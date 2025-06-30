@@ -383,7 +383,7 @@ For support and questions:
 
 ## 🔄 Version History
 
-- **v1.0.0**: Initial release with basic CRM functionality
+- **v1.0.0**: Initial release with basic Marketing App functionality
 
 ---
 
