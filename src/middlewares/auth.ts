@@ -1,76 +1,58 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { asyncHandler } from './errorHandler';
-import { decryptData } from '../config/encryption';
+import { verifyToken } from '../config/auth0';
+import {User} from "../modules/users/models/users.model";
+import session from 'express-session';
 
-interface DecodedToken {
-  id: string;
-  role: string;
-}
-
-// Extend Express Request interface
-declare global {
-  namespace Express {
-    interface Request {
-      user?: DecodedToken;
-    }
+declare module 'express-session' {
+  interface SessionData {
+    linkedinState?: string;
   }
 }
 
-export const protect = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    let token;
+export interface AuthenticatedRequest extends Request {
+  user?: any;
+  dbUser?: any;
+  session: session.Session & Partial<session.SessionData>;
+}
 
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      try {
-        // Get token from header
-        token = req.headers.authorization.split(' ')[1];
-        
-        // In production, decrypt token if it's encrypted
-        if (process.env.NODE_ENV === 'production' || process.env.DEBUG_ENCRYPTION === 'true') {
-          token = decryptData(token);
-        }
+export const requireAuth = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
 
-        // Verify token
-        const decoded = jwt.verify(
-          token,
-          process.env.JWT_SECRET as string
-        ) as DecodedToken;
-
-        // Add user info to request
-        req.user = decoded;
-
-        next();
-      } catch (error) {
-        const err = new Error('Not authorized, token failed') as any;
-        err.statusCode = 401;
-        next(err);
-      }
-    } else {
-      const err = new Error('Not authorized, no token') as any;
-      err.statusCode = 401;
-      next(err);
+    if (!token) {
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
-  }
-);
 
-export const authorize = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      const err = new Error('Not authorized, no user found') as any;
-      err.statusCode = 401;
-      return next(err);
+    const decoded = await verifyToken(token);
+    req.user = decoded;
+
+    // Get user from database
+    const dbUser = await User.findOne({ auth0Id: decoded.sub });
+    if (!dbUser) {
+      res.status(401).json({ error: 'User not found' });
+      return;
     }
-    
-    if (!roles.includes(req.user.role)) {
-      const err = new Error(`Role (${req.user.role}) is not authorized to access this route`) as any;
-      err.statusCode = 403;
-      return next(err);
-    }
-    
+
+    req.dbUser = dbUser;
     next();
-  };
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+export const requireLinkedIn = (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+): void => {
+  if (!req.dbUser?.linkedinProfile?.accessToken) {
+    res.status(403).json({ error: 'LinkedIn account not connected' });
+    return;
+  }
+  next();
 };

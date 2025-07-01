@@ -33,12 +33,16 @@
   "homepage": "https://github.com/ToufiqurRahmanTamkin/CRM-Server#readme",
   "dependencies": {
     "aws-sdk": "^2.1692.0",
+    "axios": "^1.10.0",
     "bcryptjs": "^3.0.2",
+    "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-openid-connect": "^2.18.1",
     "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.0",
@@ -54,6 +58,7 @@
     "@types/cors": "^2.8.18",
     "@types/crypto-js": "^4.2.2",
     "@types/express": "^5.0.2",
+    "@types/express-session": "^1.18.2",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.12",
@@ -63,5 +68,6 @@
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
-  }
+  },
+  "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c"
 }

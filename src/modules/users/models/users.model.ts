@@ -1,81 +1,67 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUser extends Document {
-    organizationId: mongoose.Schema.Types.ObjectId;
-    concernId: mongoose.Schema.Types.ObjectId;
-    departmentId: mongoose.Schema.Types.ObjectId;
-    teamId: mongoose.Schema.Types.ObjectId;
-    firstName: string;
-    lastName: string;
+    auth0Id: string;
     email: string;
-    phone: string;
-    role: string;
-    password: string;
-    isActive: boolean;
+    name: string;
+    picture?: string;
+    linkedinProfile?: {
+        id: string;
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt: Date;
+        profile: {
+            firstName: string;
+            lastName: string;
+            profilePicture?: string;
+            headline?: string;
+            industry?: string;
+            location?: string;
+        };
+    };
     createdAt: Date;
     updatedAt: Date;
-    createdBy: mongoose.Schema.Types.ObjectId;
-    updatedBy: mongoose.Schema.Types.ObjectId;
+    lastLogin: Date;
 }
 
-const userSchema = new Schema<IUser>({
-    organizationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'organizations',
-        required: true
-    },
-    concernId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'concerns',
-        required: true
-    },
-    departmentId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'departments',
-        required: true
-    },
-    teamId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'teams',
-        required: true
-    },
-    firstName: {
+const UserSchema: Schema = new Schema({
+    auth0Id: {
         type: String,
         required: true,
-        trim: true
-    },
-    lastName: {
-        type: String,
-        required: true,
-        trim: true
+        unique: true,
+        index: true
     },
     email: {
         type: String,
         required: true,
         unique: true,
-        trim: true
+        lowercase: true
     },
-    phone: {
-        type: String,
-        required: false,
-        trim: true
-    },
-    role: {
-        type: String,
-        required: true,
-        enum: ['admin', 'user', 'manager'],
-        default: 'user'
-    },
-    password: {
+    name: {
         type: String,
         required: true
     },
-    isActive: {
-        type: Boolean,
-        default: true
+    picture: String,
+    linkedinProfile: {
+        id: String,
+        accessToken: String,
+        refreshToken: String,
+        expiresAt: Date,
+        profile: {
+            firstName: String,
+            lastName: String,
+            profilePicture: String,
+            headline: String,
+            industry: String,
+            location: String
+        }
+    },
+    lastLogin: {
+        type: Date,
+        default: Date.now
     }
-}, { timestamps: true });
+}, {
+    timestamps: true
+});
 
-const User = mongoose.model<IUser>('users', userSchema);
-
-export default User;
+export const User = mongoose.model<IUser>('User', UserSchema);
