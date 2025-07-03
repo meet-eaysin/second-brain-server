@@ -29,7 +29,6 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@types/bcrypt", "npm:5.0.2"],\
-          ["@types/bcryptjs", "npm:3.0.0"],\
           ["@types/cors", "npm:2.8.18"],\
           ["@types/crypto-js", "npm:4.2.2"],\
           ["@types/express", "npm:5.0.2"],\
@@ -46,7 +45,6 @@ const RAW_RUNTIME_STATE =
           ["aws-sdk", "npm:2.1692.0"],\
           ["axios", "npm:1.10.0"],\
           ["bcrypt", "npm:6.0.0"],\
-          ["bcryptjs", "npm:3.0.2"],\
           ["connect-mongo", "virtual:6bd2b4a6b538bb2a1256263b33087b9930f335fa64ea7e4b844c463434e8624cc1ef7af2ce3a2c02b6419685d1f1523f70ce1f206758c9c016d62523c8153396#npm:5.1.0"],\
           ["cors", "npm:2.8.5"],\
           ["crypto-js", "npm:4.2.0"],\
@@ -406,16 +404,6 @@ const RAW_RUNTIME_STATE =
         "packageDependencies": [\
           ["@types/bcrypt", "npm:5.0.2"],\
           ["@types/node", "npm:22.15.29"]\
-        ],\
-        "linkType": "HARD"\
-      }]\
-    ]],\
-    ["@types/bcryptjs", [\
-      ["npm:3.0.0", {\
-        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@types-bcryptjs-npm-3.0.0-92809cae88-10c0.zip/node_modules/@types/bcryptjs/",\
-        "packageDependencies": [\
-          ["@types/bcryptjs", "npm:3.0.0"],\
-          ["bcryptjs", "npm:3.0.2"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -981,15 +969,6 @@ const RAW_RUNTIME_STATE =
           ["node-addon-api", "npm:8.4.0"],\
           ["node-gyp", "npm:11.2.0"],\
           ["node-gyp-build", "npm:4.8.4"]\
-        ],\
-        "linkType": "HARD"\
-      }]\
-    ]],\
-    ["bcryptjs", [\
-      ["npm:3.0.2", {\
-        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/bcryptjs-npm-3.0.2-14895420d7-10c0.zip/node_modules/bcryptjs/",\
-        "packageDependencies": [\
-          ["bcryptjs", "npm:3.0.2"]\
         ],\
         "linkType": "HARD"\
       }]\
@@ -2956,7 +2935,6 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./",\
         "packageDependencies": [\
           ["@types/bcrypt", "npm:5.0.2"],\
-          ["@types/bcryptjs", "npm:3.0.0"],\
           ["@types/cors", "npm:2.8.18"],\
           ["@types/crypto-js", "npm:4.2.2"],\
           ["@types/express", "npm:5.0.2"],\
@@ -2973,7 +2951,6 @@ const RAW_RUNTIME_STATE =
           ["aws-sdk", "npm:2.1692.0"],\
           ["axios", "npm:1.10.0"],\
           ["bcrypt", "npm:6.0.0"],\
-          ["bcryptjs", "npm:3.0.2"],\
           ["connect-mongo", "virtual:6bd2b4a6b538bb2a1256263b33087b9930f335fa64ea7e4b844c463434e8624cc1ef7af2ce3a2c02b6419685d1f1523f70ce1f206758c9c016d62523c8153396#npm:5.1.0"],\
           ["cors", "npm:2.8.5"],\
           ["crypto-js", "npm:4.2.0"],\
