@@ -1,60 +1,61 @@
-export interface User {
+export type TUser = {
     id: string;
     email: string;
     username: string;
     password?: string;
-    role: UserRole;
+    role: TUserRole;
     isActive: boolean;
-    authProvider: AuthProvider;
+    authProvider: EAuthProvider;
     auth0Sub?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    tokenVersion?: number;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
-export enum AuthProvider {
+export enum EAuthProvider {
     LOCAL = 'local',
     AUTH0 = 'auth0'
 }
 
-export interface UserCreateRequest {
+export type TUserCreateRequest = {
     email: string;
     username: string;
     password?: string;
-    role?: UserRole;
-    authProvider?: AuthProvider;
+    role?: TUserRole;
+    authProvider?: EAuthProvider;
     auth0Sub?: string;
 }
 
-export interface UserUpdateRequest {
+export type TUserUpdateRequest = {
     email?: string;
     username?: string;
     password?: string;
-    role?: UserRole;
+    role?: TUserRole;
     isActive?: boolean;
 }
 
-export interface LoginRequest {
+export type TLoginRequest = {
     email: string;
     password: string;
 }
 
-export interface AuthResponse {
-    user: Omit<User, 'password'>;
+export type TAuthResponse = {
+    user: Omit<TUser, 'password'>;
     token: string;
     refreshToken: string;
 }
 
-export interface JwtPayload {
+export type TJwtPayload = {
     userId: string;
     email: string;
     username: string;
-    role: UserRole;
-    authProvider: AuthProvider;
+    role: TUserRole;
+    authProvider: EAuthProvider;
     iat?: number;
     exp?: number;
 }
 
-export enum UserRole {
+export enum TUserRole {
     ADMIN = 'admin',
     USER = 'user',
     MODERATOR = 'moderator'

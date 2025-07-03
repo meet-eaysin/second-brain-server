@@ -1,23 +1,22 @@
-import { User, UserCreateRequest, UserUpdateRequest, UserRole, AuthProvider } from '../types/user.types';
-import {IUserDocument, UserModel} from "../models/users.model";
+import {TUserDocument, UserModel} from "../models/users.model";
 import {validateEmail, validatePassword, validateUsername} from "../../auth/utils/auth.utils";
+import {EAuthProvider, TUser, TUserCreateRequest, TUserRole, TUserUpdateRequest} from "../types/user.types";
 
 export const incrementTokenVersion = async (userId: string): Promise<void> => {
     await UserModel.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } }).exec();
 };
 
-export const getUserWithTokenVersion = async (userId: string): Promise<(User & { tokenVersion: number }) | null> => {
+export const getUserWithTokenVersion = async (userId: string): Promise<(TUser & { tokenVersion: number }) | null> => {
     const user = await UserModel.findById(userId).select('+tokenVersion').lean().exec();
     return user ? {
         ...user,
         id: user._id.toString(),
-        // Remove mongoose internal fields
         _id: undefined,
         __v: undefined
-    } as User & { tokenVersion: number } : null;
+    } as TUser & { tokenVersion: number } : null;
 };
 
-export const createUser = async (userData: UserCreateRequest): Promise<IUserDocument> => {
+export const createUser = async (userData: TUserCreateRequest): Promise<TUserDocument> => {
     // Validation (redundant since schema validates, but good for early rejection)
     if (!validateEmail(userData.email)) {
         throw new Error('Invalid email format');
@@ -27,7 +26,7 @@ export const createUser = async (userData: UserCreateRequest): Promise<IUserDocu
         throw new Error('Username must be 3-30 characters, alphanumeric and underscore only');
     }
 
-    if (userData.authProvider === AuthProvider.LOCAL || !userData.authProvider) {
+    if (userData.authProvider === EAuthProvider.LOCAL || !userData.authProvider) {
         if (!userData.password || !validatePassword(userData.password)) {
             throw new Error('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
         }
@@ -37,8 +36,8 @@ export const createUser = async (userData: UserCreateRequest): Promise<IUserDocu
         email: userData.email,
         username: userData.username,
         password: userData.password,
-        role: userData.role || UserRole.USER,
-        authProvider: userData.authProvider || AuthProvider.LOCAL,
+        role: userData.role || TUserRole.USER,
+        authProvider: userData.authProvider || EAuthProvider.LOCAL,
         auth0Sub: userData.auth0Sub
     });
 
@@ -50,7 +49,7 @@ export const createOrUpdateAuth0User = async (auth0Profile: {
     email: string;
     email_verified: boolean;
     name?: string;
-}): Promise<User> => {
+}): Promise<TUser> => {
     // Check if user exists by auth0Sub or email
     let user = await UserModel.findOne({
         $or: [
@@ -65,12 +64,12 @@ export const createOrUpdateAuth0User = async (auth0Profile: {
         user = await UserModel.create({
             email: auth0Profile.email.toLowerCase(),
             username,
-            authProvider: AuthProvider.AUTH0,
+            authProvider: EAuthProvider.AUTH0,
             auth0Sub: auth0Profile.sub
         });
-    } else if (user.authProvider !== AuthProvider.AUTH0) {
+    } else if (user.authProvider !== EAuthProvider.AUTH0) {
         // Update an existing user to Auth0 if they previously used local auth
-        user.authProvider = AuthProvider.AUTH0;
+        user.authProvider = EAuthProvider.AUTH0;
         user.auth0Sub = auth0Profile.sub;
         user.password = undefined; // Remove password if they had one
         await user.save();
@@ -82,27 +81,27 @@ export const createOrUpdateAuth0User = async (auth0Profile: {
     };
 };
 
-export const getUserById = async (id: string): Promise<IUserDocument | null> => {
+export const getUserById = async (id: string): Promise<TUser | null> => {
     const user = await UserModel.findById(id).exec();
     return user ? user.toJSON() : null;
 };
 
-export const getUserByEmail = async (email: string): Promise<IUserDocument | null> => {
+export const getUserByEmail = async (email: string): Promise<TUser | null> => {
     const user = await UserModel.findOne({email}).exec();
     return user ? user.toJSON() : null;
 };
 
-export const getUserByAuth0Sub = async (auth0Sub: string): Promise<IUserDocument | null> => {
+export const getUserByAuth0Sub = async (auth0Sub: string): Promise<TUser | null> => {
     const user = await UserModel.findOne({auth0Sub}).exec();
     return user ? user.toJSON() : null;
 };
 
-export const getUserByUsername = async (username: string): Promise<IUserDocument | null> => {
+export const getUserByUsername = async (username: string): Promise<TUser | null> => {
     const user = await UserModel.findOne({username}).exec();
     return user ? user.toJSON() : null;
 };
 
-export const updateUser = async (id: string, updateData: UserUpdateRequest): Promise<IUserDocument | null> => {
+export const updateUser = async (id: string, updateData: TUserUpdateRequest): Promise<TUserDocument | null> => {
     const user = await UserModel.findById(id).exec();
     if (!user) return null;
 
@@ -133,7 +132,7 @@ export const deleteUser = async (id: string): Promise<boolean> => {
     return result.deletedCount === 1;
 };
 
-export const getAllUsers = async (page: number = 1, limit: number = 10): Promise<{ users: IUserDocument[]; total: number }> => {
+export const getAllUsers = async (page: number = 1, limit: number = 10): Promise<{ users: TUser[]; total: number }> => {
     const [users, total] = await Promise.all([
         UserModel.find()
             .skip((page - 1) * limit)
@@ -148,6 +147,6 @@ export const getAllUsers = async (page: number = 1, limit: number = 10): Promise
     };
 };
 
-export const getUsersWithoutPassword = (userList: User[]): Omit<User, 'password'>[] => {
+export const getUsersWithoutPassword = (userList: TUser[]): Omit<TUser, 'password'>[] => {
     return userList.map(({ password, ...user }) => user);
 };

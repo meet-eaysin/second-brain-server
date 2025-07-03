@@ -1,28 +1,19 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
-import { AuthProvider, UserRole } from '../types/user.types';
 import bcrypt from "bcrypt";
+import {EAuthProvider, TUser, TUserRole} from "../types/user.types";
 
-export interface IUserDocument extends Document {
-    user: any;
-    email: string;
-    username: string;
-    password?: string;
-    role: UserRole;
-    isActive: boolean;
-    authProvider: AuthProvider;
-    auth0Sub?: string;
-    tokenVersion: number;
-    createdAt: Date;
-    updatedAt: Date;
-}
+export type TUserDocument = TUser & Document & {
+    comparePassword(candidatePassword: string): Promise<boolean>;
+    incrementTokenVersion(): Promise<void>;
+};
 
-interface IUserModel extends Model<IUserDocument> {
-    findByEmail(email: string): Promise<IUserDocument | null>;
-    findByAuth0Sub(auth0Sub: string): Promise<IUserDocument | null>;
-    findByUsername(username: string): Promise<IUserDocument | null>;
-}
+export type TUserModel = Model<TUserDocument> & {
+    findByEmail(email: string): Promise<TUserDocument | null>;
+    findByAuth0Sub(auth0Sub: string): Promise<TUserDocument | null>;
+    findByUsername(username: string): Promise<TUserDocument | null>;
+};
 
-const UserSchema = new Schema<IUserDocument, IUserModel>(
+const UserSchema = new Schema<TUserDocument, TUserModel>(
     {
         email: {
             type: String,
@@ -67,8 +58,8 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
         },
         role: {
             type: String,
-            enum: Object.values(UserRole),
-            default: UserRole.USER
+            enum: Object.values(TUserRole),
+            default: TUserRole.USER
         },
         isActive: {
             type: Boolean,
@@ -76,8 +67,8 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
         },
         authProvider: {
             type: String,
-            enum: Object.values(AuthProvider),
-            default: AuthProvider.LOCAL
+            enum: Object.values(EAuthProvider),
+            default: EAuthProvider.LOCAL
         },
         auth0Sub: {
             type: String,
@@ -112,11 +103,6 @@ const UserSchema = new Schema<IUserDocument, IUserModel>(
     }
 );
 
-// Indexes
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ username: 1 }, { unique: true });
-UserSchema.index({ auth0Sub: 1 }, { unique: true, sparse: true });
-
 UserSchema.statics.findByEmail = function (email: string) {
     return this.findOne({ email }).select('+password').exec();
 };
@@ -129,7 +115,7 @@ UserSchema.statics.findByUsername = function (username: string) {
     return this.findOne({ username }).select('+password').exec();
 };
 
-UserSchema.pre<IUserDocument>('save', async function (next) {
+UserSchema.pre<TUserDocument>('save', async function (next) {
     if (!this.isModified('password') || !this.password) return next();
 
     try {
@@ -151,4 +137,4 @@ UserSchema.methods.incrementTokenVersion = function () {
     return this.save();
 };
 
-export const UserModel = mongoose.model<IUserDocument, IUserModel>('User', UserSchema);
+export const UserModel = mongoose.model<TUserDocument, TUserModel>('User', UserSchema);

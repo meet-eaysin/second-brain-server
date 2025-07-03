@@ -1,10 +1,8 @@
-import {Auth0LoginRequest, Auth0CallbackRequest, Auth0UserProfile, RefreshTokenPayload} from '../types/auth.types';
 import {
     createOrUpdateAuth0User, getUserByEmail,
     getUserWithTokenVersion,
     incrementTokenVersion
 } from "../../users/services/users.services";
-import {AuthProvider, AuthResponse, LoginRequest} from "../../users/types/user.types";
 import {
     comparePassword, exchangeCodeForToken,
     generateAccessToken,
@@ -13,10 +11,12 @@ import {
     sendPasswordlessEmail, verifyPasswordlessCode, verifyRefreshToken
 } from "../utils/auth.utils";
 import {JwtPayload} from "jsonwebtoken";
+import {EAuthProvider, TAuthResponse, TLoginRequest} from "../../users/types/user.types";
+import {TAuth0CallbackRequest, TAuth0LoginRequest, TRefreshTokenPayload} from "../types/auth.types";
 
 const userTokenVersions: Map<string, number> = new Map();
 
-export const authenticateUser = async (loginData: LoginRequest): Promise<AuthResponse> => {
+export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthResponse> => {
     const { email, password } = loginData;
 
     // Find user by email with password
@@ -31,7 +31,7 @@ export const authenticateUser = async (loginData: LoginRequest): Promise<AuthRes
     }
 
     // Check if user uses local authentication
-    if (user.authProvider !== AuthProvider.LOCAL) {
+    if (user.authProvider !== EAuthProvider.LOCAL) {
         throw new Error('Please use social login for this account');
     }
 
@@ -60,7 +60,7 @@ export const authenticateUser = async (loginData: LoginRequest): Promise<AuthRes
         authProvider: user.authProvider
     };
 
-    const refreshTokenPayload: RefreshTokenPayload = {
+    const refreshTokenPayload: TRefreshTokenPayload = {
         userId: user.id,
         tokenVersion: userWithToken.tokenVersion
     };
@@ -78,7 +78,7 @@ export const authenticateUser = async (loginData: LoginRequest): Promise<AuthRes
     };
 };
 
-export const initiateAuth0Login = async (loginData: Auth0LoginRequest): Promise<{ loginUrl: string }> => {
+export const initiateAuth0Login = async (loginData: TAuth0LoginRequest): Promise<{ loginUrl: string }> => {
     const { email } = loginData;
 
     // Generate Auth0 login URL
@@ -96,7 +96,7 @@ export const initiatePasswordlessLogin = async (email: string): Promise<{ messag
     }
 };
 
-export const handleAuth0Callback = async (callbackData: Auth0CallbackRequest): Promise<AuthResponse> => {
+export const handleAuth0Callback = async (callbackData: TAuth0CallbackRequest): Promise<TAuthResponse> => {
     const { code, state } = callbackData;
 
     try {
@@ -115,9 +115,6 @@ export const handleAuth0Callback = async (callbackData: Auth0CallbackRequest): P
 
         // Get token version
         const userWithToken = await getUserWithTokenVersion(user.id);
-        if (!userWithToken) {
-            throw new Error('User not found');
-        }
 
         // Generate our own JWT tokens
         const accessTokenPayload: JwtPayload = {
@@ -128,9 +125,9 @@ export const handleAuth0Callback = async (callbackData: Auth0CallbackRequest): P
             authProvider: user.authProvider
         };
 
-        const refreshTokenPayload: RefreshTokenPayload = {
+        const refreshTokenPayload: TRefreshTokenPayload = {
             userId: user.id,
-            tokenVersion: userWithToken.tokenVersion
+            tokenVersion: userWithToken?.tokenVersion || 0
         };
 
         const newAccessToken = generateAccessToken(accessTokenPayload);
@@ -189,7 +186,7 @@ export const logoutAllDevices = async (userId: string): Promise<void> => {
     await incrementTokenVersion(userId);
 };
 
-export const verifyPasswordlessLogin = async (email: string, code: string): Promise<AuthResponse> => {
+export const verifyPasswordlessLogin = async (email: string, code: string): Promise<TAuthResponse> => {
     try {
         // Verify the code with Auth0
         const accessToken = await verifyPasswordlessCode(email, code);
@@ -224,7 +221,7 @@ export const verifyPasswordlessLogin = async (email: string, code: string): Prom
             authProvider: user.authProvider
         };
 
-        const refreshTokenPayload: RefreshTokenPayload = {
+        const refreshTokenPayload: TRefreshTokenPayload = {
             userId: user.id,
             tokenVersion: userWithToken.tokenVersion
         };

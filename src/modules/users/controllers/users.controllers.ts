@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { UserUpdateRequest } from '../types/user.types';
 import {sendError, sendSuccess} from "../../../utils/response.utils";
 import {deleteUser, getAllUsers, getUserById, getUsersWithoutPassword, updateUser} from "../services/users.services";
 import {AuthenticatedRequest} from "../../../middlewares/auth";
+import {TUserUpdateRequest} from "../types/user.types";
 
 export const getUsers = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -46,7 +46,7 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const updateData: UserUpdateRequest = req.body;
+        const updateData: TUserUpdateRequest = req.body;
         const { user: currentUser } = req as AuthenticatedRequest;
 
         // Users can only update their own profile unless they're admin

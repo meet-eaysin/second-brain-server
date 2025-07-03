@@ -1,5 +1,5 @@
 {
-  "name": "crm-server",
+  "name": "marketing-app",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -7,9 +7,9 @@
     "node": ">=22.15.1"
   },
   "scripts": {
-    "dev": "nodemon --exec ts-node src/server.ts",
+    "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/index.js",
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix",
@@ -22,16 +22,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ToufiqurRahmanTamkin/CRM-Server.git"
+    "url": "git+https://github.com/meet-eaysin/api-service"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ToufiqurRahmanTamkin/CRM-Server/issues"
+    "url": "https://github.com/meet-eaysin/api-service/issues"
   },
-  "homepage": "https://github.com/ToufiqurRahmanTamkin/CRM-Server#readme",
+  "homepage": "https://github.com/meet-eaysin/api-service#readme",
   "dependencies": {
+    "auth0": "^4.27.0",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
@@ -51,6 +52,8 @@
     "multer": "^2.0.0",
     "node-cron": "^4.0.7",
     "nodemailer": "^7.0.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.25.71"
@@ -68,6 +71,8 @@
     "@types/node": "^22.15.21",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.17",
+    "@types/swagger-jsdoc": "^6",
+    "@types/swagger-ui-express": "^4.1.8",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"

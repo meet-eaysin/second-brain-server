@@ -175,7 +175,7 @@ npm run docker:logs           # View container logs
 ```
 src/
 ├── app.ts                    # Express app configuration
-├── server.ts                 # Server entry point
+├── index.ts                 # Server entry point
 ├── config/                   # Configuration files
 │   ├── db/                   # Database configuration
 │   ├── encryption/           # Data encryption utilities

@@ -1,20 +1,41 @@
+import {appConfig} from "../default-config/app-config";
+
 export const auth0Config = {
-    domain: process.env.AUTH0_DOMAIN || 'your-domain.auth0.com',
-    clientId: process.env.AUTH0_CLIENT_ID || 'your-client-id',
-    clientSecret: process.env.AUTH0_CLIENT_SECRET || 'your-client-secret',
-    audience: process.env.AUTH0_AUDIENCE || 'your-api-audience',
+    // Required base configuration
+    secret: appConfig.auth0.clientSecret as string,
+    baseURL: appConfig.baseURL as string,
+    clientID: appConfig.auth0.clientId as string,
+    issuerBaseURL: appConfig.auth0.issuerBaseURL as string,
+
+    // Passwordless configuration
+    authRequired: false,
+    enablePasswordless: true,  // Enable passwordless feature
+    passwordlessMethod: 'link', // or 'code' for OTP codes
+
+    // Email passwordless specific config
+    passwordlessEmail: {
+        template: appConfig.auth0.passwordlessTemplate || 'your_email_template',
+        subject: appConfig.auth0.passwordlessSubject || 'Your Login Link',
+        otp: {
+            length: 6,
+            expiresIn: 300 // 5 minutes
+        }
+    },
+
+    // Standard OAuth config
+    clientSecret: appConfig.auth0.clientSecret,
+    audience: appConfig.auth0.audience,
     scope: 'openid profile email',
-    redirectUri: process.env.AUTH0_REDIRECT_URI || 'http://localhost:3000/api/auth/auth0/callback',
-    connection: 'email',
+    redirectUri: appConfig.auth0.redirectUri || 'http://localhost:3000/api/auth/auth0/callback',
     responseType: 'code',
     grantType: 'authorization_code',
-    // Add passwordless specific config
-    passwordless: {
-        email: {
-            template: 'your_email_template_name', // Optional: if you have a custom email template
-            subject: 'Your Login Code', // Optional: custom subject
-            otpLength: 6, // Default is 6
-            otpExpiresIn: 300, // 5 minutes in seconds
-        }
-    }
+    authorizationParams: {
+        responseType: 'code',
+        responseMode: 'query',
+        scope: 'openid profile email'
+    },
+
+    // Connection configuration
+    connection: 'email', // For email passwordless
+    // connection: 'sms'  // For SMS passwordless
 };

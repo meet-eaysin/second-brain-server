@@ -8,12 +8,12 @@ import {
 } from '../services/auth.service';
 import {sendError, sendSuccess} from "../../../utils/response.utils";
 import {AuthenticatedRequest} from "../../../middlewares/auth";
-import {LoginRequest, UserCreateRequest} from "../../users/types/user.types";
+import {TLoginRequest, TUserCreateRequest} from "../../users/types/user.types";
 import {createUser, getUsersWithoutPassword} from "../../users/services/users.services";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userData: UserCreateRequest = req.body;
+        const userData: TUserCreateRequest = req.body;
         const user = await createUser(userData);
         const userWithoutPassword = getUsersWithoutPassword([user])[0];
 
@@ -25,7 +25,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
     try {
-        const loginData: LoginRequest = req.body;
+        const loginData: TLoginRequest = req.body;
         const authResponse = await authenticateUser(loginData);
 
         sendSuccess(res, 'Login successful', authResponse);

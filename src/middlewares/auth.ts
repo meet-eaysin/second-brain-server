@@ -1,10 +1,10 @@
 import {sendError} from '../utils/response.utils';
-import {JwtPayload, UserRole} from "../modules/users/types/user.types";
 import {extractTokenFromHeader, verifyAccessToken} from "../modules/auth/utils/auth.utils";
 import {NextFunction, Request, Response} from "express"
+import {TJwtPayload, TUserRole} from "../modules/users/types/user.types";
 
 export interface AuthenticatedRequest extends Request {
-  user: JwtPayload;
+  user: TJwtPayload;
 }
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
@@ -24,7 +24,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export const requireRole = (roles: UserRole[]) => {
+export const requireRole = (roles: TUserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = (req as AuthenticatedRequest).user;
 
@@ -37,5 +37,5 @@ export const requireRole = (roles: UserRole[]) => {
   };
 };
 
-export const requireAdmin = requireRole([UserRole.ADMIN]);
-export const requireAdminOrModerator = requireRole([UserRole.ADMIN, UserRole.MODERATOR]);
+export const requireAdmin = requireRole([TUserRole.ADMIN]);
+export const requireAdminOrModerator = requireRole([TUserRole.ADMIN, TUserRole.MODERATOR]);

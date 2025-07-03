@@ -1,16 +1,16 @@
 import axios from 'axios';
-import {Auth0UserProfile, RefreshTokenPayload} from '../types/auth.types';
+import {TAuth0UserProfile, TRefreshTokenPayload} from '../types/auth.types';
 import bcrypt from 'bcrypt';
 import {jwtConfig} from "../../../config/jwt/jwt.config";
 import {auth0Config} from "../../../config/auth0";
-import jwt from 'jsonwebtoken';
-import {JwtPayload} from "../../users/types/user.types";
-
+import jwt, {JwtPayload} from 'jsonwebtoken';
+import {TJwtPayload} from "../../users/types/user.types";
+import {appConfig} from "../../../config/default-config/app-config";
 
 export const generateAuth0LoginUrl = (email: string): string => {
     const params = new URLSearchParams({
         response_type: auth0Config.responseType,
-        client_id: auth0Config.clientId,
+        client_id: auth0Config.clientID,
         redirect_uri: auth0Config.redirectUri,
         scope: auth0Config.scope,
         connection: auth0Config.connection,
@@ -18,15 +18,15 @@ export const generateAuth0LoginUrl = (email: string): string => {
         state: Buffer.from(JSON.stringify({ email, timestamp: Date.now() })).toString('base64')
     });
 
-    return `https://${auth0Config.domain}/authorize?${params.toString()}`;
+    return `https://${appConfig.auth0.domain}/authorize?${params.toString()}`;
 };
 
 export const exchangeCodeForToken = async (code: string): Promise<string> => {
-    const tokenEndpoint = `https://${auth0Config.domain}/oauth/token`;
+    const tokenEndpoint = `https://${appConfig.auth0.domain}/oauth/token`;
 
     const response = await axios.post(tokenEndpoint, {
         grant_type: auth0Config.grantType,
-        client_id: auth0Config.clientId,
+        client_id: auth0Config.clientID,
         client_secret: auth0Config.clientSecret,
         code,
         redirect_uri: auth0Config.redirectUri
@@ -39,8 +39,8 @@ export const exchangeCodeForToken = async (code: string): Promise<string> => {
     return response.data.access_token;
 };
 
-export const getAuth0UserProfile = async (accessToken: string): Promise<Auth0UserProfile> => {
-    const userInfoEndpoint = `https://${auth0Config.domain}/userinfo`;
+export const getAuth0UserProfile = async (accessToken: string): Promise<TAuth0UserProfile> => {
+    const userInfoEndpoint = `https://${appConfig.auth0.domain}/userinfo`;
 
     const response = await axios.get(userInfoEndpoint, {
         headers: {
@@ -55,16 +55,16 @@ export const generateAccessToken = (payload: JwtPayload): string => {
     return jwt.sign(payload, jwtConfig.accessTokenSecret, jwtConfig.accessTokenOptions);
 };
 
-export const generateRefreshToken = (payload: RefreshTokenPayload): string => {
+export const generateRefreshToken = (payload: TRefreshTokenPayload): string => {
     return jwt.sign(payload, jwtConfig.refreshTokenSecret, jwtConfig.refreshTokenOptions);
 };
 
-export const verifyAccessToken = (token: string): JwtPayload => {
-    return jwt.verify(token, jwtConfig.accessTokenSecret) as JwtPayload;
+export const verifyAccessToken = (token: string): TJwtPayload => {
+    return jwt.verify(token, jwtConfig.accessTokenSecret) as TJwtPayload;
 };
 
-export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
-    return jwt.verify(token, jwtConfig.refreshTokenSecret) as RefreshTokenPayload;
+export const verifyRefreshToken = (token: string): TRefreshTokenPayload => {
+    return jwt.verify(token, jwtConfig.refreshTokenSecret) as TRefreshTokenPayload;
 };
 
 export const extractTokenFromHeader = (authHeader: string | undefined): string | null => {
@@ -104,10 +104,10 @@ export const validateUsername = (username: string): boolean => {
 };
 
 export const sendPasswordlessEmail = async (email: string): Promise<void> => {
-    const passwordlessEndpoint = `https://${auth0Config.domain}/passwordless/start`;
+    const passwordlessEndpoint = `https://${appConfig.auth0.domain}/passwordless/start`;
 
     const response = await axios.post(passwordlessEndpoint, {
-        client_id: auth0Config.clientId,
+        client_id: auth0Config.clientID,
         client_secret: auth0Config.clientSecret,
         connection: 'email',
         email,
@@ -130,11 +130,11 @@ export const sendPasswordlessEmail = async (email: string): Promise<void> => {
 
 // Update the verifyPasswordlessCode function
 export const verifyPasswordlessCode = async (email: string, code: string): Promise<string> => {
-    const tokenEndpoint = `https://${auth0Config.domain}/oauth/token`;
+    const tokenEndpoint = `https://${appConfig.auth0.domain}/oauth/token`;
 
     const response = await axios.post(tokenEndpoint, {
         grant_type: 'http://auth0.com/oauth/grant-type/passwordless/otp',
-        client_id: auth0Config.clientId,
+        client_id: auth0Config.clientID,
         client_secret: auth0Config.clientSecret,
         username: email,
         otp: code,

@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import {ApiResponse} from "../modules/auth/types/auth.types";
+import {TApiResponse} from "../modules/auth/types/auth.types";
 
 export const sendSuccess = <T>(res: Response, message: string, data?: T, statusCode: number = 200): Response => {
-    const response: ApiResponse<T> = {
+    const response: TApiResponse<T> = {
         success: true,
         message,
         data
@@ -11,7 +11,7 @@ export const sendSuccess = <T>(res: Response, message: string, data?: T, statusC
 };
 
 export const sendError = (res: Response, message: string, statusCode: number = 400, error?: string): Response => {
-    const response: ApiResponse = {
+    const response: TApiResponse = {
         success: false,
         message,
         error

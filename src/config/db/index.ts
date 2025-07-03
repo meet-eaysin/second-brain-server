@@ -1,18 +1,95 @@
-import mongoose from 'mongoose';
-import logger from '../logger';
+import mongoose, { ConnectOptions } from 'mongoose';
 
-const connectDB = async (): Promise<void> => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI as string);
-    logger.info(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    if (error instanceof Error) {
-      logger.error(`Database Connection Error: ${error.message}`);
-    } else {
-      logger.error('Unknown error occurred during database connection');
-    }
-    process.exit(1);
-  }
+interface IOnConnectedCallback {
+  (mongoUrl: string): void;
+}
+
+interface SafeMongooseConnectionOptions {
+  mongoUrl: string;
+  mongooseConnectionOptions?: ConnectOptions;
+  retryDelayMs?: number;
+  debugCallback?: (collectionName: string, method: string, query: any, doc: string) => void;
+  onStartConnection?: (mongoUrl: string) => void;
+  onConnectionError?: (error: Error, mongoUrl: string) => void;
+  onConnectionRetry?: (mongoUrl: string) => void;
+}
+
+const defaultMongooseConnectionOptions: ConnectOptions = {
+  autoCreate: true,
+  autoIndex: true,
 };
 
-export default connectDB;
+export default class SafeMongooseConnection {
+  private readonly options: SafeMongooseConnectionOptions;
+
+  private onConnectedCallback?: IOnConnectedCallback;
+
+  private isConnectedBefore: boolean = false;
+
+  private shouldCloseConnection: boolean = false;
+
+  private retryDelayMs: number = 2000;
+
+  private readonly mongoConnectionOptions: ConnectOptions = defaultMongooseConnectionOptions;
+
+  private connectionTimeout?: NodeJS.Timeout;
+
+  constructor(options: SafeMongooseConnectionOptions) {
+    this.options = options;
+    mongoose.connection.on('error', this.onError);
+    mongoose.connection.on('connected', this.onConnected);
+    mongoose.connection.on('disconnected', this.onDisconnected);
+    mongoose.connection.on('reconnected', this.onReconnected);
+
+    if (options.debugCallback) mongoose.set('debug', options.debugCallback);
+
+    if (options.retryDelayMs) this.retryDelayMs = options.retryDelayMs;
+  }
+
+  public async close(force: boolean = false) {
+    if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
+
+    this.shouldCloseConnection = true;
+    await mongoose.connection.close(force);
+  }
+
+  public connect(onConnectedCallback: IOnConnectedCallback) {
+    this.onConnectedCallback = onConnectedCallback;
+    this.startConnection();
+  }
+
+  private startConnection = () => {
+    if (this.options.onStartConnection) {
+      this.options.onStartConnection(this.options.mongoUrl);
+    }
+    mongoose.connect(this.options.mongoUrl, this.mongoConnectionOptions).catch(() => {});
+  };
+
+  private onConnected = () => {
+    this.isConnectedBefore = true;
+    this.onConnectedCallback?.(this.options.mongoUrl);
+  };
+
+  private onReconnected = () => {
+    this.onConnectedCallback?.(this.options.mongoUrl);
+  };
+
+  private onError = () => {
+    if (this.options.onConnectionError) {
+      const error = new Error(`Could not connect to MongoDB at ${this.options.mongoUrl}`);
+      this.options.onConnectionError(error, this.options.mongoUrl);
+    }
+  };
+
+  private onDisconnected = () => {
+    if (!this.isConnectedBefore && !this.shouldCloseConnection) {
+      this.connectionTimeout = setTimeout(() => {
+        this.startConnection();
+        if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
+      }, this.retryDelayMs);
+      if (this.options.onConnectionRetry) {
+        this.options.onConnectionRetry(this.options.mongoUrl);
+      }
+    }
+  };
+}

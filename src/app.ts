@@ -20,35 +20,34 @@ const app: Express = express();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    credentials: true
+}));
 app.use(helmet());
 app.use(morgan('combined', { stream }));
 
-// Session configuration
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-super-secret-session-key',
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
-        touchAfter: 24 * 3600 // lazy session update
-    }),
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // true in production
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    }
-}));
-
 // Auth0 middleware
-app.use(auth(auth0Config));
+// app.use(auth({
+//     issuerBaseURL: auth0Config.issuerBaseURL,
+//     baseURL: auth0Config.baseURL,
+//     clientID: auth0Config.clientID,
+//     secret: auth0Config.secret,
+//     idpLogout: true,
+//     clientSecret: auth0Config.clientSecret,
+//     authorizationParams: {
+//         response_type: auth0Config.authorizationParams.responseType,
+//         response_mode: auth0Config.authorizationParams.responseMode,
+//         scope: auth0Config.authorizationParams.scope
+//     }
+// }));
 
 // Encryption middleware - Apply to all routes
 app.use(encryptRequest);
 app.use(encryptResponse);
 
 // Main Routes - all API routes will be under /api
-app.use('/api', routes);
+app.use('/api/v1', routes);
 
 // Error handling middleware
 app.use(errorHandler);

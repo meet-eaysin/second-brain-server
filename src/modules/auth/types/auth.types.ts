@@ -1,20 +1,20 @@
-export interface RefreshTokenPayload {
+export type TRefreshTokenPayload = {
     userId: string;
     tokenVersion: number;
     iat?: number;
     exp?: number;
 }
 
-export interface Auth0LoginRequest {
+export type TAuth0LoginRequest = {
     email: string;
 }
 
-export interface Auth0CallbackRequest {
+export type TAuth0CallbackRequest = {
     code: string;
     state?: string;
 }
 
-export interface Auth0UserProfile {
+export type TAuth0UserProfile = {
     sub: string;
     email: string;
     email_verified: boolean;
@@ -24,7 +24,7 @@ export interface Auth0UserProfile {
     family_name?: string;
 }
 
-export interface ApiResponse<T = any> {
+export type TApiResponse<T = any> = {
     success: boolean;
     message: string;
     data?: T;
