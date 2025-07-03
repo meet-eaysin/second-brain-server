@@ -1,29 +1,20 @@
-import axios from 'axios';
-import jwt from 'jsonwebtoken';
-
-interface Jwk {
-    kid: string;
-    alg: string;
-    kty: string;
-    use: string;
-    n: string;
-    e: string;
-}
-
-async function getJwks(): Promise<Jwk[]> {
-    const response = await axios.get<{ keys: Jwk[] }>(
-        `${process.env.AUTH0_ISSUER_BASE_URL}/.well-known/jwks.json`
-    );
-    return response.data.keys;
-}
-
-function getKey(header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) {
-    getJwks().then(keys => {
-        const key = keys.find(k => k.kid === header.kid);
-        if (!key) {
-            callback(new Error('Key not found'));
-            return;
+export const auth0Config = {
+    domain: process.env.AUTH0_DOMAIN || 'your-domain.auth0.com',
+    clientId: process.env.AUTH0_CLIENT_ID || 'your-client-id',
+    clientSecret: process.env.AUTH0_CLIENT_SECRET || 'your-client-secret',
+    audience: process.env.AUTH0_AUDIENCE || 'your-api-audience',
+    scope: 'openid profile email',
+    redirectUri: process.env.AUTH0_REDIRECT_URI || 'http://localhost:3000/api/auth/auth0/callback',
+    connection: 'email',
+    responseType: 'code',
+    grantType: 'authorization_code',
+    // Add passwordless specific config
+    passwordless: {
+        email: {
+            template: 'your_email_template_name', // Optional: if you have a custom email template
+            subject: 'Your Login Code', // Optional: custom subject
+            otpLength: 6, // Default is 6
+            otpExpiresIn: 300, // 5 minutes in seconds
         }
-        callback(null, key.n);
-    }).catch(err => callback(err));
-}
+    }
+};

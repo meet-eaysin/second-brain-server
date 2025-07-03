@@ -1,58 +1,41 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyToken } from '../config/auth0';
-import {User} from "../modules/users/models/users.model";
-import session from 'express-session';
-
-declare module 'express-session' {
-  interface SessionData {
-    linkedinState?: string;
-  }
-}
+import {sendError} from '../utils/response.utils';
+import {JwtPayload, UserRole} from "../modules/users/types/user.types";
+import {extractTokenFromHeader, verifyAccessToken} from "../modules/auth/utils/auth.utils";
+import {NextFunction, Request, Response} from "express"
 
 export interface AuthenticatedRequest extends Request {
-  user?: any;
-  dbUser?: any;
-  session: session.Session & Partial<session.SessionData>;
+  user: JwtPayload;
 }
 
-export const requireAuth = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-): Promise<void> => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  const token = extractTokenFromHeader(req.headers.authorization);
 
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
-      return;
-    }
-
-    const decoded = await verifyToken(token);
-    req.user = decoded;
-
-    // Get user from database
-    const dbUser = await User.findOne({ auth0Id: decoded.sub });
-    if (!dbUser) {
-      res.status(401).json({ error: 'User not found' });
-      return;
-    }
-
-    req.dbUser = dbUser;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-export const requireLinkedIn = (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-): void => {
-  if (!req.dbUser?.linkedinProfile?.accessToken) {
-    res.status(403).json({ error: 'LinkedIn account not connected' });
+  if (!token) {
+    sendError(res, 'Access token required', 401);
     return;
   }
-  next();
+
+  try {
+    (req as AuthenticatedRequest).user = verifyAccessToken(token);
+
+    next();
+  } catch (error) {
+    sendError(res, 'Invalid or expired token', 401);
+  }
 };
+
+export const requireRole = (roles: UserRole[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = (req as AuthenticatedRequest).user;
+
+    if (!roles.includes(user.role)) {
+      sendError(res, 'Insufficient permissions', 403);
+      return;
+    }
+
+    next();
+  };
+};
+
+export const requireAdmin = requireRole([UserRole.ADMIN]);
+export const requireAdminOrModerator = requireRole([UserRole.ADMIN, UserRole.MODERATOR]);

@@ -1,35 +1,61 @@
 export interface User {
-    sub: string;
-    nickname: string;
-    name: string;
-    picture: string;
-    updated_at: string;
+    id: string;
     email: string;
-    email_verified: boolean;
+    username: string;
+    password?: string;
+    role: UserRole;
+    isActive: boolean;
+    authProvider: AuthProvider;
+    auth0Sub?: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
-export interface AuthRequest extends Request {
-    oidc?: {
-        isAuthenticated(): boolean;
-        user?: User;
-        idToken?: string;
-        accessToken?: string;
-        refreshToken?: string;
-        idTokenClaims?: any;
-    };
+export enum AuthProvider {
+    LOCAL = 'local',
+    AUTH0 = 'auth0'
 }
 
-declare global {
-    namespace Express {
-        interface Request {
-            oidc?: {
-                isAuthenticated(): boolean;
-                user?: User;
-                idToken?: string;
-                accessToken?: string;
-                refreshToken?: string;
-                idTokenClaims?: any;
-            };
-        }
-    }
+export interface UserCreateRequest {
+    email: string;
+    username: string;
+    password?: string;
+    role?: UserRole;
+    authProvider?: AuthProvider;
+    auth0Sub?: string;
+}
+
+export interface UserUpdateRequest {
+    email?: string;
+    username?: string;
+    password?: string;
+    role?: UserRole;
+    isActive?: boolean;
+}
+
+export interface LoginRequest {
+    email: string;
+    password: string;
+}
+
+export interface AuthResponse {
+    user: Omit<User, 'password'>;
+    token: string;
+    refreshToken: string;
+}
+
+export interface JwtPayload {
+    userId: string;
+    email: string;
+    username: string;
+    role: UserRole;
+    authProvider: AuthProvider;
+    iat?: number;
+    exp?: number;
+}
+
+export enum UserRole {
+    ADMIN = 'admin',
+    USER = 'user',
+    MODERATOR = 'moderator'
 }
