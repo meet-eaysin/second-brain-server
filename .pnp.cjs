@@ -41,6 +41,7 @@ const RAW_RUNTIME_STATE =
           ["@types/nodemailer", "npm:6.4.17"],\
           ["@types/swagger-jsdoc", "npm:6.0.4"],\
           ["@types/swagger-ui-express", "npm:4.1.8"],\
+          ["@types/yamljs", "npm:0.2.34"],\
           ["auth0", "npm:4.27.0"],\
           ["aws-sdk", "npm:2.1692.0"],\
           ["axios", "npm:1.10.0"],\
@@ -68,6 +69,7 @@ const RAW_RUNTIME_STATE =
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["winston", "npm:3.17.0"],\
           ["winston-daily-rotate-file", "virtual:6bd2b4a6b538bb2a1256263b33087b9930f335fa64ea7e4b844c463434e8624cc1ef7af2ce3a2c02b6419685d1f1523f70ce1f206758c9c016d62523c8153396#npm:5.0.0"],\
+          ["yamljs", "npm:0.3.0"],\
           ["zod", "npm:3.25.71"]\
         ],\
         "linkType": "SOFT"\
@@ -710,6 +712,15 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["@types/yamljs", [\
+      ["npm:0.2.34", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/@types-yamljs-npm-0.2.34-deb7fcb4e8-10c0.zip/node_modules/@types/yamljs/",\
+        "packageDependencies": [\
+          ["@types/yamljs", "npm:0.2.34"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["abbrev", [\
       ["npm:3.0.1", {\
         "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/abbrev-npm-3.0.1-a34d600e50-10c0.zip/node_modules/abbrev/",\
@@ -832,6 +843,14 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["argparse", [\
+      ["npm:1.0.10", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/argparse-npm-1.0.10-528934e59d-10c0.zip/node_modules/argparse/",\
+        "packageDependencies": [\
+          ["argparse", "npm:1.0.10"],\
+          ["sprintf-js", "npm:1.0.3"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
       ["npm:2.0.1", {\
         "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/argparse-npm-2.0.1-faff7999e6-10c0.zip/node_modules/argparse/",\
         "packageDependencies": [\
@@ -2188,6 +2207,19 @@ const RAW_RUNTIME_STATE =
           ["path-is-absolute", "npm:1.0.1"]\
         ],\
         "linkType": "HARD"\
+      }],\
+      ["npm:7.2.3", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/glob-npm-7.2.3-2d866d17a5-10c0.zip/node_modules/glob/",\
+        "packageDependencies": [\
+          ["fs.realpath", "npm:1.0.0"],\
+          ["glob", "npm:7.2.3"],\
+          ["inflight", "npm:1.0.6"],\
+          ["inherits", "npm:2.0.4"],\
+          ["minimatch", "npm:3.1.2"],\
+          ["once", "npm:1.4.0"],\
+          ["path-is-absolute", "npm:1.0.1"]\
+        ],\
+        "linkType": "HARD"\
       }]\
     ]],\
     ["glob-parent", [\
@@ -2947,6 +2979,7 @@ const RAW_RUNTIME_STATE =
           ["@types/nodemailer", "npm:6.4.17"],\
           ["@types/swagger-jsdoc", "npm:6.0.4"],\
           ["@types/swagger-ui-express", "npm:4.1.8"],\
+          ["@types/yamljs", "npm:0.2.34"],\
           ["auth0", "npm:4.27.0"],\
           ["aws-sdk", "npm:2.1692.0"],\
           ["axios", "npm:1.10.0"],\
@@ -2974,6 +3007,7 @@ const RAW_RUNTIME_STATE =
           ["typescript", "patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"],\
           ["winston", "npm:3.17.0"],\
           ["winston-daily-rotate-file", "virtual:6bd2b4a6b538bb2a1256263b33087b9930f335fa64ea7e4b844c463434e8624cc1ef7af2ce3a2c02b6419685d1f1523f70ce1f206758c9c016d62523c8153396#npm:5.0.0"],\
+          ["yamljs", "npm:0.3.0"],\
           ["zod", "npm:3.25.71"]\
         ],\
         "linkType": "SOFT"\
@@ -4174,6 +4208,13 @@ const RAW_RUNTIME_STATE =
       }]\
     ]],\
     ["sprintf-js", [\
+      ["npm:1.0.3", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/sprintf-js-npm-1.0.3-73f0a322fa-10c0.zip/node_modules/sprintf-js/",\
+        "packageDependencies": [\
+          ["sprintf-js", "npm:1.0.3"]\
+        ],\
+        "linkType": "HARD"\
+      }],\
       ["npm:1.1.3", {\
         "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/sprintf-js-npm-1.1.3-b99efd75b2-10c0.zip/node_modules/sprintf-js/",\
         "packageDependencies": [\
@@ -4854,6 +4895,17 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/yaml-npm-2.0.0-1-230a208429-10c0.zip/node_modules/yaml/",\
         "packageDependencies": [\
           ["yaml", "npm:2.0.0-1"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["yamljs", [\
+      ["npm:0.3.0", {\
+        "packageLocation": "../../../AppData/Local/Yarn/Berry/cache/yamljs-npm-0.3.0-b0b262e524-10c0.zip/node_modules/yamljs/",\
+        "packageDependencies": [\
+          ["argparse", "npm:1.0.10"],\
+          ["glob", "npm:7.2.3"],\
+          ["yamljs", "npm:0.3.0"]\
         ],\
         "linkType": "HARD"\
       }]\
