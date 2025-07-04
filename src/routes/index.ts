@@ -5,11 +5,6 @@ import swaggerRoute from "./swagger.route";
 
 const router = express.Router();
 
-// Health check endpoint
-router.get('/health', (req, res) => {
-  res.status(200).json({ status: 'UP', message: 'API is running' });
-});
-
 router.use('/docs', swaggerRoute)
 // Module routes
 router.use('/auth', authRoutes);

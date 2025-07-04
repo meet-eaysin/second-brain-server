@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { sendError } from '../utils/response.utils';
+import { z, ZodError } from 'zod';
+import {sendError} from "../utils/response.utils";
+import {createValidationError} from "../utils/error.utils";
+import {PaginationSchema} from "../types/error.types";
 
 // Helper function for Zod validation
 export const validate = (schema: z.ZodSchema) =>
@@ -98,3 +100,98 @@ export const validateUserUpdate = validate(userUpdateSchema);
 export const validatePasswordlessInitiate = validate(passwordlessInitiateSchema);
 export const validatePasswordlessVerify = validate(passwordlessVerifySchema);
 export const validateAuth0Callback = validate(auth0CallbackSchema);
+
+
+
+export const validateQuery = <T extends z.ZodType>(schema: T) => {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        try {
+            req.query = schema.parse(req.query);
+            next();
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const validationErrors = error.errors.map(err => ({
+                    field: err.path.join('.'),
+                    message: err.message,
+                    value: err.path.length > 0 ? get(err.path, req.query) : undefined
+                }));
+
+                const appError = createValidationError(
+                    'Query validation failed',
+                    validationErrors
+                );
+                return next(appError);
+            }
+            next(error);
+        }
+    };
+};
+
+export const validateBody = <T extends z.ZodType>(schema: T) => {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        try {
+            req.body = schema.parse(req.body);
+            next();
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const validationErrors = error.errors.map(err => ({
+                    field: err.path.join('.'),
+                    message: err.message,
+                    value: get(err.path, req.body)
+                }));
+
+                const appError = createValidationError(
+                    'Request body validation failed',
+                    validationErrors
+                );
+                return next(appError);
+            }
+            next(error);
+        }
+    };
+};
+
+export const validateParams = <T extends z.ZodType>(schema: T) => {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        try {
+            req.params = schema.parse(req.params);
+            next();
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const validationErrors = error.errors.map(err => ({
+                    field: err.path.join('.'),
+                    message: err.message,
+                    value: get(err.path, req.params)
+                }));
+
+                const appError = createValidationError(
+                    'URL parameters validation failed',
+                    validationErrors
+                );
+                return next(appError);
+            }
+            next(error);
+        }
+    };
+};
+
+// Common validation schemas
+export const CommonSchemas = {
+    mongoId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId'),
+    email: z.string().email('Invalid email format'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    pagination: PaginationSchema,
+    uuid: z.string().uuid('Invalid UUID format'),
+    url: z.string().url('Invalid URL format'),
+    positiveNumber: z.number().positive('Must be a positive number'),
+    nonEmptyString: z.string().min(1, 'Field is required').trim(),
+};
+
+function get(path: (string | number)[], obj: any): any {
+    return path.reduce((acc, key) => {
+        if (acc && typeof acc === 'object' && key in acc) {
+            return acc[key];
+        }
+        return undefined;
+    }, obj);
+}
