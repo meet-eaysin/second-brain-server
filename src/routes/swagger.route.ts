@@ -15,7 +15,7 @@ const mergedSpec = {
     ...openapiSpec,
     servers: [
         {
-            url: `http://localhost:${appConfig.port}/v1`,
+            url: `http://localhost:${appConfig.port}/api/v1`,
             description: 'Development Server',
         },
     ],

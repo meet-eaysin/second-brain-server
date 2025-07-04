@@ -1,102 +1,90 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import {
     authenticateUser,
     refreshAccessToken,
     logoutUser,
     logoutAllDevices,
-    initiatePasswordlessLogin, verifyPasswordlessLogin
+    initiatePasswordlessLogin,
+    verifyPasswordlessLogin
 } from '../services/auth.service';
-import {sendError, sendSuccess} from "../../../utils/response.utils";
-import {AuthenticatedRequest} from "../../../middlewares/auth";
-import {TLoginRequest, TUserCreateRequest} from "../../users/types/user.types";
-import {createUser, getUsersWithoutPassword} from "../../users/services/users.services";
+import { AuthenticatedRequest } from '../../../middlewares/auth';
+import { TLoginRequest, TUserCreateRequest } from '../../users/types/user.types';
+import { createUser, getUsersWithoutPassword } from '../../users/services/users.services';
+import {catchAsync} from "../../../utils/catch-async";
+import {sendSuccessResponse} from "../../../utils/response-handler.utils";
+import {createValidationError} from "../../../utils/error.utils";
 
-export const register = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const userData: TUserCreateRequest = req.body;
-        const user = await createUser(userData);
-        const userWithoutPassword = getUsersWithoutPassword([user])[0];
+export const register = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userData: TUserCreateRequest = req.body;
+    const user = await createUser(userData);
+    const userWithoutPassword = getUsersWithoutPassword([user])[0];
 
-        sendSuccess(res, 'User registered successfully', userWithoutPassword, 201);
-    } catch (error) {
-        sendError(res, 'Registration failed', 400, error instanceof Error ? error.message : 'Unknown error');
+    sendSuccessResponse(res, userWithoutPassword, 'User registered successfully', 201);
+});
+
+export const login = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const loginData: TLoginRequest = req.body;
+    const authResponse = await authenticateUser(loginData);
+
+    sendSuccessResponse(res, authResponse, 'Login successful');
+});
+
+export const refreshToken = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return next(createValidationError('Refresh token is required', {
+            refreshToken: 'This field is required'
+        }));
     }
-};
 
-export const login = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const loginData: TLoginRequest = req.body;
-        const authResponse = await authenticateUser(loginData);
+    const result = await refreshAccessToken(refreshToken);
+    sendSuccessResponse(res, result, 'Token refreshed successfully');
+});
 
-        sendSuccess(res, 'Login successful', authResponse);
-    } catch (error) {
-        sendError(res, 'Login failed', 401, error instanceof Error ? error.message : 'Unknown error');
+export const logout = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { user } = req as AuthenticatedRequest;
+    await logoutUser(user.userId);
+
+    sendSuccessResponse(res, null, 'Logged out successfully');
+});
+
+export const logoutAll = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { user } = req as AuthenticatedRequest;
+    await logoutAllDevices(user.userId);
+
+    sendSuccessResponse(res, null, 'Logged out from all devices successfully');
+});
+
+export const getProfile = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { user } = req as AuthenticatedRequest;
+    sendSuccessResponse(res, user, 'Profile retrieved successfully');
+});
+
+export const initiatePasswordless = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { email } = req.body;
+
+    if (!email) {
+        return next(createValidationError('Email is required', {
+            email: 'This field is required'
+        }));
     }
-};
 
-export const refreshToken = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { refreshToken } = req.body;
+    const result = await initiatePasswordlessLogin(email);
+    sendSuccessResponse(res, { message: result.message }, result.message);
+});
 
-        if (!refreshToken) {
-            sendError(res, 'Refresh token required', 400);
-            return;
-        }
+export const verifyPasswordless = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { email, code } = req.body;
 
-        const result = await refreshAccessToken(refreshToken);
-        sendSuccess(res, 'Token refreshed successfully', result);
-    } catch (error) {
-        sendError(res, 'Token refresh failed', 401, error instanceof Error ? error.message : 'Unknown error');
+    if (!email || !code) {
+        const errors: Record<string, string> = {};
+        if (!email) errors.email = 'This field is required';
+        if (!code) errors.code = 'This field is required';
+
+        return next(createValidationError('Email and verification code are required', errors));
     }
-};
 
-export const logout = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { user } = req as AuthenticatedRequest;
-        await logoutUser(user.userId);
-
-        sendSuccess(res, 'Logged out successfully');
-    } catch (error) {
-        sendError(res, 'Logout failed', 500, error instanceof Error ? error.message : 'Unknown error');
-    }
-};
-
-export const logoutAll = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { user } = req as AuthenticatedRequest;
-        await logoutAllDevices(user.userId);
-
-        sendSuccess(res, 'Logged out from all devices successfully');
-    } catch (error) {
-        sendError(res, 'Logout failed', 500, error instanceof Error ? error.message : 'Unknown error');
-    }
-};
-
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { user } = req as AuthenticatedRequest;
-        sendSuccess(res, 'Profile retrieved successfully', user);
-    } catch (error) {
-        sendError(res, 'Failed to get profile', 500, error instanceof Error ? error.message : 'Unknown error');
-    }
-};
-
-export const initiatePasswordless = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { email } = req.body;
-        const result = await initiatePasswordlessLogin(email);
-        sendSuccess(res, result.message);
-    } catch (error) {
-        sendError(res, 'Passwordless initiation failed', 400, error instanceof Error ? error.message : 'Unknown error');
-    }
-};
-
-export const verifyPasswordless = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { email, code } = req.body;
-        const authResponse = await verifyPasswordlessLogin(email, code);
-        sendSuccess(res, 'Passwordless login successful', authResponse);
-    } catch (error) {
-        sendError(res, 'Passwordless verification failed', 401, error instanceof Error ? error.message : 'Unknown error');
-    }
-};
+    const authResponse = await verifyPasswordlessLogin(email, code);
+    sendSuccessResponse(res, authResponse, 'Passwordless login successful');
+});
