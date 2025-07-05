@@ -87,7 +87,6 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
             versionKey: false,
             transform: (doc, ret) => {
                 delete ret._id;
-                delete ret.password;
                 return ret;
             }
         },

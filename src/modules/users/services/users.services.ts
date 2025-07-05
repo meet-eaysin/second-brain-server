@@ -87,8 +87,8 @@ export const getUserById = async (id: string): Promise<TUser | null> => {
 };
 
 export const getUserByEmail = async (email: string): Promise<TUser | null> => {
-    const user = await UserModel.findOne({email}).exec();
-    return user ? user.toJSON() : null;
+    const user = await UserModel.findByEmail(email)
+    return user ? user.toJSON() as TUser : null;
 };
 
 export const getUserByAuth0Sub = async (auth0Sub: string): Promise<TUser | null> => {

@@ -21,6 +21,7 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 
     // Find user by email with password
     const user = await getUserByEmail(email);
+    console.log("user: *(*(*(*(*(*(*(*(", user)
     if (!user) {
         throw new Error('Invalid email or password');
     }
