@@ -54,7 +54,7 @@ const envSchema = z.object({
     LINKEDIN_API_BASE_URL: z.string().url().default('https://api.linkedin.com/v2'),
 
     // Application
-    CLIENT_URL: z.string().url().default('http://localhost:3000')
+    CLIENT_URL: z.string().url().default('http://localhost:5000')
 }).passthrough();
 
 const envVars = envSchema.safeParse(process.env);

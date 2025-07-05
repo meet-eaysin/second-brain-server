@@ -16,7 +16,7 @@ export const getUserWithTokenVersion = async (userId: string): Promise<(TUser & 
     } as TUser & { tokenVersion: number } : null;
 };
 
-export const createUser = async (userData: TUserCreateRequest): Promise<TUserDocument> => {
+export const createUser = async (userData: TUserCreateRequest): Promise<TUser> => {
     // Validation (redundant since schema validates, but good for early rejection)
     if (!validateEmail(userData.email)) {
         throw new Error('Invalid email format');
@@ -50,7 +50,6 @@ export const createOrUpdateAuth0User = async (auth0Profile: {
     email_verified: boolean;
     name?: string;
 }): Promise<TUser> => {
-    // Check if user exists by auth0Sub or email
     let user = await UserModel.findOne({
         $or: [
             { auth0Sub: auth0Profile.sub },
@@ -59,7 +58,6 @@ export const createOrUpdateAuth0User = async (auth0Profile: {
     }).exec();
 
     if (!user) {
-        // Create new user
         const username = auth0Profile.name || auth0Profile.email.split('@')[0];
         user = await UserModel.create({
             email: auth0Profile.email.toLowerCase(),
@@ -68,10 +66,9 @@ export const createOrUpdateAuth0User = async (auth0Profile: {
             auth0Sub: auth0Profile.sub
         });
     } else if (user.authProvider !== EAuthProvider.AUTH0) {
-        // Update an existing user to Auth0 if they previously used local auth
         user.authProvider = EAuthProvider.AUTH0;
         user.auth0Sub = auth0Profile.sub;
-        user.password = undefined; // Remove password if they had one
+        user.password = undefined;
         await user.save();
     }
 

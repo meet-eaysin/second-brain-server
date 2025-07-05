@@ -2,12 +2,11 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const linkedinConfig = {
-    clientID: process.env.LINKEDIN_CLIENT_ID || '',
+    clientId: process.env.LINKEDIN_CLIENT_ID || '',
     clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
-    callbackURL: process.env.LINKEDIN_CALLBACK_URL || '',
-    scope: ['r_liteprofile', 'r_emailaddress', 'w_member_social'],
-    state: true
+    redirectUri: process.env.LINKEDIN_REDIRECT_URI || '',
+    scope: process.env.LINKEDIN_SCOPE || "",
+    authUrl: 'https://www.linkedin.com/oauth/v2/authorization',
+    tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
+    apiBaseUrl: 'https://api.linkedin.com/v2'
 };
-
-export const LINKEDIN_API_VERSION = '202302';
-export const LINKEDIN_API_BASE = 'https://api.linkedin.com/v2';

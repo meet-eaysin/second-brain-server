@@ -29,7 +29,7 @@ export const sendPasswordResetEmail = async (
     email: string,
     resetToken: string
 ): Promise<boolean> => {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
 
     const emailOptions: EmailOptions = {
         to: email,

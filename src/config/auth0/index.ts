@@ -26,7 +26,7 @@ export const auth0Config = {
     clientSecret: appConfig.auth0.clientSecret,
     audience: appConfig.auth0.audience,
     scope: 'openid profile email',
-    redirectUri: appConfig.auth0.redirectUri || 'http://localhost:3000/api/auth/auth0/callback',
+    redirectUri: appConfig.auth0.redirectUri || 'http://localhost:5000/api/auth/auth0/callback',
     responseType: 'code',
     grantType: 'authorization_code',
     authorizationParams: {
