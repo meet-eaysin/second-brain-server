@@ -7,7 +7,6 @@ import {googleConfig} from "../../../config/google/google";
 import {jwtConfig} from "../../../config/jwt/jwt.config";
 import {TJwtPayload} from "../../users/types/user.types";
 
-// Google OAuth Functions
 export const generateGoogleLoginUrl = (): string => {
     const state = crypto.randomBytes(32).toString('hex');
 
@@ -59,7 +58,6 @@ export const getGoogleUserProfile = async (accessToken: string): Promise<TGoogle
     return response.data;
 };
 
-// JWT Functions
 export const generateAccessToken = (payload: JwtPayload): string => {
     return jwt.sign(payload, jwtConfig.accessTokenSecret, jwtConfig.accessTokenOptions);
 };
@@ -83,7 +81,6 @@ export const extractTokenFromHeader = (authHeader: string | undefined): string |
     return authHeader.substring(7);
 };
 
-// Password Functions
 const SALT_ROUNDS = 12;
 
 export const hashPassword = async (password: string): Promise<string> => {
@@ -94,12 +91,10 @@ export const comparePassword = async (password: string, hashedPassword: string):
     return bcrypt.compare(password, hashedPassword);
 };
 
-// Generate secure random token
 export const generateSecureToken = (): string => {
     return crypto.randomBytes(32).toString('hex');
 };
 
-// Validation Functions
 export const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -115,7 +110,6 @@ export const validateUsername = (username: string): boolean => {
     return usernameRegex.test(username);
 };
 
-// Generate username from email
 export const generateUsernameFromEmail = (email: string): string => {
     const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
     return baseUsername.substring(0, 30);
