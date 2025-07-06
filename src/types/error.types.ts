@@ -46,7 +46,6 @@ export type TPaginatedResponse<T = any> = {
     };
 };
 
-// Zod schemas for validation
 export const ErrorResponseSchema = z.object({
     success: z.literal(false),
     error: z.object({

@@ -18,7 +18,6 @@ import {authenticateToken} from "../../../middlewares/auth";
 
 const router = Router();
 
-// Public routes
 router.post('/register', validateRegistration, register);
 router.post('/login', validateLogin, login);
 router.post('/refresh', refreshToken);
@@ -26,7 +25,6 @@ router.post('/refresh', refreshToken);
 router.post('/passwordless/initiate', validatePasswordlessInitiate, initiatePasswordless);
 router.post('/passwordless/verify', validatePasswordlessVerify, verifyPasswordless);
 
-// Protected routes
 router.post('/logout', authenticateToken, logout);
 router.post('/logout-all', authenticateToken, logoutAll);
 router.get('/profile', authenticateToken, getProfile);

@@ -3,18 +3,13 @@ import logger from '../logger';
 
 dotenv.config();
 
-// Mock SMS service for now - you can replace with actual Twilio implementation
-// This helps with development when you don't want to send actual SMS
-
 interface SmsData {
   to: string;
   body: string;
 }
 
-// Send SMS
 export const sendSMS = async (smsData: SmsData): Promise<boolean> => {
   try {
-    // For development/testing
     if (process.env.NODE_ENV !== 'production') {
       logger.info(`[MOCK SMS] To: ${smsData.to}, Body: ${smsData.body}`);
       return true;
@@ -41,7 +36,6 @@ export const sendSMS = async (smsData: SmsData): Promise<boolean> => {
   }
 };
 
-// SMS templates
 export const smsTemplates = {
   verification: (code: string): string => {
     return `Your verification code is: ${code}`;

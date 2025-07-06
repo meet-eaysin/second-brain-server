@@ -1,13 +1,10 @@
 import cron from 'node-cron';
 import logger from '../logger';
 
-// Example cron jobs
 const jobs = {
-  // Run every day at midnight
   dailyCleanup: cron.schedule('0 0 * * *', () => {
     try {
       logger.info('Running daily cleanup job');
-      // Add your cleanup logic here
     } catch (error) {
       logger.error('Daily cleanup job failed:', error);
     }
@@ -15,11 +12,9 @@ const jobs = {
     timezone: 'UTC'
   }),
   
-  // Run every Monday at 9am
   weeklyReport: cron.schedule('0 9 * * 1', () => {
     try {
       logger.info('Generating weekly report');
-      // Add your reporting logic here
     } catch (error) {
       logger.error('Weekly report job failed:', error);
     }
@@ -27,11 +22,9 @@ const jobs = {
     timezone: 'UTC'
   }),
   
-  // Run every 30 minutes
   syncData: cron.schedule('*/30 * * * *', () => {
     try {
       logger.info('Syncing data');
-      // Add your data syncing logic here
     } catch (error) {
       logger.error('Data sync job failed:', error);
     }
@@ -40,10 +33,8 @@ const jobs = {
   })
 };
 
-// Initialize all cron jobs
 const init = (): void => {
   try {
-    // Only start cron jobs in production
     if (process.env.NODE_ENV === 'production') {
       Object.entries(jobs).forEach(([name, job]) => {
         job.start();
@@ -58,7 +49,6 @@ const init = (): void => {
   }
 };
 
-// Stop all cron jobs
 const stop = (): void => {
   try {
     Object.entries(jobs).forEach(([name, job]) => {
@@ -71,7 +61,6 @@ const stop = (): void => {
   }
 };
 
-// Get job status
 const getStatus = () => {
   return Object.entries(jobs).reduce((status, [name]) => {
     status[name] = {
@@ -81,7 +70,6 @@ const getStatus = () => {
   }, {} as Record<string, { exists: boolean }>);
 };
 
-// Start a specific job
 const startJob = (jobName: string): boolean => {
   const job = jobs[jobName as keyof typeof jobs];
   if (job) {
@@ -93,7 +81,6 @@ const startJob = (jobName: string): boolean => {
   return false;
 };
 
-// Stop a specific job
 const stopJob = (jobName: string): boolean => {
   const job = jobs[jobName as keyof typeof jobs];
   if (job) {

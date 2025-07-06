@@ -3,6 +3,14 @@ export interface TLinkedInAuthRequest {
     state?: string;
 }
 
+export interface TLinkedInTokenResponse {
+    access_token: string;
+    expires_in: number;
+    refresh_token?: string;
+    refresh_token_expires_in?: number;
+    scope: string;
+}
+
 export interface TLinkedInProfile {
     id: string;
     firstName: {
@@ -32,20 +40,19 @@ export interface TLinkedInProfile {
         };
     };
     vanityName?: string;
-    emailAddress?: string;
 }
 
-export interface TLinkedInToken {
-    access_token: string;
-    expires_in: number;
-    refresh_token?: string;
-    refresh_token_expires_in?: number;
+export interface TLinkedInEmailResponse {
+    elements: Array<{
+        'handle~': {
+            emailAddress: string;
+        };
+    }>;
 }
 
 export interface TLinkedInPostCreate {
-    text?: string;
-    images?: string[];
-    visibility?: 'PUBLIC' | 'CONNECTIONS';
+    text: string;
+    visibility?: 'PUBLIC' | 'CONNECTIONS' | 'LOGGED_IN';
 }
 
 export interface TLinkedInFeedResponse {
@@ -53,17 +60,6 @@ export interface TLinkedInFeedResponse {
         id: string;
         text?: {
             text: string;
-        };
-        author: string;
-        created: {
-            time: number;
-        };
-        socialDetail: {
-            totalSocialActivityCounts: {
-                numLikes: number;
-                numComments: number;
-                numShares: number;
-            };
         };
         content?: {
             multiImage?: {
@@ -74,25 +70,8 @@ export interface TLinkedInFeedResponse {
             article?: {
                 title: string;
                 source: string;
-                description?: string;
+                description: string;
             };
-        };
-    }>;
-    paging?: {
-        start: number;
-        count: number;
-        total: number;
-    };
-}
-
-export interface TLinkedInUserActivity {
-    elements: Array<{
-        id: string;
-        actor: string;
-        verb: string;
-        object: string;
-        created: {
-            time: number;
         };
         socialDetail: {
             totalSocialActivityCounts: {
@@ -101,5 +80,41 @@ export interface TLinkedInUserActivity {
                 numShares: number;
             };
         };
+        created: {
+            time: number;
+        };
     }>;
+}
+
+export interface TLinkedInError {
+    error: string;
+    error_description?: string;
+    status?: number;
+}
+
+export interface TLinkedInAuthState {
+    userId: string;
+    timestamp: number;
+    nonce: string;
+}
+
+export interface TLinkedInTokenStatus {
+    needsRefresh: boolean;
+    expiresIn: number | null;
+    refreshExpiresIn: number | null;
+    isActive: boolean;
+}
+
+export interface TLinkedInPostEngagement {
+    likes: number;
+    comments: number;
+    shares: number;
+    reactions: {
+        like: number;
+        celebrate: number;
+        support: number;
+        love: number;
+        insightful: number;
+        funny: number;
+    };
 }

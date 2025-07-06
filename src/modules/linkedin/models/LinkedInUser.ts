@@ -1,11 +1,12 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 export interface ILinkedInUser extends Document {
-    userId: mongoose.Types.ObjectId;
+    userId: string;
     linkedinId: string;
     accessToken: string;
     refreshToken?: string;
     tokenExpiresAt: Date;
+    refreshTokenExpiresAt?: Date;
     profile: {
         firstName: string;
         lastName: string;
@@ -13,76 +14,76 @@ export interface ILinkedInUser extends Document {
         profilePicture?: string;
         publicProfileUrl?: string;
         emailAddress?: string;
-        location?: string;
-        industry?: string;
-        summary?: string;
-        positions?: Array<{
-            title: string;
-            company: string;
-            startDate?: Date;
-            endDate?: Date;
-            description?: string;
-        }>;
     };
     isActive: boolean;
     connectedAt: Date;
-    lastSyncAt?: Date;
+    lastSyncAt: Date;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
-const linkedInUserSchema = new Schema<ILinkedInUser>({
+const LinkedInUserSchema = new Schema<ILinkedInUser>({
     userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
+        type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     linkedinId: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     accessToken: {
         type: String,
-        required: true
+        required: true,
+        select: false // Don't include by default for security
     },
     refreshToken: {
-        type: String
+        type: String,
+        select: false // Don't include by default for security
     },
     tokenExpiresAt: {
         type: Date,
         required: true
     },
+    refreshTokenExpiresAt: {
+        type: Date
+    },
     profile: {
-        firstName: { type: String, required: true },
-        lastName: { type: String, required: true },
+        firstName: {
+            type: String,
+            required: true
+        },
+        lastName: {
+            type: String,
+            required: true
+        },
         headline: String,
         profilePicture: String,
         publicProfileUrl: String,
-        emailAddress: String,
-        location: String,
-        industry: String,
-        summary: String,
-        positions: [{
-            title: String,
-            company: String,
-            startDate: Date,
-            endDate: Date,
-            description: String
-        }]
+        emailAddress: String
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: true,
+        index: true
     },
     connectedAt: {
         type: Date,
         default: Date.now
     },
     lastSyncAt: {
-        type: Date
+        type: Date,
+        default: Date.now
     }
 }, {
     timestamps: true
 });
 
-export const LinkedInUser = mongoose.model<ILinkedInUser>('LinkedInUser', linkedInUserSchema);
+// Index for efficient queries
+LinkedInUserSchema.index({ userId: 1, isActive: 1 });
+LinkedInUserSchema.index({ tokenExpiresAt: 1 });
+
+export const LinkedInUser = model<ILinkedInUser>('LinkedInUser', LinkedInUserSchema);

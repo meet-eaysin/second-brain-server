@@ -7,20 +7,18 @@ interface EmailOptions {
 
 export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
     try {
-        // Mock implementation - replace with actual email service
         console.log('📧 Sending email:', {
             to: options.to,
             subject: options.subject,
             content: options.text || options.html,
         });
 
-        // Simulate email sending delay
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Mock success
         return true;
     } catch (error) {
-        console.error('❌ Failed to send email:', error);
+        console.error('❌ Failed to send email:', JSON.stringify(error, null, 2));
         return false;
     }
 };

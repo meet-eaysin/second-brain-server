@@ -13,11 +13,11 @@ import {} from "../../../utils/linkedin.utils";
 const router = Router();
 
 // All LinkedIn routes require authentication
-router.use(authenticateToken);
+// router.use(authenticateToken);
 
 // Connection management
 router.get('/auth/initiate', initiateAuth);
-router.post('/auth/callback', handleCallback);
+router.get('/auth/callback', handleCallback);
 router.post('/disconnect', disconnect);
 router.get('/connection', getConnectionStatus);
 

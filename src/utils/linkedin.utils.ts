@@ -1,167 +1,325 @@
 import axios from 'axios';
+import crypto from 'crypto';
 import { linkedinConfig } from '../config/linkedin';
 import {
-    TLinkedInFeedResponse,
+    TLinkedInAuthState,
+    TLinkedInEmailResponse, TLinkedInError, TLinkedInFeedResponse,
     TLinkedInPostCreate,
-    TLinkedInProfile,
-    TLinkedInToken
+    TLinkedInProfile, TLinkedInTokenResponse
 } from "../modules/linkedin/types/linkedin.types";
+import logger from "../config/logger";
 
-export const generateLinkedInAuthUrl = (state?: string): string => {
-    // Ensure redirectUri has http:// prefix
-    const redirectUri = linkedinConfig.redirectUri.startsWith('http')
-        ? linkedinConfig.redirectUri
-        : `http://${linkedinConfig.redirectUri}`;
+/**
+ * Generate LinkedIn authorization URL
+ * @param state - State parameter for CSRF protection
+ * @returns LinkedIn authorization URL
+ */
+export const generateLinkedInAuthUrl = (state: string): string => {
+    const authState = createAuthState(state);
+    const encodedState = encodeURIComponent(JSON.stringify(authState));
 
-    console.log("linkedinConfig.scope++++++++++++++++++++++++++++++++", linkedinConfig.scope)
     const params = new URLSearchParams({
         response_type: 'code',
         client_id: linkedinConfig.clientId,
-        redirect_uri: redirectUri,
-        scope: linkedinConfig.scope,
-        ...(state && { state })
+        redirect_uri: linkedinConfig.redirectUri,
+        state: encodedState,
+        scope: linkedinConfig.scope
     });
 
-    return `${linkedinConfig.authUrl}?${params.toString()}`;
+    return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
 };
 
-export const verifyRedirectUri = (incomingUri: string): boolean => {
-    const expected = new URL(linkedinConfig.redirectUri);
-    const actual = new URL(incomingUri);
-
-    return expected.protocol === actual.protocol &&
-        expected.host === actual.host &&
-        expected.pathname === actual.pathname;
+/**
+ * Create authentication state for CSRF protection
+ * @param userId - User ID
+ * @returns Authentication state object
+ */
+export const createAuthState = (userId: string): TLinkedInAuthState => {
+    return {
+        userId,
+        timestamp: Date.now(),
+        nonce: crypto.randomBytes(16).toString('hex')
+    };
 };
 
-
-export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinkedInToken> => {
+/**
+ * Validate and parse state parameter
+ * @param state - State parameter from LinkedIn callback
+ * @returns Parsed authentication state
+ */
+export const validateAndParseState = (state: string): TLinkedInAuthState => {
     try {
-        const response = await axios.post(linkedinConfig.tokenUrl, {
-            grant_type: 'authorization_code',
-            code,
-            client_id: linkedinConfig.clientId,
-            client_secret: linkedinConfig.clientSecret,
-            redirect_uri: linkedinConfig.redirectUri
-        }, {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-        });
+        const decoded = decodeURIComponent(state);
+        const parsed = JSON.parse(decoded) as TLinkedInAuthState;
 
-        return response.data;
+        const now = Date.now();
+        const maxAge = 30 * 60 * 1000; // 30 minutes
+
+        if (now - parsed.timestamp > maxAge) {
+            throw new Error('State parameter expired');
+        }
+
+        return parsed;
     } catch (error) {
-        throw new Error('Failed to exchange code for token');
+        throw new Error('Invalid state parameter');
     }
 };
 
+/**
+ * Exchange authorization code for access token
+ * @param code - Authorization code from LinkedIn
+ * @returns Token response from LinkedIn
+ */
+export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinkedInTokenResponse> => {
+    try {
+        const response = await axios.post(
+            'https://www.linkedin.com/oauth/v2/accessToken',
+            {
+                grant_type: 'authorization_code',
+                code,
+                client_id: linkedinConfig.clientId,
+                client_secret: linkedinConfig.clientSecret,
+                redirect_uri: linkedinConfig.redirectUri
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
+
+        return response.data;
+    } catch (error: any) {
+        throw handleLinkedInError(error);
+    }
+};
+
+/**
+ * Get LinkedIn profile information
+ * @param accessToken - LinkedIn access token
+ * @returns LinkedIn profile data
+ */
 export const getLinkedInProfile = async (accessToken: string): Promise<TLinkedInProfile> => {
     try {
-        const response = await axios.get(`${linkedinConfig.apiBaseUrl}/people/~:(id,firstName,lastName,headline,profilePicture(displayImage~:playableStreams),vanityName)`, {
+        const response = await axios.get('https://api.linkedin.com/v2/me', {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
         });
 
         return response.data;
-    } catch (error) {
-        throw new Error('Failed to fetch LinkedIn profile');
+    } catch (error: any) {
+        throw handleLinkedInError(error);
     }
 };
 
+/**
+ * Get LinkedIn email address
+ * @param accessToken - LinkedIn access token
+ * @returns Email address
+ */
 export const getLinkedInEmail = async (accessToken: string): Promise<string> => {
     try {
-        const response = await axios.get(`${linkedinConfig.apiBaseUrl}/emailAddress?q=members&projection=(elements*(handle~))`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
+        const response = await axios.get(
+            'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
             }
-        });
+        );
 
-        return response.data.elements[0]['handle~'].emailAddress;
-    } catch (error) {
-        throw new Error('Failed to fetch LinkedIn email');
+        const data = response.data as TLinkedInEmailResponse;
+        return data.elements[0]['handle~'].emailAddress;
+    } catch (error: any) {
+        throw handleLinkedInError(error);
     }
 };
 
-export const getLinkedInFeed = async (accessToken: string, start: number = 0, count: number = 10): Promise<TLinkedInFeedResponse> => {
+/**
+ * Get LinkedIn user feed
+ * @param accessToken - LinkedIn access token
+ * @returns User feed data
+ */
+export const getLinkedInFeed = async (accessToken: string): Promise<TLinkedInFeedResponse> => {
     try {
-        const response = await axios.get(`${linkedinConfig.apiBaseUrl}/shares`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            },
-            params: {
-                q: 'owners',
-                owners: 'urn:li:person:current',
-                start,
-                count,
-                sortBy: 'CREATED'
+        const profile = await getLinkedInProfile(accessToken);
+
+        const response = await axios.get(
+            `https://api.linkedin.com/v2/shares?q=owners&owners=urn:li:person:${profile.id}&sortBy=CREATED&count=50`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
             }
-        });
+        );
 
         return response.data;
-    } catch (error) {
-        throw new Error('Failed to fetch LinkedIn feed');
+    } catch (error: any) {
+        throw handleLinkedInError(error);
     }
 };
 
-export const createLinkedInPost = async (accessToken: string, postData: TLinkedInPostCreate): Promise<any> => {
+/**
+ * Create a LinkedIn post
+ * @param accessToken - LinkedIn access token
+ * @param postData - Post data
+ * @returns Created post data
+ */
+export const createLinkedInPost = async (
+    accessToken: string,
+    postData: TLinkedInPostCreate
+): Promise<{ id: string }> => {
     try {
-        const response = await axios.post(`${linkedinConfig.apiBaseUrl}/shares`, {
-            author: 'urn:li:person:current',
-            lifecycleState: 'PUBLISHED',
-            specificContent: {
-                'com.linkedin.ugc.ShareContent': {
-                    shareCommentary: {
-                        text: postData.text
-                    },
-                    shareMediaCategory: 'NONE'
+        const profile = await getLinkedInProfile(accessToken);
+
+        const response = await axios.post(
+            'https://api.linkedin.com/v2/shares',
+            {
+                content: {
+                    contentEntities: [],
+                    title: postData.text.substring(0, 200)
+                },
+                distribution: {
+                    linkedInDistributionTarget: {
+                        visibleToGuest: postData.visibility === 'PUBLIC'
+                    }
+                },
+                owner: `urn:li:person:${profile.id}`,
+                text: {
+                    text: postData.text
                 }
             },
-            visibility: {
-                'com.linkedin.ugc.MemberNetworkVisibility': postData.visibility || 'PUBLIC'
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
             }
-        }, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        );
 
         return response.data;
-    } catch (error) {
-        throw new Error('Failed to create LinkedIn post');
+    } catch (error: any) {
+        throw handleLinkedInError(error);
     }
 };
 
+/**
+ * Like a LinkedIn post
+ * @param accessToken - LinkedIn access token
+ * @param postId - Post ID to like
+ */
 export const likeLinkedInPost = async (accessToken: string, postId: string): Promise<void> => {
     try {
-        await axios.post(`${linkedinConfig.apiBaseUrl}/socialActions/${postId}/likes`, {
-            actor: 'urn:li:person:current'
-        }, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+        const profile = await getLinkedInProfile(accessToken);
+
+        await axios.post(
+            `https://api.linkedin.com/v2/socialActions/${postId}/likes`,
+            {
+                actor: `urn:li:person:${profile.id}`
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
             }
-        });
-    } catch (error) {
-        throw new Error('Failed to like LinkedIn post');
+        );
+    } catch (error: any) {
+        throw handleLinkedInError(error);
     }
 };
 
-export const commentOnLinkedInPost = async (accessToken: string, postId: string, comment: string): Promise<void> => {
+/**
+ * Comment on a LinkedIn post
+ * @param accessToken - LinkedIn access token
+ * @param postId - Post ID to comment on
+ * @param comment - Comment text
+ */
+export const commentOnLinkedInPost = async (
+    accessToken: string,
+    postId: string,
+    comment: string
+): Promise<void> => {
     try {
-        await axios.post(`${linkedinConfig.apiBaseUrl}/socialActions/${postId}/comments`, {
-            actor: 'urn:li:person:current',
-            message: {
-                text: comment
+        const profile = await getLinkedInProfile(accessToken);
+
+        await axios.post(
+            `https://api.linkedin.com/v2/socialActions/${postId}/comments`,
+            {
+                actor: `urn:li:person:${profile.id}`,
+                message: {
+                    text: comment
+                }
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
             }
-        }, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (error) {
-        throw new Error('Failed to comment on LinkedIn post');
+        );
+    } catch (error: any) {
+        throw handleLinkedInError(error);
     }
+};
+
+/**
+ * Refresh LinkedIn access token
+ * @param refreshToken - LinkedIn refresh token
+ * @returns New token response
+ */
+export const refreshLinkedInToken = async (refreshToken: string): Promise<TLinkedInTokenResponse> => {
+    try {
+        const response = await axios.post(
+            'https://www.linkedin.com/oauth/v2/accessToken',
+            {
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+                client_id: linkedinConfig.clientId,
+                client_secret: linkedinConfig.clientSecret
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
+
+        return response.data;
+    } catch (error: any) {
+        throw handleLinkedInError(error);
+    }
+};
+
+/**
+ * Check if token is expired
+ * @param expiresAt - Token expiration date
+ * @returns True if token is expired or about to expire
+ */
+export const isTokenExpired = (expiresAt: Date): boolean => {
+    const now = new Date();
+    const buffer = 5 * 60 * 1000; // 5 minutes buffer
+    return now.getTime() >= (expiresAt.getTime() - buffer);
+};
+
+/**
+ * Handle LinkedIn API errors
+ * @param error - Error object
+ * @returns Standardized error
+ */
+export const handleLinkedInError = (error: any): Error => {
+    if (error.response) {
+        const linkedInError = error.response.data as TLinkedInError;
+        const message = linkedInError.error_description || linkedInError.error || 'LinkedIn API error';
+        const newError = new Error(message);
+        (newError as any).status = error.response.status;
+        return newError;
+    }
+
+    if (error.request) {
+        return new Error('No response from LinkedIn API');
+    }
+
+    return error;
 };

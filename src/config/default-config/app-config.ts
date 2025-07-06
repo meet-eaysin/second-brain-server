@@ -2,21 +2,17 @@ import 'dotenv/config';
 import { z } from 'zod';
 
 const envSchema = z.object({
-    // Server Configuration
     NODE_ENV: z.enum(['production', 'development', 'test']).default('development'),
     PORT: z.coerce.number().default(5000),
     BaseURL: z.string().url().default('http://localhost:5000'),
 
-    // Database
     MONGO_URI: z.string().min(1, "MongoDB URI is required"),
 
-    // Authentication
     ACCESS_TOKEN_SECRET: z.string().min(32, "Access token secret must be at least 32 characters"),
     REFRESH_TOKEN_SECRET: z.string().min(32, "Refresh token secret must be at least 32 characters"),
     ACCESS_TOKEN_EXPIRY: z.string().default('15m'),
     REFRESH_TOKEN_EXPIRY: z.string().default('7d'),
 
-    // Email Configuration
     EMAIL_SERVICE: z.string().default('gmail'),
     EMAIL_HOST: z.string().default('smtp.gmail.com'),
     EMAIL_PORT: z.coerce.number().default(587),
@@ -24,18 +20,15 @@ const envSchema = z.object({
     EMAIL_PASS: z.string(),
     EMAIL_FROM: z.string().email(),
 
-    // AWS S3 Configuration
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     AWS_BUCKET_NAME: z.string().optional(),
     AWS_REGION: z.string().optional(),
 
-    // Twilio Configuration
     TWILIO_ACCOUNT_SID: z.string().optional(),
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_PHONE_NUMBER: z.string().optional(),
 
-    // Auth0 Configuration
     AUTH0_DOMAIN: z.string().optional(),
     AUTH0_CLIENT_ID: z.string().optional(),
     AUTH0_CLIENT_SECRET: z.string().optional(),
@@ -46,14 +39,12 @@ const envSchema = z.object({
     AUTH0_PASSWORDLESS_SUBJECT: z.string().optional(),
     AUTH0_PASSWORDLESS_METHOD: z.enum(['link', 'code']).default('link'),
 
-    // LinkedIn Configuration
     LINKEDIN_CLIENT_ID: z.string().optional(),
     LINKEDIN_CLIENT_SECRET: z.string().optional(),
     LINKEDIN_CALLBACK_URL: z.string().url().optional(),
     LINKEDIN_REDIRECT_URI: z.string().url().optional(),
     LINKEDIN_API_BASE_URL: z.string().url().default('https://api.linkedin.com/v2'),
 
-    // Application
     CLIENT_URL: z.string().url().default('http://localhost:5000')
 }).passthrough();
 
@@ -64,7 +55,6 @@ if (!envVars.success) {
 }
 
 export const appConfig = {
-    // Application Info
     APPLICATION_NAME: 'Sync-Workbench',
     versionPrefix: '/v1/',
     env: envVars.data.NODE_ENV,
@@ -73,7 +63,6 @@ export const appConfig = {
     clientUrl: envVars.data.CLIENT_URL,
     API_DOCS_URL: '/api-docs',
 
-    // Database
     mongoose: {
         url: envVars.data.MONGO_URI,
         options: {
@@ -84,7 +73,6 @@ export const appConfig = {
         }
     },
 
-    // Authentication
     jwt: {
         accessTokenSecret: envVars.data.ACCESS_TOKEN_SECRET,
         accessExpiration: envVars.data.ACCESS_TOKEN_EXPIRY,
@@ -97,7 +85,6 @@ export const appConfig = {
         }
     },
 
-    // Email
     email: {
         service: envVars.data.EMAIL_SERVICE,
         host: envVars.data.EMAIL_HOST,
@@ -109,7 +96,6 @@ export const appConfig = {
         from: envVars.data.EMAIL_FROM
     },
 
-    // AWS
     aws: {
         accessKeyId: envVars.data.AWS_ACCESS_KEY_ID,
         secretAccessKey: envVars.data.AWS_SECRET_ACCESS_KEY,
@@ -117,14 +103,12 @@ export const appConfig = {
         region: envVars.data.AWS_REGION
     },
 
-    // Twilio
     twilio: {
         accountSid: envVars.data.TWILIO_ACCOUNT_SID,
         authToken: envVars.data.TWILIO_AUTH_TOKEN,
         phoneNumber: envVars.data.TWILIO_PHONE_NUMBER
     },
 
-    // Auth0
     auth0: {
         domain: envVars.data.AUTH0_DOMAIN,
         clientId: envVars.data.AUTH0_CLIENT_ID,
@@ -137,7 +121,6 @@ export const appConfig = {
         passwordlessMethod: envVars.data.AUTH0_PASSWORDLESS_METHOD,
     },
 
-    // LinkedIn
     linkedin: {
         clientId: envVars.data.LINKEDIN_CLIENT_ID,
         clientSecret: envVars.data.LINKEDIN_CLIENT_SECRET,

@@ -1,13 +1,12 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 export interface ILinkedInPost extends Document {
-    userId: mongoose.Types.ObjectId;
-    linkedinUserId: mongoose.Types.ObjectId;
+    userId: string;
+    linkedinUserId: Schema.Types.ObjectId;
     postId: string;
     content: {
         text?: string;
         images?: string[];
-        videos?: string[];
         articles?: Array<{
             title: string;
             url: string;
@@ -34,15 +33,16 @@ export interface ILinkedInPost extends Document {
     };
     publishedAt: Date;
     isUserPost: boolean;
-    visibility: 'PUBLIC' | 'CONNECTIONS' | 'PRIVATE';
-    lastSyncAt: Date;
+    visibility: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
-const linkedInPostSchema = new Schema<ILinkedInPost>({
+const LinkedInPostSchema = new Schema<ILinkedInPost>({
     userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        type: String,
+        required: true,
+        index: true
     },
     linkedinUserId: {
         type: Schema.Types.ObjectId,
@@ -52,12 +52,12 @@ const linkedInPostSchema = new Schema<ILinkedInPost>({
     postId: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     content: {
         text: String,
         images: [String],
-        videos: [String],
         articles: [{
             title: String,
             url: String,
@@ -65,21 +65,51 @@ const linkedInPostSchema = new Schema<ILinkedInPost>({
         }]
     },
     author: {
-        name: { type: String, required: true },
+        name: {
+            type: String,
+            required: true
+        },
         profileUrl: String,
         profilePicture: String
     },
     engagement: {
-        likes: { type: Number, default: 0 },
-        comments: { type: Number, default: 0 },
-        shares: { type: Number, default: 0 },
+        likes: {
+            type: Number,
+            default: 0
+        },
+        comments: {
+            type: Number,
+            default: 0
+        },
+        shares: {
+            type: Number,
+            default: 0
+        },
         reactions: {
-            like: { type: Number, default: 0 },
-            celebrate: { type: Number, default: 0 },
-            support: { type: Number, default: 0 },
-            love: { type: Number, default: 0 },
-            insightful: { type: Number, default: 0 },
-            funny: { type: Number, default: 0 }
+            like: {
+                type: Number,
+                default: 0
+            },
+            celebrate: {
+                type: Number,
+                default: 0
+            },
+            support: {
+                type: Number,
+                default: 0
+            },
+            love: {
+                type: Number,
+                default: 0
+            },
+            insightful: {
+                type: Number,
+                default: 0
+            },
+            funny: {
+                type: Number,
+                default: 0
+            }
         }
     },
     publishedAt: {
@@ -92,15 +122,16 @@ const linkedInPostSchema = new Schema<ILinkedInPost>({
     },
     visibility: {
         type: String,
-        enum: ['PUBLIC', 'CONNECTIONS', 'PRIVATE'],
+        enum: ['PUBLIC', 'CONNECTIONS', 'LOGGED_IN'],
         default: 'PUBLIC'
-    },
-    lastSyncAt: {
-        type: Date,
-        default: Date.now
     }
 }, {
     timestamps: true
 });
 
-export const LinkedInPost = mongoose.model<ILinkedInPost>('LinkedInPost', linkedInPostSchema);
+// Indexes for efficient queries
+LinkedInPostSchema.index({ userId: 1, publishedAt: -1 });
+LinkedInPostSchema.index({ postId: 1 });
+LinkedInPostSchema.index({ linkedinUserId: 1 });
+
+export const LinkedInPost = model<ILinkedInPost>('LinkedInPost', LinkedInPostSchema);

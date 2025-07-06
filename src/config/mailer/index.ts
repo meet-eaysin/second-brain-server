@@ -4,7 +4,6 @@ import logger from '../logger';
 
 dotenv.config();
 
-// Email config interface
 interface EmailConfig {
   service: string;
   host: string;
@@ -16,7 +15,6 @@ interface EmailConfig {
   };
 }
 
-// Email data interface
 interface EmailData {
   to: string | string[];
   subject: string;
@@ -29,7 +27,6 @@ interface EmailData {
   }>;
 }
 
-// Create transporter
 const createTransporter = () => {
   const config: EmailConfig = {
     service: process.env.EMAIL_SERVICE || 'gmail',
@@ -45,7 +42,6 @@ const createTransporter = () => {
   return nodemailer.createTransport(config);
 };
 
-// Send email
 export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
   try {
     const transporter = createTransporter();
@@ -72,7 +68,6 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
   }
 };
 
-// Email templates
 export const emailTemplates = {
   welcome: (name: string): string => {
     return `

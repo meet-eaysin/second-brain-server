@@ -2,7 +2,6 @@ import winston from 'winston';
 import 'winston-daily-rotate-file';
 import path from 'path';
 
-// Define the custom settings for each transport
 const options = {
   file: {
     level: 'info',
@@ -29,12 +28,10 @@ const options = {
   }
 };
 
-// Define different transports for the logger
 const transports: winston.transport[] = [
   new winston.transports.Console(options.console)
 ];
 
-// Add file transports only in production
 if (process.env.NODE_ENV === 'production') {
   transports.push(
     new winston.transports.DailyRotateFile(options.file),
@@ -42,7 +39,6 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
-// Instantiate a new Winston logger with the settings defined above
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
   format: winston.format.combine(
@@ -50,10 +46,9 @@ const logger = winston.createLogger({
     winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
   ),
   transports,
-  exitOnError: false // Do not exit on handled exceptions
+  exitOnError: false
 });
 
-// Create a stream object with a 'write' function that will be used by morgan
 export const stream = {
   write: (message: string) => {
     logger.info(message.trim());

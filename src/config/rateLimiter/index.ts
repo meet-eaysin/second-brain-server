@@ -31,7 +31,6 @@ export const createRateLimiter = (windowMs: number, max: number, message?: strin
   });
 };
 
-// Default rate limiters
-export const generalLimiter = createRateLimiter(15 * 60 * 1000, 100); // 100 requests per 15 minutes
-export const authLimiter = createRateLimiter(15 * 60 * 1000, 5); // 5 requests per 15 minutes for auth routes
+export const generalLimiter = createRateLimiter(15 * 60 * 1000, 100);
+export const authLimiter = createRateLimiter(15 * 60 * 1000, 5);
 export const strictLimiter = createRateLimiter(15 * 60 * 1000, 10);

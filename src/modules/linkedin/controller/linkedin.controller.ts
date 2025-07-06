@@ -24,7 +24,7 @@ export const initiateAuth = catchAsync(async (req: Request, res: Response, next:
 
 export const handleCallback = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
-    const { code, state } = req.body;
+    const { code, state } = req.query as Record<string, string>;
 
     if (!code) {
         return next(createValidationError('Authorization code is required', {
@@ -32,7 +32,7 @@ export const handleCallback = catchAsync(async (req: Request, res: Response, nex
         }));
     }
 
-    const result = await handleLinkedInCallback(user.userId, { code, state });
+    const result = await handleLinkedInCallback("user.userId", { code, state });
     sendSuccessResponse(res, result, 'LinkedIn connected successfully');
 });
 

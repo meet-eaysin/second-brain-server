@@ -16,16 +16,12 @@ import {createAppError} from "./utils/error.utils";
 import {Request, Response} from "express";
 import {notFound} from "./middlewares/not-found";
 
-// Load environment variables
 dotenv.config();
 
 const app: Express = express();
 
-// Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
-// Middleware
-// Body parsing middleware with enhanced validation
 app.use(express.json({
     limit: '10mb',
     verify: (req: Request, res: Response, buf: Buffer) => {
@@ -50,7 +46,6 @@ app.use(cors({
     origin: (origin, callback) => {
         const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5000'];
 
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
         if (allowedOrigins.includes(origin)) {
@@ -84,7 +79,6 @@ app.use(express.urlencoded({
     parameterLimit: 1000
 }));
 
-// Rate limiting
 app.use(generalLimiter);
 
 // Auth0 middleware
@@ -102,11 +96,9 @@ app.use(generalLimiter);
 //     }
 // }));
 
-// Encryption middleware - Apply to all routes
 app.use(encryptRequest);
 app.use(encryptResponse);
 
-// Health check route (before API routes)
 app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({
         success: true,
@@ -119,7 +111,6 @@ app.get('/health', (req: Request, res: Response) => {
     });
 });
 
-// Main Routes - all API routes will be under /api
 app.get('/api', (req: Request, res: Response) => {
     res.status(200).json({
         success: true,
@@ -138,7 +129,6 @@ app.use('/api/v1', routes);
 
 app.use(notFound);
 
-// Global error handler - This must be the LAST middleware
 app.use(errorHandler);
 
 export default app;
