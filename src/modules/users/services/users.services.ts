@@ -1,23 +1,15 @@
-import {TUserDocument, UserModel} from "../models/users.model";
-import {validateEmail, validatePassword, validateUsername} from "../../auth/utils/auth.utils";
-import {EAuthProvider, TUser, TUserCreateRequest, TUserRole, TUserUpdateRequest} from "../types/user.types";
+import { TUser, TUserCreateRequest, TUserUpdateRequest, EAuthProvider, TUserRole } from '../types/user.types';
+import {
+    generateUsernameFromEmail,
+    validateEmail,
+    validatePassword,
+    validateUsername
+} from "../../auth/utils/auth.utils";
+import {UserModel} from "../models/users.model";
+import {TGoogleUserProfile} from "../../auth/types/auth.types";
 
-export const incrementTokenVersion = async (userId: string): Promise<void> => {
-    await UserModel.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } }).exec();
-};
-
-export const getUserWithTokenVersion = async (userId: string): Promise<(TUser & { tokenVersion: number }) | null> => {
-    const user = await UserModel.findById(userId).select('+tokenVersion').lean().exec();
-    return user ? {
-        ...user,
-        id: user._id.toString(),
-        _id: undefined,
-        __v: undefined
-    } as TUser & { tokenVersion: number } : null;
-};
 
 export const createUser = async (userData: TUserCreateRequest): Promise<TUser> => {
-    // Validation (redundant since schema validates, but good for early rejection)
     if (!validateEmail(userData.email)) {
         throw new Error('Invalid email format');
     }
@@ -32,100 +24,102 @@ export const createUser = async (userData: TUserCreateRequest): Promise<TUser> =
         }
     }
 
+    const existingUser = await UserModel.findOne({
+        $or: [{ email: userData.email }, { username: userData.username }]
+    });
+
+    if (existingUser) {
+        throw new Error('User already exists with this email or username');
+    }
+
     const newUser = await UserModel.create({
-        email: userData.email,
-        username: userData.username,
-        password: userData.password,
+        ...userData,
         role: userData.role || TUserRole.USER,
         authProvider: userData.authProvider || EAuthProvider.LOCAL,
-        auth0Sub: userData.auth0Sub
+        isEmailVerified: userData.isEmailVerified || false
     });
 
     return newUser.toJSON();
 };
 
-export const createOrUpdateAuth0User = async (auth0Profile: {
-    sub: string;
-    email: string;
-    email_verified: boolean;
-    name?: string;
-}): Promise<TUser> => {
+export const createOrUpdateGoogleUser = async (googleProfile: TGoogleUserProfile): Promise<TUser> => {
     let user = await UserModel.findOne({
         $or: [
-            { auth0Sub: auth0Profile.sub },
-            { email: auth0Profile.email.toLowerCase() }
+            { googleId: googleProfile.id },
+            { email: googleProfile.email }
         ]
-    }).exec();
+    });
 
-    if (!user) {
-        const username = auth0Profile.name || auth0Profile.email.split('@')[0];
-        user = await UserModel.create({
-            email: auth0Profile.email.toLowerCase(),
-            username,
-            authProvider: EAuthProvider.AUTH0,
-            auth0Sub: auth0Profile.sub
-        });
-    } else if (user.authProvider !== EAuthProvider.AUTH0) {
-        user.authProvider = EAuthProvider.AUTH0;
-        user.auth0Sub = auth0Profile.sub;
-        user.password = undefined;
+    if (user) {
+        if (user.authProvider !== EAuthProvider.GOOGLE) {
+            throw new Error('An account with this email already exists with a different login method');
+        }
+
+        // Update existing Google user
+        user.firstName = googleProfile.given_name || user.firstName;
+        user.lastName = googleProfile.family_name || user.lastName;
+        user.profilePicture = googleProfile.picture || user.profilePicture;
+        user.lastLoginAt = new Date();
+        user.isEmailVerified = googleProfile.verified_email || user.isEmailVerified;
+
         await user.save();
-    }
+        return user.toJSON();
+    } else {
+        // Create new Google user
+        const username = await generateUniqueUsername(googleProfile.email);
 
-    return {
-        ...user.toJSON(),
-        id: user.id.toString(),
-    };
+        const newUser = await UserModel.create({
+            email: googleProfile.email,
+            username,
+            firstName: googleProfile.given_name || '',
+            lastName: googleProfile.family_name || '',
+            authProvider: EAuthProvider.GOOGLE,
+            googleId: googleProfile.id,
+            isEmailVerified: googleProfile.verified_email || false,
+            profilePicture: googleProfile.picture,
+            isActive: true,
+            lastLoginAt: new Date()
+        });
+
+        return newUser.toJSON();
+    }
 };
 
 export const getUserById = async (id: string): Promise<TUser | null> => {
-    const user = await UserModel.findById(id).exec();
+    const user = await UserModel.findById(id);
     return user ? user.toJSON() : null;
 };
 
 export const getUserByEmail = async (email: string): Promise<TUser | null> => {
-    const user = await UserModel.findByEmail(email)
-    return user ? user.toJSON() as TUser : null;
-};
-
-export const getUserByAuth0Sub = async (auth0Sub: string): Promise<TUser | null> => {
-    const user = await UserModel.findOne({auth0Sub}).exec();
+    const user = await UserModel.findOne({email});
     return user ? user.toJSON() : null;
 };
 
-export const getUserByUsername = async (username: string): Promise<TUser | null> => {
-    const user = await UserModel.findOne({username}).exec();
+export const getUserByGoogleId = async (googleId: string): Promise<TUser | null> => {
+    const user = await UserModel.findOne({ googleId });
     return user ? user.toJSON() : null;
 };
 
-export const updateUser = async (id: string, updateData: TUserUpdateRequest): Promise<TUserDocument | null> => {
-    const user = await UserModel.findById(id).exec();
+export const getUserWithTokenVersion = async (userId: string): Promise<(TUser & { tokenVersion: number }) | null> => {
+    const user = await UserModel.findById(userId).select('+tokenVersion');
+    return user ? user.toJSON() as (TUser & { tokenVersion: number }) : null;
+};
+
+export const updateUser = async (id: string, updateData: TUserUpdateRequest): Promise<TUser | null> => {
+    const user = await UserModel.findById(id);
     if (!user) return null;
-
-    if (updateData.email && !validateEmail(updateData.email)) {
-        throw new Error('Invalid email format');
-    }
 
     if (updateData.username && !validateUsername(updateData.username)) {
         throw new Error('Invalid username format');
     }
 
-    if (updateData.password && !validatePassword(updateData.password)) {
-        throw new Error('Invalid password format');
-    }
-
     Object.assign(user, updateData);
-    if (updateData.password) {
-        user.password = updateData.password; // Pre-save hook will hash it
-    }
-
     await user.save();
     return user.toJSON();
 };
 
-
 export const deleteUser = async (id: string): Promise<boolean> => {
-    const result = await UserModel.deleteOne({ _id: id }).exec();
+    const result = await UserModel.deleteOne({ _id: id });
     return result.deletedCount === 1;
 };
 
@@ -144,6 +138,24 @@ export const getAllUsers = async (page: number = 1, limit: number = 10): Promise
     };
 };
 
+export const incrementTokenVersion = async (userId: string): Promise<void> => {
+    await UserModel.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
+};
+
 export const getUsersWithoutPassword = (userList: TUser[]): Omit<TUser, 'password'>[] => {
     return userList.map(({ password, ...user }) => user);
+};
+
+// Helper function to generate unique username
+const generateUniqueUsername = async (email: string): Promise<string> => {
+    let baseUsername = generateUsernameFromEmail(email);
+    let username = baseUsername;
+    let counter = 1;
+
+    while (await UserModel.findByUsername(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+    }
+
+    return username;
 };

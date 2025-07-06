@@ -1,106 +1,90 @@
-import { Request, Response } from 'express';
-import {sendError, sendSuccess} from "../../../utils/response.utils";
-import {deleteUser, getAllUsers, getUserById, getUsersWithoutPassword, updateUser} from "../services/users.services";
+import { Request, Response, NextFunction } from 'express';
+import { TUserUpdateRequest } from '../types/user.types';
+import {
+    getUserById,
+    updateUser,
+    deleteUser,
+    getAllUsers
+} from '../services/users.services';
+import {catchAsync} from "../../../utils/catch-async";
+import {createNotFoundError} from "../../../utils/error.utils";
+import {sendSuccessResponse} from "../../../utils/response-handler.utils";
 import {AuthenticatedRequest} from "../../../middlewares/auth";
-import {TUserUpdateRequest} from "../types/user.types";
 
-export const getUsers = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
+export const getUser = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const user = await getUserById(id);
 
-        const result = await getAllUsers(page, limit);
-        const usersWithoutPassword = getUsersWithoutPassword(result.users);
-
-        sendSuccess(res, 'Users retrieved successfully', {
-            users: usersWithoutPassword,
-            pagination: {
-                page,
-                limit,
-                total: result.total,
-                totalPages: Math.ceil(result.total / limit)
-            }
-        });
-    } catch (error) {
-        sendError(res, 'Failed to get users', 500, error instanceof Error ? error.message : 'Unknown error');
+    if (!user) {
+        return next(createNotFoundError('User not found'));
     }
-};
 
-export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const user = await getUserById(id);
+    sendSuccessResponse(res, user, 'User retrieved successfully');
+});
 
-        if (!user) {
-            sendError(res, 'User not found', 404);
-            return;
-        }
+export const updateProfile = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { user } = req as AuthenticatedRequest;
+    const updateData: TUserUpdateRequest = req.body;
 
-        const userWithoutPassword = getUsersWithoutPassword([user])[0];
-        sendSuccess(res, 'User retrieved successfully', userWithoutPassword);
-    } catch (error) {
-        sendError(res, 'Failed to get user', 500, error instanceof Error ? error.message : 'Unknown error');
+    const updatedUser = await updateUser(user.userId, updateData);
+
+    if (!updatedUser) {
+        return next(createNotFoundError('User not found'));
     }
-};
 
-export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const updateData: TUserUpdateRequest = req.body;
-        const { user: currentUser } = req as AuthenticatedRequest;
+    sendSuccessResponse(res, updatedUser, 'Profile updated successfully');
+});
 
-        // Users can only update their own profile unless they're admin
-        if (currentUser.role !== 'admin' && currentUser.userId !== id) {
-            sendError(res, 'Insufficient permissions', 403);
-            return;
-        }
+export const deleteAccount = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { user } = req as AuthenticatedRequest;
+    const deleted = await deleteUser(user.userId);
 
-        // Non-admin users cannot change role or isActive
-        if (currentUser.role !== 'admin') {
-            delete updateData.role;
-            delete updateData.isActive;
-        }
-
-        const updatedUser = await updateUser(id, updateData);
-
-        if (!updatedUser) {
-            sendError(res, 'User not found', 404);
-            return;
-        }
-
-        const userWithoutPassword = getUsersWithoutPassword([updatedUser])[0];
-        sendSuccess(res, 'User updated successfully', userWithoutPassword);
-    } catch (error) {
-        sendError(res, 'Failed to update user', 400, error instanceof Error ? error.message : 'Unknown error');
+    if (!deleted) {
+        return next(createNotFoundError('User not found'));
     }
-};
 
-export const deleteUserProfile = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { id } = req.params;
-        const { user: currentUser } = req as AuthenticatedRequest;
+    sendSuccessResponse(res, null, 'Account deleted successfully');
+});
 
-        // Users can only delete their own profile unless they're admin
-        if (currentUser.role !== 'admin' && currentUser.userId !== id) {
-            sendError(res, 'Insufficient permissions', 403);
-            return;
-        }
+export const getUsers = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
 
-        // Admin cannot delete their own account
-        if (currentUser.role === 'admin' && currentUser.userId === id) {
-            sendError(res, 'Admin cannot delete their own account', 400);
-            return;
-        }
+    const result = await getAllUsers(page, limit);
+    sendSuccessResponse(res, result, 'Users retrieved successfully');
+});
 
-        const deleted = await deleteUser(id);
+export const getUserDetails = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const user = await getUserById(id);
 
-        if (!deleted) {
-            sendError(res, 'User not found', 404);
-            return;
-        }
-
-        sendSuccess(res, 'User deleted successfully');
-    } catch (error) {
-        sendError(res, 'Failed to delete user', 500, error instanceof Error ? error.message : 'Unknown error');
+    if (!user) {
+        return next(createNotFoundError('User not found'));
     }
-};
+
+    sendSuccessResponse(res, user, 'User details retrieved successfully');
+});
+
+export const updateUserById = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const updateData: TUserUpdateRequest = req.body;
+
+    const updatedUser = await updateUser(id, updateData);
+
+    if (!updatedUser) {
+        return next(createNotFoundError('User not found'));
+    }
+
+    sendSuccessResponse(res, updatedUser, 'User updated successfully');
+});
+
+export const deleteUserById = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const deleted = await deleteUser(id);
+
+    if (!deleted) {
+        return next(createNotFoundError('User not found'));
+    }
+
+    sendSuccessResponse(res, null, 'User deleted successfully');
+});

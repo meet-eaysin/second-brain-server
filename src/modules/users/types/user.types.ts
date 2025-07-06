@@ -1,37 +1,46 @@
+export enum EAuthProvider {
+    LOCAL = 'local',
+    GOOGLE = 'google'
+}
+
+export enum TUserRole {
+    USER = 'user',
+    ADMIN = 'admin',
+    MODERATOR = 'moderator'
+}
+
 export type TUser = {
     id: string;
     email: string;
-    username: string;
     password?: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
     role: TUserRole;
-    isActive: boolean;
     authProvider: EAuthProvider;
-    auth0Sub?: string;
-    tokenVersion?: number;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
-
-export enum EAuthProvider {
-    LOCAL = 'local',
-    AUTH0 = 'auth0'
+    googleId?: string;
+    isEmailVerified: boolean;
+    isActive: boolean;
+    profilePicture?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    lastLoginAt?: Date;
+    tokenVersion: number;
+    passwordResetToken?: string;
+    passwordResetExpires?: Date;
 }
 
 export type TUserCreateRequest = {
     email: string;
+    password?: string;
     username: string;
-    password?: string;
-    role?: TUserRole;
+    firstName?: string;
+    lastName?: string;
     authProvider?: EAuthProvider;
-    auth0Sub?: string;
-}
-
-export type TUserUpdateRequest = {
-    email?: string;
-    username?: string;
-    password?: string;
-    role?: TUserRole;
-    isActive?: boolean;
+    googleId?: string;
+    isEmailVerified?: boolean;
+    profilePicture?: string;
+    role: TUserRole
 }
 
 export type TLoginRequest = {
@@ -55,8 +64,25 @@ export type TJwtPayload = {
     exp?: number;
 }
 
-export enum TUserRole {
-    ADMIN = 'admin',
-    USER = 'user',
-    MODERATOR = 'moderator'
+export type TUserUpdateRequest = {
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    profilePicture?: string;
+    isActive?: boolean;
+    lastLoginAt?: Date;
+}
+
+export type TChangePasswordRequest = {
+    currentPassword: string;
+    newPassword: string;
+}
+
+export type TForgotPasswordRequest = {
+    email: string;
+}
+
+export type TResetPasswordRequest = {
+    token: string;
+    newPassword: string;
 }

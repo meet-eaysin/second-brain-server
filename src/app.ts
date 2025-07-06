@@ -8,19 +8,18 @@ import { errorHandler } from './middlewares/errorHandler';
 import { stream } from './config/logger';
 import routes from './routes';
 import { encryptRequest, encryptResponse } from './config/encryption';
-import {auth0Config} from "./config/auth0";
-import { auth } from 'express-openid-connect';
-import MongoStore from "connect-mongo";
 import {generalLimiter} from "./config/rateLimiter";
 import {createAppError} from "./utils/error.utils";
 import {Request, Response} from "express";
 import {notFound} from "./middlewares/not-found";
+import {validateGoogleConfig} from "./config/google/google";
 
 dotenv.config();
 
 const app: Express = express();
 
 app.set('trust proxy', 1);
+validateGoogleConfig();
 
 app.use(express.json({
     limit: '10mb',
@@ -80,21 +79,6 @@ app.use(express.urlencoded({
 }));
 
 app.use(generalLimiter);
-
-// Auth0 middleware
-// app.use(auth({
-//     issuerBaseURL: auth0Config.issuerBaseURL,
-//     baseURL: auth0Config.baseURL,
-//     clientID: auth0Config.clientID,
-//     secret: auth0Config.secret,
-//     idpLogout: true,
-//     clientSecret: auth0Config.clientSecret,
-//     authorizationParams: {
-//         response_type: auth0Config.authorizationParams.responseType,
-//         response_mode: auth0Config.authorizationParams.responseMode,
-//         scope: auth0Config.authorizationParams.scope
-//     }
-// }));
 
 app.use(encryptRequest);
 app.use(encryptResponse);

@@ -1,41 +1,71 @@
-import {sendError} from '../utils/response.utils';
-import {extractTokenFromHeader, verifyAccessToken} from "../modules/auth/utils/auth.utils";
-import {NextFunction, Request, Response} from "express"
+import { Request, Response, NextFunction } from 'express';
+import { createUnauthorizedError, createForbiddenError } from '../utils/error.utils';
 import {TJwtPayload, TUserRole} from "../modules/users/types/user.types";
+import {extractTokenFromHeader, verifyAccessToken} from "../modules/auth/utils/auth.utils";
+import {getUserById} from "../modules/users/services/users.services";
 
 export interface AuthenticatedRequest extends Request {
-  user: TJwtPayload;
+  user: TJwtPayload & { userId: string };
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
-  const token = extractTokenFromHeader(req.headers.authorization);
-
-  if (!token) {
-    sendError(res, 'Access token required', 401);
-    return;
-  }
-
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    (req as AuthenticatedRequest).user = verifyAccessToken(token);
+    const token = extractTokenFromHeader(req.headers.authorization);
 
+    if (!token) {
+      return next(createUnauthorizedError('Access token is required'));
+    }
+
+    const payload = verifyAccessToken(token);
+
+    // Verify user still exists and is active
+    const user = await getUserById(payload.userId);
+    if (!user || !user.isActive) {
+      return next(createUnauthorizedError('Invalid token'));
+    }
+
+    (req as AuthenticatedRequest).user = payload;
     next();
   } catch (error) {
-    sendError(res, 'Invalid or expired token', 401);
+    next(createUnauthorizedError('Invalid token'));
   }
 };
 
-export const requireRole = (roles: TUserRole[]) => {
+export const requireRoles = (...roles: TUserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const user = (req as AuthenticatedRequest).user;
+    const { user } = req as AuthenticatedRequest;
+
+    if (!user) {
+      return next(createUnauthorizedError('Authentication required'));
+    }
 
     if (!roles.includes(user.role)) {
-      sendError(res, 'Insufficient permissions', 403);
-      return;
+      return next(createForbiddenError('Insufficient permissions'));
     }
 
     next();
   };
 };
 
-export const requireAdmin = requireRole([TUserRole.ADMIN]);
-export const requireAdminOrModerator = requireRole([TUserRole.ADMIN, TUserRole.MODERATOR]);
+export const requireAdmin = requireRoles(TUserRole.ADMIN);
+export const requireModerator = requireRoles(TUserRole.ADMIN, TUserRole.MODERATOR);
+
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = extractTokenFromHeader(req.headers.authorization);
+
+    if (token) {
+      const payload = verifyAccessToken(token);
+      const user = await getUserById(payload.userId);
+
+      if (user && user.isActive) {
+        (req as AuthenticatedRequest).user = payload;
+      }
+    }
+
+    next();
+  } catch (error) {
+    // Continue without authentication if token is invalid
+    next();
+  }
+};

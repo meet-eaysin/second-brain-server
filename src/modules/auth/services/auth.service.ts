@@ -1,20 +1,30 @@
+import { JwtPayload } from 'jsonwebtoken';
 import {
-    createOrUpdateAuth0User, getUserByEmail,
+    TAuthResponse,
+    TLoginRequest,
+    TChangePasswordRequest,
+    TForgotPasswordRequest,
+    TResetPasswordRequest,
+    EAuthProvider
+} from '../../users/types/user.types';
+import { TRefreshTokenPayload, TGoogleUserProfile } from '../types/auth.types';
+import {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyRefreshToken,
+    exchangeGoogleCodeForToken,
+    getGoogleUserProfile,
+    generateSecureToken,
+    comparePassword
+} from '../utils/auth.utils';
+import {
+    createOrUpdateGoogleUser,
+    getUserByEmail,
     getUserWithTokenVersion,
     incrementTokenVersion
-} from "../../users/services/users.services";
-import {
-    comparePassword, exchangeCodeForToken,
-    generateAccessToken,
-    generateAuth0LoginUrl,
-    generateRefreshToken, getAuth0UserProfile,
-    sendPasswordlessEmail, verifyPasswordlessCode, verifyRefreshToken
-} from "../utils/auth.utils";
-import {JwtPayload} from "jsonwebtoken";
-import {EAuthProvider, TAuthResponse, TLoginRequest} from "../../users/types/user.types";
-import {TAuth0CallbackRequest, TAuth0LoginRequest, TRefreshTokenPayload} from "../types/auth.types";
-
-const userTokenVersions: Map<string, number> = new Map();
+} from '../../users/services/users.services';
+import {UserModel} from "../../users/models/users.model";
+import {sendEmail} from "../../../utils/email.utils";
 
 export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthResponse> => {
     const { email, password } = loginData;
@@ -29,7 +39,7 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
     }
 
     if (user.authProvider !== EAuthProvider.LOCAL) {
-        throw new Error('Please use social login for this account');
+        throw new Error('Please use Google login for this account');
     }
 
     if (!user.password) {
@@ -45,6 +55,9 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
     if (!userWithToken) {
         throw new Error('User not found');
     }
+
+    // Update last login
+    await UserModel.findByIdAndUpdate(user.id, { lastLoginAt: new Date() });
 
     const accessTokenPayload: JwtPayload = {
         userId: user.id,
@@ -71,94 +84,143 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
     };
 };
 
-export const initiateAuth0Login = async (loginData: TAuth0LoginRequest): Promise<{ loginUrl: string }> => {
-    const { email } = loginData;
+export const handleGoogleCallback = async (code: string): Promise<TAuthResponse> => {
+    const { accessToken } = await exchangeGoogleCodeForToken(code);
+    const googleProfile = await getGoogleUserProfile(accessToken);
 
-    const loginUrl = generateAuth0LoginUrl(email);
+    const user = await createOrUpdateGoogleUser(googleProfile);
 
-    return { loginUrl };
-};
-
-export const initiatePasswordlessLogin = async (email: string): Promise<{ message: string }> => {
-    try {
-        await sendPasswordlessEmail(email);
-        return { message: 'Passwordless login email sent successfully' };
-    } catch (error) {
-        throw new Error('Failed to send passwordless email');
+    if (!user.isActive) {
+        throw new Error('Account is deactivated');
     }
-};
 
-export const handleAuth0Callback = async (callbackData: TAuth0CallbackRequest): Promise<TAuthResponse> => {
-    const { code, state } = callbackData;
+    const userWithToken = await getUserWithTokenVersion(user.id);
 
-    try {
-        const accessToken = await exchangeCodeForToken(code);
+    const accessTokenPayload: JwtPayload = {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        authProvider: user.authProvider
+    };
 
-        const auth0Profile = await getAuth0UserProfile(accessToken);
+    const refreshTokenPayload: TRefreshTokenPayload = {
+        userId: user.id,
+        tokenVersion: userWithToken?.tokenVersion || 0
+    };
 
-        const user = await createOrUpdateAuth0User(auth0Profile);
+    const newAccessToken = generateAccessToken(accessTokenPayload);
+    const newRefreshToken = generateRefreshToken(refreshTokenPayload);
 
-        if (!user.isActive) {
-            throw new Error('Account is deactivated');
-        }
-
-        const userWithToken = await getUserWithTokenVersion(user.id);
-
-        const accessTokenPayload: JwtPayload = {
-            userId: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-            authProvider: user.authProvider
-        };
-
-        const refreshTokenPayload: TRefreshTokenPayload = {
-            userId: user.id,
-            tokenVersion: userWithToken?.tokenVersion || 0
-        };
-
-        const newAccessToken = generateAccessToken(accessTokenPayload);
-        const refreshToken = generateRefreshToken(refreshTokenPayload);
-
-        const { password: _, ...userWithoutPassword } = user;
-
-        return {
-            user: userWithoutPassword,
-            token: newAccessToken,
-            refreshToken
-        };
-    } catch (error) {
-        throw new Error('Auth0 callback failed');
-    }
+    return {
+        user,
+        token: newAccessToken,
+        refreshToken: newRefreshToken
+    };
 };
 
 export const refreshAccessToken = async (refreshToken: string): Promise<{ token: string }> => {
-    try {
-        const payload = verifyRefreshToken(refreshToken);
+    const payload = verifyRefreshToken(refreshToken);
 
-        const user = await getUserWithTokenVersion(payload.userId);
-        if (!user || !user.isActive) {
-            throw new Error('Invalid refresh token');
-        }
-
-        if (payload.tokenVersion !== user.tokenVersion) {
-            throw new Error('Invalid refresh token');
-        }
-
-        const accessTokenPayload: JwtPayload = {
-            userId: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-            authProvider: user.authProvider
-        };
-
-        const newAccessToken = generateAccessToken(accessTokenPayload);
-
-        return { token: newAccessToken };
-    } catch (error) {
+    const user = await getUserWithTokenVersion(payload.userId);
+    if (!user || !user.isActive) {
         throw new Error('Invalid refresh token');
     }
+
+    if (payload.tokenVersion !== user.tokenVersion) {
+        throw new Error('Invalid refresh token');
+    }
+
+    const accessTokenPayload: JwtPayload = {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        authProvider: user.authProvider
+    };
+
+    const newAccessToken = generateAccessToken(accessTokenPayload);
+
+    return { token: newAccessToken };
+};
+
+export const changePassword = async (userId: string, changePasswordData: TChangePasswordRequest): Promise<void> => {
+    const { currentPassword, newPassword } = changePasswordData;
+
+    const user = await UserModel.findById(userId).select('+password');
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    if (user.authProvider !== EAuthProvider.LOCAL) {
+        throw new Error('Cannot change password for OAuth accounts');
+    }
+
+    if (!user.password) {
+        throw new Error('No password set for this account');
+    }
+
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+        throw new Error('Current password is incorrect');
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    // Invalidate all tokens
+    await incrementTokenVersion(userId);
+};
+
+export const forgotPassword = async (forgotPasswordData: TForgotPasswordRequest): Promise<void> => {
+    const { email } = forgotPasswordData;
+
+    const user = await UserModel.findByEmail(email);
+    if (!user) {
+        // Don't reveal if user exists or not
+        return;
+    }
+
+    if (user.authProvider !== EAuthProvider.LOCAL) {
+        throw new Error('Password reset is not available for OAuth accounts');
+    }
+
+    const resetToken = generateSecureToken();
+    const resetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = resetExpires;
+    await user.save();
+
+    // Send reset email
+    await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request',
+        html: `
+            <h2>Password Reset Request</h2>
+            <p>You have requested to reset your password. Click the link below to reset it:</p>
+            <a href="${process.env.FRONTEND_URL}/reset-password?token=${resetToken}">Reset Password</a>
+            <p>This link will expire in 10 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>
+        `
+    });
+};
+
+export const resetPassword = async (resetPasswordData: TResetPasswordRequest): Promise<void> => {
+    const { token, newPassword } = resetPasswordData;
+
+    const user = await UserModel.findByResetToken(token);
+    if (!user) {
+        throw new Error('Invalid or expired reset token');
+    }
+
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    // Invalidate all tokens
+    await incrementTokenVersion(user.id);
 };
 
 export const logoutUser = async (userId: string): Promise<void> => {
@@ -167,54 +229,4 @@ export const logoutUser = async (userId: string): Promise<void> => {
 
 export const logoutAllDevices = async (userId: string): Promise<void> => {
     await incrementTokenVersion(userId);
-};
-
-export const verifyPasswordlessLogin = async (email: string, code: string): Promise<TAuthResponse> => {
-    try {
-        const accessToken = await verifyPasswordlessCode(email, code);
-
-        const auth0Profile = await getAuth0UserProfile(accessToken);
-
-        if (auth0Profile.email.toLowerCase() !== email.toLowerCase()) {
-            throw new Error('Email does not match verification code');
-        }
-
-        const user = await createOrUpdateAuth0User(auth0Profile);
-
-        if (!user.isActive) {
-            throw new Error('Account is deactivated');
-        }
-
-        const userWithToken = await getUserWithTokenVersion(user.id);
-        if (!userWithToken) {
-            throw new Error('User not found');
-        }
-
-        const accessTokenPayload: JwtPayload = {
-            userId: user.id,
-            email: user.email,
-            username: user.username,
-            role: user.role,
-            authProvider: user.authProvider
-        };
-
-        const refreshTokenPayload: TRefreshTokenPayload = {
-            userId: user.id,
-            tokenVersion: userWithToken.tokenVersion
-        };
-
-        const newAccessToken = generateAccessToken(accessTokenPayload);
-        const refreshToken = generateRefreshToken(refreshTokenPayload);
-
-        const { password: _, ...userWithoutPassword } = user;
-
-        return {
-            user: userWithoutPassword,
-            token: newAccessToken,
-            refreshToken
-        };
-    } catch (error) {
-        console.error('Passwordless verification error:', JSON.stringify(error, null, 2));
-        throw new Error('Invalid passwordless code or email');
-    }
 };

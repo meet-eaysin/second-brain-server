@@ -1,46 +1,54 @@
 import axios from 'axios';
-import {TAuth0UserProfile, TRefreshTokenPayload} from '../types/auth.types';
 import bcrypt from 'bcrypt';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import crypto from 'crypto';
+import { TGoogleUserProfile, TRefreshTokenPayload, TGoogleTokenResponse } from '../types/auth.types';
+import {googleConfig} from "../../../config/google/google";
 import {jwtConfig} from "../../../config/jwt/jwt.config";
-import {auth0Config} from "../../../config/auth0";
-import jwt, {JwtPayload} from 'jsonwebtoken';
 import {TJwtPayload} from "../../users/types/user.types";
-import {appConfig} from "../../../config/default-config/app-config";
 
-export const generateAuth0LoginUrl = (email: string): string => {
+// Google OAuth Functions
+export const generateGoogleLoginUrl = (): string => {
+    const state = crypto.randomBytes(32).toString('hex');
+
     const params = new URLSearchParams({
-        response_type: auth0Config.responseType,
-        client_id: auth0Config.clientID,
-        redirect_uri: auth0Config.redirectUri,
-        scope: auth0Config.scope,
-        connection: auth0Config.connection,
-        login_hint: email,
-        state: Buffer.from(JSON.stringify({ email, timestamp: Date.now() })).toString('base64')
+        client_id: googleConfig.clientId,
+        redirect_uri: googleConfig.redirectUri,
+        response_type: 'code',
+        scope: googleConfig.scope,
+        access_type: 'offline',
+        prompt: 'consent',
+        state: state
     });
 
-    return `https://${appConfig.auth0.domain}/authorize?${params.toString()}`;
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 };
 
-export const exchangeCodeForToken = async (code: string): Promise<string> => {
-    const tokenEndpoint = `https://${appConfig.auth0.domain}/oauth/token`;
+export const exchangeGoogleCodeForToken = async (code: string): Promise<{ accessToken: string; refreshToken?: string }> => {
+    const tokenEndpoint = 'https://oauth2.googleapis.com/token';
 
     const response = await axios.post(tokenEndpoint, {
-        grant_type: auth0Config.grantType,
-        client_id: auth0Config.clientID,
-        client_secret: auth0Config.clientSecret,
+        client_id: googleConfig.clientId,
+        client_secret: googleConfig.clientSecret,
         code,
-        redirect_uri: auth0Config.redirectUri
+        grant_type: 'authorization_code',
+        redirect_uri: googleConfig.redirectUri
     }, {
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
         }
     });
 
-    return response.data.access_token;
+    const tokenData: TGoogleTokenResponse = response.data;
+
+    return {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token
+    };
 };
 
-export const getAuth0UserProfile = async (accessToken: string): Promise<TAuth0UserProfile> => {
-    const userInfoEndpoint = `https://${appConfig.auth0.domain}/userinfo`;
+export const getGoogleUserProfile = async (accessToken: string): Promise<TGoogleUserProfile> => {
+    const userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
     const response = await axios.get(userInfoEndpoint, {
         headers: {
@@ -51,6 +59,7 @@ export const getAuth0UserProfile = async (accessToken: string): Promise<TAuth0Us
     return response.data;
 };
 
+// JWT Functions
 export const generateAccessToken = (payload: JwtPayload): string => {
     return jwt.sign(payload, jwtConfig.accessTokenSecret, jwtConfig.accessTokenOptions);
 };
@@ -74,7 +83,7 @@ export const extractTokenFromHeader = (authHeader: string | undefined): string |
     return authHeader.substring(7);
 };
 
-
+// Password Functions
 const SALT_ROUNDS = 12;
 
 export const hashPassword = async (password: string): Promise<string> => {
@@ -85,71 +94,29 @@ export const comparePassword = async (password: string, hashedPassword: string):
     return bcrypt.compare(password, hashedPassword);
 };
 
-// utils/validation.utils.ts
+// Generate secure random token
+export const generateSecureToken = (): string => {
+    return crypto.randomBytes(32).toString('hex');
+};
+
+// Validation Functions
 export const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
 };
 
 export const validatePassword = (password: string): boolean => {
-    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     return passwordRegex.test(password);
 };
 
 export const validateUsername = (username: string): boolean => {
-    // 3-30 characters, alphanumeric and underscore only
     const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
     return usernameRegex.test(username);
 };
 
-export const sendPasswordlessEmail = async (email: string): Promise<void> => {
-    const passwordlessEndpoint = `https://${appConfig.auth0.domain}/passwordless/start`;
-
-    const response = await axios.post(passwordlessEndpoint, {
-        client_id: auth0Config.clientID,
-        client_secret: auth0Config.clientSecret,
-        connection: 'email',
-        email,
-        send: 'code',
-        authParams: {
-            scope: auth0Config.scope,
-            redirect_uri: auth0Config.redirectUri,
-            response_type: auth0Config.responseType
-        }
-    }, {
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
-
-    if (response.status !== 200) {
-        throw new Error('Failed to send passwordless email');
-    }
-};
-
-// Update the verifyPasswordlessCode function
-export const verifyPasswordlessCode = async (email: string, code: string): Promise<string> => {
-    const tokenEndpoint = `https://${appConfig.auth0.domain}/oauth/token`;
-
-    const response = await axios.post(tokenEndpoint, {
-        grant_type: 'http://auth0.com/oauth/grant-type/passwordless/otp',
-        client_id: auth0Config.clientID,
-        client_secret: auth0Config.clientSecret,
-        username: email,
-        otp: code,
-        realm: 'email',
-        audience: auth0Config.audience,
-        scope: auth0Config.scope
-    }, {
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
-
-    if (response.status !== 200) {
-        throw new Error('Invalid verification code');
-    }
-
-    return response.data.access_token;
+// Generate username from email
+export const generateUsernameFromEmail = (email: string): string => {
+    const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+    return baseUsername.substring(0, 30);
 };

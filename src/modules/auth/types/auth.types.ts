@@ -5,23 +5,24 @@ export type TRefreshTokenPayload = {
     exp?: number;
 }
 
-export type TAuth0LoginRequest = {
+export type TGoogleUserProfile = {
+    id: string;
     email: string;
-}
-
-export type TAuth0CallbackRequest = {
-    code: string;
-    state?: string;
-}
-
-export type TAuth0UserProfile = {
-    sub: string;
-    email: string;
-    email_verified: boolean;
+    verified_email: boolean;
     name?: string;
     picture?: string;
     given_name?: string;
     family_name?: string;
+    locale?: string;
+}
+
+export type TGoogleTokenResponse = {
+    access_token: string;
+    expires_in: number;
+    refresh_token?: string;
+    scope: string;
+    token_type: string;
+    id_token?: string;
 }
 
 export type TApiResponse<T = any> = {

@@ -27,7 +27,7 @@ export const createAppError = (
 
 export const createValidationError = (
     message: string,
-    errors: Record<string, any>,
+    errors?: Record<string, any>,
     statusCode: number = 400
 ): TAppError => {
     const error = createAppError(message, statusCode);
@@ -35,11 +35,25 @@ export const createValidationError = (
     return error;
 };
 
+export const createAuthError = (message: string = 'Authentication failed', statusCode: number = 401): TAppError => {
+    return createAppError(message, 401);
+};
+
 export const createNotFoundError = (resource: string, id?: string): TAppError => {
     const message = id
         ? `${resource} with ID '${id}' not found`
         : `${resource} not found`;
     return createAppError(message, 404);
+};
+
+export const createValidationErrorFromSchema = (
+    message: string,
+    errors: Record<string, any>,
+    statusCode: number = 400
+): TAppError => {
+    const error = createValidationError(message, errors, statusCode);
+    error.errors = errors;
+    return error;
 };
 
 export const createUnauthorizedError = (message: string = 'Unauthorized'): TAppError => {
