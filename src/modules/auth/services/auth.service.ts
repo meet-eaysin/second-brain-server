@@ -19,7 +19,7 @@ import {
 } from '../utils/auth.utils';
 import {
     createOrUpdateGoogleUser,
-    getUserByEmail,
+    getUserByEmailWithPassword,
     getUserWithTokenVersion,
     incrementTokenVersion
 } from '../../users/services/users.services';
@@ -29,7 +29,7 @@ import {sendEmail} from "../../../utils/email.utils";
 export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthResponse> => {
     const { email, password } = loginData;
 
-    const user = await getUserByEmail(email);
+    const user = await getUserByEmailWithPassword(email);
     if (!user) {
         throw new Error('Invalid email or password');
     }
@@ -41,7 +41,7 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
     if (user.authProvider !== EAuthProvider.LOCAL) {
         throw new Error('Please use Google login for this account');
     }
-
+    console.log("_+++ user", JSON.stringify(user, null, 2))
     if (!user.password) {
         throw new Error('Invalid email or password');
     }
@@ -56,7 +56,6 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
         throw new Error('User not found');
     }
 
-    // Update last login
     await UserModel.findByIdAndUpdate(user.id, { lastLoginAt: new Date() });
 
     const accessTokenPayload: JwtPayload = {
@@ -79,7 +78,7 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 
     return {
         user: userWithoutPassword,
-        token: accessToken,
+        accessToken: accessToken,
         refreshToken
     };
 };
@@ -114,12 +113,12 @@ export const handleGoogleCallback = async (code: string): Promise<TAuthResponse>
 
     return {
         user,
-        token: newAccessToken,
+        accessToken: newAccessToken,
         refreshToken: newRefreshToken
     };
 };
 
-export const refreshAccessToken = async (refreshToken: string): Promise<{ token: string }> => {
+export const refreshAccessToken = async (refreshToken: string): Promise<{ accessToken: string }> => {
     const payload = verifyRefreshToken(refreshToken);
 
     const user = await getUserWithTokenVersion(payload.userId);
@@ -141,7 +140,7 @@ export const refreshAccessToken = async (refreshToken: string): Promise<{ token:
 
     const newAccessToken = generateAccessToken(accessTokenPayload);
 
-    return { token: newAccessToken };
+    return { accessToken: newAccessToken };
 };
 
 export const changePassword = async (userId: string, changePasswordData: TChangePasswordRequest): Promise<void> => {
@@ -207,9 +206,9 @@ export const forgotPassword = async (forgotPasswordData: TForgotPasswordRequest)
 };
 
 export const resetPassword = async (resetPasswordData: TResetPasswordRequest): Promise<void> => {
-    const { token, newPassword } = resetPasswordData;
+    const { accessToken, newPassword } = resetPasswordData;
 
-    const user = await UserModel.findByResetToken(token);
+    const user = await UserModel.findByResetToken(accessToken);
     if (!user) {
         throw new Error('Invalid or expired reset token');
     }
@@ -219,7 +218,6 @@ export const resetPassword = async (resetPasswordData: TResetPasswordRequest): P
     user.passwordResetExpires = undefined;
     await user.save();
 
-    // Invalidate all tokens
     await incrementTokenVersion(user.id);
 };
 

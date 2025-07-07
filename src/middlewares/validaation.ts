@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { z, ZodError } from 'zod';
 import {sendError} from "../utils/response.utils";
 import {createValidationError} from "../utils/error.utils";
-import {PaginationSchema} from "../types/error.types";
 
 export const validate = (schema: z.ZodSchema) =>
     async (req: Request, res: Response, next: NextFunction) => {
@@ -93,18 +92,6 @@ export const validateParams = <T extends z.ZodType>(schema: T) => {
             next(error);
         }
     };
-};
-
-// Common validation schemas
-export const CommonSchemas = {
-    mongoId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId'),
-    email: z.string().email('Invalid email format'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    pagination: PaginationSchema,
-    uuid: z.string().uuid('Invalid UUID format'),
-    url: z.string().url('Invalid URL format'),
-    positiveNumber: z.number().positive('Must be a positive number'),
-    nonEmptyString: z.string().min(1, 'Field is required').trim(),
 };
 
 function get(path: (string | number)[], obj: any): any {

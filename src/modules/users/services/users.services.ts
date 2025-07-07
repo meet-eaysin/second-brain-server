@@ -7,6 +7,7 @@ import {
 } from "../../auth/utils/auth.utils";
 import {UserModel} from "../models/users.model";
 import {TGoogleUserProfile} from "../../auth/types/auth.types";
+import {transformUserDocument} from "../utils";
 
 
 export const createUser = async (userData: TUserCreateRequest): Promise<TUser> => {
@@ -55,7 +56,6 @@ export const createOrUpdateGoogleUser = async (googleProfile: TGoogleUserProfile
             throw new Error('An account with this email already exists with a different login method');
         }
 
-        // Update existing Google user
         user.firstName = googleProfile.given_name || user.firstName;
         user.lastName = googleProfile.family_name || user.lastName;
         user.profilePicture = googleProfile.picture || user.profilePicture;
@@ -65,7 +65,6 @@ export const createOrUpdateGoogleUser = async (googleProfile: TGoogleUserProfile
         await user.save();
         return user.toJSON();
     } else {
-        // Create new Google user
         const username = await generateUniqueUsername(googleProfile.email);
 
         const newUser = await UserModel.create({
@@ -91,8 +90,34 @@ export const getUserById = async (id: string): Promise<TUser | null> => {
 };
 
 export const getUserByEmail = async (email: string): Promise<TUser | null> => {
-    const user = await UserModel.findOne({email});
-    return user ? user.toJSON() : null;
+    const user = await UserModel.findByEmail(email);
+    return user ? transformUserDocument(user) : null;
+};
+
+export const getUserByEmailWithPassword = async (email: string): Promise<TUser | null> => {
+    const user = await UserModel.findOne({ email }).select('+password').exec();
+    if (!user) return null;
+
+    return {
+        id: user.id.toString(),
+        email: user.email,
+        password: user.password,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        authProvider: user.authProvider,
+        googleId: user.googleId,
+        isEmailVerified: user.isEmailVerified,
+        isActive: user.isActive,
+        profilePicture: user.profilePicture,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastLoginAt: user.lastLoginAt,
+        tokenVersion: user.tokenVersion,
+        passwordResetToken: user.passwordResetToken,
+        passwordResetExpires: user.passwordResetExpires
+    } as TUser;
 };
 
 export const getUserByGoogleId = async (googleId: string): Promise<TUser | null> => {
@@ -146,7 +171,6 @@ export const getUsersWithoutPassword = (userList: TUser[]): Omit<TUser, 'passwor
     return userList.map(({ password, ...user }) => user);
 };
 
-// Helper function to generate unique username
 const generateUniqueUsername = async (email: string): Promise<string> => {
     let baseUsername = generateUsernameFromEmail(email);
     let username = baseUsername;

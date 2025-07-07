@@ -34,7 +34,6 @@ const safeMongooseConnection = new SafeMongooseConnection({
     onConnectionRetry: (mongoUrl) => logger.info(`Retrying to MongoDB at ${mongoUrl}`),
 });
 
-// Enhanced server startup
 const serve = () => {
     const server = app.listen(PORT, () => {
         logger.info(`🚀 EXPRESS server started at http://localhost:${PORT}`);
@@ -43,7 +42,6 @@ const serve = () => {
         logger.info(`🌟 Environment: ${appConfig.env}`);
     });
 
-    // Handle server errors
     server.on('error', (error: NodeJS.ErrnoException) => {
         if (error.code === 'EADDRINUSE') {
             logger.error(`Port ${PORT} is already in use`);
@@ -54,7 +52,6 @@ const serve = () => {
         }
     });
 
-    // Graceful shutdown handling
     const gracefulShutdown = (signal: string) => {
         logger.info(`🛑 ${signal} received`);
         logger.info('🔄 Gracefully shutting down...');
@@ -79,21 +76,18 @@ const serve = () => {
         });
     };
 
-    // Handle different termination signals
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
     return server;
 };
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
     logger.error('💥 Uncaught Exception:', error);
     logger.error('🚨 Application will exit');
     process.exit(1);
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('🚨 Unhandled Rejection at:', promise);
     logger.error('💥 Reason:', reason);
@@ -101,28 +95,23 @@ process.on('unhandledRejection', (reason, promise) => {
     process.exit(1);
 });
 
-// Main startup sequence
 const startApplication = async () => {
     try {
-        // Check MongoDB connection URL
         if (!appConfig.mongoose.url) {
             throw new Error('DB_CONNECTION_URL not specified in environment');
         }
 
-        // Connect to MongoDB first, then start the server
         await new Promise<void>((resolve, reject) => {
             safeMongooseConnection.connect((mongoUrl) => {
                 logger.info(`🍃 Connected to MongoDB at ${mongoUrl}`);
                 resolve();
             });
 
-            // Set a timeout for MongoDB connection
             setTimeout(() => {
                 reject(new Error('MongoDB connection timeout'));
             }, 30000); // 30 seconds timeout
         });
 
-        // Start the server
         serve();
 
     } catch (error) {
@@ -131,5 +120,4 @@ const startApplication = async () => {
     }
 };
 
-// Start the application
 startApplication();

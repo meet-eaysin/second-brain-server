@@ -126,7 +126,6 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
     }
 );
 
-// Static methods
 UserSchema.statics.findByEmail = function (email: string) {
     return this.findOne({ email }).select('+password +passwordResetToken +passwordResetExpires').exec();
 };
@@ -146,7 +145,6 @@ UserSchema.statics.findByResetToken = function (token: string) {
     }).exec();
 };
 
-// Pre-save middleware
 UserSchema.pre<TUserDocument>('save', async function (next) {
     if (!this.isModified('password') || !this.password) return next();
 
@@ -154,7 +152,6 @@ UserSchema.pre<TUserDocument>('save', async function (next) {
         const salt = await bcrypt.genSalt(12);
         this.password = await bcrypt.hash(this.password, salt);
 
-        // Clear password reset fields when password is changed
         this.passwordResetToken = undefined;
         this.passwordResetExpires = undefined;
 
@@ -164,7 +161,6 @@ UserSchema.pre<TUserDocument>('save', async function (next) {
     }
 });
 
-// Instance methods
 UserSchema.methods.comparePassword = async function (candidatePassword: string) {
     if (!this.password) return false;
     return bcrypt.compare(candidatePassword, this.password);

@@ -14,22 +14,39 @@ import {
     googleLoginSuccess
 } from '../controller/auth.controller';
 import { authenticateToken } from '../../../middlewares/auth';
+import {validateBody, validateQuery} from "../../../middlewares/validaation";
+import {
+    changePasswordSchema,
+    forgotPasswordSchema, googleCallbackQuerySchema, googleCallbackSchema,
+    loginSchema,
+    refreshTokenSchema,
+    registerSchema, resetPasswordSchema
+} from "../validator/auth.validaations";
 
 const router = Router();
 
-router.post('/register', register);
-router.post('/login', login);
-router.post('/refresh-token', refreshToken);
-router.post('/change-password', authenticateToken, changeUserPassword);
-router.post('/forgot-password', forgotUserPassword);
-router.post('/reset-password', resetUserPassword);
+router.post('/register', validateBody(registerSchema), register);
+router.post('/login', validateBody(loginSchema), login);
+router.post('/refresh-token', validateBody(refreshTokenSchema), refreshToken);
+router.post('/change-password',
+    authenticateToken,
+    validateBody(changePasswordSchema),
+    changeUserPassword
+);
+router.post('/forgot-password', validateBody(forgotPasswordSchema), forgotUserPassword);
+router.post('/reset-password', validateBody(resetPasswordSchema), resetUserPassword);
 router.post('/logout', authenticateToken, logout);
 router.post('/logout-all', authenticateToken, logoutAll);
 router.get('/profile', authenticateToken, getProfile);
 
-// Google OAuth routes
 router.get('/google', googleLogin);
-router.get('/google/callback', googleCallback);
-router.post('/google/callback', googleLoginSuccess);
+router.get('/google/callback',
+    validateQuery(googleCallbackQuerySchema),
+    googleCallback
+);
+router.post('/google/callback',
+    validateBody(googleCallbackSchema),
+    googleLoginSuccess
+);
 
 export default router;

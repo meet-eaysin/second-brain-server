@@ -66,12 +66,12 @@ export const generateRefreshToken = (payload: TRefreshTokenPayload): string => {
     return jwt.sign(payload, jwtConfig.refreshTokenSecret, jwtConfig.refreshTokenOptions);
 };
 
-export const verifyAccessToken = (token: string): TJwtPayload => {
-    return jwt.verify(token, jwtConfig.accessTokenSecret) as TJwtPayload;
+export const verifyAccessToken = (accessToken: string): TJwtPayload => {
+    return jwt.verify(accessToken, jwtConfig.accessTokenSecret) as TJwtPayload;
 };
 
-export const verifyRefreshToken = (token: string): TRefreshTokenPayload => {
-    return jwt.verify(token, jwtConfig.refreshTokenSecret) as TRefreshTokenPayload;
+export const verifyRefreshToken = (accessToken: string): TRefreshTokenPayload => {
+    return jwt.verify(accessToken, jwtConfig.refreshTokenSecret) as TRefreshTokenPayload;
 };
 
 export const extractTokenFromHeader = (authHeader: string | undefined): string | null => {

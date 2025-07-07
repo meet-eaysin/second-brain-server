@@ -10,15 +10,14 @@ export interface AuthenticatedRequest extends Request {
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const token = extractTokenFromHeader(req.headers.authorization);
+    const accessToken = extractTokenFromHeader(req.headers.authorization);
 
-    if (!token) {
+    if (!accessToken) {
       return next(createUnauthorizedError('Access token is required'));
     }
 
-    const payload = verifyAccessToken(token);
+    const payload = verifyAccessToken(accessToken);
 
-    // Verify user still exists and is active
     const user = await getUserById(payload.userId);
     if (!user || !user.isActive) {
       return next(createUnauthorizedError('Invalid token'));
@@ -52,10 +51,10 @@ export const requireModerator = requireRoles(TUserRole.ADMIN, TUserRole.MODERATO
 
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const token = extractTokenFromHeader(req.headers.authorization);
+    const accessToken = extractTokenFromHeader(req.headers.authorization);
 
-    if (token) {
-      const payload = verifyAccessToken(token);
+    if (accessToken) {
+      const payload = verifyAccessToken(accessToken);
       const user = await getUserById(payload.userId);
 
       if (user && user.isActive) {
@@ -65,7 +64,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
     next();
   } catch (error) {
-    // Continue without authentication if token is invalid
     next();
   }
 };

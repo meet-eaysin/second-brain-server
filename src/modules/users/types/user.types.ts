@@ -50,7 +50,7 @@ export type TLoginRequest = {
 
 export type TAuthResponse = {
     user: Omit<TUser, 'password'>;
-    token: string;
+    accessToken: string;
     refreshToken: string;
 }
 
@@ -83,6 +83,6 @@ export type TForgotPasswordRequest = {
 }
 
 export type TResetPasswordRequest = {
-    token: string;
+    accessToken: string;
     newPassword: string;
 }

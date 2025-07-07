@@ -16,12 +16,11 @@ import {
     logoutUser,
     logoutAllDevices
 } from '../services/auth.service';
-import {catchAsync} from "../../../utils/catch-async";
-import {createUser, getUsersWithoutPassword} from "../../users/services/users.services";
-import {sendSuccessResponse} from "../../../utils/response-handler.utils";
-import {AuthenticatedRequest} from "../../../middlewares/auth";
-import {generateGoogleLoginUrl} from "../utils/auth.utils";
-import {createValidationError} from "../../../utils/error.utils";
+import { catchAsync } from "../../../utils/catch-async";
+import { createUser, getUsersWithoutPassword } from "../../users/services/users.services";
+import { sendSuccessResponse } from "../../../utils/response-handler.utils";
+import { AuthenticatedRequest } from "../../../middlewares/auth";
+import { generateGoogleLoginUrl } from "../utils/auth.utils";
 
 export const register = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userData: TUserCreateRequest = req.body;
@@ -89,22 +88,14 @@ export const googleLogin = catchAsync(async (req: Request, res: Response, next: 
 export const googleCallback = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code } = req.query;
 
-    if (!code) {
-        return next(createValidationError('Authorization code is required', {}, 400));
-    }
-
     const authResponse = await handleGoogleCallback(code as string);
 
-    const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?token=${authResponse.token}&refreshToken=${authResponse.refreshToken}`;
+    const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?token=${authResponse.accessToken}&refreshToken=${authResponse.refreshToken}`;
     res.redirect(redirectUrl);
 });
 
 export const googleLoginSuccess = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code } = req.body;
-
-    if (!code) {
-        return next(createValidationError('Authorization code is required'));
-    }
 
     const authResponse = await handleGoogleCallback(code);
     sendSuccessResponse(res, authResponse, 'Google login successful');
