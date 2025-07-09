@@ -2,23 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/index.ts",
+      "src": "dist/server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "src/index.ts"
-    },
-    {
-      "src": "/auth/(.*)",
-      "dest": "src/index.ts"
-    },
-    {
       "src": "/(.*)",
-      "status": 404,
-      "dest": "src/index.ts"
+      "dest": "dist/server.js"
     }
   ]
 }
