@@ -25,8 +25,8 @@ import {
 
 const router = Router();
 
-router.post('/register', validateBody(registerSchema), register);
-router.post('/login', validateBody(loginSchema), login);
+router.post('/sign-up', validateBody(registerSchema), register);
+router.post('/sign-in', validateBody(loginSchema), login);
 router.post('/refresh-token', validateBody(refreshTokenSchema), refreshToken);
 router.post('/change-password',
     authenticateToken,
@@ -37,7 +37,7 @@ router.post('/forgot-password', validateBody(forgotPasswordSchema), forgotUserPa
 router.post('/reset-password', validateBody(resetPasswordSchema), resetUserPassword);
 router.post('/logout', authenticateToken, logout);
 router.post('/logout-all', authenticateToken, logoutAll);
-router.get('/profile', authenticateToken, getProfile);
+router.get('/me', authenticateToken, getProfile);
 
 router.get('/google', googleLogin);
 router.get('/google/callback',

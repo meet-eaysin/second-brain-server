@@ -1,13 +1,13 @@
 import axios from 'axios';
 import crypto from 'crypto';
-import { linkedinConfig } from '../config/linkedin';
+import { linkedinConfig } from '../../../config/linkedin';
 import {
     TLinkedInAuthState,
     TLinkedInEmailResponse, TLinkedInError, TLinkedInFeedResponse,
     TLinkedInPostCreate,
     TLinkedInProfile, TLinkedInTokenResponse
-} from "../modules/linkedin/types/linkedin.types";
-import logger from "../config/logger";
+} from "../types/linkedin.types";
+import logger from "../../../config/logger";
 
 /**
  * Generate LinkedIn authorization URL

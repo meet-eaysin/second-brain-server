@@ -18,7 +18,7 @@ import {
     likeLinkedInPost,
     refreshLinkedInToken,
     validateAndParseState
-} from '../../../utils/linkedin.utils';
+} from '../utils/linkedin.utils';
 import {createAppError, createNotFoundError} from '../../../utils/error.utils';
 import {LinkedInUser} from '../models/LinkedInUser';
 import {LinkedInPost} from "../models/LinkedInPost"

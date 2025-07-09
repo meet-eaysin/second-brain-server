@@ -10,7 +10,7 @@ router.use('/docs', swaggerRoute)
 // Module routes
 router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
-router.use('/linkedin', linkedinRoutes);
+router.use('/social/linkedin', linkedinRoutes);
 
 
 export default router;

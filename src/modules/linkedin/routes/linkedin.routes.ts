@@ -8,12 +8,10 @@ import {
     syncPosts,
     commentOnLinkedInPost, createLinkedInPost, likeLinkedInPost
 } from "../controller/linkedin.controller";
-import {} from "../../../utils/linkedin.utils";
 
 const router = Router();
 
-// All LinkedIn routes require authentication
-// router.use(authenticateToken);
+router.use(authenticateToken);
 
 // Connection management
 router.get('/auth/initiate', initiateAuth);
