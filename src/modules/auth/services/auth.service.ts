@@ -12,10 +12,9 @@ import {
     generateAccessToken,
     generateRefreshToken,
     verifyRefreshToken,
-    exchangeGoogleCodeForToken,
     getGoogleUserProfile,
     generateSecureToken,
-    comparePassword
+    comparePassword, exchangeLinkedInCodeForToken
 } from '../utils/auth.utils';
 import {
     createOrUpdateGoogleUser,
@@ -84,7 +83,7 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 };
 
 export const handleGoogleCallback = async (code: string): Promise<TAuthResponse> => {
-    const { accessToken } = await exchangeGoogleCodeForToken(code);
+    const { accessToken } = await exchangeLinkedInCodeForToken(code);
     const googleProfile = await getGoogleUserProfile(accessToken);
 
     const user = await createOrUpdateGoogleUser(googleProfile);

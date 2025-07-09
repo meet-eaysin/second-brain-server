@@ -6,6 +6,21 @@ import { TGoogleUserProfile, TRefreshTokenPayload, TGoogleTokenResponse } from '
 import {googleConfig} from "../../../config/google/google";
 import {jwtConfig} from "../../../config/jwt/jwt.config";
 import {TJwtPayload} from "../../users/types/user.types";
+import {linkedinConfig} from "../../../config/linkedin";
+
+interface LinkedInTokenResponse {
+    access_token: string;
+    expires_in: number;
+    refresh_token?: string;
+    refresh_token_expires_in?: number;
+    scope: string;
+}
+
+interface LinkedInConfig {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+}
 
 export const generateGoogleLoginUrl = (): string => {
     const state = crypto.randomBytes(32).toString('hex');
@@ -23,28 +38,61 @@ export const generateGoogleLoginUrl = (): string => {
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 };
 
-export const exchangeGoogleCodeForToken = async (code: string): Promise<{ accessToken: string; refreshToken?: string }> => {
-    const tokenEndpoint = 'https://oauth2.googleapis.com/token';
+export const generateLinkedInAuthUrl = (
+    linkedinConfig: LinkedInConfig,
+    state: string,
+    scopes: string[] = ['r_liteprofile', 'r_emailaddress', 'w_member_social']
+): string => {
+    const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization');
 
-    const response = await axios.post(tokenEndpoint, {
-        client_id: googleConfig.clientId,
-        client_secret: googleConfig.clientSecret,
-        code,
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('client_id', linkedinConfig.clientId);
+    authUrl.searchParams.append('redirect_uri', linkedinConfig.redirectUri);
+    authUrl.searchParams.append('state', state);
+    authUrl.searchParams.append('scope', scopes.join(' '));
+
+    return authUrl.toString();
+};
+
+
+export const exchangeLinkedInCodeForToken = async (
+    code: string,
+): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> => {
+
+    console.log("===== bbbb", { linkedinConfig, code })
+    const tokenEndpoint = 'https://www.linkedin.com/oauth/v2/accessToken';
+
+    const params = new URLSearchParams({
         grant_type: 'authorization_code',
-        redirect_uri: googleConfig.redirectUri
-    }, {
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        code: code,
+        client_id: linkedinConfig.clientId,
+        client_secret: linkedinConfig.clientSecret,
+        redirect_uri: linkedinConfig.redirectUri
     });
 
-    const tokenData: TGoogleTokenResponse = response.data;
+    try {
+        const response = await axios.post(tokenEndpoint, params, {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            }
+        });
 
-    return {
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token
-    };
+        console.log("===== ccc", response.data)
+        const tokenData: LinkedInTokenResponse = response.data;
+
+        return {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            expiresIn: tokenData.expires_in
+        };
+    } catch (error) {
+        console.log("===== ddd", { error, linkedinConfig, code })
+        console.error('LinkedIn token exchange error:', error);
+        throw new Error(`Failed to exchange LinkedIn code for token: ${error}`);
+    }
 };
+
 
 export const getGoogleUserProfile = async (accessToken: string): Promise<TGoogleUserProfile> => {
     const userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
