@@ -61,15 +61,20 @@ export const handleLinkedInCallback = async (
     email: string;
     isNewConnection: boolean;
 }> => {
+    console.log('== Handling LinkedIn Callback for User ID:', userId, authRequest);
     try {
-        if (authRequest.state) {
-            const parsedState = validateAndParseState(authRequest.state);
-            if (parsedState.userId !== userId) {
-                throw new Error('Invalid state parameter - user mismatch');
-            }
-        }
+        // if (authRequest.state) {
+        //     const parsedState = validateAndParseState(authRequest.state);
+        //     console.log('== Parsed State:', parsedState);
+        //     console.log('== User ID:', userId);
+        //     if (parsedState.userId !== userId) {
+        //         throw new Error('Invalid state parameter - user mismatch');
+        //     }
+        // }
 
+        console.log('== LinkedIn Auth Request:', authRequest);
         const tokenResponse = await exchangeLinkedInCodeForToken(authRequest.code);
+        console.log('== LinkedIn Token Response:', tokenResponse);
 
         const [profile, email] = await Promise.all([
             getLinkedInProfile(tokenResponse.access_token),

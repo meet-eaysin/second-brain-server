@@ -26,13 +26,14 @@ export const handleCallback = catchAsync(async (req: Request, res: Response, nex
     const { user } = req as AuthenticatedRequest;
     const { code, state } = req.query as Record<string, string>;
 
+
     if (!code) {
         return next(createValidationError('Authorization code is required', {
             code: 'This field is required'
         }));
     }
 
-    const result = await handleLinkedInCallback("user.userId", { code, state });
+    const result = await handleLinkedInCallback(user.userId, { code, state });
     sendSuccessResponse(res, result, 'LinkedIn connected successfully');
 });
 

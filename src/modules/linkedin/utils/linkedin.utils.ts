@@ -8,21 +8,25 @@ import {
     TLinkedInProfile, TLinkedInTokenResponse
 } from "../types/linkedin.types";
 import logger from "../../../config/logger";
+import { log } from 'console';
 
 /**
  * Generate LinkedIn authorization URL
  * @param state - State parameter for CSRF protection
  * @returns LinkedIn authorization URL
  */
-export const generateLinkedInAuthUrl = (state: string): string => {
-    const authState = createAuthState(state);
-    const encodedState = encodeURIComponent(JSON.stringify(authState));
+export const generateLinkedInAuthUrl = (userId: string): string => {
+    const state = {
+        userId,
+        timestamp: Date.now(),
+        nonce: crypto.randomBytes(16).toString('hex')
+    };
 
     const params = new URLSearchParams({
         response_type: 'code',
         client_id: linkedinConfig.clientId,
         redirect_uri: linkedinConfig.redirectUri,
-        state: encodedState,
+        state: JSON.stringify(state),
         scope: linkedinConfig.scope
     });
 
@@ -71,12 +75,13 @@ export const validateAndParseState = (state: string): TLinkedInAuthState => {
  * @returns Token response from LinkedIn
  */
 export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinkedInTokenResponse> => {
+    console.log("== code", code)
     try {
         const response = await axios.post(
             'https://www.linkedin.com/oauth/v2/accessToken',
             {
                 grant_type: 'authorization_code',
-                code,
+                code: code,
                 client_id: linkedinConfig.clientId,
                 client_secret: linkedinConfig.clientSecret,
                 redirect_uri: linkedinConfig.redirectUri
@@ -88,8 +93,11 @@ export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinke
             }
         );
 
+        console.log("== response", response.data)
+
         return response.data;
     } catch (error: any) {
+        console.log("== Error exchanging LinkedIn code for token:", error);
         throw handleLinkedInError(error);
     }
 };
