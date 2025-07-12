@@ -19,7 +19,7 @@ import {
 } from '../services/social-connections.services';
 
 const validatePlatform = (platform: string): ESocialPlatform => {
-    const platformEnum = platform.toUpperCase() as ESocialPlatform;
+    const platformEnum = platform as ESocialPlatform;
     if (!Object.values(ESocialPlatform).includes(platformEnum)) {
         throw createAppError(`Unsupported platform: ${platform}`, 400);
     }
@@ -89,7 +89,7 @@ export const getConnectionStatus = catchAsync(async (req: Request, res: Response
             sendSuccessResponse(res, {
                 platform: validPlatform,
                 isConnected,
-                connection: isConnected ? {
+                profile: isConnected ? {
                     profile: connection.profile,
                     connectedAt: connection.connectedAt,
                     lastSyncAt: connection.lastSyncAt,
@@ -101,14 +101,7 @@ export const getConnectionStatus = catchAsync(async (req: Request, res: Response
 
             const connectionStatus = {
                 totalConnections: connections.length,
-                platforms: {} as Record<string, any>,
-                connections: connections.map(conn => ({
-                    platform: conn.platform,
-                    profile: conn.profile,
-                    connectedAt: conn.connectedAt,
-                    lastSyncAt: conn.lastSyncAt,
-                    email: conn.email
-                }))
+                platforms: {} as Record<string, any>
             };
 
             connections.forEach(conn => {

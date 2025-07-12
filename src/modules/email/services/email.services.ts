@@ -15,7 +15,6 @@ export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
 
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Mock success
         return true;
     } catch (error) {
         console.error('❌ Failed to send email:', JSON.stringify(error, null, 2));

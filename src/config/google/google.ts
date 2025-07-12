@@ -1,4 +1,3 @@
-// config/google.ts
 export const googleConfig = {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -6,7 +5,6 @@ export const googleConfig = {
     scope: 'openid profile email'
 };
 
-// Validate Google configuration
 export const validateGoogleConfig = (): void => {
     if (!googleConfig.clientId) {
         throw new Error('GOOGLE_CLIENT_ID environment variable is required');

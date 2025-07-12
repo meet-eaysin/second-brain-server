@@ -1,6 +1,5 @@
 import express, { Express } from 'express';
 import dotenv from 'dotenv';
-import session from 'express-session';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -43,7 +42,10 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
     origin: (origin, callback) => {
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5000', 'http://localhost:5173'];
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+            'http://localhost:5000',
+            'http://localhost:5173'
+        ];
 
         if (!origin) return callback(null, true);
 
@@ -112,7 +114,6 @@ app.get('/api', (req: Request, res: Response) => {
 app.use('/api/v1', routes);
 
 app.use(notFound);
-
 app.use(errorHandler);
 
 export default app;

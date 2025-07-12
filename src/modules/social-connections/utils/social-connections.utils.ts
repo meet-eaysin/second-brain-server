@@ -6,7 +6,6 @@ export const migrateLinkedInData = async () => {
         const linkedinUsers = await LinkedInUser.find({ isActive: true });
 
         for (const linkedinUser of linkedinUsers) {
-            // Check if already migrated
             const existingConnection = await SocialConnection.findOne({
                 userId: linkedinUser.userId,
                 platform: ESocialPlatform.LINKEDIN

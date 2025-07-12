@@ -17,6 +17,7 @@ router.use(authenticateToken);
 router.get('/auth/initiate', initiateAuth);
 router.get('/auth/callback', handleCallback);
 router.post('/disconnect', disconnect);
+router.get('/connections', getConnectionStatus);
 router.get('/connection', getConnectionStatus);
 
 // Posts management

@@ -11,12 +11,12 @@ import {
 
 const router = Router();
 
-// User profile routes
+// USER PROFILE
 router.get('/profile', authenticateToken, getUser);
 router.put('/profile', authenticateToken, updateProfile);
 router.delete('/profile', authenticateToken, deleteAccount);
 
-// Admin routes
+// ADMIN
 router.get('/', authenticateToken, requireModerator, getUsers);
 router.get('/:id', authenticateToken, requireModerator, getUserDetails);
 router.put('/:id', authenticateToken, requireAdmin, updateUserById);
