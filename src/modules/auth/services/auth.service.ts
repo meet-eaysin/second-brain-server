@@ -40,7 +40,6 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
     if (user.authProvider !== EAuthProvider.LOCAL) {
         throw new Error('Please use Google login for this account');
     }
-    console.log("_+++ user", JSON.stringify(user, null, 2))
     if (!user.password) {
         throw new Error('Invalid email or password');
     }

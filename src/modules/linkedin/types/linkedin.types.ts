@@ -12,34 +12,22 @@ export interface TLinkedInTokenResponse {
 }
 
 export interface TLinkedInProfile {
-    id: string;
-    firstName: {
-        localized: Record<string, string>;
-        preferredLocale: {
-            country: string;
-            language: string;
-        };
+    sub: string;
+    name: string;
+    given_name: string;
+    family_name: string;
+    email: string;
+    email_verified: boolean;
+    picture?: string;
+    locale?: {
+        language: string;
+        country: string;
     };
-    lastName: {
-        localized: Record<string, string>;
-        preferredLocale: {
-            country: string;
-            language: string;
-        };
-    };
-    headline?: {
-        localized: Record<string, string>;
-    };
-    profilePicture?: {
-        'displayImage~': {
-            elements: Array<{
-                identifiers: Array<{
-                    identifier: string;
-                }>;
-            }>;
-        };
-    };
-    vanityName?: string;
+    headline?: string;
+    publicProfileUrl?: string;
+    industry?: string;
+    location?: string;
+    summary?: string;
 }
 
 export interface TLinkedInEmailResponse {

@@ -16,26 +16,30 @@ import {linkedinConfig} from "../../../config/linkedin";
 export const initiateAuth = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
     const { state } = req.query;
-    const encodedRedirectUri = encodeURIComponent(linkedinConfig.redirectUri);
 
     const result = await initiateLinkedInAuth(user.userId, state as string);
     sendSuccessResponse(res, result, 'LinkedIn authentication URL generated');
 });
 
 export const handleCallback = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { user } = req as AuthenticatedRequest;
-    const { code, state } = req.query as Record<string, string>;
+    try {
+        const { user } = req as AuthenticatedRequest;
+        const { code, state } = req.query as Record<string, string>;
 
+        if (!code) {
+            return next(createValidationError('Authorization code is required', {
+                code: 'This field is required'
+            }));
+        }
 
-    if (!code) {
-        return next(createValidationError('Authorization code is required', {
-            code: 'This field is required'
-        }));
+        const result = await handleLinkedInCallback(user.userId, { code, state });
+
+        sendSuccessResponse(res, result, 'LinkedIn connected successfully');
+    } catch (error: any) {
+        next(error);
     }
-
-    const result = await handleLinkedInCallback(user.userId, { code, state });
-    sendSuccessResponse(res, result, 'LinkedIn connected successfully');
 });
+
 
 export const disconnect = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;

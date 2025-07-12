@@ -7,37 +7,25 @@ import {
     TLinkedInPostCreate,
     TLinkedInProfile, TLinkedInTokenResponse
 } from "../types/linkedin.types";
-import logger from "../../../config/logger";
-import { log } from 'console';
 
-/**
- * Generate LinkedIn authorization URL
- * @param state - State parameter for CSRF protection
- * @returns LinkedIn authorization URL
- */
 export const generateLinkedInAuthUrl = (userId: string): string => {
-    const state = {
-        userId,
-        timestamp: Date.now(),
-        nonce: crypto.randomBytes(16).toString('hex')
-    };
+    // const state = {
+    //     userId,
+    //     timestamp: Date.now(),
+    //     nonce: crypto.randomBytes(16).toString('hex')
+    // };
+    //
+    // const params = new URLSearchParams({
+    //     response_type: 'code',
+    //     client_id: linkedinConfig.clientId,
+    //     redirect_uri: linkedinConfig.redirectUri,
+    //     state: JSON.stringify(state),
+    //     scope: linkedinConfig.scope
+    // });
 
-    const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: linkedinConfig.clientId,
-        redirect_uri: linkedinConfig.redirectUri,
-        state: JSON.stringify(state),
-        scope: linkedinConfig.scope
-    });
-
-    return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
+    return `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinConfig.clientId}&redirect_uri=${linkedinConfig.redirectUri}&scope=openid%20profile%20w_member_social%20email`;
 };
 
-/**
- * Create authentication state for CSRF protection
- * @param userId - User ID
- * @returns Authentication state object
- */
 export const createAuthState = (userId: string): TLinkedInAuthState => {
     return {
         userId,
@@ -75,16 +63,15 @@ export const validateAndParseState = (state: string): TLinkedInAuthState => {
  * @returns Token response from LinkedIn
  */
 export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinkedInTokenResponse> => {
-    console.log("== code", code)
     try {
         const response = await axios.post(
             'https://www.linkedin.com/oauth/v2/accessToken',
             {
                 grant_type: 'authorization_code',
                 code: code,
-                client_id: linkedinConfig.clientId,
-                client_secret: linkedinConfig.clientSecret,
-                redirect_uri: linkedinConfig.redirectUri
+                redirect_uri: "http://localhost:5173/app/social-connect/linkedin/callback",
+                client_id: "86htpoghv1ptpr",
+                client_secret: "WPL_AP1.2jKFyYI0rMD3NHv6.xEErwQ==",
             },
             {
                 headers: {
@@ -93,11 +80,8 @@ export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinke
             }
         );
 
-        console.log("== response", response.data)
-
         return response.data;
     } catch (error: any) {
-        console.log("== Error exchanging LinkedIn code for token:", error);
         throw handleLinkedInError(error);
     }
 };
@@ -109,36 +93,12 @@ export const exchangeLinkedInCodeForToken = async (code: string): Promise<TLinke
  */
 export const getLinkedInProfile = async (accessToken: string): Promise<TLinkedInProfile> => {
     try {
-        const response = await axios.get('https://api.linkedin.com/v2/me', {
+        const response = await axios.get('https://api.linkedin.com/v2/userinfo', {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
         });
-
         return response.data;
-    } catch (error: any) {
-        throw handleLinkedInError(error);
-    }
-};
-
-/**
- * Get LinkedIn email address
- * @param accessToken - LinkedIn access token
- * @returns Email address
- */
-export const getLinkedInEmail = async (accessToken: string): Promise<string> => {
-    try {
-        const response = await axios.get(
-            'https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))',
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            }
-        );
-
-        const data = response.data as TLinkedInEmailResponse;
-        return data.elements[0]['handle~'].emailAddress;
     } catch (error: any) {
         throw handleLinkedInError(error);
     }
@@ -154,7 +114,7 @@ export const getLinkedInFeed = async (accessToken: string): Promise<TLinkedInFee
         const profile = await getLinkedInProfile(accessToken);
 
         const response = await axios.get(
-            `https://api.linkedin.com/v2/shares?q=owners&owners=urn:li:person:${profile.id}&sortBy=CREATED&count=50`,
+            `https://api.linkedin.com/v2/shares?q=owners&owners=urn:li:person:${profile.sub}&sortBy=CREATED&count=50`,
             {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
@@ -193,7 +153,7 @@ export const createLinkedInPost = async (
                         visibleToGuest: postData.visibility === 'PUBLIC'
                     }
                 },
-                owner: `urn:li:person:${profile.id}`,
+                owner: `urn:li:person:${profile.sub}`,
                 text: {
                     text: postData.text
                 }
@@ -224,7 +184,7 @@ export const likeLinkedInPost = async (accessToken: string, postId: string): Pro
         await axios.post(
             `https://api.linkedin.com/v2/socialActions/${postId}/likes`,
             {
-                actor: `urn:li:person:${profile.id}`
+                actor: `urn:li:person:${profile.sub}`
             },
             {
                 headers: {
@@ -255,7 +215,7 @@ export const commentOnLinkedInPost = async (
         await axios.post(
             `https://api.linkedin.com/v2/socialActions/${postId}/comments`,
             {
-                actor: `urn:li:person:${profile.id}`,
+                actor: `urn:li:person:${profile.sub}`,
                 message: {
                     text: comment
                 }

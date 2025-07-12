@@ -58,8 +58,6 @@ export const generateLinkedInAuthUrl = (
 export const exchangeLinkedInCodeForToken = async (
     code: string,
 ): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> => {
-
-    console.log("===== bbbb", { linkedinConfig, code })
     const tokenEndpoint = 'https://www.linkedin.com/oauth/v2/accessToken';
 
     const params = new URLSearchParams({
@@ -78,7 +76,6 @@ export const exchangeLinkedInCodeForToken = async (
             }
         });
 
-        console.log("===== ccc", response.data)
         const tokenData: LinkedInTokenResponse = response.data;
 
         return {
@@ -87,8 +84,6 @@ export const exchangeLinkedInCodeForToken = async (
             expiresIn: tokenData.expires_in
         };
     } catch (error) {
-        console.log("===== ddd", { error, linkedinConfig, code })
-        console.error('LinkedIn token exchange error:', error);
         throw new Error(`Failed to exchange LinkedIn code for token: ${error}`);
     }
 };

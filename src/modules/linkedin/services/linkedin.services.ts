@@ -1,4 +1,3 @@
-// services/linkedin.services.ts
 import {
     TLinkedInAuthRequest,
     TLinkedInPostCreate,
@@ -11,18 +10,16 @@ import {
     createLinkedInPost,
     exchangeLinkedInCodeForToken,
     generateLinkedInAuthUrl,
-    getLinkedInEmail,
     getLinkedInFeed,
     getLinkedInProfile,
     isTokenExpired,
     likeLinkedInPost,
     refreshLinkedInToken,
-    validateAndParseState
 } from '../utils/linkedin.utils';
 import {createAppError, createNotFoundError} from '../../../utils/error.utils';
 import {LinkedInUser} from '../models/LinkedInUser';
 import {LinkedInPost} from "../models/LinkedInPost"
-import logger from "../../../config/logger";
+import {ESocialPlatform, SocialConnection} from "../../social-connections/models/social-connections.model";
 
 /**
  * Initiate LinkedIn authentication process
@@ -53,77 +50,115 @@ export const initiateLinkedInAuth = async (
  * @param authRequest - LinkedIn authorization request data
  * @returns Connection result with profile information
  */
+// export const handleLinkedInCallback = async (
+//     userId: string,
+//     authRequest: TLinkedInAuthRequest
+// ): Promise<{
+//     profile: TLinkedInProfile;
+//     isNewConnection: boolean;
+// }> => {
+//     try {
+//         const tokenResponse = await exchangeLinkedInCodeForToken(authRequest.code);
+//         const userInfo = await getLinkedInProfile(tokenResponse.access_token);
+//
+//         const tokenExpiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
+//         const refreshTokenExpiresAt = tokenResponse.refresh_token_expires_in
+//             ? new Date(Date.now() + tokenResponse.refresh_token_expires_in * 1000)
+//             : null;
+//
+//         const existingConnection = await LinkedInUser.findOne({ userId });
+//         const isNewConnection = !existingConnection;
+//
+//         const connectionData = {
+//             userId,
+//             linkedinId: userInfo.sub,
+//             accessToken: tokenResponse.access_token,
+//             refreshToken: tokenResponse.refresh_token,
+//             tokenExpiresAt,
+//             refreshTokenExpiresAt,
+//             scope: tokenResponse.scope,
+//             profile: {
+//                 sub: userInfo.sub,
+//                 name: userInfo.name,
+//                 given_name: userInfo.given_name,
+//                 family_name: userInfo.family_name,
+//                 email: userInfo.email,
+//                 email_verified: userInfo.email_verified,
+//                 picture: userInfo.picture,
+//                 locale: userInfo.locale,
+//                 ...(userInfo.headline && { headline: userInfo.headline }),
+//                 ...(userInfo.publicProfileUrl && { publicProfileUrl: userInfo.publicProfileUrl }),
+//                 ...(userInfo.industry && { industry: userInfo.industry }),
+//                 ...(userInfo.location && { location: userInfo.location }),
+//                 ...(userInfo.summary && { summary: userInfo.summary }),
+//             },
+//             email: userInfo.email,
+//             isActive: true,
+//             lastSyncAt: new Date(),
+//             updatedAt: new Date()
+//         };
+//
+//         if (existingConnection) {
+//             await LinkedInUser.findOneAndUpdate(
+//                 { userId },
+//                 connectionData,
+//                 { new: true }
+//             );
+//         } else {
+//             await LinkedInUser.create({
+//                 ...connectionData,
+//                 connectedAt: new Date(),
+//                 createdAt: new Date()
+//             });
+//         }
+//
+//         return {
+//             profile: userInfo,
+//             isNewConnection
+//         };
+//     } catch (error: Error | any) {
+//         console.error('== Error in handleLinkedInCallback:', error);
+//         console.error('== Error stack:', error.stack);
+//         throw createAppError('Failed to process LinkedIn callback', 500);
+//     }
+// };
+
 export const handleLinkedInCallback = async (
     userId: string,
     authRequest: TLinkedInAuthRequest
-): Promise<{
-    profile: TLinkedInProfile;
-    email: string;
-    isNewConnection: boolean;
-}> => {
-    console.log('== Handling LinkedIn Callback for User ID:', userId, authRequest);
+) => {
     try {
-        // if (authRequest.state) {
-        //     const parsedState = validateAndParseState(authRequest.state);
-        //     console.log('== Parsed State:', parsedState);
-        //     console.log('== User ID:', userId);
-        //     if (parsedState.userId !== userId) {
-        //         throw new Error('Invalid state parameter - user mismatch');
-        //     }
-        // }
-
-        console.log('== LinkedIn Auth Request:', authRequest);
         const tokenResponse = await exchangeLinkedInCodeForToken(authRequest.code);
-        console.log('== LinkedIn Token Response:', tokenResponse);
-
-        const [profile, email] = await Promise.all([
-            getLinkedInProfile(tokenResponse.access_token),
-            getLinkedInEmail(tokenResponse.access_token)
-        ]);
-
-        const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
-        const refreshExpiresAt = tokenResponse.refresh_token_expires_in
-            ? new Date(Date.now() + tokenResponse.refresh_token_expires_in * 1000)
-            : null;
-
-        const existingConnection = await LinkedInUser.findOne({ userId });
-        const isNewConnection = !existingConnection;
+        const profileData  = await getLinkedInProfile(tokenResponse.access_token);
 
         const connectionData = {
             userId,
-            linkedInId: profile.id,
+            platform: ESocialPlatform.LINKEDIN,
+            platformUserId: profileData.sub,
             accessToken: tokenResponse.access_token,
             refreshToken: tokenResponse.refresh_token,
-            expiresAt,
-            refreshExpiresAt,
-            scope: tokenResponse.scope,
-            profile: profile,
-            email,
-            isActive: true,
-            lastSyncAt: new Date(),
-            updatedAt: new Date()
+            tokenExpiresAt: new Date(Date.now() + tokenResponse.expires_in * 1000),
+            scope: tokenResponse.scope || 'r_liteprofile r_emailaddress w_member_social',
+            profile: profileData,
+            email: profileData.email,
+            connectedAt: new Date(),
+            lastSyncAt: new Date()
         };
 
-        if (existingConnection) {
-            await LinkedInUser.findOneAndUpdate(
-                { userId },
-                connectionData,
-                { new: true }
-            );
-        } else {
-            await LinkedInUser.create({
-                ...connectionData,
-                connectedAt: new Date(),
-                createdAt: new Date()
-            });
-        }
+        const connection = await SocialConnection.findOneAndUpdate(
+            { userId, platform: ESocialPlatform.LINKEDIN },
+            connectionData,
+            { upsert: true, new: true }
+        );
 
         return {
-            profile,
-            email,
-            isNewConnection
+            connection: {
+                platform: connection.platform,
+                profile: connection.profile,
+                connectedAt: connection.connectedAt
+            }
         };
-    } catch (error) {
+    } catch (error: Error | any) {
         throw createAppError('Failed to process LinkedIn callback', 500);
     }
 };
@@ -132,28 +167,39 @@ export const handleLinkedInCallback = async (
  * Disconnect LinkedIn account
  * @param userId - User ID
  */
-export const disconnectLinkedIn = async (userId: string): Promise<void> => {
+// export const disconnectLinkedIn = async (userId: string): Promise<void> => {
+//     try {
+//         const connection = await LinkedInUser.findOne({ userId });
+//
+//         if (!connection) {
+//             throw createNotFoundError('LinkedIn connection not found');
+//         }
+//
+//         await LinkedInUser.findOneAndUpdate(
+//             { userId },
+//             {
+//                 isActive: false,
+//                 accessToken: null,
+//                 refreshToken: null,
+//                 expiresAt: null,
+//                 refreshExpiresAt: null,
+//                 updatedAt: new Date()
+//             }
+//         );
+//     } catch (error) {
+//         throw createAppError('Failed to disconnect LinkedIn account', 500);
+//     }
+// };
+
+export const disconnectLinkedIn = async (userId: string) => {
     try {
-        const connection = await LinkedInUser.findOne({ userId });
-
-        if (!connection) {
-            throw createNotFoundError('LinkedIn connection not found');
-        }
-
-        // Update connection to inactive instead of deleting
-        await LinkedInUser.findOneAndUpdate(
-            { userId },
-            {
-                isActive: false,
-                accessToken: null,
-                refreshToken: null,
-                expiresAt: null,
-                refreshExpiresAt: null,
-                updatedAt: new Date()
-            }
+        await SocialConnection.findOneAndUpdate(
+            { userId, platform: ESocialPlatform.LINKEDIN },
+            { isActive: false },
+            { new: true }
         );
     } catch (error) {
-        throw createAppError('Failed to disconnect LinkedIn account', 500);
+        throw createAppError('Failed to disconnect LinkedIn', 500);
     }
 };
 
@@ -162,10 +208,21 @@ export const disconnectLinkedIn = async (userId: string): Promise<void> => {
  * @param userId - User ID
  * @returns LinkedIn connection or null
  */
+// export const getLinkedInConnection = async (userId: string) => {
+//     try {
+//         return await LinkedInUser.findOne({
+//             userId,
+//             isActive: true
+//         });
+//     } catch (error) {
+//         throw createAppError('Failed to get LinkedIn connection', 500);
+//     }
+// };
 export const getLinkedInConnection = async (userId: string) => {
     try {
-        return await LinkedInUser.findOne({
+        return await SocialConnection.findOne({
             userId,
+            platform: ESocialPlatform.LINKEDIN,
             isActive: true
         });
     } catch (error) {
@@ -190,16 +247,13 @@ export const getValidAccessToken = async (userId: string): Promise<string> => {
             throw createAppError('No access token available', 400);
         }
 
-        // Check if token needs refresh
         if (connection.tokenExpiresAt && isTokenExpired(connection.tokenExpiresAt)) {
             if (!connection.refreshToken) {
                 throw createAppError('Access token expired and no refresh token available', 400);
             }
 
-            // Refresh the token
             const newTokenResponse = await refreshLinkedInToken(connection.refreshToken);
 
-            // Update connection with new token
             const newExpiresAt = new Date(Date.now() + newTokenResponse.expires_in * 1000);
             const newRefreshExpiresAt = newTokenResponse.refresh_token_expires_in
                 ? new Date(Date.now() + newTokenResponse.refresh_token_expires_in * 1000)
@@ -240,11 +294,9 @@ export const syncLinkedInPosts = async (userId: string): Promise<any[]> => {
             throw createNotFoundError('LinkedIn connection not found');
         }
 
-        // Get posts from LinkedIn API
         const feedResponse = await getLinkedInFeed(accessToken);
         const posts = feedResponse.elements || [];
 
-        // Save posts to database
         const savedPosts = [];
         for (const post of posts) {
             const postData = {
@@ -261,7 +313,6 @@ export const syncLinkedInPosts = async (userId: string): Promise<any[]> => {
                 updatedAt: new Date()
             };
 
-            // Check if post already exists
             const existingPost = await LinkedInPost.findOne({
                 userId,
                 linkedInPostId: post.id
@@ -284,7 +335,6 @@ export const syncLinkedInPosts = async (userId: string): Promise<any[]> => {
             savedPosts.push(savedPost);
         }
 
-        // Update last sync time
         await LinkedInUser.findOneAndUpdate(
             { userId },
             { lastSyncAt: new Date() }
@@ -362,10 +412,8 @@ export const createPost = async (
             throw createNotFoundError('LinkedIn connection not found');
         }
 
-        // Create post on LinkedIn
         const createdPost = await createLinkedInPost(accessToken, postData);
 
-        // Save post to database
         const savedPost = await LinkedInPost.create({
             userId,
             linkedInPostId: createdPost.id,
@@ -401,7 +449,6 @@ export const likePost = async (userId: string, postId: string): Promise<void> =>
     try {
         const accessToken = await getValidAccessToken(userId);
 
-        // Find the post in database
         const post = await LinkedInPost.findOne({
             userId,
             $or: [
@@ -414,10 +461,8 @@ export const likePost = async (userId: string, postId: string): Promise<void> =>
             throw createNotFoundError('LinkedIn post not found');
         }
 
-        // Like the post on LinkedIn - use linkedInPostId instead of postId
         await likeLinkedInPost(accessToken, post.postId);
 
-        // Update engagement in database
         await LinkedInPost.findOneAndUpdate(
             { _id: post._id },
             {
@@ -444,7 +489,6 @@ export const commentOnPost = async (
     try {
         const accessToken = await getValidAccessToken(userId);
 
-        // Find the post in database
         const post = await LinkedInPost.findOne({
             userId,
             $or: [
@@ -457,10 +501,8 @@ export const commentOnPost = async (
             throw createNotFoundError('LinkedIn post not found');
         }
 
-        // Comment on the post on LinkedIn - use linkedInPostId instead of postId
         await commentOnLinkedInPost(accessToken, post.postId, comment);
 
-        // Update engagement in database
         await LinkedInPost.findOneAndUpdate(
             { _id: post._id },
             {
@@ -526,10 +568,8 @@ export const refreshAccessToken = async (userId: string): Promise<TLinkedInToken
             throw createAppError('No refresh token available', 400);
         }
 
-        // Refresh the token
         const newTokenResponse = await refreshLinkedInToken(connection.refreshToken);
 
-        // Update connection with new token
         const newExpiresAt = new Date(Date.now() + newTokenResponse.expires_in * 1000);
         const newRefreshExpiresAt = newTokenResponse.refresh_token_expires_in
             ? new Date(Date.now() + newTokenResponse.refresh_token_expires_in * 1000)
