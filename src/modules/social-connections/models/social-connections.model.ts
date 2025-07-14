@@ -149,14 +149,26 @@ SocialConnectionSchema.index({ userId: 1, isActive: 1 });
 SocialConnectionSchema.index({ platform: 1, platformUserId: 1 }, { unique: true });
 SocialConnectionSchema.index({ tokenExpiresAt: 1 });
 
+// SocialConnectionSchema.set('toJSON', {
+//     virtuals: true,
+//     versionKey: false,
+//     transform: (doc, ret) => {
+//         delete ret._id;
+//         delete ret.accessToken;
+//         delete ret.refreshToken;
+//         return ret;
+//     }
+// });
 SocialConnectionSchema.set('toJSON', {
     virtuals: true,
     versionKey: false,
     transform: (doc, ret) => {
-        delete ret._id;
-        delete ret.accessToken;
-        delete ret.refreshToken;
-        return ret;
+        // Type-safe approach
+        const finalRet = ret as Partial<ISocialConnection> & { _id?: any };
+        delete finalRet._id;
+        delete finalRet.accessToken;
+        delete finalRet.refreshToken;
+        return finalRet;
     }
 });
 
