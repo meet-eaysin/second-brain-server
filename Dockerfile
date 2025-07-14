@@ -38,5 +38,5 @@ RUN npm run build
 # Expose port
 EXPOSE 5000
 
-# Start production server
-CMD ["node", "dist/server.js"]
+# Start production index
+CMD ["node", "dist/index.js"]

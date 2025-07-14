@@ -1,6 +1,6 @@
 # Marketing APP
 
-A comprehensive Customer Relationship Management (Marketing App) server built with Node.js, Express.js, TypeScript, and MongoDB.
+A comprehensive Customer Relationship Management (Marketing App) index built with Node.js, Express.js, TypeScript, and MongoDB.
 
 ## 🚀 Features
 
@@ -28,7 +28,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/ToufiqurRahmanTamkin/marketing-server.git
+git clone https://github.com/meet-eaysin/marketing-app
 cd marketing-server
 ```
 
