@@ -85,6 +85,18 @@ app.use(generalLimiter);
 app.use(encryptRequest);
 app.use(encryptResponse);
 
+app.get("/", (req: Request, res: Response) => {
+    res.status(200).json({
+        success: true,
+        message: "Welcome to APIs!",
+        version: "v1",
+        endpoints: {
+            health: "/health",
+            api: "/api/v1",
+            docs: "/api/docs"
+        },
+    })
+})
 app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({
         success: true,
