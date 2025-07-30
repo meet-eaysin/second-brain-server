@@ -7,7 +7,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import { stream } from './config/logger';
 import routes from './routes';
 import { encryptRequest, encryptResponse } from './config/encryption';
-import {generalLimiter} from "./config/rateLimiter";
+import {generalLimiter} from "./config/rate-limiter";
 import {createAppError} from "./utils/error.utils";
 import {Request, Response} from "express";
 import {notFound} from "./middlewares/not-found";
@@ -22,7 +22,7 @@ validateGoogleConfig();
 
 app.use(express.json({
     limit: '10mb',
-    verify: (req: Request, res: Response, buf: Buffer) => {
+    verify: (_req: Request, res: Response, buf: Buffer) => {
         try {
             JSON.parse(buf.toString());
         } catch (e) {

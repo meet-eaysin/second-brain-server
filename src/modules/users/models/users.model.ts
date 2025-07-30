@@ -4,14 +4,12 @@ import { EAuthProvider, TUser, TUserRole } from '../types/user.types';
 
 export type TUserDocument = TUser & Document & {
     comparePassword(candidatePassword: string): Promise<boolean>;
-    incrementTokenVersion(): Promise<void>;
 };
 
 export type TUserModel = Model<TUserDocument> & {
     findByEmail(email: string): Promise<TUserDocument | null>;
     findByGoogleId(googleId: string): Promise<TUserDocument | null>;
     findByUsername(username: string): Promise<TUserDocument | null>;
-    findByResetToken(token: string): Promise<TUserDocument | null>;
 };
 
 const UserSchema = new Schema<TUserDocument, TUserModel>(
@@ -96,18 +94,6 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
         },
         lastLoginAt: {
             type: Date
-        },
-        tokenVersion: {
-            type: Number,
-            default: 0
-        },
-        passwordResetToken: {
-            type: String,
-            select: false
-        },
-        passwordResetExpires: {
-            type: Date,
-            select: false
         }
     },
     {
@@ -127,7 +113,7 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
 );
 
 UserSchema.statics.findByEmail = function (email: string) {
-    return this.findOne({ email }).select('+password +passwordResetToken +passwordResetExpires').exec();
+    return this.findOne({ email }).select('+password').exec();
 };
 
 UserSchema.statics.findByGoogleId = function (googleId: string) {
@@ -138,22 +124,12 @@ UserSchema.statics.findByUsername = function (username: string) {
     return this.findOne({ username }).exec();
 };
 
-UserSchema.statics.findByResetToken = function (token: string) {
-    return this.findOne({
-        passwordResetToken: token,
-        passwordResetExpires: { $gt: Date.now() }
-    }).exec();
-};
-
 UserSchema.pre<TUserDocument>('save', async function (next) {
     if (!this.isModified('password') || !this.password) return next();
 
     try {
         const salt = await bcrypt.genSalt(12);
         this.password = await bcrypt.hash(this.password, salt);
-
-        this.passwordResetToken = undefined;
-        this.passwordResetExpires = undefined;
 
         return next();
     } catch (error: any) {
@@ -164,11 +140,6 @@ UserSchema.pre<TUserDocument>('save', async function (next) {
 UserSchema.methods.comparePassword = async function (candidatePassword: string) {
     if (!this.password) return false;
     return bcrypt.compare(candidatePassword, this.password);
-};
-
-UserSchema.methods.incrementTokenVersion = function () {
-    this.tokenVersion += 1;
-    return this.save();
 };
 
 export const UserModel = mongoose.model<TUserDocument, TUserModel>('User', UserSchema);

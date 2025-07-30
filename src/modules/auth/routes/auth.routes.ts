@@ -22,29 +22,38 @@ import {
     refreshTokenSchema,
     registerSchema, resetPasswordSchema
 } from "../validator/auth.validaations";
+import {
+    loginLimiter,
+    registerLimiter,
+    passwordResetLimiter,
+    refreshTokenLimiter,
+    oauthLimiter
+} from '../../../config/rate-limiter/auth-rate-limiter';
 
 const router = Router();
 
-router.post('/sign-up', validateBody(registerSchema), register);
-router.post('/sign-in', validateBody(loginSchema), login);
-router.post('/refresh-token', validateBody(refreshTokenSchema), refreshToken);
+router.post('/sign-up', registerLimiter, validateBody(registerSchema), register);
+router.post('/sign-in', loginLimiter, validateBody(loginSchema), login);
+router.post('/refresh-token', refreshTokenLimiter, validateBody(refreshTokenSchema), refreshToken);
 router.post('/change-password',
     authenticateToken,
     validateBody(changePasswordSchema),
     changeUserPassword
 );
-router.post('/forgot-password', validateBody(forgotPasswordSchema), forgotUserPassword);
-router.post('/reset-password', validateBody(resetPasswordSchema), resetUserPassword);
+router.post('/forgot-password', passwordResetLimiter, validateBody(forgotPasswordSchema), forgotUserPassword);
+router.post('/reset-password', passwordResetLimiter, validateBody(resetPasswordSchema), resetUserPassword);
 router.post('/logout', authenticateToken, logout);
 router.post('/logout-all', authenticateToken, logoutAll);
 router.get('/me', authenticateToken, getProfile);
 
-router.get('/google', googleLogin);
+router.get('/google', oauthLimiter, googleLogin);
 router.get('/google/callback',
+    oauthLimiter,
     validateQuery(googleCallbackQuerySchema),
     googleCallback
 );
 router.post('/google/callback',
+    oauthLimiter,
     validateBody(googleCallbackSchema),
     googleLoginSuccess
 );

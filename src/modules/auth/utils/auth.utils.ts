@@ -6,24 +6,15 @@ import { TGoogleUserProfile, TRefreshTokenPayload, TGoogleTokenResponse } from '
 import {googleConfig} from "../../../config/google/google";
 import {jwtConfig} from "../../../config/jwt/jwt.config";
 import {TJwtPayload} from "../../users/types/user.types";
-import {linkedinConfig} from "../../../config/linkedin";
 
-interface LinkedInTokenResponse {
-    access_token: string;
-    expires_in: number;
-    refresh_token?: string;
-    refresh_token_expires_in?: number;
-    scope: string;
-}
+export const generateGoogleLoginUrl = (): { url: string } => {
+    const statePayload = {
+        timestamp: Date.now(),
+        nonce: crypto.randomBytes(16).toString('hex'),
+        provider: 'google'
+    };
 
-interface LinkedInConfig {
-    clientId: string;
-    clientSecret: string;
-    redirectUri: string;
-}
-
-export const generateGoogleLoginUrl = (): string => {
-    const state = crypto.randomBytes(32).toString('hex');
+    const state = jwt.sign(statePayload, jwtConfig.accessTokenSecret, { expiresIn: '10m' });
 
     const params = new URLSearchParams({
         client_id: googleConfig.clientId,
@@ -35,37 +26,20 @@ export const generateGoogleLoginUrl = (): string => {
         state: state
     });
 
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+    return { url };
 };
 
-export const generateLinkedInAuthUrl = (
-    linkedinConfig: LinkedInConfig,
-    state: string,
-    scopes: string[] = ['r_liteprofile', 'r_emailaddress', 'w_member_social']
-): string => {
-    const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization');
-
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('client_id', linkedinConfig.clientId);
-    authUrl.searchParams.append('redirect_uri', linkedinConfig.redirectUri);
-    authUrl.searchParams.append('state', state);
-    authUrl.searchParams.append('scope', scopes.join(' '));
-
-    return authUrl.toString();
-};
-
-
-export const exchangeLinkedInCodeForToken = async (
-    code: string,
-): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> => {
-    const tokenEndpoint = 'https://www.linkedin.com/oauth/v2/accessToken';
+export const exchangeGoogleCodeForToken = async (code: string): Promise<TGoogleTokenResponse> => {
+    const tokenEndpoint = 'https://oauth2.googleapis.com/token';
 
     const params = new URLSearchParams({
         grant_type: 'authorization_code',
         code: code,
-        client_id: linkedinConfig.clientId,
-        client_secret: linkedinConfig.clientSecret,
-        redirect_uri: linkedinConfig.redirectUri
+        client_id: googleConfig.clientId,
+        client_secret: googleConfig.clientSecret,
+        redirect_uri: googleConfig.redirectUri
     });
 
     try {
@@ -76,18 +50,11 @@ export const exchangeLinkedInCodeForToken = async (
             }
         });
 
-        const tokenData: LinkedInTokenResponse = response.data;
-
-        return {
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token,
-            expiresIn: tokenData.expires_in
-        };
-    } catch (error) {
-        throw new Error(`Failed to exchange LinkedIn code for token: ${error}`);
+        return response.data;
+    } catch (error: any) {
+        throw new Error(`Failed to exchange Google code for token: ${error.response?.data?.error_description || error.message}`);
     }
 };
-
 
 export const getGoogleUserProfile = async (accessToken: string): Promise<TGoogleUserProfile> => {
     const userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
@@ -156,4 +123,8 @@ export const validateUsername = (username: string): boolean => {
 export const generateUsernameFromEmail = (email: string): string => {
     const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
     return baseUsername.substring(0, 30);
+};
+
+export const verifyStateToken = (stateToken: string): any => {
+    return jwt.verify(stateToken, jwtConfig.accessTokenSecret);
 };

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError } from 'zod';
 import {sendError} from "../utils/response.utils";
-import {createValidationError} from "../utils/error.utils";
+import {createValidationErrorFromSchema} from "../utils/error.utils";
 
 export const validate = (schema: z.ZodSchema) =>
     async (req: Request, res: Response, next: NextFunction) => {
@@ -35,9 +35,9 @@ export const validateQuery = <T extends z.ZodType>(schema: T) => {
                     value: err.path.length > 0 ? get(err.path, req.query) : undefined
                 }));
 
-                const appError = createValidationError(
+                const appError = createValidationErrorFromSchema(
                     'Query validation failed',
-                    validationErrors
+                    { details: validationErrors }
                 );
                 return next(appError);
             }
@@ -59,9 +59,9 @@ export const validateBody = <T extends z.ZodType>(schema: T) => {
                     value: get(err.path, req.body)
                 }));
 
-                const appError = createValidationError(
+                const appError = createValidationErrorFromSchema(
                     'Request body validation failed',
-                    validationErrors
+                    { details: validationErrors }
                 );
                 return next(appError);
             }
@@ -83,9 +83,9 @@ export const validateParams = <T extends z.ZodType>(schema: T) => {
                     value: get(err.path, req.params)
                 }));
 
-                const appError = createValidationError(
+                const appError = createValidationErrorFromSchema(
                     'URL parameters validation failed',
-                    validationErrors
+                    { details: validationErrors }
                 );
                 return next(appError);
             }

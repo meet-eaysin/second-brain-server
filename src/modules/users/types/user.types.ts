@@ -25,9 +25,6 @@ export type TUser = {
     createdAt: Date;
     updatedAt: Date;
     lastLoginAt?: Date;
-    tokenVersion: number;
-    passwordResetToken?: string;
-    passwordResetExpires?: Date;
 }
 
 export type TUserCreateRequest = {
@@ -66,6 +63,7 @@ export type TJwtPayload = {
 
 export type TUserUpdateRequest = {
     firstName?: string;
+    email?: string;
     lastName?: string;
     username?: string;
     profilePicture?: string;
@@ -83,6 +81,6 @@ export type TForgotPasswordRequest = {
 }
 
 export type TResetPasswordRequest = {
-    accessToken: string;
+    resetToken: string;
     newPassword: string;
 }

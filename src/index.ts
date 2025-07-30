@@ -109,7 +109,7 @@ const startApplication = async () => {
 
             setTimeout(() => {
                 reject(new Error('MongoDB connection timeout'));
-            }, 30000); // 30 seconds timeout
+            }, 30000);
         });
 
         serve();

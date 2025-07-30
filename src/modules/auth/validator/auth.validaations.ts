@@ -44,7 +44,7 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-    accessToken: z.string().min(1, 'Reset token is required'),
+    resetToken: z.string().min(1, 'Reset token is required'),
     newPassword: z.string()
         .min(8, 'New password must be at least 8 characters long')
         .regex(

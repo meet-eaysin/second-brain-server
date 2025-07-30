@@ -1,17 +1,8 @@
-# Marketing APP
+# second brain
 
-A comprehensive Customer Relationship Management (Marketing App) index built with Node.js, Express.js, TypeScript, and MongoDB.
+A comprehensive Customer Relationship Management (second brain App) index built with Node.js, Express.js, TypeScript, and MongoDB.
 
 ## 🚀 Features
-
-- **Authentication & Authorization**: JWT-based authentication with role-based access control
-- **Data Encryption**: Request/response encryption for enhanced security
-- **Rate Limiting**: API rate limiting to prevent abuse
-- **File Storage**: Support for local and AWS S3 file storage
-- **Email & SMS**: Integrated email and SMS services
-- **Logging**: Comprehensive logging with Winston
-- **Cron Jobs**: Scheduled tasks for automated operations
-- **Docker Support**: Containerized deployment for development and production
 
 ## 📋 Prerequisites
 
@@ -28,8 +19,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/meet-eaysin/marketing-app
-cd marketing-server
+git clone https://github.com/meet-eaysin/second-brain
+cd second-brain-server
 ```
 
 ### 2. Install dependencies
@@ -383,7 +374,7 @@ For support and questions:
 
 ## 🔄 Version History
 
-- **v1.0.0**: Initial release with basic Marketing App functionality
+- **v1.0.0**: Initial release with basic second brain App functionality
 
 ---
 

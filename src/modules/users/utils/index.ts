@@ -18,8 +18,5 @@ export const transformUserDocument = (user: TUserDocument): TUser => {
         createdAt: userObj.createdAt,
         updatedAt: userObj.updatedAt,
         lastLoginAt: userObj.lastLoginAt,
-        tokenVersion: userObj.tokenVersion,
-        passwordResetToken: userObj.passwordResetToken,
-        passwordResetExpires: userObj.passwordResetExpires
     };
 };

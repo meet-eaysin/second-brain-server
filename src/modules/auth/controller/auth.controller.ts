@@ -20,7 +20,13 @@ import { catchAsync } from "../../../utils/catch-async";
 import { createUser, getUsersWithoutPassword } from "../../users/services/users.services";
 import { sendSuccessResponse } from "../../../utils/response-handler.utils";
 import { AuthenticatedRequest } from "../../../middlewares/auth";
-import { generateGoogleLoginUrl } from "../utils/auth.utils";
+import { generateGoogleLoginUrl, verifyStateToken } from "../utils/auth.utils";
+import {
+    createOAuthStateInvalidError,
+    createOAuthCodeInvalidError,
+    createRegistrationFailedError,
+    createAuthenticationFailedError
+} from '../utils/auth-errors';
 
 export const register = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userData: TUserCreateRequest = req.body;
@@ -81,12 +87,32 @@ export const getProfile = catchAsync(async (req: Request, res: Response, next: N
 });
 
 export const googleLogin = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const loginUrl = generateGoogleLoginUrl();
-    res.redirect(loginUrl);
+    const { url } = generateGoogleLoginUrl();
+
+    // Stateless approach - no server-side state storage
+    // The state parameter is embedded in the URL and validated via JWT
+    res.redirect(url);
 });
 
 export const googleCallback = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { code } = req.query;
+    const { code, state, error } = req.query;
+
+    // Handle OAuth errors
+    if (error) {
+        const errorUrl = `${process.env.FRONTEND_URL}/auth/error?error=${encodeURIComponent(error as string)}`;
+        return res.redirect(errorUrl);
+    }
+
+    // Stateless CSRF protection - validate state via JWT
+    if (state) {
+        try {
+            // Verify the state is a valid JWT signed by our server
+            const statePayload = verifyStateToken(state as string);
+            // Additional validation can be added here if needed
+        } catch (error) {
+            return next(createOAuthStateInvalidError());
+        }
+    }
 
     const authResponse = await handleGoogleCallback(code as string);
 
@@ -96,6 +122,11 @@ export const googleCallback = catchAsync(async (req: Request, res: Response, nex
 
 export const googleLoginSuccess = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code } = req.body;
+
+    // Validate authorization code
+    if (!code || typeof code !== 'string') {
+        return next(createOAuthCodeInvalidError());
+    }
 
     const authResponse = await handleGoogleCallback(code);
     sendSuccessResponse(res, authResponse, 'Google login successful');
