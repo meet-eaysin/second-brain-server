@@ -2,14 +2,17 @@ openapi: 3.0.0
 info:
   title: Second Brain Server API
   description: |
-    Comprehensive API for user authentication and management with stateless JWT-based authentication.
+    Comprehensive personal intelligence platform API for knowledge management, creativity, learning, and personal growth.
 
     ## Features
     - **Stateless Authentication**: JWT-based authentication with no server-side sessions
     - **OAuth Integration**: Google OAuth support with CSRF protection
-    - **Rate Limiting**: Built-in rate limiting for security
-    - **Password Management**: Secure password reset and change functionality
-    - **Role-Based Access**: Support for different user roles (admin, moderator, user)
+    - **Database Management**: Create and manage custom databases with flexible schemas
+    - **Record Management**: CRUD operations for database records with rich property types
+    - **User Management**: Complete user lifecycle management with role-based access control
+    - **Rate Limiting**: Built-in rate limiting for security and performance
+    - **File Operations**: Import/export data in multiple formats (JSON, CSV, Excel)
+    - **Real-time Collaboration**: Share databases with granular permissions
 
     ## Authentication
     This API uses JWT Bearer tokens for authentication. Include the token in the Authorization header:
@@ -23,6 +26,25 @@ info:
     - Password Reset: 3 attempts per hour
     - Token Refresh: 10 attempts per 15 minutes
     - OAuth: 20 attempts per 15 minutes
+    - General API: 100 requests per 15 minutes
+
+    ## Database Property Types
+    - **TEXT**: Single-line text
+    - **NUMBER**: Numeric values
+    - **SELECT**: Single selection from predefined options
+    - **MULTI_SELECT**: Multiple selections from predefined options
+    - **DATE**: Date and time values
+    - **CHECKBOX**: Boolean values
+    - **URL**: Web links
+    - **EMAIL**: Email addresses
+    - **PHONE**: Phone numbers
+    - **RELATION**: Links to records in other databases
+    - **FORMULA**: Calculated values based on other properties
+    - **ROLLUP**: Aggregated values from related records
+    - **CREATED_TIME**: Automatically set creation timestamp
+    - **CREATED_BY**: Automatically set creator user
+    - **LAST_EDITED_TIME**: Automatically updated timestamp
+    - **LAST_EDITED_BY**: Automatically updated editor user
   version: 1.0.0
   contact:
     name: API Support
@@ -36,22 +58,54 @@ servers:
   - url: https://your-domain.com/api/v1
     description: Production server
 tags:
+  - name: System
+    description: |
+      System-level endpoints for health checks and API information.
+      These endpoints provide basic server status and API metadata.
   - name: Authentication
     description: |
       User authentication operations including registration, login, logout, and token management.
-      All authentication endpoints use stateless JWT tokens.
+      All authentication endpoints use stateless JWT tokens with comprehensive security features.
   - name: OAuth
     description: |
       OAuth authentication flows for third-party providers like Google.
-      Includes CSRF protection and secure callback handling.
+      Includes CSRF protection, secure callback handling, and automatic account linking.
   - name: Password Management
     description: |
       Password-related operations including password change and reset functionality.
-      Uses stateless JWT tokens for password reset links.
-  - name: Users
+      Uses stateless JWT tokens for password reset links with time-based expiration.
+  - name: User Management
     description: |
-      User management operations for profile management and administrative functions.
-      Requires authentication and appropriate permissions.
+      User profile management and administrative functions.
+      Includes profile updates, account management, and user statistics.
+  - name: User Administration
+    description: |
+      Administrative operations for managing users across the platform.
+      Requires elevated permissions (moderator/admin roles).
+  - name: Database Management
+    description: |
+      Core database operations including creation, updates, deletion, and configuration.
+      Supports flexible schema design with custom properties and views.
+  - name: Database Properties
+    description: |
+      Manage database schema by adding, updating, and removing properties.
+      Supports various property types including relations, formulas, and rollups.
+  - name: Database Views
+    description: |
+      Create and manage different views of database data.
+      Supports filtering, sorting, grouping, and custom layouts.
+  - name: Record Management
+    description: |
+      CRUD operations for database records with rich property value handling.
+      Supports batch operations and complex data types.
+  - name: Database Sharing
+    description: |
+      Share databases with other users and manage access permissions.
+      Supports granular permission levels (read, write, admin).
+  - name: Data Import/Export
+    description: |
+      Import and export database data in multiple formats.
+      Supports JSON, CSV, and Excel formats with flexible mapping options.
 components:
   securitySchemes:
     bearerAuth:
@@ -1015,6 +1069,152 @@ components:
           example: 2023-01-01T00:00:00Z
 
 paths:
+  /:
+    get:
+      tags: [System]
+      summary: API welcome message
+      description: |
+        Returns basic API information and available endpoints.
+        Useful for API discovery and health verification.
+      operationId: getApiInfo
+      responses:
+        '200':
+          description: API information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Welcome to Second Brain Server API
+                  version:
+                    type: string
+                    example: v1
+                  environment:
+                    type: string
+                    example: production
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2023-01-01T12:00:00Z
+                  endpoints:
+                    type: object
+                    properties:
+                      health:
+                        type: string
+                        example: /health
+                      api:
+                        type: string
+                        example: /api/v1
+                      docs:
+                        type: string
+                        example: /api/v1/docs
+                  documentation:
+                    type: string
+                    example: /api/v1/docs
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check endpoint
+      description: |
+        Returns server health status including uptime, memory usage, and environment information.
+        Used for monitoring and load balancer health checks.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Server is running!
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2023-01-01T12:00:00Z
+                  environment:
+                    type: string
+                    example: production
+                  version:
+                    type: string
+                    example: 1.0.0
+                  uptime:
+                    type: number
+                    description: Server uptime in seconds
+                    example: 86400
+                  memory:
+                    type: object
+                    properties:
+                      rss:
+                        type: number
+                        description: Resident Set Size in bytes
+                        example: 52428800
+                      heapTotal:
+                        type: number
+                        description: Total heap size in bytes
+                        example: 20971520
+                      heapUsed:
+                        type: number
+                        description: Used heap size in bytes
+                        example: 15728640
+                      external:
+                        type: number
+                        description: External memory usage in bytes
+                        example: 1048576
+
+  /api:
+    get:
+      tags: [System]
+      summary: API status endpoint
+      description: |
+        Returns API status and available endpoints.
+        Alternative health check endpoint with API-specific information.
+      operationId: getApiStatus
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: API is running!
+                  version:
+                    type: string
+                    example: v1
+                  endpoints:
+                    type: object
+                    properties:
+                      health:
+                        type: string
+                        example: /health
+                      api:
+                        type: string
+                        example: /api/v1
+                      docs:
+                        type: string
+                        example: /api/v1/docs
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: 2023-01-01T12:00:00Z
+
   /auth/sign-up:
     post:
       tags: [Authentication]
@@ -4352,6 +4552,651 @@ paths:
                 $ref: '#/components/schemas/ApiResponse'
         '413':
           description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # User Management Endpoints
+  /users/profile:
+    get:
+      tags: [User Management]
+      summary: Get current user profile
+      description: |
+        Retrieve the authenticated user's profile information.
+        Returns user data without sensitive information like password.
+      operationId: getUserProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      tags: [User Management]
+      summary: Update user profile
+      description: |
+        Update the authenticated user's profile information.
+        Users can update their own profile data including name, username, and profile picture.
+      operationId: updateUserProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+            examples:
+              update_profile:
+                summary: Update profile information
+                value:
+                  firstName: John
+                  lastName: Doe
+                  username: john_doe_updated
+                  profilePicture: https://example.com/new-avatar.jpg
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error or username already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [User Management]
+      summary: Delete user account
+      description: |
+        Permanently delete the authenticated user's account.
+        This action cannot be undone and will remove all associated data.
+      operationId: deleteUserAccount
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: Account deleted
+                  value:
+                    success: true
+                    message: Account deleted successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # User Administration Endpoints
+  /users:
+    get:
+      tags: [User Administration]
+      summary: Get all users (Admin/Moderator)
+      description: |
+        Retrieve a paginated list of all users with filtering and sorting options.
+        Requires moderator or admin role.
+      operationId: getAllUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Number of users per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 20
+        - name: search
+          in: query
+          description: Search term for email, username, or name
+          schema:
+            type: string
+            example: john
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [USER, MODERATOR, ADMIN]
+            example: USER
+        - name: authProvider
+          in: query
+          description: Filter by authentication provider
+          schema:
+            type: string
+            enum: [LOCAL, GOOGLE]
+            example: LOCAL
+        - name: isActive
+          in: query
+          description: Filter by account status
+          schema:
+            type: boolean
+            example: true
+        - name: sortBy
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, lastLoginAt, email, username]
+            default: createdAt
+            example: createdAt
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+            example: desc
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaginatedUsersResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/stats:
+    get:
+      tags: [User Administration]
+      summary: Get user statistics (Admin)
+      description: |
+        Retrieve comprehensive user statistics including counts by role, provider,
+        and recent activity. Requires admin role.
+      operationId: getUserStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: Time period for statistics
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+            example: 30d
+        - name: includeActivity
+          in: query
+          description: Include recent activity data
+          schema:
+            type: boolean
+            default: true
+            example: true
+      responses:
+        '200':
+          description: User statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserStatsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/{id}:
+    get:
+      tags: [User Administration]
+      summary: Get user by ID (Moderator/Admin)
+      description: |
+        Retrieve detailed information about a specific user by their ID.
+        Requires moderator or admin role.
+      operationId: getUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      tags: [User Administration]
+      summary: Update user by ID (Admin)
+      description: |
+        Update any user's information including role and status.
+        Requires admin role. Admins cannot modify their own role or status.
+      operationId: updateUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserByAdminRequest'
+            examples:
+              update_user:
+                summary: Update user information
+                value:
+                  firstName: Jane
+                  lastName: Smith
+                  username: jane_smith_admin
+                  role: MODERATOR
+                  isActive: true
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error or cannot modify self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [User Administration]
+      summary: Delete user by ID (Admin)
+      description: |
+        Permanently delete a user account and all associated data.
+        Requires admin role. Admins cannot delete their own account.
+      operationId: deleteUserById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: User deleted
+                  value:
+                    success: true
+                    message: User deleted successfully
+        '400':
+          description: Cannot delete self
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                cannot_delete_self:
+                  summary: Cannot delete own account
+                  value:
+                    success: false
+                    error:
+                      message: Cannot delete your own account
+                      statusCode: 400
+                      status: error
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/{id}/status:
+    patch:
+      tags: [User Administration]
+      summary: Toggle user status (Admin)
+      description: |
+        Toggle a user's active/inactive status.
+        Requires admin role. Admins cannot change their own status.
+      operationId: toggleUserStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      responses:
+        '200':
+          description: User status updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: Cannot change own status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/{id}/role:
+    patch:
+      tags: [User Administration]
+      summary: Update user role (Admin)
+      description: |
+        Update a user's role (USER, MODERATOR, ADMIN).
+        Requires admin role. Admins cannot change their own role.
+      operationId: updateUserRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            pattern: '^[0-9a-fA-F]{24}$'
+            example: 507f1f77bcf86cd799439011
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum: [USER, MODERATOR, ADMIN]
+                  description: New role for the user
+                  example: MODERATOR
+            examples:
+              promote_to_moderator:
+                summary: Promote user to moderator
+                value:
+                  role: MODERATOR
+              promote_to_admin:
+                summary: Promote user to admin
+                value:
+                  role: ADMIN
+      responses:
+        '200':
+          description: User role updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+        '400':
+          description: Cannot change own role or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions (Admin required)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /users/bulk-update:
+    patch:
+      tags: [User Administration]
+      summary: Bulk update users (Admin)
+      description: |
+        Update multiple users at once with the same changes.
+        Requires admin role. Useful for batch operations like role changes or status updates.
+      operationId: bulkUpdateUsers
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkUpdateUsersRequest'
+            examples:
+              bulk_activate:
+                summary: Activate multiple users
+                value:
+                  userIds: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+                  updates:
+                    isActive: true
+              bulk_role_change:
+                summary: Change role for multiple users
+                value:
+                  userIds: ["507f1f77bcf86cd799439013", "507f1f77bcf86cd799439014"]
+                  updates:
+                    role: MODERATOR
+      responses:
+        '200':
+          description: Users updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          updated:
+                            type: integer
+                            description: Number of users successfully updated
+                            example: 5
+                          errors:
+                            type: array
+                            items:
+                              type: string
+                            description: List of errors for failed updates
+                            example: ["User 507f1f77bcf86cd799439015 not found"]
+        '400':
+          description: Validation error or invalid user IDs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions (Admin required)
           content:
             application/json:
               schema:
