@@ -58,7 +58,6 @@ router.delete('/:id',
   databaseController.deleteDatabase
 );
 
-// Property management routes
 router.post('/:id/properties',
   authenticateToken,
   validateParams(validators.databaseIdSchema),
@@ -79,7 +78,6 @@ router.delete('/:id/properties/:propertyId',
   databaseController.deleteProperty
 );
 
-// View management routes
 router.post('/:id/views',
   authenticateToken,
   validateParams(validators.databaseIdSchema),
@@ -100,7 +98,6 @@ router.delete('/:id/views/:viewId',
   databaseController.deleteView
 );
 
-// Record management routes
 router.post('/:id/records',
   authenticateToken,
   validateParams(validators.databaseIdSchema),
@@ -134,7 +131,6 @@ router.delete('/:id/records/:recordId',
   databaseController.deleteRecord
 );
 
-// Permission management routes
 router.post('/:id/share',
   authenticateToken,
   validateParams(validators.databaseIdSchema),
@@ -148,7 +144,6 @@ router.delete('/:id/share/:targetUserId',
   databaseController.removeDatabaseAccess
 );
 
-// Export/Import routes
 router.get('/:id/export',
   authenticateToken,
   validateParams(validators.databaseIdSchema),

@@ -1,9 +1,13 @@
 import * as XLSX from 'xlsx';
 import { Parser as CsvParser } from 'json2csv';
 import Papa from 'papaparse';
-import { TDatabaseExportOptions, TDatabaseImportOptions, TRecordsListResponse } from '../types/database.types';
+import {
+  EPropertyType,
+  TDatabaseExportOptions,
+  TDatabaseImportOptions,
+  TRecordsListResponse
+} from '../types/database.types';
 import * as databaseService from './database.service';
-import { EPropertyType } from '../models/database.model';
 import {
   createExportFormatInvalidError,
   createImportFormatInvalidError,

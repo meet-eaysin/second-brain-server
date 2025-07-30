@@ -1,4 +1,171 @@
-import { EPropertyType, ERelationType, EViewType, ISelectOption, IRelationConfig, IFormulaConfig, IRollupConfig, IFilter, ISort } from '../models/database.model';
+import {HydratedDocument, Schema, Document} from "mongoose";
+import {IDatabaseRecord, IDatabaseRecordDocument} from "../models/database-record.model";
+
+export type DatabaseDocument = HydratedDocument<IDatabaseDocument>;
+export type DatabaseRecordDocument = HydratedDocument<IDatabaseRecordDocument>;
+
+export enum EPropertyType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  DATE = 'date',
+  BOOLEAN = 'boolean',
+  SELECT = 'select',
+  MULTI_SELECT = 'multi_select',
+  FILE = 'file',
+  EMAIL = 'email',
+  PHONE = 'phone',
+  URL = 'url',
+  CHECKBOX='checkbox',
+  RELATION = 'relation',
+  FORMULA = 'formula',
+  ROLLUP = 'rollup',
+  CREATED_TIME = 'created_time',
+  LAST_EDITED_TIME = 'last_edited_time',
+  CREATED_BY = 'created_by',
+  LAST_EDITED_BY = 'last_edited_by'
+}
+
+export enum ERelationType {
+  ONE_TO_ONE = 'one_to_one',
+  ONE_TO_MANY = 'one_to_many',
+  MANY_TO_MANY = 'many_to_many'
+}
+
+export enum EViewType {
+  TABLE = 'table',
+  BOARD = 'board',
+  TIMELINE = 'timeline',
+  CALENDAR = 'calendar',
+  GALLERY = 'gallery',
+  LIST = 'list'
+}
+
+export interface ISelectOption {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface IRelationConfig {
+  relatedDatabaseId: string;
+  relationType: ERelationType;
+  relatedPropertyId?: string;
+}
+
+export interface IFormulaConfig {
+  expression: string;
+  returnType: EPropertyType;
+}
+
+export interface IRollupConfig {
+  relationPropertyId: string;
+  rollupPropertyId: string;
+  function: 'count' | 'sum' | 'average' | 'min' | 'max' | 'unique';
+}
+
+export interface IDatabaseProperty {
+  id: string;
+  name: string;
+  type: EPropertyType;
+  description?: string;
+  required?: boolean;
+
+  selectOptions?: ISelectOption[];
+  relationConfig?: IRelationConfig;
+  formulaConfig?: IFormulaConfig;
+  rollupConfig?: IRollupConfig;
+
+  isVisible: boolean;
+  order: number;
+}
+
+export interface IFilter {
+  propertyId: string;
+  operator: string;
+  value: string | number | boolean | Date | string[] | null;
+}
+
+export interface ISort {
+  propertyId: string;
+  direction: 'asc' | 'desc';
+}
+
+export interface IDatabaseView {
+  id: string;
+  name: string;
+  type: EViewType;
+  isDefault: boolean;
+
+  filters: IFilter[];
+  sorts: ISort[];
+  groupBy?: string;
+
+  visibleProperties: string[];
+  propertyWidths?: { [propertyId: string]: number };
+
+  boardSettings?: {
+    groupByPropertyId: string;
+    showUngrouped: boolean;
+  };
+  timelineSettings?: {
+    startDatePropertyId: string;
+    endDatePropertyId?: string;
+  };
+  calendarSettings?: {
+    datePropertyId: string;
+  };
+}
+
+// Plain data interface (for API responses and data transfer)
+export interface IDatabase {
+  _id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  cover?: string;
+
+  userId: string;
+  workspaceId?: string;
+
+  properties: IDatabaseProperty[];
+  views: IDatabaseView[];
+
+  isPublic: boolean;
+  sharedWith: Array<{
+    userId: string;
+    permission: 'read' | 'write' | 'admin';
+  }>;
+
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  lastEditedBy: string;
+}
+
+// Mongoose document interface (extends Document for database operations)
+export interface IDatabaseDocument extends Document {
+  name: string;
+  description?: string;
+  icon?: string;
+  cover?: string;
+
+  userId: string;
+  workspaceId?: string;
+
+  properties: IDatabaseProperty[];
+  views: IDatabaseView[];
+
+  isPublic: boolean;
+  sharedWith: Array<{
+    userId: string;
+    permission: 'read' | 'write' | 'admin';
+  }>;
+
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  lastEditedBy: string;
+}
 
 export interface TDatabaseCreateRequest {
   name: string;
@@ -82,11 +249,11 @@ export interface TViewUpdateRequest {
 }
 
 export interface TRecordCreateRequest {
-  properties: { [propertyId: string]: any };
+  properties: { [propertyId: string]: unknown };
 }
 
 export interface TRecordUpdateRequest {
-  properties: { [propertyId: string]: any };
+  properties: { [propertyId: string]: unknown };
 }
 
 export interface TRecordQueryParams {
@@ -118,7 +285,6 @@ export interface TDatabaseImportOptions {
   propertyMapping?: { [columnName: string]: string }; // maps import columns to property IDs
 }
 
-// Response types
 export interface TDatabaseResponse {
   _id: string;
   name: string;
@@ -150,9 +316,17 @@ export interface TDatabaseResponse {
     groupBy?: string;
     visibleProperties: string[];
     propertyWidths?: { [propertyId: string]: number };
-    boardSettings?: any;
-    timelineSettings?: any;
-    calendarSettings?: any;
+    boardSettings?: {
+      groupByPropertyId: string;
+      showUngrouped: boolean;
+    };
+    timelineSettings?: {
+      startDatePropertyId: string;
+      endDatePropertyId: string;
+    };
+    calendarSettings?: {
+      datePropertyId: string;
+    };
   }>;
   isPublic: boolean;
   sharedWith: Array<{
@@ -168,7 +342,7 @@ export interface TDatabaseResponse {
 export interface TRecordResponse {
   _id: string;
   databaseId: string;
-  properties: { [propertyId: string]: any };
+  properties: { [propertyId: string]: unknown };
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -185,18 +359,24 @@ export interface TRecordsListResponse {
   };
   aggregations?: {
     groupedData?: { [groupValue: string]: TRecordResponse[] };
-    summary?: { [propertyId: string]: any };
+    summary?: { [propertyId: string]: {
+      count: number;
+      sum?: number;
+      average?: number;
+      min?: number | Date;
+      max?: number | Date;
+      unique?: number;
+    }};
   };
 }
 
 export interface TPropertyValidationError {
   propertyId: string;
   propertyName: string;
-  value: any;
+  value: unknown;
   message: string;
 }
 
-// Utility types for property values
 export type TPropertyValue = {
   [EPropertyType.TEXT]: string;
   [EPropertyType.NUMBER]: number;
@@ -215,8 +395,8 @@ export type TPropertyValue = {
   [EPropertyType.PHONE]: string;
   [EPropertyType.URL]: string;
   [EPropertyType.RELATION]: string | string[];
-  [EPropertyType.FORMULA]: any;
-  [EPropertyType.ROLLUP]: any;
+  [EPropertyType.FORMULA]: string | number | boolean | Date | null;
+  [EPropertyType.ROLLUP]: string | number | boolean | Date | null;
   [EPropertyType.CREATED_TIME]: Date;
   [EPropertyType.LAST_EDITED_TIME]: Date;
   [EPropertyType.CREATED_BY]: string;

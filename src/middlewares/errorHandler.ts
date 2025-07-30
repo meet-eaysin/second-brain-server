@@ -3,28 +3,49 @@ import { TAppError } from '../types/error.types';
 import logger from '../config/logger';
 import {createAppError} from "../utils/error.utils";
 
-// Handle MongoDB Cast Error
-const handleCastErrorDB = (err: any): TAppError => {
+// MongoDB Cast Error
+interface IMongoCastError {
+  name: 'CastError';
+  path: string;
+  value: unknown;
+  kind: string;
+}
+
+// MongoDB Duplicate Key Error
+interface IMongoDuplicateError {
+  name: 'MongoServerError';
+  code: 11000;
+  keyValue: Record<string, unknown>;
+}
+
+// MongoDB Validation Error
+interface IMongoValidationError {
+  name: 'ValidationError';
+  errors: Record<string, {
+    message: string;
+    path: string;
+    value: unknown;
+  }>;
+}
+
+const handleCastErrorDB = (err: IMongoCastError): TAppError => {
   const message = `Invalid ${err.path}: ${err.value}`;
   return createAppError(message, 400);
 };
 
-// Handle MongoDB Duplicate Key Error
-const handleDuplicateFieldsDB = (err: any): TAppError => {
+const handleDuplicateFieldsDB = (err: IMongoDuplicateError): TAppError => {
   const field = Object.keys(err.keyValue)[0];
   const value = err.keyValue[field];
   const message = `Duplicate field value: ${field} = '${value}'. Please use another value!`;
   return createAppError(message, 400);
 };
 
-// Handle MongoDB Validation Error
-const handleValidationErrorDB = (err: any): TAppError => {
-  const errors = Object.values(err.errors).map((el: any) => el.message);
+const handleValidationErrorDB = (err: IMongoValidationError): TAppError => {
+  const errors = Object.values(err.errors).map((el) => el.message);
   const message = `Invalid input data: ${errors.join('. ')}`;
   return createAppError(message, 400);
 };
 
-// Handle JWT Errors
 const handleJWTError = (): TAppError => {
   return createAppError('Invalid token. Please log in again!', 401);
 };
@@ -33,13 +54,17 @@ const handleJWTExpiredError = (): TAppError => {
   return createAppError('Your token has expired! Please log in again.', 401);
 };
 
-// Handle Auth0 Errors
-const handleAuth0Error = (err: any): TAppError => {
+// Auth0 Error
+interface IAuth0Error {
+  message?: string;
+  statusCode?: number;
+}
+
+const handleAuth0Error = (err: IAuth0Error): TAppError => {
   const message = err.message || 'Authentication failed';
   return createAppError(message, 401);
 };
 
-// Send error response for development
 const sendErrorDev = (err: TAppError, res: Response): void => {
   logger.error('Error Details:', {
     error: err,
@@ -69,9 +94,7 @@ const sendErrorDev = (err: TAppError, res: Response): void => {
   });
 };
 
-// Send error response for production
 const sendErrorProd = (err: TAppError, res: Response): void => {
-  // Log error details for debugging
   logger.error('Production Error:', {
     message: err.message,
     statusCode: err.statusCode,
@@ -80,7 +103,6 @@ const sendErrorProd = (err: TAppError, res: Response): void => {
     isOperational: err.isOperational
   });
 
-  // Operational, trusted error: send message to client
   if (err.isOperational) {
     res.status(err.statusCode).json({
       success: false,
@@ -91,7 +113,6 @@ const sendErrorProd = (err: TAppError, res: Response): void => {
       }
     });
   } else {
-    // Programming or other unknown error: don't leak error details
     res.status(500).json({
       success: false,
       error: {
@@ -103,28 +124,28 @@ const sendErrorProd = (err: TAppError, res: Response): void => {
   }
 };
 
-// Main error handler middleware
 export const errorHandler = (
-    err: any,
+    err: unknown,
     req: Request,
     res: Response,
     next: NextFunction
 ): void => {
-  // Convert error to TAppError if it's not already
   let error: TAppError;
 
-  if (err.isOperational) {
+  // Check if it's already an operational error
+  if (err && typeof err === 'object' && 'isOperational' in err && err.isOperational) {
     error = err as TAppError;
   } else {
-    error = createAppError(
-        err.message || 'Internal Server Error',
-        err.statusCode || 500,
-        false,
-        err.stack
-    );
+    // Create a new error from unknown error
+    const message = err instanceof Error ? err.message : 'Internal Server Error';
+    const statusCode = (err && typeof err === 'object' && 'statusCode' in err)
+      ? (err.statusCode as number)
+      : 500;
+    const stack = err instanceof Error ? err.stack : undefined;
+
+    error = createAppError(message, statusCode, false, stack);
   }
 
-  // Log the original error
   logger.error('Global Error Handler:', {
     message: error.message,
     stack: error.stack,
@@ -136,14 +157,19 @@ export const errorHandler = (
   });
 
   // Handle specific error types
-  if (err.name === 'CastError') error = handleCastErrorDB(err);
-  if (err.code === 11000) error = handleDuplicateFieldsDB(err);
-  if (err.name === 'ValidationError') error = handleValidationErrorDB(err);
-  if (err.name === 'JsonWebTokenError') error = handleJWTError();
-  if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
-  if (err.name === 'IdentityProviderError') error = handleAuth0Error(err);
+  if (err && typeof err === 'object') {
+    if ('name' in err) {
+      if (err.name === 'CastError') error = handleCastErrorDB(err as IMongoCastError);
+      if (err.name === 'ValidationError') error = handleValidationErrorDB(err as IMongoValidationError);
+      if (err.name === 'JsonWebTokenError') error = handleJWTError();
+      if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
+      if (err.name === 'IdentityProviderError') error = handleAuth0Error(err as IAuth0Error);
+    }
+    if ('code' in err && err.code === 11000) {
+      error = handleDuplicateFieldsDB(err as IMongoDuplicateError);
+    }
+  }
 
-  // Send error response based on environment
   if (process.env.NODE_ENV === 'development') {
     sendErrorDev(error, res);
   } else {

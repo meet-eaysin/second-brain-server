@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-export const catchAsync = <T extends any[]>(
+export const catchAsync = <T extends unknown[]>(
     fn: (req: Request, res: Response, next: NextFunction, ...args: T) => Promise<void>
 ) => {
     return (req: Request, res: Response, next: NextFunction, ...args: T) => {

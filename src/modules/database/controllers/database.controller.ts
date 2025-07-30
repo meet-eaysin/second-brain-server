@@ -6,7 +6,6 @@ import * as databaseService from '../services/database.service';
 import * as exportService from '../services/export.service';
 import { TDatabaseExportOptions, TDatabaseImportOptions } from '../types/database.types';
 
-// Extend Request type to include user
 interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
@@ -15,12 +14,9 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-// Database CRUD
 export const createDatabase = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.createDatabase(userId, req.body);
   sendSuccessResponse(res, database, 'Database created successfully', 201);
@@ -29,9 +25,7 @@ export const createDatabase = catchAsync(async (req: AuthenticatedRequest, res: 
 export const getDatabaseById = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.getDatabaseById(id, userId);
   sendSuccessResponse(res, database, 'Database retrieved successfully');
@@ -39,9 +33,7 @@ export const getDatabaseById = catchAsync(async (req: AuthenticatedRequest, res:
 
 export const getUserDatabases = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const { workspaceId } = req.query;
   const databases = await databaseService.getUserDatabases(userId, workspaceId as string);
@@ -51,9 +43,7 @@ export const getUserDatabases = catchAsync(async (req: AuthenticatedRequest, res
 export const updateDatabase = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.updateDatabase(id, userId, req.body);
   sendSuccessResponse(res, database, 'Database updated successfully');
@@ -62,21 +52,17 @@ export const updateDatabase = catchAsync(async (req: AuthenticatedRequest, res: 
 export const deleteDatabase = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   await databaseService.deleteDatabase(id, userId);
   sendSuccessResponse(res, null, 'Database deleted successfully');
 });
 
-// Property management
 export const addProperty = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
+
 
   const database = await databaseService.addProperty(id, userId, req.body);
   sendSuccessResponse(res, database, 'Property added successfully', 201);
@@ -85,9 +71,7 @@ export const addProperty = catchAsync(async (req: AuthenticatedRequest, res: Res
 export const updateProperty = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id, propertyId } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
   sendSuccessResponse(res, database, 'Property updated successfully');
@@ -96,21 +80,16 @@ export const updateProperty = catchAsync(async (req: AuthenticatedRequest, res: 
 export const deleteProperty = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id, propertyId } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.deleteProperty(id, propertyId, userId);
   sendSuccessResponse(res, database, 'Property deleted successfully');
 });
 
-// View management
 export const addView = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.addView(id, userId, req.body);
   sendSuccessResponse(res, database, 'View added successfully', 201);
@@ -119,9 +98,7 @@ export const addView = catchAsync(async (req: AuthenticatedRequest, res: Respons
 export const updateView = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id, viewId } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.updateView(id, viewId, userId, req.body);
   sendSuccessResponse(res, database, 'View updated successfully');
@@ -130,21 +107,16 @@ export const updateView = catchAsync(async (req: AuthenticatedRequest, res: Resp
 export const deleteView = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id, viewId } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const database = await databaseService.deleteView(id, viewId, userId);
   sendSuccessResponse(res, database, 'View deleted successfully');
 });
 
-// Record management
 export const createRecord = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const record = await databaseService.createRecord(id, userId, req.body);
   sendSuccessResponse(res, record, 'Record created successfully', 201);
@@ -153,9 +125,8 @@ export const createRecord = catchAsync(async (req: AuthenticatedRequest, res: Re
 export const getRecords = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
+
 
   const queryParams = {
     viewId: req.query.viewId as string,
@@ -175,9 +146,7 @@ export const getRecords = catchAsync(async (req: AuthenticatedRequest, res: Resp
 export const getRecordById = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id, recordId } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const record = await databaseService.getRecordById(id, recordId, userId);
   sendSuccessResponse(res, record, 'Record retrieved successfully');
@@ -186,9 +155,7 @@ export const getRecordById = catchAsync(async (req: AuthenticatedRequest, res: R
 export const updateRecord = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id, recordId } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
 
   const record = await databaseService.updateRecord(id, recordId, userId, req.body);
   sendSuccessResponse(res, record, 'Record updated successfully');
@@ -228,7 +195,6 @@ export const removeDatabaseAccess = catchAsync(async (req: AuthenticatedRequest,
   sendSuccessResponse(res, database, 'Database access removed successfully');
 });
 
-// Export/Import
 export const exportDatabase = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
@@ -269,13 +235,8 @@ export const exportDatabase = catchAsync(async (req: AuthenticatedRequest, res: 
 export const importData = catchAsync(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   const { id } = req.params;
   const userId = req.user?.id;
-  if (!userId) {
-    return next(createNotFoundError('User authentication required'));
-  }
-
-  if (!req.file) {
-    return next(createNotFoundError('No file uploaded'));
-  }
+  if (!userId) return next(createNotFoundError('User authentication required'));
+  if (!req.file) return next(createNotFoundError('No file uploaded'));
 
   const formatValue = req.body.format || 'csv';
   if (!['json', 'csv', 'xlsx'].includes(formatValue)) {

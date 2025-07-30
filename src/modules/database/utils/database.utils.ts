@@ -1,5 +1,4 @@
-import { FILTER_OPERATORS } from '../types/database.types';
-import { EPropertyType } from "../models/database.model";
+import { FILTER_OPERATORS, EPropertyType } from '../types/database.types';
 
 // Type-safe filter operator validation
 export const validateFilterOperator = (propertyType: EPropertyType, operator: string): boolean => {

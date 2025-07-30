@@ -1,5 +1,22 @@
 import { z } from 'zod';
 
+// Define specific error value types
+export type TErrorValue = unknown;
+
+// Define validation error structure
+export interface IValidationError {
+    field?: string;
+    code?: string;
+    message: string;
+    value?: TErrorValue;
+    [key: string]: unknown; // Allow additional properties
+}
+
+// Define key-value error structure for database conflicts
+export interface IKeyValueError {
+    [key: string]: TErrorValue;
+}
+
 export type TAppError = {
     name: string;
     message: string;
@@ -8,9 +25,9 @@ export type TAppError = {
     isOperational: boolean;
     code?: string;
     path?: string;
-    value?: any;
-    keyValue?: Record<string, any>;
-    errors?: Record<string, any>;
+    value?: TErrorValue;
+    keyValue?: IKeyValueError;
+    errors?: Record<string, IValidationError>;
     stack?: string;
 };
 
@@ -21,18 +38,18 @@ export type TErrorResponse = {
         statusCode: number;
         status: string;
         stack?: string;
-        details?: any;
+        details?: Record<string, unknown>;
     };
 };
 
-export type TSuccessResponse<T = any> = {
+export type TSuccessResponse<T = unknown> = {
     success: true;
     message: string;
     data: T;
     statusCode: number;
 };
 
-export type TPaginatedResponse<T = any> = {
+export type TPaginatedResponse<T = unknown> = {
     success: true;
     message: string;
     data: T[];
@@ -53,14 +70,14 @@ export const ErrorResponseSchema = z.object({
         statusCode: z.number(),
         status: z.string(),
         stack: z.string().optional(),
-        details: z.any().optional(),
+        details: z.record(z.unknown()).optional(),
     }),
 });
 
 export const SuccessResponseSchema = z.object({
     success: z.literal(true),
     message: z.string(),
-    data: z.any(),
+    data: z.unknown(),
     statusCode: z.number(),
 });
 

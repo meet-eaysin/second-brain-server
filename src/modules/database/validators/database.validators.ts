@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EPropertyType, ERelationType, EViewType } from '../models/database.model';
+import { EPropertyType, ERelationType, EViewType } from '../types/database.types';
 
 // Common schemas
 const mongoIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId');

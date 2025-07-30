@@ -10,7 +10,7 @@ interface CustomResponse extends Response {
   rawJson?: Function;
 }
 
-export const encryptData = (data: any): string => {
+export const encryptData = (data: unknown): string => {
   const dataString = typeof data === 'string' ? data : JSON.stringify(data);
   return CryptoJS.AES.encrypt(dataString, ENCRYPTION_SECRET).toString();
 };
@@ -24,7 +24,7 @@ export const decryptData = (encryptedData: string): string => {
   }
 };
 
-export const parseDecryptedData = (decryptedString: string): any => {
+export const parseDecryptedData = (decryptedString: string): unknown => {
   try {
     return JSON.parse(decryptedString);
   } catch (e) {
@@ -66,7 +66,7 @@ export const encryptResponse = (req: Request, res: Response, next: NextFunction)
   try {
     const originalJson = res.json;
     
-    res.json = function(body: any): any {
+    res.json = function(body: unknown): Response {
       if (body) {
         try {
           const encrypted = encryptData(body);

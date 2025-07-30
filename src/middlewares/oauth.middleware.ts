@@ -16,9 +16,6 @@ setInterval(() => {
     }
 }, 10 * 60 * 1000);
 
-/**
- * Generate and store CSRF state for OAuth flow
- */
 export const generateOAuthState = (userId?: string): string => {
     const state = randomBytes(32).toString('hex');
     stateStore.set(state, {
@@ -28,9 +25,6 @@ export const generateOAuthState = (userId?: string): string => {
     return state;
 };
 
-/**
- * Verify OAuth state parameter
- */
 export const verifyOAuthState = (req: Request, res: Response, next: NextFunction): void => {
     const { state } = req.query;
 
@@ -56,9 +50,6 @@ export const verifyOAuthState = (req: Request, res: Response, next: NextFunction
     next();
 };
 
-/**
- * Rate limiting for OAuth endpoints
- */
 const oauthAttempts = new Map<string, { count: number; resetTime: number }>();
 
 export const oauthRateLimit = (maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000) => {
@@ -87,9 +78,6 @@ export const oauthRateLimit = (maxAttempts: number = 5, windowMs: number = 15 * 
     };
 };
 
-/**
- * Validate OAuth error responses
- */
 export const handleOAuthError = (req: Request, res: Response, next: NextFunction): void => {
     const { error, error_description } = req.query;
 
@@ -101,9 +89,6 @@ export const handleOAuthError = (req: Request, res: Response, next: NextFunction
     next();
 };
 
-/**
- * Secure OAuth redirect
- */
 export const secureRedirect = (allowedDomains: string[]) => {
     return (redirectUrl: string): boolean => {
         try {

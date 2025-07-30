@@ -1,4 +1,5 @@
-import {TAppError} from "../types/error.types";
+import {TAppError, IValidationError} from "../types/error.types";
+import { convertErrorArrayToRecord, convertToValidationError } from './validation-error-converter';
 
 export const createAppError = (
     message: string,
@@ -27,11 +28,22 @@ export const createAppError = (
 
 export const createValidationError = (
     message: string,
-    errors?: Record<string, any>,
+    errors?: Record<string, IValidationError> | any[] | any,
     statusCode: number = 400
 ): TAppError => {
     const error = createAppError(message, statusCode);
-    error.errors = errors;
+
+    if (Array.isArray(errors)) {
+        error.errors = convertErrorArrayToRecord(errors);
+    } else if (errors && typeof errors === 'object') {
+        // If it's already in the correct format, use it
+        if ('field' in errors || 'code' in errors || 'message' in errors) {
+            error.errors = { error: convertToValidationError(errors) };
+        } else {
+            error.errors = errors;
+        }
+    }
+
     return error;
 };
 
@@ -48,12 +60,10 @@ export const createNotFoundError = (resource: string, id?: string): TAppError =>
 
 export const createValidationErrorFromSchema = (
     message: string,
-    errors: Record<string, any>,
+    errors: Record<string, IValidationError> | any[] | any,
     statusCode: number = 400
 ): TAppError => {
-    const error = createValidationError(message, errors, statusCode);
-    error.errors = errors;
-    return error;
+    return createValidationError(message, errors, statusCode);
 };
 
 export const createUnauthorizedError = (message: string = 'Unauthorized'): TAppError => {

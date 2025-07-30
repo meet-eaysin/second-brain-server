@@ -17,12 +17,6 @@ const envSchema = z.object({
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_PHONE_NUMBER: z.string().optional(),
 
-    LINKEDIN_CLIENT_ID: z.string().optional(),
-    LINKEDIN_CLIENT_SECRET: z.string().optional(),
-    LINKEDIN_CALLBACK_URL: z.string().url().optional(),
-    LINKEDIN_REDIRECT_URI: z.string().url().optional(),
-    LINKEDIN_API_BASE_URL: z.string().url().default('https://api.linkedin.com/v2'),
-
     CLIENT_URL: z.string().url().default('http://localhost:5000')
 }).passthrough();
 

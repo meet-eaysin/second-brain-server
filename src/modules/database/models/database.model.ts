@@ -1,148 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-
-export enum EPropertyType {
-  TEXT = 'text',
-  NUMBER = 'number',
-  DATE = 'date',
-  BOOLEAN = 'boolean',
-  SELECT = 'select',
-  MULTI_SELECT = 'multi_select',
-  FILE = 'file',
-  EMAIL = 'email',
-  PHONE = 'phone',
-  URL = 'url',
-  CHECKBOX='checkbox',
-  RELATION = 'relation',
-  FORMULA = 'formula',
-  ROLLUP = 'rollup',
-  CREATED_TIME = 'created_time',
-  LAST_EDITED_TIME = 'last_edited_time',
-  CREATED_BY = 'created_by',
-  LAST_EDITED_BY = 'last_edited_by'
-}
-
-export enum ERelationType {
-  ONE_TO_ONE = 'one_to_one',
-  ONE_TO_MANY = 'one_to_many',
-  MANY_TO_MANY = 'many_to_many'
-}
-
-export enum EViewType {
-  TABLE = 'table',
-  BOARD = 'board',
-  TIMELINE = 'timeline',
-  CALENDAR = 'calendar',
-  GALLERY = 'gallery',
-  LIST = 'list'
-}
-
-export interface ISelectOption {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface IRelationConfig {
-  relatedDatabaseId: string;
-  relationType: ERelationType;
-  relatedPropertyId?: string; // For bidirectional relations
-}
-
-export interface IFormulaConfig {
-  expression: string;
-  returnType: EPropertyType;
-}
-
-export interface IRollupConfig {
-  relationPropertyId: string;
-  rollupPropertyId: string;
-  function: 'count' | 'sum' | 'average' | 'min' | 'max' | 'unique';
-}
-
-export interface IDatabaseProperty {
-  id: string;
-  name: string;
-  type: EPropertyType;
-  description?: string;
-  required?: boolean;
-
-  // Type-specific configurations
-  selectOptions?: ISelectOption[]; // For select and multi_select
-  relationConfig?: IRelationConfig; // For relation
-  formulaConfig?: IFormulaConfig; // For formula
-  rollupConfig?: IRollupConfig; // For rollup
-
-  // Display settings
-  isVisible: boolean;
-  order: number;
-}
-
-export interface IFilter {
-  propertyId: string;
-  operator: string; // equals, not_equals, contains, does_not_contain, is_empty, is_not_empty, etc.
-  value: any;
-}
-
-export interface ISort {
-  propertyId: string;
-  direction: 'asc' | 'desc';
-}
-
-export interface IDatabaseView {
-  id: string;
-  name: string;
-  type: EViewType;
-  isDefault: boolean;
-
-  // View configuration
-  filters: IFilter[];
-  sorts: ISort[];
-  groupBy?: string; // propertyId
-
-  // Display settings
-  visibleProperties: string[]; // propertyIds
-  propertyWidths?: { [propertyId: string]: number };
-
-  // View-specific settings
-  boardSettings?: {
-    groupByPropertyId: string;
-    showUngrouped: boolean;
-  };
-  timelineSettings?: {
-    startDatePropertyId: string;
-    endDatePropertyId?: string;
-  };
-  calendarSettings?: {
-    datePropertyId: string;
-  };
-}
-
-export interface IDatabase extends Document {
-  _id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  cover?: string;
-
-  userId: string; // Owner of the database
-  workspaceId?: string; // Optional workspace grouping
-
-  properties: IDatabaseProperty[];
-  views: IDatabaseView[];
-
-  // Permissions
-  isPublic: boolean;
-  sharedWith: Array<{
-    userId: string;
-    permission: 'read' | 'write' | 'admin';
-  }>;
-
-  // Metadata
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
-  lastEditedBy: string;
-}
+import {EPropertyType, ERelationType, EViewType, IDatabaseDocument} from "../types/database.types";
 
 const DatabasePropertySchema = new Schema({
   id: { type: String, required: true },
@@ -212,7 +69,7 @@ const DatabaseViewSchema = new Schema({
   }
 });
 
-const DatabaseSchema = new Schema<IDatabase>({
+const DatabaseSchema = new Schema<IDatabaseDocument>({
   name: { type: String, required: true },
   description: String,
   icon: String,
@@ -237,41 +94,8 @@ const DatabaseSchema = new Schema<IDatabase>({
   collection: 'databases'
 });
 
-// Indexes
 DatabaseSchema.index({ userId: 1, createdAt: -1 });
 DatabaseSchema.index({ workspaceId: 1 });
 DatabaseSchema.index({ 'sharedWith.userId': 1 });
 
-export const DatabaseModel = mongoose.model<IDatabase>('Database', DatabaseSchema);
-
-// src/modules/database/models/database-record.model.ts
-export interface IDatabaseRecord extends Document {
-  _id: string;
-  databaseId: string;
-
-  // Dynamic properties - stored as key-value pairs
-  properties: { [propertyId: string]: any };
-
-  // Metadata
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
-  lastEditedBy: string;
-}
-
-const DatabaseRecordSchema = new Schema<IDatabaseRecord>({
-  databaseId: { type: String, required: true, index: true },
-  properties: { type: Map, of: Schema.Types.Mixed },
-
-  createdBy: { type: String, required: true },
-  lastEditedBy: { type: String, required: true }
-}, {
-  timestamps: true,
-  collection: 'database_records'
-});
-
-// Indexes
-DatabaseRecordSchema.index({ databaseId: 1, createdAt: -1 });
-DatabaseRecordSchema.index({ databaseId: 1, updatedAt: -1 });
-
-export const DatabaseRecordModel = mongoose.model<IDatabaseRecord>('DatabaseRecord', DatabaseRecordSchema);
+export const DatabaseModel = mongoose.model<IDatabaseDocument>('Database', DatabaseSchema);

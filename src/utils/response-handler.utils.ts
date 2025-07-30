@@ -18,7 +18,7 @@ export const sendErrorResponse = (
     res: Response,
     message: string,
     statusCode: number = 500,
-    errors?: any
+    errors?: Record<string, unknown>
 ): Response => {
     return res.status(statusCode).json({
         success: false,

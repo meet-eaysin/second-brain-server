@@ -1,20 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { DatabaseModel, DatabaseRecordModel, EPropertyType, EViewType, IDatabase, IDatabaseRecord } from '../models/database.model';
-import { HydratedDocument } from 'mongoose';
-
-// Type definitions for Mongoose documents
-type DatabaseDocument = HydratedDocument<IDatabase>;
-type DatabaseRecordDocument = HydratedDocument<IDatabaseRecord>;
-
-// Helper function to convert DatabaseDocument to IDatabase
-const toDatabaseInterface = (doc: DatabaseDocument): IDatabase => {
-  return doc.toJSON();
-};
-
-// Helper function to convert DatabaseRecordDocument to IDatabaseRecord
-const toRecordInterface = (doc: DatabaseRecordDocument): IDatabaseRecord => {
-  return doc.toJSON();
-};
+import { DatabaseModel } from '../models/database.model';
 import {
   TDatabaseCreateRequest,
   TDatabaseUpdateRequest,
@@ -28,11 +13,28 @@ import {
   TDatabasePermissionRequest,
   TRecordsListResponse,
   TPropertyValidationError,
-  FILTER_OPERATORS
+  FILTER_OPERATORS, IDatabase, DatabaseDocument, DatabaseRecordDocument, EViewType, EPropertyType, IFilter
 } from '../types/database.types';
+import { IValidationError } from '../../../types/error.types';
 import { createNotFoundError, createAppError, createForbiddenError } from '../../../utils/error.utils';
+import {DatabaseRecordModel, IDatabaseRecord} from "../models/database-record.model";
 
-// Database CRUD operations
+const toDatabaseInterface = (doc: DatabaseDocument): IDatabase => {
+  const json = doc.toJSON();
+  return {
+    ...json,
+    _id: String(doc._id)
+  } as IDatabase;
+};
+
+const toRecordInterface = (doc: DatabaseRecordDocument): IDatabaseRecord => {
+  const json = doc.toJSON();
+  return {
+    ...json,
+    _id: String(doc._id)
+  } as IDatabaseRecord;
+};
+
 export const createDatabase = async (userId: string, data: TDatabaseCreateRequest): Promise<IDatabase> => {
   const database = await DatabaseModel.create({
     ...data,
@@ -74,7 +76,15 @@ export const getDatabaseById = async (databaseId: string, userId: string): Promi
 };
 
 export const getUserDatabases = async (userId: string, workspaceId?: string): Promise<IDatabase[]> => {
-  const query: any = {
+  interface IUserDatabaseQuery {
+    $or: Array<{
+      userId?: string;
+      'sharedWith.userId'?: string;
+    }>;
+    workspaceId?: string;
+  }
+
+  const query: IUserDatabaseQuery = {
     $or: [
       { userId },
       { 'sharedWith.userId': userId }
@@ -138,7 +148,6 @@ export const addProperty = async (databaseId: string, userId: string, data: TPro
   database.properties.push(newProperty);
   database.lastEditedBy = userId;
 
-  // Add property to all views' visible properties if it's visible
   database.views.forEach(view => {
     view.visibleProperties.push(propertyId);
   });
@@ -278,17 +287,26 @@ export const deleteView = async (databaseId: string, viewId: string, userId: str
 // Record management
 export const createRecord = async (databaseId: string, userId: string, data: TRecordCreateRequest): Promise<IDatabaseRecord> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  const databaseInterface = toDatabaseInterface(database);
 
   // Validate properties
-  const validationErrors = await validateRecordProperties(database, data.properties);
+  const validationErrors = await validateRecordProperties(databaseInterface, data.properties);
   if (validationErrors.length > 0) {
     const error = createAppError('Validation failed', 400, true);
-    error.errors = validationErrors;
+    error.errors = validationErrors.reduce((acc, err) => {
+      acc[err.propertyId] = {
+        field: err.propertyName,
+        code: 'VALIDATION_FAILED',
+        message: err.message,
+        value: err.value
+      };
+      return acc;
+    }, {} as Record<string, IValidationError>);
     throw error;
   }
 
   // Process property values
-  const processedProperties = await processPropertyValues(database, data.properties, userId);
+  const processedProperties = await processPropertyValues(databaseInterface, data.properties, userId);
 
   const record = await DatabaseRecordModel.create({
     databaseId,
@@ -308,7 +326,13 @@ export const getRecords = async (databaseId: string, userId: string, params: TRe
   const skip = (page - 1) * limit;
 
   // Build query
-  const query: any = { databaseId };
+  interface IRecordQuery {
+    databaseId: string;
+    $and?: Array<Record<string, unknown>>;
+    $or?: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  }
+  const query: IRecordQuery = { databaseId };
 
   // Apply view filters if viewId is provided
   let view = null;
@@ -339,7 +363,10 @@ export const getRecords = async (databaseId: string, userId: string, params: TRe
 
   // Build sort
   const sorts = params.sorts || (view?.sorts) || [];
-  let sortOptions: any = { createdAt: -1 };
+  interface ISortOptions {
+    [key: string]: 1 | -1;
+  }
+  let sortOptions: ISortOptions = { createdAt: -1 };
   if (sorts.length > 0) {
     sortOptions = {};
     sorts.forEach(sort => {
@@ -396,17 +423,26 @@ export const getRecordById = async (databaseId: string, recordId: string, userId
 
 export const updateRecord = async (databaseId: string, recordId: string, userId: string, data: TRecordUpdateRequest): Promise<IDatabaseRecord> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  const databaseInterface = toDatabaseInterface(database);
 
   // Validate properties
-  const validationErrors = await validateRecordProperties(database, data.properties);
+  const validationErrors = await validateRecordProperties(databaseInterface, data.properties);
   if (validationErrors.length > 0) {
     const error = createAppError('Validation failed', 400, true);
-    error.errors = validationErrors;
+    error.errors = validationErrors.reduce((acc, err) => {
+      acc[err.propertyId] = {
+        field: err.propertyName,
+        code: 'VALIDATION_FAILED',
+        message: err.message,
+        value: err.value
+      };
+      return acc;
+    }, {} as Record<string, IValidationError>);
     throw error;
   }
 
   // Process property values
-  const processedProperties = await processPropertyValues(database, data.properties, userId);
+  const processedProperties = await processPropertyValues(databaseInterface, data.properties, userId);
 
   const record = await DatabaseRecordModel.findOneAndUpdate(
     { _id: recordId, databaseId },
@@ -415,7 +451,7 @@ export const updateRecord = async (databaseId: string, recordId: string, userId:
         ...Object.keys(processedProperties).reduce((acc, key) => {
           acc[`properties.${key}`] = processedProperties[key];
           return acc;
-        }, {} as any),
+        }, {} as Record<string, unknown>),
         lastEditedBy: userId
       }
     },
@@ -506,7 +542,7 @@ export const checkDatabasePermission = async (databaseId: string, userId: string
   return database;
 };
 
-const validateRecordProperties = async (database: IDatabase, properties: { [propertyId: string]: any }): Promise<TPropertyValidationError[]> => {
+const validateRecordProperties = async (database: IDatabase, properties: { [propertyId: string]: unknown }): Promise<TPropertyValidationError[]> => {
   const errors: TPropertyValidationError[] = [];
 
   for (const property of database.properties) {
@@ -543,19 +579,30 @@ const validateRecordProperties = async (database: IDatabase, properties: { [prop
 
       case EPropertyType.EMAIL:
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
+        if (typeof value === 'string' && !emailRegex.test(value)) {
           errors.push({
             propertyId: property.id,
             propertyName: property.name,
             value,
             message: `${property.name} must be a valid email address`
           });
+        } else if (typeof value !== 'string') {
+          errors.push({
+            propertyId: property.id,
+            propertyName: property.name,
+            value,
+            message: `${property.name} must be a string`
+          });
         }
         break;
 
       case EPropertyType.URL:
         try {
-          new URL(value);
+          if (typeof value === 'string') {
+            new URL(value);
+          } else {
+            throw new Error('Invalid URL type');
+          }
         } catch {
           errors.push({
             propertyId: property.id,
@@ -568,12 +615,19 @@ const validateRecordProperties = async (database: IDatabase, properties: { [prop
 
       case EPropertyType.SELECT:
         const validOptionIds = property.selectOptions?.map(opt => opt.id) || [];
-        if (!validOptionIds.includes(value)) {
+        if (typeof value === 'string' && !validOptionIds.includes(value)) {
           errors.push({
             propertyId: property.id,
             propertyName: property.name,
             value,
             message: `${property.name} must be one of the valid options`
+          });
+        } else if (typeof value !== 'string') {
+          errors.push({
+            propertyId: property.id,
+            propertyName: property.name,
+            value,
+            message: `${property.name} must be a string`
           });
         }
         break;
@@ -625,8 +679,8 @@ const validateRecordProperties = async (database: IDatabase, properties: { [prop
   return errors;
 };
 
-const processPropertyValues = async (database: IDatabase, properties: { [propertyId: string]: any }, userId: string): Promise<{ [propertyId: string]: any }> => {
-  const processed: { [propertyId: string]: any } = {};
+const processPropertyValues = async (database: IDatabase, properties: { [propertyId: string]: unknown }, userId: string): Promise<{ [propertyId: string]: unknown }> => {
+  const processed: { [propertyId: string]: unknown } = {};
 
   for (const [propertyId, value] of Object.entries(properties)) {
     const property = database.properties.find(p => p.id === propertyId);
@@ -650,7 +704,11 @@ const processPropertyValues = async (database: IDatabase, properties: { [propert
         processed[propertyId] = typeof value === 'number' ? value : Number(value);
         break;
       case EPropertyType.DATE:
-        processed[propertyId] = new Date(value);
+        if (typeof value === 'string' || typeof value === 'number' || value instanceof Date) {
+          processed[propertyId] = new Date(value);
+        } else {
+          processed[propertyId] = value;
+        }
         break;
       default:
         processed[propertyId] = value;
@@ -660,7 +718,7 @@ const processPropertyValues = async (database: IDatabase, properties: { [propert
   return processed;
 };
 
-const buildMongoFilter = (filter: any): any => {
+const buildMongoFilter = (filter: IFilter): Record<string, unknown> => {
   const { propertyId, operator, value } = filter;
   const fieldPath = `properties.${propertyId}`;
 
@@ -696,13 +754,13 @@ const buildMongoFilter = (filter: any): any => {
     case 'less_than_or_equal':
       return { [fieldPath]: { $lte: value } };
     case 'before':
-      return { [fieldPath]: { $lt: new Date(value) } };
+      return { [fieldPath]: { $lt: new Date(value as string | number | Date) } };
     case 'after':
-      return { [fieldPath]: { $gt: new Date(value) } };
+      return { [fieldPath]: { $gt: new Date(value as string | number | Date) } };
     case 'on_or_before':
-      return { [fieldPath]: { $lte: new Date(value) } };
+      return { [fieldPath]: { $lte: new Date(value as string | number | Date) } };
     case 'on_or_after':
-      return { [fieldPath]: { $gte: new Date(value) } };
+      return { [fieldPath]: { $gte: new Date(value as string | number | Date) } };
     case 'contains_all':
       return { [fieldPath]: { $all: value } };
     default:

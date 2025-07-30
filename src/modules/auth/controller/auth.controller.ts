@@ -24,8 +24,6 @@ import { generateGoogleLoginUrl, verifyStateToken } from "../utils/auth.utils";
 import {
     createOAuthStateInvalidError,
     createOAuthCodeInvalidError,
-    createRegistrationFailedError,
-    createAuthenticationFailedError
 } from '../utils/auth-errors';
 
 export const register = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -86,30 +84,25 @@ export const getProfile = catchAsync(async (req: Request, res: Response, next: N
     sendSuccessResponse(res, user, 'Profile retrieved successfully');
 });
 
-export const googleLogin = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const googleLogin = catchAsync(async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
     const { url } = generateGoogleLoginUrl();
 
-    // Stateless approach - no server-side state storage
-    // The state parameter is embedded in the URL and validated via JWT
     res.redirect(url);
 });
 
 export const googleCallback = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code, state, error } = req.query;
 
-    // Handle OAuth errors
     if (error) {
         const errorUrl = `${process.env.FRONTEND_URL}/auth/error?error=${encodeURIComponent(error as string)}`;
         return res.redirect(errorUrl);
     }
 
-    // Stateless CSRF protection - validate state via JWT
     if (state) {
-        try {
-            // Verify the state is a valid JWT signed by our server
-            const statePayload = verifyStateToken(state as string);
-            // Additional validation can be added here if needed
-        } catch (error) {
+        try  {
+            verifyStateToken(state as string);
+        }
+         catch (error) {
             return next(createOAuthStateInvalidError());
         }
     }
@@ -123,7 +116,6 @@ export const googleCallback = catchAsync(async (req: Request, res: Response, nex
 export const googleLoginSuccess = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code } = req.body;
 
-    // Validate authorization code
     if (!code || typeof code !== 'string') {
         return next(createOAuthCodeInvalidError());
     }

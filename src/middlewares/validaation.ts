@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z, ZodError } from 'zod';
 import {sendError} from "../utils/response.utils";
 import {createValidationErrorFromSchema} from "../utils/error.utils";
+import { IValidationError } from '../types/error.types';
 
 export const validate = (schema: z.ZodSchema) =>
     async (req: Request, res: Response, next: NextFunction) => {
@@ -29,15 +30,20 @@ export const validateQuery = <T extends z.ZodType>(schema: T) => {
             next();
         } catch (error) {
             if (error instanceof ZodError) {
-                const validationErrors = error.errors.map(err => ({
-                    field: err.path.join('.'),
-                    message: err.message,
-                    value: err.path.length > 0 ? get(err.path, req.query) : undefined
-                }));
+                const validationErrors = error.errors.reduce((acc, err) => {
+                    const fieldPath = err.path.join('.');
+                    acc[fieldPath] = {
+                        field: fieldPath,
+                        code: err.code,
+                        message: err.message,
+                        value: err.path.length > 0 ? get(err.path, req.query) : undefined
+                    };
+                    return acc;
+                }, {} as Record<string, IValidationError>);
 
                 const appError = createValidationErrorFromSchema(
                     'Query validation failed',
-                    { details: validationErrors }
+                    validationErrors
                 );
                 return next(appError);
             }
@@ -53,15 +59,20 @@ export const validateBody = <T extends z.ZodType>(schema: T) => {
             next();
         } catch (error) {
             if (error instanceof ZodError) {
-                const validationErrors = error.errors.map(err => ({
-                    field: err.path.join('.'),
-                    message: err.message,
-                    value: get(err.path, req.body)
-                }));
+                const validationErrors = error.errors.reduce((acc, err) => {
+                    const fieldPath = err.path.join('.');
+                    acc[fieldPath] = {
+                        field: fieldPath,
+                        code: err.code,
+                        message: err.message,
+                        value: get(err.path, req.body)
+                    };
+                    return acc;
+                }, {} as Record<string, IValidationError>);
 
                 const appError = createValidationErrorFromSchema(
                     'Request body validation failed',
-                    { details: validationErrors }
+                    validationErrors
                 );
                 return next(appError);
             }
@@ -77,15 +88,20 @@ export const validateParams = <T extends z.ZodType>(schema: T) => {
             next();
         } catch (error) {
             if (error instanceof ZodError) {
-                const validationErrors = error.errors.map(err => ({
-                    field: err.path.join('.'),
-                    message: err.message,
-                    value: get(err.path, req.params)
-                }));
+                const validationErrors = error.errors.reduce((acc, err) => {
+                    const fieldPath = err.path.join('.');
+                    acc[fieldPath] = {
+                        field: fieldPath,
+                        code: err.code,
+                        message: err.message,
+                        value: get(err.path, req.params)
+                    };
+                    return acc;
+                }, {} as Record<string, IValidationError>);
 
                 const appError = createValidationErrorFromSchema(
                     'URL parameters validation failed',
-                    { details: validationErrors }
+                    validationErrors
                 );
                 return next(appError);
             }
@@ -94,10 +110,10 @@ export const validateParams = <T extends z.ZodType>(schema: T) => {
     };
 };
 
-function get(path: (string | number)[], obj: any): any {
-    return path.reduce((acc, key) => {
-        if (acc && typeof acc === 'object' && key in acc) {
-            return acc[key];
+function get(path: (string | number)[], obj: Record<string, unknown>): unknown {
+    return path.reduce((acc: unknown, key: string | number) => {
+        if (acc && typeof acc === 'object' && acc !== null && key in acc) {
+            return (acc as Record<string | number, unknown>)[key];
         }
         return undefined;
     }, obj);
