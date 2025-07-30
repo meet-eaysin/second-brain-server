@@ -730,6 +730,41 @@ components:
           description: Property display order
           example: 1
 
+    UpdatePropertyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Property name
+          example: Updated Task Name
+        description:
+          type: string
+          maxLength: 200
+          description: Property description
+          example: Updated priority level of the task
+        required:
+          type: boolean
+          description: Whether property is required
+          example: false
+        selectOptions:
+          type: array
+          items:
+            type: object
+            required: [id, name, color]
+            properties:
+              id:
+                type: string
+                example: opt_001
+              name:
+                type: string
+                example: Critical
+              color:
+                type: string
+                pattern: '^#[0-9A-Fa-f]{6}$'
+                example: "#8B0000"
+
     DatabaseView:
       type: object
       properties:
@@ -846,6 +881,50 @@ components:
           description: List of visible property IDs
           example: ["prop_001", "prop_002"]
 
+    UpdateViewRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: View name
+          example: Updated Task View
+        filters:
+          type: array
+          items:
+            type: object
+            required: [propertyId, operator]
+            properties:
+              propertyId:
+                type: string
+                example: prop_status
+              operator:
+                type: string
+                example: equals
+              value:
+                description: Filter value
+                example: "Completed"
+        sorts:
+          type: array
+          items:
+            type: object
+            required: [propertyId, direction]
+            properties:
+              propertyId:
+                type: string
+                example: prop_priority
+              direction:
+                type: string
+                enum: [asc, desc]
+                example: desc
+        visibleProperties:
+          type: array
+          items:
+            type: string
+          description: List of visible property IDs
+          example: ["prop_001", "prop_002"]
+
     DatabaseRecord:
       type: object
       properties:
@@ -890,6 +969,18 @@ components:
             prop_priority: "High"
             prop_completed: false
 
+    UpdateRecordRequest:
+      type: object
+      required:
+        - properties
+      properties:
+        properties:
+          type: object
+          description: Record property values to update
+          example:
+            prop_status: "completed_option_id"
+            prop_completed: true
+
     ShareDatabaseRequest:
       type: object
       required:
@@ -922,261 +1013,6 @@ components:
           type: string
           format: date-time
           example: 2023-01-01T00:00:00Z
-
-    # Request/Response Schemas for Database Operations
-    UpdateDatabaseRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Database name
-          example: Updated Project Tasks
-        description:
-          type: string
-          description: Database description
-          example: Updated description for project tracking
-        icon:
-          type: string
-          description: Database icon
-          example: 📋
-        cover:
-          type: string
-          format: uri
-          description: Database cover image URL
-          example: https://example.com/cover.jpg
-        isPublic:
-          type: boolean
-          description: Whether database is publicly accessible
-          example: true
-
-    CreatePropertyRequest:
-      type: object
-      required:
-        - name
-        - type
-      properties:
-        name:
-          type: string
-          description: Property name
-          example: Task Name
-        type:
-          type: string
-          enum: [TEXT, NUMBER, DATE, BOOLEAN, CHECKBOX, SELECT, MULTI_SELECT, EMAIL, PHONE, URL, FILE, RELATION, FORMULA, ROLLUP, CREATED_TIME, LAST_EDITED_TIME, CREATED_BY, LAST_EDITED_BY]
-          description: Property type
-          example: TEXT
-        required:
-          type: boolean
-          description: Whether property is required
-          default: false
-          example: true
-        defaultValue:
-          description: Default value for the property
-          example: "Default task name"
-        selectOptions:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-                example: High
-              color:
-                type: string
-                example: "#FF0000"
-          description: Options for SELECT and MULTI_SELECT types
-        formula:
-          type: string
-          description: Formula expression for FORMULA type
-          example: "prop('Hours') * prop('Rate')"
-        rollupConfig:
-          type: object
-          properties:
-            relationProperty:
-              type: string
-              description: Related property ID
-              example: prop_relation_001
-            rollupProperty:
-              type: string
-              description: Property to rollup
-              example: prop_amount
-            function:
-              type: string
-              enum: [count, sum, average, min, max, unique]
-              description: Rollup function
-              example: sum
-          description: Configuration for ROLLUP type
-
-    UpdatePropertyRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Property name
-          example: Updated Task Name
-        required:
-          type: boolean
-          description: Whether property is required
-          example: false
-        defaultValue:
-          description: Default value for the property
-          example: "Updated default value"
-        selectOptions:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-                example: Critical
-              color:
-                type: string
-                example: "#8B0000"
-          description: Options for SELECT and MULTI_SELECT types
-
-    CreateViewRequest:
-      type: object
-      required:
-        - name
-        - type
-      properties:
-        name:
-          type: string
-          description: View name
-          example: All Tasks
-        type:
-          type: string
-          enum: [TABLE, BOARD, CALENDAR, GALLERY, LIST]
-          description: View type
-          example: TABLE
-        visibleProperties:
-          type: array
-          items:
-            type: string
-          description: Array of property IDs to show
-          example: ["prop_001", "prop_002", "prop_003"]
-        filters:
-          type: array
-          items:
-            type: object
-            properties:
-              propertyId:
-                type: string
-                example: prop_status
-              operator:
-                type: string
-                example: equals
-              value:
-                description: Filter value
-                example: "In Progress"
-          description: Filter conditions
-        sorts:
-          type: array
-          items:
-            type: object
-            properties:
-              propertyId:
-                type: string
-                example: prop_due_date
-              direction:
-                type: string
-                enum: [asc, desc]
-                example: asc
-          description: Sort conditions
-        groupBy:
-          type: string
-          description: Property ID to group by
-          example: prop_status
-        dateProperty:
-          type: string
-          description: Date property for calendar view
-          example: prop_due_date
-
-    UpdateViewRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          description: View name
-          example: Updated Task View
-        visibleProperties:
-          type: array
-          items:
-            type: string
-          description: Array of property IDs to show
-          example: ["prop_001", "prop_002"]
-        filters:
-          type: array
-          items:
-            type: object
-            properties:
-              propertyId:
-                type: string
-                example: prop_status
-              operator:
-                type: string
-                example: equals
-              value:
-                description: Filter value
-                example: "Completed"
-          description: Filter conditions
-        sorts:
-          type: array
-          items:
-            type: object
-            properties:
-              propertyId:
-                type: string
-                example: prop_priority
-              direction:
-                type: string
-                enum: [asc, desc]
-                example: desc
-          description: Sort conditions
-
-    CreateRecordRequest:
-      type: object
-      required:
-        - properties
-      properties:
-        properties:
-          type: object
-          description: Record property values
-          additionalProperties: true
-          example:
-            prop_name: "Complete project documentation"
-            prop_priority: "high_option_id"
-            prop_due_date: "2023-12-31T23:59:59Z"
-            prop_completed: false
-
-    UpdateRecordRequest:
-      type: object
-      required:
-        - properties
-      properties:
-        properties:
-          type: object
-          description: Record property values to update
-          additionalProperties: true
-          example:
-            prop_status: "completed_option_id"
-            prop_completed: true
-
-    ShareDatabaseRequest:
-      type: object
-      required:
-        - userId
-        - permission
-      properties:
-        userId:
-          type: string
-          description: User ID to share with
-          pattern: '^[0-9a-fA-F]{24}$'
-          example: 507f1f77bcf86cd799439013
-        permission:
-          type: string
-          enum: [read, write, admin]
-          description: Permission level to grant
-          example: write
 
 paths:
   /auth/sign-up:
