@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { TAppError } from '../types/error.types';
-import logger from '../config/logger';
-import {createAppError} from "../utils/error.utils";
+import {TAppError} from '@/types';
+import {createAppError} from '@/utils';
+import {logger} from '@/config';
 
-// MongoDB Cast Error
 interface IMongoCastError {
   name: 'CastError';
   path: string;
@@ -11,21 +10,22 @@ interface IMongoCastError {
   kind: string;
 }
 
-// MongoDB Duplicate Key Error
 interface IMongoDuplicateError {
   name: 'MongoServerError';
   code: 11000;
   keyValue: Record<string, unknown>;
 }
 
-// MongoDB Validation Error
 interface IMongoValidationError {
   name: 'ValidationError';
-  errors: Record<string, {
-    message: string;
-    path: string;
-    value: unknown;
-  }>;
+  errors: Record<
+    string,
+    {
+      message: string;
+      path: string;
+      value: unknown;
+    }
+  >;
 }
 
 const handleCastErrorDB = (err: IMongoCastError): TAppError => {
@@ -41,7 +41,7 @@ const handleDuplicateFieldsDB = (err: IMongoDuplicateError): TAppError => {
 };
 
 const handleValidationErrorDB = (err: IMongoValidationError): TAppError => {
-  const errors = Object.values(err.errors).map((el) => el.message);
+  const errors = Object.values(err.errors).map(el => el.message);
   const message = `Invalid input data: ${errors.join('. ')}`;
   return createAppError(message, 400);
 };
@@ -125,22 +125,19 @@ const sendErrorProd = (err: TAppError, res: Response): void => {
 };
 
 export const errorHandler = (
-    err: unknown,
-    req: Request,
-    res: Response,
-    next: NextFunction
+  err: unknown,
+  req: Request,
+  res: Response,
+  _next: NextFunction
 ): void => {
   let error: TAppError;
 
-  // Check if it's already an operational error
   if (err && typeof err === 'object' && 'isOperational' in err && err.isOperational) {
     error = err as TAppError;
   } else {
-    // Create a new error from unknown error
     const message = err instanceof Error ? err.message : 'Internal Server Error';
-    const statusCode = (err && typeof err === 'object' && 'statusCode' in err)
-      ? (err.statusCode as number)
-      : 500;
+    const statusCode =
+      err && typeof err === 'object' && 'statusCode' in err ? (err.statusCode as number) : 500;
     const stack = err instanceof Error ? err.stack : undefined;
 
     error = createAppError(message, statusCode, false, stack);
@@ -156,11 +153,11 @@ export const errorHandler = (
     userAgent: req.get('User-Agent')
   });
 
-  // Handle specific error types
   if (err && typeof err === 'object') {
     if ('name' in err) {
       if (err.name === 'CastError') error = handleCastErrorDB(err as IMongoCastError);
-      if (err.name === 'ValidationError') error = handleValidationErrorDB(err as IMongoValidationError);
+      if (err.name === 'ValidationError')
+        error = handleValidationErrorDB(err as IMongoValidationError);
       if (err.name === 'JsonWebTokenError') error = handleJWTError();
       if (err.name === 'TokenExpiredError') error = handleJWTExpiredError();
       if (err.name === 'IdentityProviderError') error = handleAuth0Error(err as IAuth0Error);

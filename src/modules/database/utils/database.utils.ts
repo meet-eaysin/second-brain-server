@@ -21,7 +21,10 @@ export const sanitizePropertyName = (name: string): string => {
   return name.trim().replace(/\s+/g, ' ');
 };
 
-export const validatePropertyName = (name: string, existingNames: string[] = []): { isValid: boolean; error?: string } => {
+export const validatePropertyName = (
+  name: string,
+  existingNames: string[] = []
+): { isValid: boolean; error?: string } => {
   const sanitized = sanitizePropertyName(name);
 
   if (!sanitized) {
@@ -39,7 +42,10 @@ export const validatePropertyName = (name: string, existingNames: string[] = [])
   return { isValid: true };
 };
 
-export const validateViewName = (name: string, existingNames: string[] = []): { isValid: boolean; error?: string } => {
+export const validateViewName = (
+  name: string,
+  existingNames: string[] = []
+): { isValid: boolean; error?: string } => {
   const sanitized = name.trim();
 
   if (!sanitized) {
@@ -80,13 +86,19 @@ interface FormattedRecord {
   updatedAt: Date;
   createdBy?: string;
   lastEditedBy?: string;
-  properties: Record<string, {
-    value: unknown;
-    displayValue: string;
-  }>;
+  properties: Record<
+    string,
+    {
+      value: unknown;
+      displayValue: string;
+    }
+  >;
 }
 
-export const formatRecordForDisplay = (record: DatabaseRecord, properties: DatabaseProperty[]): FormattedRecord => {
+export const formatRecordForDisplay = (
+  record: DatabaseRecord,
+  properties: DatabaseProperty[]
+): FormattedRecord => {
   const formatted: FormattedRecord = {
     id: record._id,
     createdAt: record.createdAt,
@@ -120,7 +132,7 @@ export const formatPropertyValue = (value: unknown, property: DatabaseProperty):
 
     case EPropertyType.BOOLEAN:
     case EPropertyType.CHECKBOX:
-      return Boolean(value) ? 'Yes' : 'No';
+      return value ? 'Yes' : 'No';
 
     case EPropertyType.SELECT:
       const option = property.selectOptions?.find(opt => opt.id === value);
@@ -128,10 +140,12 @@ export const formatPropertyValue = (value: unknown, property: DatabaseProperty):
 
     case EPropertyType.MULTI_SELECT:
       if (Array.isArray(value)) {
-        return value.map(v => {
-          const option = property.selectOptions?.find(opt => opt.id === v);
-          return option?.name || String(v);
-        }).join(', ');
+        return value
+          .map(v => {
+            const option = property.selectOptions?.find(opt => opt.id === v);
+            return option?.name || String(v);
+          })
+          .join(', ');
       }
       return String(value);
 
@@ -181,7 +195,11 @@ interface MongoAggregationStage {
   [key: string]: unknown;
 }
 
-export const buildAggregationPipeline = (filters: DatabaseFilter[], sorts: DatabaseSort[], groupBy?: string): MongoAggregationStage[] => {
+export const buildAggregationPipeline = (
+  filters: DatabaseFilter[],
+  sorts: DatabaseSort[],
+  groupBy?: string
+): MongoAggregationStage[] => {
   const pipeline: MongoAggregationStage[] = [];
 
   // Match stage for filters
@@ -313,12 +331,16 @@ interface RollupRecord {
   properties: Record<string, unknown>;
 }
 
-export const calculateRollupValue = (records: RollupRecord[], rollupConfig: RollupConfig): number | null => {
+export const calculateRollupValue = (
+  records: RollupRecord[],
+  rollupConfig: RollupConfig
+): number | null => {
   if (!records || records.length === 0) {
     return null;
   }
 
-  const values = records.map(record => record.properties[rollupConfig.rollupPropertyId])
+  const values = records
+    .map(record => record.properties[rollupConfig.rollupPropertyId])
     .filter(value => value !== null && value !== undefined && value !== '');
 
   if (values.length === 0) {

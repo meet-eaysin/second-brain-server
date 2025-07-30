@@ -14,7 +14,7 @@ export const sendSMS = async (smsData: SmsData): Promise<boolean> => {
       logger.info(`[MOCK SMS] To: ${smsData.to}, Body: ${smsData.body}`);
       return true;
     }
-    
+
     // For production, implement actual SMS sending logic here
     // Example with Twilio:
     // const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -23,7 +23,7 @@ export const sendSMS = async (smsData: SmsData): Promise<boolean> => {
     //   from: process.env.TWILIO_PHONE_NUMBER,
     //   to: smsData.to
     // });
-    
+
     logger.info(`SMS sent to ${smsData.to}`);
     return true;
   } catch (error) {

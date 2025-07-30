@@ -1,15 +1,13 @@
 import express from 'express';
-import authRoutes from "../modules/auth/routes/auth.routes";
-import usersRoutes from "../modules/users/routes/users.routes";
-import swaggerRoute from "./swagger.route";
-import databaseRoutes from "../modules/database/routes/database.routes";
+import { auth, users, database } from '../modules';
+import swaggerRoute from './swagger.route';
 
 const router = express.Router();
 
-router.use('/docs', swaggerRoute)
+router.use('/docs', swaggerRoute);
 
-router.use('/auth', authRoutes);
-router.use('/users', usersRoutes);
-router.use('/databases', databaseRoutes);
+router.use('/auth', auth.authRoutes);
+router.use('/users', users.usersRoutes);
+router.use('/databases', database.databaseRoutes);
 
 export default router;

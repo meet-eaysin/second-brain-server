@@ -33,7 +33,7 @@ info:
 servers:
   - url: http://localhost:5000/api/v1
     description: Development server
-  - url: https://api.example.com/v1
+  - url: https://your-domain.com/api/v1
     description: Production server
 tags:
   - name: Authentication

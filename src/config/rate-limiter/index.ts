@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import {createTooManyRequestsError} from "../../utils/error.utils";
+import {createTooManyRequestsError} from '@/utils/error.utils';
 
 export const createRateLimiter = (windowMs: number, max: number, message?: string) => {
   return rateLimit({
@@ -17,7 +17,7 @@ export const createRateLimiter = (windowMs: number, max: number, message?: strin
     legacyHeaders: false,
     handler: (req, res) => {
       const error = createTooManyRequestsError(
-          message || 'Too many requests from this IP, please try again later.'
+        message || 'Too many requests from this IP, please try again later.'
       );
       res.status(429).json({
         success: false,

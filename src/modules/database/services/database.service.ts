@@ -13,11 +13,17 @@ import {
   TDatabasePermissionRequest,
   TRecordsListResponse,
   TPropertyValidationError,
-  FILTER_OPERATORS, IDatabase, DatabaseDocument, DatabaseRecordDocument, EViewType, EPropertyType, IFilter
+  FILTER_OPERATORS,
+  IDatabase,
+  DatabaseDocument,
+  DatabaseRecordDocument,
+  EViewType,
+  EPropertyType,
+  IFilter
 } from '../types/database.types';
-import { IValidationError } from '../../../types/error.types';
-import { createNotFoundError, createAppError, createForbiddenError } from '../../../utils/error.utils';
-import {DatabaseRecordModel, IDatabaseRecord} from "../models/database-record.model";
+import { IValidationError } from '@/types/error.types';
+import { createNotFoundError, createAppError, createForbiddenError } from '@/utils/error.utils';
+import { DatabaseRecordModel, IDatabaseRecord } from '../models/database-record.model';
 
 const toDatabaseInterface = (doc: DatabaseDocument): IDatabase => {
   const json = doc.toJSON();
@@ -35,20 +41,25 @@ const toRecordInterface = (doc: DatabaseRecordDocument): IDatabaseRecord => {
   } as IDatabaseRecord;
 };
 
-export const createDatabase = async (userId: string, data: TDatabaseCreateRequest): Promise<IDatabase> => {
+export const createDatabase = async (
+  userId: string,
+  data: TDatabaseCreateRequest
+): Promise<IDatabase> => {
   const database = await DatabaseModel.create({
     ...data,
     userId,
     properties: [],
-    views: [{
-      id: uuidv4(),
-      name: 'All',
-      type: EViewType.TABLE,
-      isDefault: true,
-      filters: [],
-      sorts: [],
-      visibleProperties: []
-    }],
+    views: [
+      {
+        id: uuidv4(),
+        name: 'All',
+        type: EViewType.TABLE,
+        isDefault: true,
+        filters: [],
+        sorts: [],
+        visibleProperties: []
+      }
+    ],
     isPublic: data.isPublic || false,
     sharedWith: [],
     createdBy: userId,
@@ -61,11 +72,7 @@ export const createDatabase = async (userId: string, data: TDatabaseCreateReques
 export const getDatabaseById = async (databaseId: string, userId: string): Promise<IDatabase> => {
   const database = await DatabaseModel.findOne({
     _id: databaseId,
-    $or: [
-      { userId },
-      { isPublic: true },
-      { 'sharedWith.userId': userId }
-    ]
+    $or: [{ userId }, { isPublic: true }, { 'sharedWith.userId': userId }]
   });
 
   if (!database) {
@@ -75,7 +82,10 @@ export const getDatabaseById = async (databaseId: string, userId: string): Promi
   return toDatabaseInterface(database);
 };
 
-export const getUserDatabases = async (userId: string, workspaceId?: string): Promise<IDatabase[]> => {
+export const getUserDatabases = async (
+  userId: string,
+  workspaceId?: string
+): Promise<IDatabase[]> => {
   interface IUserDatabaseQuery {
     $or: Array<{
       userId?: string;
@@ -85,23 +95,23 @@ export const getUserDatabases = async (userId: string, workspaceId?: string): Pr
   }
 
   const query: IUserDatabaseQuery = {
-    $or: [
-      { userId },
-      { 'sharedWith.userId': userId }
-    ]
+    $or: [{ userId }, { 'sharedWith.userId': userId }]
   };
 
   if (workspaceId) {
     query.workspaceId = workspaceId;
   }
 
-  const databases = await DatabaseModel.find(query)
-    .sort({ updatedAt: -1 });
+  const databases = await DatabaseModel.find(query).sort({ updatedAt: -1 });
 
   return databases.map(db => toDatabaseInterface(db));
 };
 
-export const updateDatabase = async (databaseId: string, userId: string, data: TDatabaseUpdateRequest): Promise<IDatabase> => {
+export const updateDatabase = async (
+  databaseId: string,
+  userId: string,
+  data: TDatabaseUpdateRequest
+): Promise<IDatabase> => {
   await checkDatabasePermission(databaseId, userId, 'write');
 
   const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
@@ -134,7 +144,11 @@ export const deleteDatabase = async (databaseId: string, userId: string): Promis
 };
 
 // Property management
-export const addProperty = async (databaseId: string, userId: string, data: TPropertyCreateRequest): Promise<IDatabase> => {
+export const addProperty = async (
+  databaseId: string,
+  userId: string,
+  data: TPropertyCreateRequest
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   const propertyId = uuidv4();
@@ -156,7 +170,12 @@ export const addProperty = async (databaseId: string, userId: string, data: TPro
   return toDatabaseInterface(database);
 };
 
-export const updateProperty = async (databaseId: string, propertyId: string, userId: string, data: TPropertyUpdateRequest): Promise<IDatabase> => {
+export const updateProperty = async (
+  databaseId: string,
+  propertyId: string,
+  userId: string,
+  data: TPropertyUpdateRequest
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   const propertyIndex = database.properties.findIndex(p => p.id === propertyId);
@@ -172,7 +191,11 @@ export const updateProperty = async (databaseId: string, propertyId: string, use
   return toDatabaseInterface(database);
 };
 
-export const deleteProperty = async (databaseId: string, propertyId: string, userId: string): Promise<IDatabase> => {
+export const deleteProperty = async (
+  databaseId: string,
+  propertyId: string,
+  userId: string
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   // Remove property from database
@@ -201,7 +224,11 @@ export const deleteProperty = async (databaseId: string, propertyId: string, use
 };
 
 // View management
-export const addView = async (databaseId: string, userId: string, data: TViewCreateRequest): Promise<IDatabase> => {
+export const addView = async (
+  databaseId: string,
+  userId: string,
+  data: TViewCreateRequest
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   const viewId = uuidv4();
@@ -215,10 +242,12 @@ export const addView = async (databaseId: string, userId: string, data: TViewCre
     sorts: data.sorts || [],
     groupBy: data.groupBy,
     propertyWidths: data.propertyWidths,
-    boardSettings: data.boardSettings ? {
-      groupByPropertyId: data.boardSettings.groupByPropertyId,
-      showUngrouped: data.boardSettings.showUngrouped ?? true
-    } : undefined,
+    boardSettings: data.boardSettings
+      ? {
+          groupByPropertyId: data.boardSettings.groupByPropertyId,
+          showUngrouped: data.boardSettings.showUngrouped ?? true
+        }
+      : undefined,
     timelineSettings: data.timelineSettings,
     calendarSettings: data.calendarSettings
   };
@@ -236,7 +265,12 @@ export const addView = async (databaseId: string, userId: string, data: TViewCre
   return toDatabaseInterface(database);
 };
 
-export const updateView = async (databaseId: string, viewId: string, userId: string, data: TViewUpdateRequest): Promise<IDatabase> => {
+export const updateView = async (
+  databaseId: string,
+  viewId: string,
+  userId: string,
+  data: TViewUpdateRequest
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   const viewIndex = database.views.findIndex(v => v.id === viewId);
@@ -258,7 +292,11 @@ export const updateView = async (databaseId: string, viewId: string, userId: str
   return toDatabaseInterface(database);
 };
 
-export const deleteView = async (databaseId: string, viewId: string, userId: string): Promise<IDatabase> => {
+export const deleteView = async (
+  databaseId: string,
+  viewId: string,
+  userId: string
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   const viewIndex = database.views.findIndex(v => v.id === viewId);
@@ -285,7 +323,11 @@ export const deleteView = async (databaseId: string, viewId: string, userId: str
 };
 
 // Record management
-export const createRecord = async (databaseId: string, userId: string, data: TRecordCreateRequest): Promise<IDatabaseRecord> => {
+export const createRecord = async (
+  databaseId: string,
+  userId: string,
+  data: TRecordCreateRequest
+): Promise<IDatabaseRecord> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
   const databaseInterface = toDatabaseInterface(database);
 
@@ -293,20 +335,27 @@ export const createRecord = async (databaseId: string, userId: string, data: TRe
   const validationErrors = await validateRecordProperties(databaseInterface, data.properties);
   if (validationErrors.length > 0) {
     const error = createAppError('Validation failed', 400, true);
-    error.errors = validationErrors.reduce((acc, err) => {
-      acc[err.propertyId] = {
-        field: err.propertyName,
-        code: 'VALIDATION_FAILED',
-        message: err.message,
-        value: err.value
-      };
-      return acc;
-    }, {} as Record<string, IValidationError>);
+    error.errors = validationErrors.reduce(
+      (acc, err) => {
+        acc[err.propertyId] = {
+          field: err.propertyName,
+          code: 'VALIDATION_FAILED',
+          message: err.message,
+          value: err.value
+        };
+        return acc;
+      },
+      {} as Record<string, IValidationError>
+    );
     throw error;
   }
 
   // Process property values
-  const processedProperties = await processPropertyValues(databaseInterface, data.properties, userId);
+  const processedProperties = await processPropertyValues(
+    databaseInterface,
+    data.properties,
+    userId
+  );
 
   const record = await DatabaseRecordModel.create({
     databaseId,
@@ -318,7 +367,11 @@ export const createRecord = async (databaseId: string, userId: string, data: TRe
   return toRecordInterface(record);
 };
 
-export const getRecords = async (databaseId: string, userId: string, params: TRecordQueryParams): Promise<TRecordsListResponse> => {
+export const getRecords = async (
+  databaseId: string,
+  userId: string,
+  params: TRecordQueryParams
+): Promise<TRecordsListResponse> => {
   const database = await getDatabaseById(databaseId, userId);
 
   const page = params.page || 1;
@@ -344,7 +397,7 @@ export const getRecords = async (databaseId: string, userId: string, params: TRe
   }
 
   // Build filters
-  const filters = params.filters || (view?.filters) || [];
+  const filters = params.filters || view?.filters || [];
   if (filters.length > 0) {
     query.$and = filters.map(filter => buildMongoFilter(filter));
   }
@@ -362,7 +415,7 @@ export const getRecords = async (databaseId: string, userId: string, params: TRe
   }
 
   // Build sort
-  const sorts = params.sorts || (view?.sorts) || [];
+  const sorts = params.sorts || view?.sorts || [];
   interface ISortOptions {
     [key: string]: 1 | -1;
   }
@@ -376,10 +429,7 @@ export const getRecords = async (databaseId: string, userId: string, params: TRe
 
   // Execute query
   const [records, total] = await Promise.all([
-    DatabaseRecordModel.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit),
+    DatabaseRecordModel.find(query).sort(sortOptions).skip(skip).limit(limit),
     DatabaseRecordModel.countDocuments(query)
   ]);
 
@@ -399,14 +449,21 @@ export const getRecords = async (databaseId: string, userId: string, params: TRe
     const allRecords = await DatabaseRecordModel.find(query).sort(sortOptions);
 
     response.aggregations = {
-      groupedData: groupRecordsByProperty(allRecords.map(r => toRecordInterface(r)), groupByProperty!)
+      groupedData: groupRecordsByProperty(
+        allRecords.map(r => toRecordInterface(r)),
+        groupByProperty!
+      )
     };
   }
 
   return response;
 };
 
-export const getRecordById = async (databaseId: string, recordId: string, userId: string): Promise<IDatabaseRecord> => {
+export const getRecordById = async (
+  databaseId: string,
+  recordId: string,
+  userId: string
+): Promise<IDatabaseRecord> => {
   await getDatabaseById(databaseId, userId); // Check permissions
 
   const record = await DatabaseRecordModel.findOne({
@@ -421,7 +478,12 @@ export const getRecordById = async (databaseId: string, recordId: string, userId
   return toRecordInterface(record);
 };
 
-export const updateRecord = async (databaseId: string, recordId: string, userId: string, data: TRecordUpdateRequest): Promise<IDatabaseRecord> => {
+export const updateRecord = async (
+  databaseId: string,
+  recordId: string,
+  userId: string,
+  data: TRecordUpdateRequest
+): Promise<IDatabaseRecord> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
   const databaseInterface = toDatabaseInterface(database);
 
@@ -429,29 +491,39 @@ export const updateRecord = async (databaseId: string, recordId: string, userId:
   const validationErrors = await validateRecordProperties(databaseInterface, data.properties);
   if (validationErrors.length > 0) {
     const error = createAppError('Validation failed', 400, true);
-    error.errors = validationErrors.reduce((acc, err) => {
-      acc[err.propertyId] = {
-        field: err.propertyName,
-        code: 'VALIDATION_FAILED',
-        message: err.message,
-        value: err.value
-      };
-      return acc;
-    }, {} as Record<string, IValidationError>);
+    error.errors = validationErrors.reduce(
+      (acc, err) => {
+        acc[err.propertyId] = {
+          field: err.propertyName,
+          code: 'VALIDATION_FAILED',
+          message: err.message,
+          value: err.value
+        };
+        return acc;
+      },
+      {} as Record<string, IValidationError>
+    );
     throw error;
   }
 
   // Process property values
-  const processedProperties = await processPropertyValues(databaseInterface, data.properties, userId);
+  const processedProperties = await processPropertyValues(
+    databaseInterface,
+    data.properties,
+    userId
+  );
 
   const record = await DatabaseRecordModel.findOneAndUpdate(
     { _id: recordId, databaseId },
     {
       $set: {
-        ...Object.keys(processedProperties).reduce((acc, key) => {
-          acc[`properties.${key}`] = processedProperties[key];
-          return acc;
-        }, {} as Record<string, unknown>),
+        ...Object.keys(processedProperties).reduce(
+          (acc, key) => {
+            acc[`properties.${key}`] = processedProperties[key];
+            return acc;
+          },
+          {} as Record<string, unknown>
+        ),
         lastEditedBy: userId
       }
     },
@@ -465,7 +537,11 @@ export const updateRecord = async (databaseId: string, recordId: string, userId:
   return toRecordInterface(record);
 };
 
-export const deleteRecord = async (databaseId: string, recordId: string, userId: string): Promise<void> => {
+export const deleteRecord = async (
+  databaseId: string,
+  recordId: string,
+  userId: string
+): Promise<void> => {
   await checkDatabasePermission(databaseId, userId, 'write');
 
   const result = await DatabaseRecordModel.findOneAndDelete({
@@ -479,7 +555,11 @@ export const deleteRecord = async (databaseId: string, recordId: string, userId:
 };
 
 // Permission management
-export const shareDatabase = async (databaseId: string, userId: string, data: TDatabasePermissionRequest): Promise<IDatabase> => {
+export const shareDatabase = async (
+  databaseId: string,
+  userId: string,
+  data: TDatabasePermissionRequest
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'admin');
 
   // Check if user is already shared with
@@ -498,7 +578,11 @@ export const shareDatabase = async (databaseId: string, userId: string, data: TD
   return toDatabaseInterface(database);
 };
 
-export const removeDatabaseAccess = async (databaseId: string, userId: string, targetUserId: string): Promise<IDatabase> => {
+export const removeDatabaseAccess = async (
+  databaseId: string,
+  userId: string,
+  targetUserId: string
+): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'admin');
 
   database.sharedWith = database.sharedWith.filter(share => share.userId !== targetUserId);
@@ -508,7 +592,11 @@ export const removeDatabaseAccess = async (databaseId: string, userId: string, t
 };
 
 // Utility functions
-export const checkDatabasePermission = async (databaseId: string, userId: string, requiredPermission: 'read' | 'write' | 'admin'): Promise<DatabaseDocument> => {
+export const checkDatabasePermission = async (
+  databaseId: string,
+  userId: string,
+  requiredPermission: 'read' | 'write' | 'admin'
+): Promise<DatabaseDocument> => {
   const database = await DatabaseModel.findById(databaseId);
 
   if (!database) {
@@ -542,7 +630,10 @@ export const checkDatabasePermission = async (databaseId: string, userId: string
   return database;
 };
 
-const validateRecordProperties = async (database: IDatabase, properties: { [propertyId: string]: unknown }): Promise<TPropertyValidationError[]> => {
+const validateRecordProperties = async (
+  database: IDatabase,
+  properties: { [propertyId: string]: unknown }
+): Promise<TPropertyValidationError[]> => {
   const errors: TPropertyValidationError[] = [];
 
   for (const property of database.properties) {
@@ -679,7 +770,11 @@ const validateRecordProperties = async (database: IDatabase, properties: { [prop
   return errors;
 };
 
-const processPropertyValues = async (database: IDatabase, properties: { [propertyId: string]: unknown }, userId: string): Promise<{ [propertyId: string]: unknown }> => {
+const processPropertyValues = async (
+  database: IDatabase,
+  properties: { [propertyId: string]: unknown },
+  userId: string
+): Promise<{ [propertyId: string]: unknown }> => {
   const processed: { [propertyId: string]: unknown } = {};
 
   for (const [propertyId, value] of Object.entries(properties)) {
@@ -736,7 +831,9 @@ const buildMongoFilter = (filter: IFilter): Record<string, unknown> => {
     case 'ends_with':
       return { [fieldPath]: { $regex: `${value}$`, $options: 'i' } };
     case 'is_empty':
-      return { $or: [{ [fieldPath]: { $exists: false } }, { [fieldPath]: null }, { [fieldPath]: '' }] };
+      return {
+        $or: [{ [fieldPath]: { $exists: false } }, { [fieldPath]: null }, { [fieldPath]: '' }]
+      };
     case 'is_not_empty':
       return {
         $and: [
@@ -768,7 +865,10 @@ const buildMongoFilter = (filter: IFilter): Record<string, unknown> => {
   }
 };
 
-const groupRecordsByProperty = (records: IDatabaseRecord[], propertyId: string): { [groupValue: string]: IDatabaseRecord[] } => {
+const groupRecordsByProperty = (
+  records: IDatabaseRecord[],
+  propertyId: string
+): { [groupValue: string]: IDatabaseRecord[] } => {
   const grouped: { [groupValue: string]: IDatabaseRecord[] } = {};
 
   records.forEach(record => {

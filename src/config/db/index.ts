@@ -17,7 +17,15 @@ interface SafeMongooseConnectionOptions {
 const defaultMongooseConnectionOptions: ConnectOptions = {
   autoCreate: true,
   autoIndex: true,
+  // Function-optimized options
+  maxPoolSize: process.env.NODE_ENV === 'production' ? 1 : 10, // Limit connections for function environments
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  bufferCommands: false // Disable mongoose buffering for function environments
 };
+
+// Global connection cache for function environments
+let cachedConnection: typeof mongoose | null = null;
 
 export default class SafeMongooseConnection {
   private readonly options: SafeMongooseConnectionOptions;
@@ -56,6 +64,53 @@ export default class SafeMongooseConnection {
   public connect(onConnectedCallback: IOnConnectedCallback) {
     this.onConnectedCallback = onConnectedCallback;
     this.startConnection();
+  }
+
+  public async connectOptimized(): Promise<typeof mongoose> {
+    if (cachedConnection && cachedConnection.connection.readyState === 1) {
+      if (this.options.onStartConnection) {
+        this.options.onStartConnection('Using cached connection');
+      }
+      return cachedConnection;
+    }
+
+    try {
+      if (this.options.onStartConnection) {
+        this.options.onStartConnection(this.options.mongoUrl);
+      }
+
+      const connection = await mongoose.connect(this.options.mongoUrl, {
+        ...this.mongoConnectionOptions,
+        ...this.options.mongooseConnectionOptions
+      });
+
+      cachedConnection = connection;
+
+      connection.connection.on('error', (error) => {
+        if (this.options.onConnectionError) {
+          this.options.onConnectionError(error, this.options.mongoUrl);
+        }
+        cachedConnection = null;
+      });
+
+      connection.connection.on('disconnected', () => {
+        cachedConnection = null;
+      });
+
+      this.isConnectedBefore = true;
+      return connection;
+
+    } catch (error) {
+      if (this.options.onConnectionError) {
+        this.options.onConnectionError(error as Error, this.options.mongoUrl);
+      }
+      cachedConnection = null;
+      throw error;
+    }
+  }
+
+  public static isConnected(): boolean {
+    return cachedConnection?.connection.readyState === 1;
   }
 
   private startConnection = () => {

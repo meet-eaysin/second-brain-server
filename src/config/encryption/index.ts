@@ -65,8 +65,8 @@ export const encryptResponse = (req: Request, res: Response, next: NextFunction)
 
   try {
     const originalJson = res.json;
-    
-    res.json = function(body: unknown): Response {
+
+    res.json = function (body: unknown): Response {
       if (body) {
         try {
           const encrypted = encryptData(body);
@@ -78,7 +78,7 @@ export const encryptResponse = (req: Request, res: Response, next: NextFunction)
       }
       return originalJson.call(this, body);
     };
-    
+
     next();
   } catch (error) {
     console.error('Response encryption middleware error:', JSON.stringify(error, null, 2));

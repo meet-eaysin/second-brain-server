@@ -2,35 +2,47 @@ import cron from 'node-cron';
 import logger from '../logger';
 
 const jobs = {
-  dailyCleanup: cron.schedule('0 0 * * *', () => {
-    try {
-      logger.info('Running daily cleanup job');
-    } catch (error) {
-      logger.error('Daily cleanup job failed:', error);
+  dailyCleanup: cron.schedule(
+    '0 0 * * *',
+    () => {
+      try {
+        logger.info('Running daily cleanup job');
+      } catch (error) {
+        logger.error('Daily cleanup job failed:', error);
+      }
+    },
+    {
+      timezone: 'UTC'
     }
-  }, {
-    timezone: 'UTC'
-  }),
-  
-  weeklyReport: cron.schedule('0 9 * * 1', () => {
-    try {
-      logger.info('Generating weekly report');
-    } catch (error) {
-      logger.error('Weekly report job failed:', error);
+  ),
+
+  weeklyReport: cron.schedule(
+    '0 9 * * 1',
+    () => {
+      try {
+        logger.info('Generating weekly report');
+      } catch (error) {
+        logger.error('Weekly report job failed:', error);
+      }
+    },
+    {
+      timezone: 'UTC'
     }
-  }, {
-    timezone: 'UTC'
-  }),
-  
-  syncData: cron.schedule('*/30 * * * *', () => {
-    try {
-      logger.info('Syncing data');
-    } catch (error) {
-      logger.error('Data sync job failed:', error);
+  ),
+
+  syncData: cron.schedule(
+    '*/30 * * * *',
+    () => {
+      try {
+        logger.info('Syncing data');
+      } catch (error) {
+        logger.error('Data sync job failed:', error);
+      }
+    },
+    {
+      timezone: 'UTC'
     }
-  }, {
-    timezone: 'UTC'
-  })
+  )
 };
 
 const init = (): void => {
@@ -62,12 +74,15 @@ const stop = (): void => {
 };
 
 const getStatus = () => {
-  return Object.entries(jobs).reduce((status, [name]) => {
-    status[name] = {
-      exists: true
-    };
-    return status;
-  }, {} as Record<string, { exists: boolean }>);
+  return Object.entries(jobs).reduce(
+    (status, [name]) => {
+      status[name] = {
+        exists: true
+      };
+      return status;
+    },
+    {} as Record<string, { exists: boolean }>
+  );
 };
 
 const startJob = (jobName: string): boolean => {
@@ -92,11 +107,11 @@ const stopJob = (jobName: string): boolean => {
   return false;
 };
 
-export default { 
-  init, 
-  stop, 
-  jobs, 
-  getStatus, 
-  startJob, 
-  stopJob 
+export default {
+  init,
+  stop,
+  jobs,
+  getStatus,
+  startJob,
+  stopJob
 };

@@ -63,9 +63,9 @@ export const uploadToS3 = async (file: Express.Multer.File): Promise<string> => 
     };
 
     const result = await s3.upload(params).promise();
-    
+
     fs.unlinkSync(file.path);
-    
+
     logger.info(`File uploaded to S3: ${result.Location}`);
     return result.Location;
   } catch (error) {
@@ -81,7 +81,7 @@ export const uploadToS3 = async (file: Express.Multer.File): Promise<string> => 
 export const deleteFromS3 = async (fileUrl: string): Promise<boolean> => {
   try {
     const key = fileUrl.split('.com/')[1];
-    
+
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME as string,
       Key: key

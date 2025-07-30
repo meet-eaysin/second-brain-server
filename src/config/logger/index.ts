@@ -21,16 +21,11 @@ const options = {
   },
   console: {
     level: 'debug',
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
+    format: winston.format.combine(winston.format.colorize(), winston.format.simple())
   }
 };
 
-const transports: winston.transport[] = [
-  new winston.transports.Console(options.console)
-];
+const transports: winston.transport[] = [new winston.transports.Console(options.console)];
 
 if (process.env.NODE_ENV === 'production') {
   transports.push(

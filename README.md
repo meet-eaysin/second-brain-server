@@ -298,29 +298,164 @@ docker exec -it <container-name> /bin/sh
 docker system prune
 ```
 
-## 📝 Available Scripts
+## 🛠️ Development Setup & Commands
+
+### Core Development Commands
 
 ```bash
-# Development
-yarn dev              # Start development server with hot reload
+# Development Server
+yarn dev                  # Start development server with hot reload
+yarn dev:debug           # Start with debugger attached (port 9229)
 
-# Building
-yarn build           # Build TypeScript to JavaScript
-yarn start          # Start production server (requires build)
+# Building & Compilation
+yarn build               # Build for production using tsconfig.build.json
+yarn build:watch         # Build in watch mode
+yarn build:resolve-paths # Resolve TypeScript path aliases in build
+yarn clean               # Clean build artifacts and cache
 
-# Code Quality
-yarn format         # Format code with Prettier
-yarn lint          # Run ESLint
-yarn lint:fix      # Fix ESLint issues automatically
-
-# Docker Development
-yarn docker:dev            # Start development containers
-yarn docker:dev:build      # Build and start development containers
-yarn docker:prod           # Start production containers
-yarn docker:prod:build     # Build and start production containers
-yarn docker:down           # Stop all containers
-yarn docker:logs           # View container logs
+# Type Checking
+yarn typecheck           # Run TypeScript compiler check
+yarn typecheck:watch     # Run type checking in watch mode
 ```
+
+### Testing Commands
+
+```bash
+# Test Execution
+yarn test                # Run all tests with Jest
+yarn test:watch          # Run tests in watch mode
+yarn test:coverage       # Run tests with coverage report
+yarn test:ci             # Run tests for CI/CD (no watch, coverage)
+
+# Test Types
+yarn test:unit           # Run unit tests only
+yarn test:integration    # Run integration tests only
+yarn test:e2e            # Run end-to-end tests only
+```
+
+### Code Quality & Formatting
+
+```bash
+# Linting
+yarn lint                # Run ESLint on all TypeScript files
+yarn lint:fix            # Fix auto-fixable ESLint issues
+yarn lint:staged         # Run lint-staged (used by git hooks)
+
+# Code Formatting
+yarn format              # Format all files with Prettier
+yarn format:check        # Check if files are properly formatted
+
+# Comprehensive Validation
+yarn validate            # Run typecheck + lint + test (full validation)
+```
+
+### Production & Deployment
+
+```bash
+# Production Server
+yarn start               # Start production server
+yarn start:prod          # Start with NODE_ENV=production
+
+# Deployment Scripts
+yarn deploy:staging      # Deploy to staging environment
+yarn deploy:production   # Deploy to production environment
+
+# Process Management (PM2)
+yarn logs                # View PM2 logs
+yarn monitor             # Open PM2 monitoring dashboard
+yarn health              # Check server health endpoint
+```
+
+### Database & Utilities
+
+```bash
+# Database Operations
+yarn db:seed             # Seed database with sample data
+yarn db:migrate          # Run database migrations
+yarn db:reset            # Reset database (development only)
+
+# Development Utilities
+yarn clean               # Clean build artifacts
+yarn prepare             # Setup git hooks (runs automatically)
+```
+
+### Docker Development
+
+```bash
+# Development Environment
+yarn docker:dev            # Start development containers
+
+# Production Environment
+yarn docker:prod           # Start production containers
+
+# Container Management
+yarn docker:down           # Stop all containers
+```
+
+### Vercel Deployment
+
+```bash
+# Deploy to Vercel
+yarn vercel:deploy         # Deploy to production
+
+# Local Vercel development
+yarn vercel:dev            # Test serverless functions locally
+```
+
+### Path Aliases & TypeScript
+
+The project uses TypeScript path aliases for cleaner imports:
+
+```typescript
+// Instead of relative imports
+import { createAppError } from '../../../utils/error.utils';
+
+// Use path aliases
+import { createAppError } from '@/utils/error.utils';
+```
+
+**Available aliases:**
+- `@/*` → `src/*`
+- `@/config/*` → `src/config/*`
+- `@/modules/*` → `src/modules/*`
+- `@/middlewares/*` → `src/middlewares/*`
+- `@/utils/*` → `src/utils/*`
+- `@/types/*` → `src/types/*`
+- `@/routes/*` → `src/routes/*`
+- `@/database/*` → `src/modules/database/*`
+- `@/auth/*` → `src/modules/auth/*`
+- `@/users/*` → `src/modules/users/*`
+- `@/email/*` → `src/modules/email/*`
+
+### Git Hooks & Quality Gates
+
+The project uses **Husky** for git hooks to ensure code quality:
+
+**Pre-commit Hook:**
+- Runs `lint-staged` to lint and format staged files
+- Performs TypeScript type checking
+
+**Pre-push Hook:**
+- Runs full validation (`yarn validate`)
+- Ensures all tests pass before pushing
+
+### VS Code Integration
+
+The project includes comprehensive VS Code configuration:
+
+**Debugging Configurations:**
+- Debug Server with TypeScript support
+- Debug Jest tests
+- Debug current test file
+- Attach to running process
+
+**Recommended Extensions:**
+- ESLint
+- Prettier
+- TypeScript and JavaScript Language Features
+- Jest
+- Docker
+- GitLens
 
 ## 🏗️ Project Architecture
 
@@ -342,7 +477,7 @@ src/
 │   └── swagger/              # API documentation configuration
 ├── middlewares/              # Express middlewares
 │   ├── auth.ts               # Authentication middleware
-│   ├── errorHandler.ts       # Error handling middleware
+│   ├── error-handler.ts       # Error handling middleware
 │   ├── not-found.ts          # 404 handler
 │   ├── oauth.middleware.ts   # OAuth middleware
 │   └── validation.ts         # Request validation middleware

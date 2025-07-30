@@ -1,14 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
-import { createUnauthorizedError, createForbiddenError } from '../utils/error.utils';
-import {TJwtPayload, TUserRole} from "../modules/users/types/user.types";
-import {extractTokenFromHeader, verifyAccessToken} from "../modules/auth/utils/auth.utils";
-import {getUserById} from "../modules/users/services/users.services";
+import { TJwtPayload, TUserRole } from '../modules/users/types/user.types';
+import { extractTokenFromHeader, verifyAccessToken } from '../modules/auth/utils/auth.utils';
+import { createForbiddenError, createUnauthorizedError } from '../utils/error.utils';
+import { getUserById } from '../modules/users/services/users.services';
 
 export interface AuthenticatedRequest extends Request {
   user: TJwtPayload & { userId: string };
 }
 
-export const authenticateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authenticateToken = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const accessToken = extractTokenFromHeader(req.headers.authorization);
 
@@ -49,7 +53,11 @@ export const requireRoles = (...roles: TUserRole[]) => {
 export const requireAdmin = requireRoles(TUserRole.ADMIN);
 export const requireModerator = requireRoles(TUserRole.ADMIN, TUserRole.MODERATOR);
 
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const accessToken = extractTokenFromHeader(req.headers.authorization);
 

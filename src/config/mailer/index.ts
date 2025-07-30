@@ -45,7 +45,7 @@ const createTransporter = () => {
 export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
   try {
     const transporter = createTransporter();
-    
+
     const mailOptions = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: emailData.to,
@@ -54,7 +54,7 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
       html: emailData.html,
       attachments: emailData.attachments
     };
-    
+
     await transporter.sendMail(mailOptions);
     logger.info(`Email sent to ${emailData.to}`);
     return true;

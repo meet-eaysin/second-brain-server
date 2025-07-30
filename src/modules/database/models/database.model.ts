@@ -1,5 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import {EPropertyType, ERelationType, EViewType, IDatabaseDocument} from "../types/database.types";
+import {
+  EPropertyType,
+  ERelationType,
+  EViewType,
+  IDatabaseDocument
+} from '../types/database.types';
 
 const DatabasePropertySchema = new Schema({
   id: { type: String, required: true },
@@ -8,11 +13,13 @@ const DatabasePropertySchema = new Schema({
   description: String,
   required: { type: Boolean, default: false },
 
-  selectOptions: [{
-    id: String,
-    name: String,
-    color: String
-  }],
+  selectOptions: [
+    {
+      id: String,
+      name: String,
+      color: String
+    }
+  ],
   relationConfig: {
     relatedDatabaseId: String,
     relationType: { type: String, enum: Object.values(ERelationType) },
@@ -69,30 +76,35 @@ const DatabaseViewSchema = new Schema({
   }
 });
 
-const DatabaseSchema = new Schema<IDatabaseDocument>({
-  name: { type: String, required: true },
-  description: String,
-  icon: String,
-  cover: String,
+const DatabaseSchema = new Schema<IDatabaseDocument>(
+  {
+    name: { type: String, required: true },
+    description: String,
+    icon: String,
+    cover: String,
 
-  userId: { type: String, required: true, index: true },
-  workspaceId: String,
+    userId: { type: String, required: true, index: true },
+    workspaceId: String,
 
-  properties: [DatabasePropertySchema],
-  views: [DatabaseViewSchema],
+    properties: [DatabasePropertySchema],
+    views: [DatabaseViewSchema],
 
-  isPublic: { type: Boolean, default: false },
-  sharedWith: [{
-    userId: String,
-    permission: { type: String, enum: ['read', 'write', 'admin'] }
-  }],
+    isPublic: { type: Boolean, default: false },
+    sharedWith: [
+      {
+        userId: String,
+        permission: { type: String, enum: ['read', 'write', 'admin'] }
+      }
+    ],
 
-  createdBy: { type: String, required: true },
-  lastEditedBy: { type: String, required: true }
-}, {
-  timestamps: true,
-  collection: 'databases'
-});
+    createdBy: { type: String, required: true },
+    lastEditedBy: { type: String, required: true }
+  },
+  {
+    timestamps: true,
+    collection: 'databases'
+  }
+);
 
 DatabaseSchema.index({ userId: 1, createdAt: -1 });
 DatabaseSchema.index({ workspaceId: 1 });

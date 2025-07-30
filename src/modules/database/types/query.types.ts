@@ -10,7 +10,7 @@ export interface IMongoSortOptions {
 }
 
 // Filter operator types
-export type TFilterOperator = 
+export type TFilterOperator =
   | 'equals'
   | 'not_equals'
   | 'contains'
@@ -37,14 +37,7 @@ export type TFilterOperator =
   | 'relation_not_contains';
 
 // Filter value types based on operator
-export type TFilterValue = 
-  | string 
-  | number 
-  | boolean 
-  | Date 
-  | string[] 
-  | number[]
-  | null;
+export type TFilterValue = string | number | boolean | Date | string[] | number[] | null;
 
 // Typed filter interface
 export interface ITypedFilter {

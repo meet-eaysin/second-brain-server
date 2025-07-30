@@ -1,5 +1,5 @@
-import {HydratedDocument, Schema, Document} from "mongoose";
-import {IDatabaseRecord, IDatabaseRecordDocument} from "../models/database-record.model";
+import { HydratedDocument, Schema, Document } from 'mongoose';
+import { IDatabaseRecord, IDatabaseRecordDocument } from '../models/database-record.model';
 
 export type DatabaseDocument = HydratedDocument<IDatabaseDocument>;
 export type DatabaseRecordDocument = HydratedDocument<IDatabaseRecordDocument>;
@@ -15,7 +15,7 @@ export enum EPropertyType {
   EMAIL = 'email',
   PHONE = 'phone',
   URL = 'url',
-  CHECKBOX='checkbox',
+  CHECKBOX = 'checkbox',
   RELATION = 'relation',
   FORMULA = 'formula',
   ROLLUP = 'rollup',
@@ -359,14 +359,16 @@ export interface TRecordsListResponse {
   };
   aggregations?: {
     groupedData?: { [groupValue: string]: TRecordResponse[] };
-    summary?: { [propertyId: string]: {
-      count: number;
-      sum?: number;
-      average?: number;
-      min?: number | Date;
-      max?: number | Date;
-      unique?: number;
-    }};
+    summary?: {
+      [propertyId: string]: {
+        count: number;
+        sum?: number;
+        average?: number;
+        min?: number | Date;
+        max?: number | Date;
+        unique?: number;
+      };
+    };
   };
 }
 
@@ -404,22 +406,120 @@ export type TPropertyValue = {
 };
 
 export const FILTER_OPERATORS = {
-  [EPropertyType.TEXT]: ['equals', 'not_equals', 'contains', 'does_not_contain', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'],
-  [EPropertyType.NUMBER]: ['equals', 'not_equals', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'is_empty', 'is_not_empty'],
-  [EPropertyType.DATE]: ['equals', 'not_equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty', 'past_week', 'past_month', 'past_year', 'next_week', 'next_month', 'next_year'],
+  [EPropertyType.TEXT]: [
+    'equals',
+    'not_equals',
+    'contains',
+    'does_not_contain',
+    'starts_with',
+    'ends_with',
+    'is_empty',
+    'is_not_empty'
+  ],
+  [EPropertyType.NUMBER]: [
+    'equals',
+    'not_equals',
+    'greater_than',
+    'less_than',
+    'greater_than_or_equal',
+    'less_than_or_equal',
+    'is_empty',
+    'is_not_empty'
+  ],
+  [EPropertyType.DATE]: [
+    'equals',
+    'not_equals',
+    'before',
+    'after',
+    'on_or_before',
+    'on_or_after',
+    'is_empty',
+    'is_not_empty',
+    'past_week',
+    'past_month',
+    'past_year',
+    'next_week',
+    'next_month',
+    'next_year'
+  ],
   [EPropertyType.BOOLEAN]: ['equals', 'not_equals'],
   [EPropertyType.SELECT]: ['equals', 'not_equals', 'is_empty', 'is_not_empty'],
-  [EPropertyType.MULTI_SELECT]: ['contains', 'does_not_contain', 'contains_all', 'is_empty', 'is_not_empty'],
+  [EPropertyType.MULTI_SELECT]: [
+    'contains',
+    'does_not_contain',
+    'contains_all',
+    'is_empty',
+    'is_not_empty'
+  ],
   [EPropertyType.FILE]: ['is_empty', 'is_not_empty'],
-  [EPropertyType.EMAIL]: ['equals', 'not_equals', 'contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
-  [EPropertyType.PHONE]: ['equals', 'not_equals', 'contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
-  [EPropertyType.URL]: ['equals', 'not_equals', 'contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
+  [EPropertyType.EMAIL]: [
+    'equals',
+    'not_equals',
+    'contains',
+    'does_not_contain',
+    'is_empty',
+    'is_not_empty'
+  ],
+  [EPropertyType.PHONE]: [
+    'equals',
+    'not_equals',
+    'contains',
+    'does_not_contain',
+    'is_empty',
+    'is_not_empty'
+  ],
+  [EPropertyType.URL]: [
+    'equals',
+    'not_equals',
+    'contains',
+    'does_not_contain',
+    'is_empty',
+    'is_not_empty'
+  ],
   [EPropertyType.CHECKBOX]: ['equals', 'not_equals'],
   [EPropertyType.RELATION]: ['contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
-  [EPropertyType.FORMULA]: ['equals', 'not_equals', 'contains', 'does_not_contain', 'is_empty', 'is_not_empty'],
-  [EPropertyType.ROLLUP]: ['equals', 'not_equals', 'greater_than', 'less_than', 'is_empty', 'is_not_empty'],
-  [EPropertyType.CREATED_TIME]: ['equals', 'not_equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty', 'past_week', 'past_month', 'past_year'],
-  [EPropertyType.LAST_EDITED_TIME]: ['equals', 'not_equals', 'before', 'after', 'on_or_before', 'on_or_after', 'is_empty', 'is_not_empty', 'past_week', 'past_month', 'past_year'],
+  [EPropertyType.FORMULA]: [
+    'equals',
+    'not_equals',
+    'contains',
+    'does_not_contain',
+    'is_empty',
+    'is_not_empty'
+  ],
+  [EPropertyType.ROLLUP]: [
+    'equals',
+    'not_equals',
+    'greater_than',
+    'less_than',
+    'is_empty',
+    'is_not_empty'
+  ],
+  [EPropertyType.CREATED_TIME]: [
+    'equals',
+    'not_equals',
+    'before',
+    'after',
+    'on_or_before',
+    'on_or_after',
+    'is_empty',
+    'is_not_empty',
+    'past_week',
+    'past_month',
+    'past_year'
+  ],
+  [EPropertyType.LAST_EDITED_TIME]: [
+    'equals',
+    'not_equals',
+    'before',
+    'after',
+    'on_or_before',
+    'on_or_after',
+    'is_empty',
+    'is_not_empty',
+    'past_week',
+    'past_month',
+    'past_year'
+  ],
   [EPropertyType.CREATED_BY]: ['equals', 'not_equals', 'is_empty', 'is_not_empty'],
   [EPropertyType.LAST_EDITED_BY]: ['equals', 'not_equals', 'is_empty', 'is_not_empty']
 } as const;
