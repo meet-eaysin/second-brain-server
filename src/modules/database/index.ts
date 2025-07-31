@@ -12,7 +12,10 @@ export {
   updateRecord,
   deleteRecord,
   exportDatabase,
-  importData
+  importData,
+  toggleDatabaseFavorite,
+  moveDatabaseToCategory,
+  trackDatabaseAccess
 } from './controllers/database.controller';
 
 // Services
@@ -22,6 +25,7 @@ export * as exportService from './services/export.service';
 // Models
 export { DatabaseModel } from './models/database.model';
 export { DatabaseRecordModel } from './models/database-record.model';
+export { DatabaseCategoryModel } from './models/database-category.model';
 
 // Types
 export type {
@@ -29,7 +33,13 @@ export type {
   TDatabaseCreateRequest,
   TDatabaseUpdateRequest,
   TDatabaseExportOptions,
-  TDatabaseImportOptions
+  TDatabaseImportOptions,
+  IDatabaseCategory,
+  TDatabaseCategoryCreateRequest,
+  TDatabaseCategoryUpdateRequest,
+  ISidebarData,
+  TDatabaseListResponse,
+  TGetDatabasesQuery
 } from './types/database.types';
 
 // Validators

@@ -2,21 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { catchAsync } from '../../../utils/catch-async';
 import { sendSuccessResponse } from '../../../utils/response-handler.utils';
 import { createNotFoundError } from '../../../utils/error.utils';
+import { AuthenticatedRequest } from '../../../middlewares/auth';
 import * as databaseService from '../services/database.service';
 import * as exportService from '../services/export.service';
 import { TDatabaseExportOptions, TDatabaseImportOptions } from '../types/database.types';
 
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
-
 export const createDatabase = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    const userId = req.user?.id;
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.createDatabase(userId, req.body);
@@ -25,9 +18,9 @@ export const createDatabase = catchAsync(
 );
 
 export const getDatabaseById = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.getDatabaseById(id, userId);
@@ -36,20 +29,32 @@ export const getDatabaseById = catchAsync(
 );
 
 export const getUserDatabases = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    const userId = req.user?.id;
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const { workspaceId } = req.query;
-    const databases = await databaseService.getUserDatabases(userId, workspaceId as string);
-    sendSuccessResponse(res, databases, 'Databases retrieved successfully');
+    const queryParams = {
+      includeSidebarData: req.query.includeSidebarData === 'true',
+      categoryId: req.query.categoryId as string,
+      isFavorite: req.query.isFavorite === 'true' ? true : undefined,
+      tags: req.query.tags ? (req.query.tags as string).split(',').map(tag => tag.trim()) : undefined,
+      search: req.query.search as string,
+      sortBy: req.query.sortBy as 'name' | 'createdAt' | 'updatedAt' | 'lastAccessedAt',
+      sortOrder: req.query.sortOrder as 'asc' | 'desc',
+      page: req.query.page ? parseInt(req.query.page as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined
+    };
+
+    const result = await databaseService.getDatabasesWithSidebar(userId, queryParams);
+    sendSuccessResponse(res, result, 'Databases retrieved successfully');
   }
 );
 
 export const updateDatabase = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.updateDatabase(id, userId, req.body);
@@ -58,9 +63,9 @@ export const updateDatabase = catchAsync(
 );
 
 export const deleteDatabase = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     await databaseService.deleteDatabase(id, userId);
@@ -69,9 +74,9 @@ export const deleteDatabase = catchAsync(
 );
 
 export const addProperty = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.addProperty(id, userId, req.body);
@@ -80,9 +85,9 @@ export const addProperty = catchAsync(
 );
 
 export const updateProperty = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, propertyId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
@@ -91,9 +96,9 @@ export const updateProperty = catchAsync(
 );
 
 export const deleteProperty = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, propertyId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.deleteProperty(id, propertyId, userId);
@@ -102,9 +107,9 @@ export const deleteProperty = catchAsync(
 );
 
 export const addView = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.addView(id, userId, req.body);
@@ -113,9 +118,9 @@ export const addView = catchAsync(
 );
 
 export const updateView = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, viewId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.updateView(id, viewId, userId, req.body);
@@ -124,9 +129,9 @@ export const updateView = catchAsync(
 );
 
 export const deleteView = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, viewId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.deleteView(id, viewId, userId);
@@ -135,9 +140,9 @@ export const deleteView = catchAsync(
 );
 
 export const createRecord = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const record = await databaseService.createRecord(id, userId, req.body);
@@ -146,9 +151,9 @@ export const createRecord = catchAsync(
 );
 
 export const getRecords = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const queryParams = {
@@ -170,9 +175,9 @@ export const getRecords = catchAsync(
 );
 
 export const getRecordById = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, recordId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const record = await databaseService.getRecordById(id, recordId, userId);
@@ -181,9 +186,9 @@ export const getRecordById = catchAsync(
 );
 
 export const updateRecord = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, recordId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const record = await databaseService.updateRecord(id, recordId, userId, req.body);
@@ -192,9 +197,9 @@ export const updateRecord = catchAsync(
 );
 
 export const deleteRecord = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, recordId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) {
       return next(createNotFoundError('User authentication required'));
     }
@@ -206,9 +211,9 @@ export const deleteRecord = catchAsync(
 
 // Permission management
 export const shareDatabase = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) {
       return next(createNotFoundError('User authentication required'));
     }
@@ -219,9 +224,9 @@ export const shareDatabase = catchAsync(
 );
 
 export const removeDatabaseAccess = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, targetUserId } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) {
       return next(createNotFoundError('User authentication required'));
     }
@@ -232,9 +237,9 @@ export const removeDatabaseAccess = catchAsync(
 );
 
 export const exportDatabase = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) {
       return next(createNotFoundError('User authentication required'));
     }
@@ -274,9 +279,9 @@ export const exportDatabase = catchAsync(
 );
 
 export const importData = catchAsync(
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
     if (!req.file) return next(createNotFoundError('No file uploaded'));
 
@@ -293,5 +298,43 @@ export const importData = catchAsync(
 
     const result = await exportService.importData(id, userId, req.file, importOptions);
     sendSuccessResponse(res, result, 'Data imported successfully');
+  }
+);
+
+// Toggle database favorite status
+export const toggleDatabaseFavorite = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { isFavorite } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.toggleDatabaseFavorite(id, userId, isFavorite);
+    sendSuccessResponse(res, database, 'Database favorite status updated successfully');
+  }
+);
+
+// Move database to category
+export const moveDatabaseToCategory = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { categoryId } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.moveDatabaseToCategory(id, userId, categoryId);
+    sendSuccessResponse(res, database, 'Database moved to category successfully');
+  }
+);
+
+// Update database access tracking (called when user opens a database)
+export const trackDatabaseAccess = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    await databaseService.updateDatabaseAccess(id, userId);
+    sendSuccessResponse(res, null, 'Database access tracked successfully');
   }
 );

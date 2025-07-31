@@ -97,6 +97,13 @@ const DatabaseSchema = new Schema<IDatabaseDocument>(
       }
     ],
 
+    // New fields for enhanced organization
+    isFavorite: { type: Boolean, default: false },
+    categoryId: { type: String, index: true },
+    tags: [{ type: String, trim: true }],
+    lastAccessedAt: { type: Date, default: Date.now },
+    accessCount: { type: Number, default: 0 },
+
     createdBy: { type: String, required: true },
     lastEditedBy: { type: String, required: true }
   },
@@ -109,5 +116,9 @@ const DatabaseSchema = new Schema<IDatabaseDocument>(
 DatabaseSchema.index({ userId: 1, createdAt: -1 });
 DatabaseSchema.index({ workspaceId: 1 });
 DatabaseSchema.index({ 'sharedWith.userId': 1 });
+DatabaseSchema.index({ userId: 1, isFavorite: 1 });
+DatabaseSchema.index({ userId: 1, categoryId: 1 });
+DatabaseSchema.index({ userId: 1, lastAccessedAt: -1 });
+DatabaseSchema.index({ tags: 1 });
 
 export const DatabaseModel = mongoose.model<IDatabaseDocument>('Database', DatabaseSchema);

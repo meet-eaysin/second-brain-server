@@ -52,7 +52,9 @@ export const createDatabaseSchema = z.object({
   icon: z.string().max(50, 'Icon cannot exceed 50 characters').optional(),
   cover: z.string().url('Cover must be a valid URL').optional(),
   workspaceId: mongoIdSchema.optional(),
-  isPublic: z.boolean().default(false).optional()
+  isPublic: z.boolean().default(false).optional(),
+  categoryId: mongoIdSchema.optional(),
+  tags: z.array(z.string().trim().max(50)).max(20, 'Maximum 20 tags allowed').optional()
 });
 
 export const updateDatabaseSchema = z.object({
@@ -65,8 +67,38 @@ export const updateDatabaseSchema = z.object({
   description: z.string().max(500, 'Description cannot exceed 500 characters').optional(),
   icon: z.string().max(50, 'Icon cannot exceed 50 characters').optional(),
   cover: z.string().url('Cover must be a valid URL').optional(),
-  isPublic: z.boolean().optional()
+  isPublic: z.boolean().optional(),
+  categoryId: mongoIdSchema.optional(),
+  tags: z.array(z.string().trim().max(50)).max(20, 'Maximum 20 tags allowed').optional()
 });
+
+// Enhanced database query schema
+export const getDatabasesQuerySchema = z.object({
+  includeSidebarData: z.string().transform(val => val === 'true').optional(),
+  categoryId: mongoIdSchema.optional(),
+  isFavorite: z.string().transform(val => val === 'true').optional(),
+  tags: z.string().transform(val => val.split(',').map(tag => tag.trim())).optional(),
+  search: z.string().trim().optional(),
+  sortBy: z.enum(['name', 'createdAt', 'updatedAt', 'lastAccessedAt']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  page: z.string().transform(val => parseInt(val)).optional(),
+  limit: z.string().transform(val => parseInt(val)).optional()
+});
+
+// Favorite toggle schema
+export const toggleFavoriteSchema = z.object({
+  isFavorite: z.boolean()
+});
+
+// Move to category schema
+export const moveToCategorySchema = z.object({
+  categoryId: mongoIdSchema.optional()
+});
+
+// Export type definitions
+export type TGetDatabasesQuery = z.infer<typeof getDatabasesQuerySchema>;
+export type TToggleFavoriteRequest = z.infer<typeof toggleFavoriteSchema>;
+export type TMoveToCategoryRequest = z.infer<typeof moveToCategorySchema>;
 
 export const databaseIdSchema = z.object({
   id: mongoIdSchema

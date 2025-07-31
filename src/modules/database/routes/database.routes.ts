@@ -35,7 +35,12 @@ router.post(
   databaseController.createDatabase
 );
 
-router.get('/', authenticateToken, databaseController.getUserDatabases);
+router.get(
+  '/',
+  authenticateToken,
+  validateQuery(validators.getDatabasesQuerySchema),
+  databaseController.getUserDatabases
+);
 
 router.get(
   '/:id',
@@ -173,6 +178,28 @@ router.post(
   validateParams(validators.databaseIdSchema),
   validateBody(validators.importSchema),
   databaseController.importData
+);
+
+// Enhanced database management routes
+router.put(
+  '/:id/favorite',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  databaseController.toggleDatabaseFavorite
+);
+
+router.put(
+  '/:id/category',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  databaseController.moveDatabaseToCategory
+);
+
+router.post(
+  '/:id/access',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  databaseController.trackDatabaseAccess
 );
 
 export default router;

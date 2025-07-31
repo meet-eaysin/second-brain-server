@@ -136,6 +136,13 @@ export interface IDatabase {
     permission: 'read' | 'write' | 'admin';
   }>;
 
+  // New fields for enhanced organization
+  isFavorite?: boolean;
+  categoryId?: string;
+  tags?: string[];
+  lastAccessedAt?: Date;
+  accessCount?: number;
+
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -161,6 +168,13 @@ export interface IDatabaseDocument extends Document {
     permission: 'read' | 'write' | 'admin';
   }>;
 
+  // New fields for enhanced organization
+  isFavorite?: boolean;
+  categoryId?: string;
+  tags?: string[];
+  lastAccessedAt?: Date;
+  accessCount?: number;
+
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -174,6 +188,8 @@ export interface TDatabaseCreateRequest {
   cover?: string;
   workspaceId?: string;
   isPublic?: boolean;
+  categoryId?: string;
+  tags?: string[];
 }
 
 export interface TDatabaseUpdateRequest {
@@ -182,6 +198,77 @@ export interface TDatabaseUpdateRequest {
   icon?: string;
   cover?: string;
   isPublic?: boolean;
+  categoryId?: string;
+  tags?: string[];
+}
+
+// Database Category Types
+export interface IDatabaseCategory {
+  _id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  ownerId: string;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TDatabaseCategoryCreateRequest {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  sortOrder?: number;
+}
+
+export interface TDatabaseCategoryUpdateRequest {
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  sortOrder?: number;
+}
+
+// Sidebar Data Types
+export interface ISidebarData {
+  categories: IDatabaseCategory[];
+  recentDatabases: IDatabase[];
+  favoriteDatabases: IDatabase[];
+  myDatabases: IDatabase[];
+  sharedDatabases: IDatabase[];
+  totalCount: number;
+}
+
+export interface TDatabaseListResponse {
+  databases: IDatabase[];
+  sidebarData?: ISidebarData;
+}
+
+// Database Templates
+export interface IDatabaseTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  properties: Omit<IDatabaseProperty, 'id'>[];
+  tags: string[];
+}
+
+// Enhanced query parameters
+export interface TGetDatabasesQuery {
+  includeSidebarData?: boolean;
+  categoryId?: string;
+  isFavorite?: boolean;
+  tags?: string[];
+  search?: string;
+  sortBy?: 'name' | 'createdAt' | 'updatedAt' | 'lastAccessedAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
 }
 
 export interface TPropertyCreateRequest {

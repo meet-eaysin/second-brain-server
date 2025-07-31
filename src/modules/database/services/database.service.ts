@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseModel } from '../models/database.model';
+import { DatabaseCategoryModel } from '../models/database-category.model';
 import {
   TDatabaseCreateRequest,
   TDatabaseUpdateRequest,
@@ -19,7 +20,11 @@ import {
   DatabaseRecordDocument,
   EViewType,
   EPropertyType,
-  IFilter
+  IFilter,
+  TGetDatabasesQuery,
+  TDatabaseListResponse,
+  ISidebarData,
+  IDatabaseCategory
 } from '../types/database.types';
 import { IValidationError } from '@/types/error.types';
 import { createNotFoundError, createAppError, createForbiddenError } from '@/utils/error.utils';
@@ -105,6 +110,219 @@ export const getUserDatabases = async (
   const databases = await DatabaseModel.find(query).sort({ updatedAt: -1 });
 
   return databases.map(db => toDatabaseInterface(db));
+};
+
+// Enhanced database listing with sidebar data
+export const getDatabasesWithSidebar = async (
+  userId: string,
+  queryParams: TGetDatabasesQuery = {}
+): Promise<TDatabaseListResponse> => {
+  const {
+    includeSidebarData = false,
+    categoryId,
+    isFavorite,
+    tags,
+    search,
+    sortBy = 'updatedAt',
+    sortOrder = 'desc',
+    page = 1,
+    limit = 50
+  } = queryParams;
+
+  // Build base query
+  interface IDatabaseQuery {
+    $or: Array<{
+      userId?: string;
+      'sharedWith.userId'?: string;
+    }>;
+    categoryId?: string | { $exists: boolean };
+    isFavorite?: boolean;
+    tags?: { $in: string[] };
+    $and?: Array<{
+      $or: Array<{
+        name?: { $regex: string; $options: string };
+        description?: { $regex: string; $options: string };
+      }>;
+    }>;
+  }
+
+  const query: IDatabaseQuery = {
+    $or: [{ userId }, { 'sharedWith.userId': userId }]
+  };
+
+  // Apply filters
+  if (categoryId) {
+    query.categoryId = categoryId;
+  }
+
+  if (isFavorite !== undefined) {
+    query.isFavorite = isFavorite;
+  }
+
+  if (tags && tags.length > 0) {
+    query.tags = { $in: tags };
+  }
+
+  if (search) {
+    query.$and = [
+      {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ]
+      }
+    ];
+  }
+
+  // Build sort options
+  const sortOptions: Record<string, 1 | -1> = {};
+  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+  // Calculate pagination
+  const skip = (page - 1) * limit;
+
+  // Execute query
+  const [databases, total] = await Promise.all([
+    DatabaseModel.find(query)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit),
+    DatabaseModel.countDocuments(query)
+  ]);
+
+  const result: TDatabaseListResponse = {
+    databases: databases.map(db => toDatabaseInterface(db))
+  };
+
+  // Add sidebar data if requested
+  if (includeSidebarData) {
+    result.sidebarData = await generateSidebarData(userId);
+  }
+
+  return result;
+};
+
+// Generate sidebar data for dynamic navigation
+const generateSidebarData = async (userId: string): Promise<ISidebarData> => {
+  const baseQuery = {
+    $or: [{ userId }, { 'sharedWith.userId': userId }]
+  };
+
+  // Get all user's databases
+  const allDatabases = await DatabaseModel.find(baseQuery).sort({ updatedAt: -1 });
+  const databases = allDatabases.map(db => toDatabaseInterface(db));
+
+  // Get categories
+  const categories = await DatabaseCategoryModel.find({ ownerId: userId })
+    .sort({ sortOrder: 1, createdAt: 1 });
+
+  // Separate databases by ownership and favorites
+  const myDatabases = databases.filter(db => db.userId === userId);
+  const sharedDatabases = databases.filter(db => db.userId !== userId);
+  const favoriteDatabases = databases.filter(db => db.isFavorite);
+
+  // Get recent databases (last 5 accessed)
+  const recentDatabases = await DatabaseModel.find(baseQuery)
+    .sort({ lastAccessedAt: -1 })
+    .limit(5);
+
+  return {
+    categories: categories.map(cat => ({
+      _id: String(cat._id),
+      name: cat.name,
+      description: cat.description,
+      icon: cat.icon,
+      color: cat.color,
+      ownerId: cat.ownerId,
+      isDefault: cat.isDefault,
+      sortOrder: cat.sortOrder,
+      createdAt: cat.createdAt,
+      updatedAt: cat.updatedAt
+    })),
+    recentDatabases: recentDatabases.map(db => toDatabaseInterface(db)),
+    favoriteDatabases,
+    myDatabases,
+    sharedDatabases,
+    totalCount: databases.length
+  };
+};
+
+// Toggle database favorite status
+export const toggleDatabaseFavorite = async (
+  databaseId: string,
+  userId: string,
+  isFavorite: boolean
+): Promise<IDatabase> => {
+  const database = await checkDatabasePermission(databaseId, userId, 'read');
+
+  const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
+    databaseId,
+    {
+      $set: {
+        isFavorite,
+        lastEditedBy: userId
+      }
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedDatabase) {
+    throw createNotFoundError('Database not found');
+  }
+
+  return toDatabaseInterface(updatedDatabase);
+};
+
+// Move database to category
+export const moveDatabaseToCategory = async (
+  databaseId: string,
+  userId: string,
+  categoryId?: string
+): Promise<IDatabase> => {
+  await checkDatabasePermission(databaseId, userId, 'write');
+
+  // Verify category exists and belongs to user (if provided)
+  if (categoryId) {
+    const category = await DatabaseCategoryModel.findOne({
+      _id: categoryId,
+      ownerId: userId
+    });
+
+    if (!category) {
+      throw createNotFoundError('Category not found');
+    }
+  }
+
+  const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
+    databaseId,
+    {
+      $set: {
+        categoryId: categoryId || undefined,
+        lastEditedBy: userId
+      }
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedDatabase) {
+    throw createNotFoundError('Database not found');
+  }
+
+  return toDatabaseInterface(updatedDatabase);
+};
+
+// Update database access tracking
+export const updateDatabaseAccess = async (
+  databaseId: string,
+  userId: string
+): Promise<void> => {
+  await DatabaseModel.findByIdAndUpdate(
+    databaseId,
+    {
+      $set: { lastAccessedAt: new Date() },
+      $inc: { accessCount: 1 }
+    }
+  );
 };
 
 export const updateDatabase = async (
