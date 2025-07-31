@@ -20,7 +20,8 @@ import {
   getProfile,
   googleLogin,
   googleCallback,
-  googleLoginSuccess
+  googleLoginSuccess,
+  testGoogleConfig
 } from '../controller/auth.controller';
 import {
   registerSchema,
@@ -73,5 +74,8 @@ router.post(
   validateBody(googleCallbackSchema),
   googleLoginSuccess
 );
+
+// TEST ROUTES (remove in production)
+router.get('/google/test-config', testGoogleConfig);
 
 export default router;

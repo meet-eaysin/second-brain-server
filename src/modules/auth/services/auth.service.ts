@@ -108,10 +108,21 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 
 export const handleGoogleCallback = async (code: string): Promise<TAuthResponse> => {
   try {
-    if (!code || typeof code !== 'string') throw createOAuthCodeInvalidError();
+    if (!code || typeof code !== 'string') {
+      throw createOAuthCodeInvalidError();
+    }
 
+    // Exchange authorization code for access token
     const tokenResponse = await exchangeGoogleCodeForToken(code);
+    if (!tokenResponse.access_token) {
+      throw createAuthenticationFailedError('Failed to get access token from Google');
+    }
+
+    // Get user profile from Google
     const googleProfile = await getGoogleUserProfile(tokenResponse.access_token);
+    if (!googleProfile.email) {
+      throw createAuthenticationFailedError('Email not provided by Google');
+    }
 
     const user = await createOrUpdateGoogleUser(googleProfile);
 

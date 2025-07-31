@@ -18,7 +18,7 @@ const envSchema = z
     TWILIO_AUTH_TOKEN: z.string().optional(),
     TWILIO_PHONE_NUMBER: z.string().optional(),
 
-    CLIENT_URL: z.string().url().default('http://localhost:5000')
+    CLIENT_URL: z.string().url().default('http://localhost:5173')
   })
   .passthrough();
 

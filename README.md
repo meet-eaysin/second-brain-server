@@ -181,7 +181,7 @@ DEBUG_ENCRYPTION=true
 # Google OAuth (for User Authentication)
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/auth/google/callback
+GOOGLE_REDIRECT_URI="http://localhost:5173/auth/google/callback"
 
 # Email Configuration (for Notifications & Communication)
 EMAIL_SERVICE=gmail

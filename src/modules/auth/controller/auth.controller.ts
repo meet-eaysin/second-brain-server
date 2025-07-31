@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import {catchAsync, sendSuccessResponse} from '@/utils';
+import {catchAsync, sendSuccessResponse, sendErrorResponse} from '@/utils';
 import {
     createUser,
     getUsersWithoutPassword,
@@ -16,7 +16,13 @@ import {
     resetPassword, verifyStateToken
 } from '@/modules/auth';
 import {AuthenticatedRequest} from '@/middlewares';
-import {createOAuthCodeInvalidError, createOAuthStateInvalidError} from '@/auth/utils/auth-errors';
+import {
+    createAuthenticationFailedError,
+    createOAuthCodeInvalidError,
+    createOAuthStateInvalidError
+} from '@/auth/utils/auth-errors';
+import {appConfig} from "@/config";
+import {googleConfig} from "@/config/google/google";
 
 export const register = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -95,19 +101,39 @@ export const getProfile = catchAsync(
 );
 
 export const googleLogin = catchAsync(
-  async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
-    const { url } = generateGoogleLoginUrl();
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { url } = generateGoogleLoginUrl();
 
-    res.redirect(url);
+      const responseType = req.query.response_type || req.headers.accept;
+      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
+        sendSuccessResponse(res, {
+          url,
+          instructions: 'Open this URL in a popup or redirect user to this URL'
+        }, 'Google OAuth URL generated');
+      }
+
+      res.redirect(url);
+    } catch (error) {
+      return next(createAuthenticationFailedError('Failed to generate Google OAuth URL'));
+    }
   }
 );
 
 export const googleCallback = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code, state, error } = req.query;
+    const responseType = req.query.response_type || req.headers.accept;
 
     if (error) {
-      const errorUrl = `${process.env.FRONTEND_URL}/auth/error?error=${encodeURIComponent(error as string)}`;
+      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
+        sendErrorResponse(res, 'OAuth error from Google', 400, {
+          error: error as string
+        });
+      }
+
+      const clientUrl = appConfig.clientUrl
+      const errorUrl = `${clientUrl}/auth/error?error=${encodeURIComponent(error as string)}`;
       return res.redirect(errorUrl);
     }
 
@@ -115,14 +141,49 @@ export const googleCallback = catchAsync(
       try {
         verifyStateToken(state as string);
       } catch (error) {
-        return next(createOAuthStateInvalidError());
+        if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
+          sendErrorResponse(res, 'Invalid state parameter', 400, {
+            error: 'invalid_state'
+          });
+        }
+
+        const clientUrl = appConfig.clientUrl
+        const errorUrl = `${clientUrl}/auth/error?error=invalid_state`;
+        return res.redirect(errorUrl);
       }
     }
 
-    const authResponse = await handleGoogleCallback(code as string);
+    if (!code || typeof code !== 'string') {
+      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
+        sendErrorResponse(res, 'Missing authorization code', 400, {
+          error: 'missing_code'
+        });
+      }
 
-    const redirectUrl = `${process.env.FRONTEND_URL}/auth/callback?token=${authResponse.accessToken}&refreshToken=${authResponse.refreshToken}`;
-    res.redirect(redirectUrl);
+      const clientUrl = appConfig.clientUrl
+      const errorUrl = `${clientUrl}/auth/error?error=missing_code`;
+      return res.redirect(errorUrl);
+    }
+
+    try {
+      const authResponse = await handleGoogleCallback(code);
+
+      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
+        sendSuccessResponse(res, authResponse, 'Google OAuth successful');
+      }
+
+      const redirectUrl = `${appConfig.clientUrl}/auth/callback?token=${authResponse.accessToken}&refreshToken=${authResponse.refreshToken}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
+        sendErrorResponse(res, 'Google OAuth failed', 500, {
+          error: 'oauth_failed'
+        });
+      }
+
+      const errorUrl = `${appConfig.clientUrl}/auth/error?error=oauth_failed`;
+      return res.redirect(errorUrl);
+    }
   }
 );
 
@@ -134,7 +195,24 @@ export const googleLoginSuccess = catchAsync(
       return next(createOAuthCodeInvalidError());
     }
 
-    const authResponse = await handleGoogleCallback(code);
-    sendSuccessResponse(res, authResponse, 'Google login successful');
+    try {
+      const authResponse = await handleGoogleCallback(code);
+      sendSuccessResponse(res, authResponse, 'Google login successful');
+    } catch (error) {
+      return next(createAuthenticationFailedError('Google OAuth failed'));
+    }
+  }
+);
+
+export const testGoogleConfig = catchAsync(
+  async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    const config = {
+      hasClientId: !!googleConfig.clientId,
+      hasClientSecret: !!googleConfig.clientSecret,
+      redirectUri: googleConfig.redirectUri,
+      frontendUrl: appConfig.clientUrl,
+    };
+
+    sendSuccessResponse(res, config, 'Google OAuth configuration status');
   }
 );
