@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 // Plain data interface (for API responses and data transfer)
 export interface IDatabaseRecord {
-  _id: string;
+  id: string;
   databaseId: string;
 
   properties: { [propertyId: string]: unknown };
@@ -35,7 +35,16 @@ const DatabaseRecordSchema = new Schema<IDatabaseRecordDocument>(
   },
   {
     timestamps: true,
-    collection: 'database_records'
+    collection: 'database_records',
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id;
+        delete ret._id;
+        return ret;
+      }
+    }
   }
 );
 

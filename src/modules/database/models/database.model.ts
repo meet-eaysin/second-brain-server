@@ -109,7 +109,16 @@ const DatabaseSchema = new Schema<IDatabaseDocument>(
   },
   {
     timestamps: true,
-    collection: 'databases'
+    collection: 'databases',
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id;
+        delete ret._id;
+        return ret;
+      }
+    }
   }
 );
 

@@ -31,19 +31,11 @@ import { createNotFoundError, createAppError, createForbiddenError } from '@/uti
 import { DatabaseRecordModel, IDatabaseRecord } from '../models/database-record.model';
 
 const toDatabaseInterface = (doc: DatabaseDocument): IDatabase => {
-  const json = doc.toJSON();
-  return {
-    ...json,
-    _id: String(doc._id)
-  } as IDatabase;
+  return doc.toJSON() as IDatabase;
 };
 
 const toRecordInterface = (doc: DatabaseRecordDocument): IDatabaseRecord => {
-  const json = doc.toJSON();
-  return {
-    ...json,
-    _id: String(doc._id)
-  } as IDatabaseRecord;
+  return doc.toJSON() as IDatabaseRecord;
 };
 
 export const createDatabase = async (
@@ -227,18 +219,7 @@ const generateSidebarData = async (userId: string): Promise<ISidebarData> => {
     .limit(5);
 
   return {
-    categories: categories.map(cat => ({
-      _id: String(cat._id),
-      name: cat.name,
-      description: cat.description,
-      icon: cat.icon,
-      color: cat.color,
-      ownerId: cat.ownerId,
-      isDefault: cat.isDefault,
-      sortOrder: cat.sortOrder,
-      createdAt: cat.createdAt,
-      updatedAt: cat.updatedAt
-    })),
+    categories: categories.map(cat => cat.toJSON() as IDatabaseCategory),
     recentDatabases: recentDatabases.map(db => toDatabaseInterface(db)),
     favoriteDatabases,
     myDatabases,

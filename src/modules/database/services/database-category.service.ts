@@ -222,16 +222,5 @@ export const createDefaultCategory = async (ownerId: string): Promise<IDatabaseC
  * Convert Mongoose document to interface
  */
 const toCategoryInterface = (doc: any): IDatabaseCategory => {
-  return {
-    _id: doc._id.toString(),
-    name: doc.name,
-    description: doc.description,
-    icon: doc.icon,
-    color: doc.color,
-    ownerId: doc.ownerId,
-    isDefault: doc.isDefault,
-    sortOrder: doc.sortOrder,
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt
-  };
+  return doc.toJSON() as IDatabaseCategory;
 };

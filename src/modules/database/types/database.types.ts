@@ -118,7 +118,7 @@ export interface IDatabaseView {
 
 // Plain data interface (for API responses and data transfer)
 export interface IDatabase {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   icon?: string;
@@ -204,7 +204,7 @@ export interface TDatabaseUpdateRequest {
 
 // Database Category Types
 export interface IDatabaseCategory {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   icon?: string;
@@ -427,7 +427,7 @@ export interface TDatabaseResponse {
 }
 
 export interface TRecordResponse {
-  _id: string;
+  id: string;
   databaseId: string;
   properties: { [propertyId: string]: unknown };
   createdAt: Date;

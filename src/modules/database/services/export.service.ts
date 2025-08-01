@@ -69,7 +69,7 @@ export const exportDatabase = async (
     // Transform records for export
     const exportData: ExportRecord[] = records.map(record => {
       const exportRecord: ExportRecord = {
-        id: record._id,
+        id: record.id,
         createdAt: record.createdAt,
         updatedAt: record.updatedAt
       };

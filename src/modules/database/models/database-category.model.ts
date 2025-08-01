@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IDatabaseCategory {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   icon?: string;
@@ -65,7 +65,16 @@ const DatabaseCategorySchema = new Schema<IDatabaseCategoryDocument>(
   },
   {
     timestamps: true,
-    collection: 'database_categories'
+    collection: 'database_categories',
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id;
+        delete ret._id;
+        return ret;
+      }
+    }
   }
 );
 

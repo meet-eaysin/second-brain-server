@@ -65,7 +65,7 @@ export const validateViewName = (
 
 // Type definitions for better type safety
 interface DatabaseRecord {
-  _id: string;
+  id: string;
   createdAt: Date;
   updatedAt: Date;
   createdBy?: string;
@@ -100,7 +100,7 @@ export const formatRecordForDisplay = (
   properties: DatabaseProperty[]
 ): FormattedRecord => {
   const formatted: FormattedRecord = {
-    id: record._id,
+    id: record.id,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     createdBy: record.createdBy,
