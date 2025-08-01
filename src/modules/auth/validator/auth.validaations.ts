@@ -58,7 +58,18 @@ export const googleCallbackSchema = z.object({
 });
 
 export const googleCallbackQuerySchema = z.object({
-  code: z.string().min(1, 'Authorization code is required').optional(),
+  // Required parameters (either code for success or error for failure)
+  code: z.string().optional(),
   error: z.string().optional(),
-  state: z.string().optional()
-});
+
+  // Optional parameters that Google may send
+  error_description: z.string().optional(),
+  state: z.string().optional(),
+  scope: z.string().optional(),
+  authuser: z.union([z.string(), z.number()]).optional(),
+  prompt: z.string().optional(),
+
+  // Additional parameters Google might send
+  session_state: z.string().optional(),
+  hd: z.string().optional() // Hosted domain
+}).passthrough(); // Allow any additional parameters from Google

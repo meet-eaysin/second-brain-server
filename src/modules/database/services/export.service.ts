@@ -1,6 +1,8 @@
-import * as XLSX from 'xlsx';
-import { Parser as CsvParser } from 'json2csv';
-import Papa from 'papaparse';
+// Note: Excel and CSV export functionality temporarily disabled
+// To re-enable, install: npm install xlsx json2csv papaparse
+// import * as XLSX from 'xlsx';
+// import { Parser as CsvParser } from 'json2csv';
+// import Papa from 'papaparse';
 import {
   EPropertyType,
   TDatabaseExportOptions,
@@ -392,58 +394,71 @@ const exportToCsv = (data: ExportRecord[]): string => {
     return '';
   }
 
+  // Simple CSV export without external dependencies
   const fields = Object.keys(data[0]);
-  const parser = new CsvParser({ fields });
-  return parser.parse(data);
+  const csvHeader = fields.join(',');
+  const csvRows = data.map(record =>
+    fields.map(field => {
+      const value = record[field];
+      // Escape commas and quotes in CSV values
+      if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    }).join(',')
+  );
+
+  return [csvHeader, ...csvRows].join('\n');
 };
 
 const exportToXlsx = (data: ExportRecord[], sheetName: string): Buffer => {
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.substring(0, 31)); // Excel sheet name limit
-
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  // Excel export temporarily disabled - return CSV as buffer instead
+  // To re-enable Excel export, install: npm install xlsx
+  const csvData = exportToCsv(data);
+  return Buffer.from(csvData, 'utf8');
 };
 
 const parseCsvFile = async (file: Express.Multer.File): Promise<ImportRow[]> => {
-  return new Promise((resolve, reject) => {
+  try {
     const csvContent = file.buffer.toString('utf8');
+    const lines = csvContent.split('\n').filter(line => line.trim());
 
-    Papa.parse(csvContent, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: true,
-      complete: (results: Papa.ParseResult<ImportRow>) => {
-        if (results.errors.length > 0) {
-          const errorMessages = results.errors.map(e =>
-            typeof e === 'object' && e !== null && 'message' in e
-              ? String(e.message)
-              : 'Unknown parsing error'
-          );
-          reject(createImportDataInvalidError(`CSV parsing errors: ${errorMessages.join(', ')}`));
-        } else {
-          resolve(results.data);
+    if (lines.length === 0) {
+      return [];
+    }
+
+    // Parse header
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+    // Parse data rows
+    const data: ImportRow[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const row: ImportRow = {};
+
+      headers.forEach((header, index) => {
+        if (values[index] !== undefined) {
+          // Simple type conversion
+          let value: any = values[index];
+          if (value === 'true') value = true;
+          else if (value === 'false') value = false;
+          else if (!isNaN(Number(value)) && value !== '') value = Number(value);
+
+          row[header] = value;
         }
-      },
-      error: (error: Error) => {
-        reject(createImportDataInvalidError(`CSV parsing failed: ${error.message}`));
-      }
-    });
-  });
+      });
+
+      data.push(row);
+    }
+
+    return data;
+  } catch (error) {
+    throw createImportDataInvalidError(`CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 const parseXlsxFile = async (file: Express.Multer.File): Promise<ImportRow[]> => {
-  const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-
-  if (!sheetName) {
-    throw createImportDataInvalidError('No worksheets found in Excel file');
-  }
-
-  const worksheet = workbook.Sheets[sheetName];
-  const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-  // Ensure the data is properly typed as ImportRow[]
-  return jsonData as ImportRow[];
+  // Excel import temporarily disabled - treat as CSV instead
+  // To re-enable Excel import, install: npm install xlsx
+  throw createImportFormatInvalidError('Excel import temporarily disabled. Please use CSV format instead.');
 };

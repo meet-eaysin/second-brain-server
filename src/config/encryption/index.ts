@@ -1,24 +1,46 @@
-import CryptoJS from 'crypto-js';
+import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET as string;
+const ALGORITHM = 'aes-256-gcm';
 
 interface CustomResponse extends Response {
   rawJson?: Function;
 }
 
 export const encryptData = (data: unknown): string => {
-  const dataString = typeof data === 'string' ? data : JSON.stringify(data);
-  return CryptoJS.AES.encrypt(dataString, ENCRYPTION_SECRET).toString();
+  try {
+    const dataString = typeof data === 'string' ? data : JSON.stringify(data);
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_SECRET);
+
+    let encrypted = cipher.update(dataString, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    return iv.toString('hex') + ':' + encrypted;
+  } catch (error) {
+    throw new Error('Encryption failed');
+  }
 };
 
 export const decryptData = (encryptedData: string): string => {
   try {
-    const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_SECRET);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    const parts = encryptedData.split(':');
+    if (parts.length !== 2) {
+      throw new Error('Invalid encrypted data format');
+    }
+
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+
+    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_SECRET);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
   } catch (error) {
     throw new Error('Decryption failed');
   }

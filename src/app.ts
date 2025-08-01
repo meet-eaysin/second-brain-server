@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
 import { errorHandler, notFound } from './middlewares';
 import { generalLimiter, encryptRequest, encryptResponse } from './config';
 import { stream } from './config/logger';
@@ -39,7 +38,6 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {

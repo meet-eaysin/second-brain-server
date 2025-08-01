@@ -124,18 +124,32 @@ export const googleLogin = catchAsync(
 
 export const googleCallback = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { code, state, error } = req.query;
+    const {
+      code,
+      state,
+      error,
+      error_description,
+      scope,
+      authuser,
+      prompt
+    } = req.query;
 
     console.log('🔍 Google OAuth callback received:', {
       hasCode: !!code,
       hasState: !!state,
-      error
+      error,
+      error_description,
+      scope,
+      authuser,
+      prompt,
+      allQueryParams: req.query // Log all parameters for debugging
     });
 
     // Handle OAuth errors from Google
     if (error) {
-      console.error('❌ Google OAuth error:', error);
-      const errorUrl = `${appConfig.clientUrl}/login?error=${encodeURIComponent(error as string)}&message=Google authentication failed`;
+      console.error('❌ Google OAuth error:', error, error_description);
+      const errorMessage = error_description || 'Google authentication failed';
+      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=${encodeURIComponent(error as string)}&message=${encodeURIComponent(errorMessage)}`;
       return res.redirect(errorUrl);
     }
 
