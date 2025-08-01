@@ -81,6 +81,8 @@ export const logout = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
     await logoutUser(user.userId);
+
+    console.log('✅ User logged out successfully');
     sendSuccessResponse(res, null, 'Logged out successfully');
   }
 );
@@ -89,6 +91,8 @@ export const logoutAll = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
     await logoutAllDevices(user.userId);
+
+    console.log('✅ User logged out from all devices successfully');
     sendSuccessResponse(res, null, 'Logged out from all devices successfully');
   }
 );
@@ -103,18 +107,16 @@ export const getProfile = catchAsync(
 export const googleLogin = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      console.log('🚀 Initiating Google OAuth redirect flow');
+
+      // Generate Google OAuth URL for redirect flow
       const { url } = generateGoogleLoginUrl();
 
-      const responseType = req.query.response_type || req.headers.accept;
-      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
-        sendSuccessResponse(res, {
-          url,
-          instructions: 'Open this URL in a popup or redirect user to this URL'
-        }, 'Google OAuth URL generated');
-      }
-
+      console.log('🔄 Redirecting to Google OAuth URL');
       res.redirect(url);
+
     } catch (error) {
+      console.error('❌ Failed to generate Google OAuth URL:', error);
       return next(createAuthenticationFailedError('Failed to generate Google OAuth URL'));
     }
   }
@@ -123,65 +125,58 @@ export const googleLogin = catchAsync(
 export const googleCallback = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { code, state, error } = req.query;
-    const responseType = req.query.response_type || req.headers.accept;
 
+    console.log('🔍 Google OAuth callback received:', {
+      hasCode: !!code,
+      hasState: !!state,
+      error
+    });
+
+    // Handle OAuth errors from Google
     if (error) {
-      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
-        sendErrorResponse(res, 'OAuth error from Google', 400, {
-          error: error as string
-        });
-      }
-
-      const clientUrl = appConfig.clientUrl
-      const errorUrl = `${clientUrl}/auth/error?error=${encodeURIComponent(error as string)}`;
+      console.error('❌ Google OAuth error:', error);
+      const errorUrl = `${appConfig.clientUrl}/login?error=${encodeURIComponent(error as string)}&message=Google authentication failed`;
       return res.redirect(errorUrl);
     }
 
-    if (state) {
-      try {
-        verifyStateToken(state as string);
-      } catch (error) {
-        if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
-          sendErrorResponse(res, 'Invalid state parameter', 400, {
-            error: 'invalid_state'
-          });
-        }
-
-        const clientUrl = appConfig.clientUrl
-        const errorUrl = `${clientUrl}/auth/error?error=invalid_state`;
-        return res.redirect(errorUrl);
-      }
-    }
-
     if (!code || typeof code !== 'string') {
-      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
-        sendErrorResponse(res, 'Missing authorization code', 400, {
-          error: 'missing_code'
-        });
-      }
-
-      const clientUrl = appConfig.clientUrl
-      const errorUrl = `${clientUrl}/auth/error?error=missing_code`;
+      console.error('❌ No authorization code received');
+      const errorUrl = `${appConfig.clientUrl}/login?error=missing_code&message=Authorization code not received`;
       return res.redirect(errorUrl);
     }
 
     try {
+      // Verify state token for security
+      if (state && typeof state === 'string') {
+        try {
+          const stateData = verifyStateToken(state);
+          console.log('✅ State token verified successfully');
+        } catch (error) {
+          console.error('❌ Invalid state token:', error);
+          const errorUrl = `${appConfig.clientUrl}/login?error=invalid_state&message=Security validation failed`;
+          return res.redirect(errorUrl);
+        }
+      }
+
+      // Exchange authorization code for tokens
+      console.log('🔄 Exchanging authorization code for tokens...');
       const authResponse = await handleGoogleCallback(code);
+      console.log('✅ Authentication successful, tokens received');
 
-      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
-        sendSuccessResponse(res, authResponse, 'Google OAuth successful');
-      }
+      // Stateless approach: Redirect with tokens in URL parameters
+      // Frontend will extract and store tokens in localStorage/sessionStorage
+      const redirectUrl = `${appConfig.clientUrl}/auth/callback?` +
+        `accessToken=${encodeURIComponent(authResponse.accessToken)}&` +
+        `refreshToken=${encodeURIComponent(authResponse.refreshToken)}&` +
+        `auth=success`;
 
-      const redirectUrl = `${appConfig.clientUrl}/auth/callback?token=${authResponse.accessToken}&refreshToken=${authResponse.refreshToken}`;
+      console.log('🎉 Redirecting to frontend with JWT tokens');
       res.redirect(redirectUrl);
-    } catch (error) {
-      if (responseType === 'json' || req.headers.accept?.includes('application/json')) {
-        sendErrorResponse(res, 'Google OAuth failed', 500, {
-          error: 'oauth_failed'
-        });
-      }
 
-      const errorUrl = `${appConfig.clientUrl}/auth/error?error=oauth_failed`;
+    } catch (error) {
+      console.error('❌ Google OAuth callback processing failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      const errorUrl = `${appConfig.clientUrl}/login?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`;
       return res.redirect(errorUrl);
     }
   }

@@ -20,15 +20,33 @@ export const sendErrorResponse = (
   statusCode: number = 500,
   errors?: Record<string, unknown>
 ): Response => {
-  return res.status(statusCode).json({
+  const errorResponse: any = {
     success: false,
     error: {
       message,
       statusCode,
-      status: statusCode >= 500 ? 'error' : 'fail',
-      ...(errors && { errors })
+      status: statusCode >= 500 ? 'error' : 'fail'
     }
-  });
+  };
+
+  // If errors is provided, add it to the response
+  if (errors) {
+    // If errors contains an 'errors' property (validation errors), flatten it
+    if ('errors' in errors && typeof errors.errors === 'object') {
+      errorResponse.error.errors = errors.errors;
+
+      // Add a summary for better UX
+      const errorCount = Object.keys(errors.errors as object).length;
+      if (errorCount > 1) {
+        errorResponse.error.summary = `${errorCount} validation errors found`;
+      }
+    } else {
+      // Otherwise, add errors as-is
+      errorResponse.error.errors = errors;
+    }
+  }
+
+  return res.status(statusCode).json(errorResponse);
 };
 
 export const sendPaginatedResponse = <T>(

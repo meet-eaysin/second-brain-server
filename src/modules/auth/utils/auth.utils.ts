@@ -12,25 +12,32 @@ import { jwtConfig } from '../../../config/jwt/jwt.config';
 import { TJwtPayload } from '../../users/types/user.types';
 
 export const generateGoogleLoginUrl = (): { url: string } => {
+  // Create state payload for CSRF protection
   const statePayload = {
     timestamp: Date.now(),
     nonce: crypto.randomBytes(16).toString('hex'),
     provider: 'google'
   };
 
-  const state = jwt.sign(statePayload, jwtConfig.accessTokenSecret, { expiresIn: '10m' });
+  // Sign the state token for security
+  const state = jwt.sign(statePayload, jwtConfig.accessTokenSecret, {
+    expiresIn: '10m' // State expires in 10 minutes
+  });
 
+  // Build Google OAuth URL for redirect flow
   const params = new URLSearchParams({
     client_id: googleConfig.clientId,
-    redirect_uri: googleConfig.redirectUri,
+    redirect_uri: googleConfig.redirectUri, // Points to backend callback
     response_type: 'code',
-    scope: googleConfig.scope,
+    scope: 'openid profile email',
     access_type: 'offline',
     prompt: 'consent',
     state: state
   });
 
   const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+  console.log('🔗 Generated Google OAuth redirect URL');
 
   return { url };
 };
@@ -134,6 +141,27 @@ export const generateUsernameFromEmail = (email: string): string => {
   return baseUsername.substring(0, 30);
 };
 
-export const verifyStateToken = (stateToken: string): any => {
-  return jwt.verify(stateToken, jwtConfig.accessTokenSecret);
+export const verifyStateToken = (state: string) => {
+  try {
+    const decoded = jwt.verify(state, jwtConfig.accessTokenSecret) as any;
+
+    // Verify timestamp (should be within last 10 minutes)
+    const now = Date.now();
+    const stateTime = decoded.timestamp;
+    const timeDiff = now - stateTime;
+
+    if (timeDiff > 10 * 60 * 1000) { // 10 minutes
+      throw new Error('State token expired');
+    }
+
+    // Verify provider
+    if (decoded.provider !== 'google') {
+      throw new Error('Invalid provider in state token');
+    }
+
+    return decoded;
+  } catch (error) {
+    console.error('❌ State token verification failed:', error);
+    throw new Error('Invalid or expired state token');
+  }
 };

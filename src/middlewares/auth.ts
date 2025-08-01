@@ -14,6 +14,7 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Stateless authentication: Only use Authorization header
     const accessToken = extractTokenFromHeader(req.headers.authorization);
 
     if (!accessToken) {
