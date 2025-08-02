@@ -72,17 +72,15 @@ export const createDatabaseFromTemplate = catchAsync(
       return;
     }
 
-    // TODO: Implement create database from template logic
-    const database = {
-      id: 'new-database-id',
-      name,
-      description,
-      workspaceId,
-      categoryId,
+    // Get the template
+    const template = await templatesService.getTemplateById(id);
+
+    // Create database from template
+    const database = await templatesService.createDatabaseFromTemplate(
+      id,
       userId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      { name, description, workspaceId, categoryId }
+    );
 
     sendSuccessResponse(res, database, 'Database created from template successfully', 201);
   }

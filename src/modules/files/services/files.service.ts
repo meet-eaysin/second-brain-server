@@ -172,17 +172,7 @@ export const getUserFiles = async (userId: string, params: TFileQueryParams) => 
 /**
  * Convert file document to response format
  */
-const toFileResponse = (file: any): TFileResponse => ({
-  id: file._id.toString(),
-  originalName: file.originalName,
-  fileName: file.fileName,
-  mimeType: file.mimeType,
-  size: file.size,
-  url: file.url,
-  description: file.description,
-  category: file.category,
-  isPublic: file.isPublic,
-  userId: file.userId,
-  createdAt: file.createdAt,
-  updatedAt: file.updatedAt
-});
+const toFileResponse = (file: any): TFileResponse => {
+  // Use toJSON() which already handles _id to id conversion
+  return file.toJSON() as TFileResponse;
+};

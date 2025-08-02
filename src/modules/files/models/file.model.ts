@@ -58,7 +58,16 @@ const FileSchema = new Schema<IFile>(
   },
   {
     timestamps: true,
-    collection: 'files'
+    collection: 'files',
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id;
+        delete ret._id;
+        return ret;
+      }
+    }
   }
 );
 

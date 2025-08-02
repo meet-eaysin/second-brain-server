@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { catchAsync, sendSuccessResponse, createNotFoundError } from '../../../utils';
+import { catchAsync, sendSuccessResponse, createNotFoundError, createValidationError } from '../../../utils';
 import { AuthenticatedRequest } from '../../../middlewares/auth';
+import * as searchService from '../services/search.service';
 
 /**
  * Global search across all content
@@ -10,15 +11,17 @@ export const globalSearch = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const { q, type, limit = 20 } = req.query;
-    
-    // TODO: Implement global search logic
-    const results = {
-      databases: [],
-      records: [],
-      files: [],
-      total: 0
-    };
+    const { q, type, limit = 20, offset = 0 } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return next(createValidationError('Search query is required'));
+    }
+
+    const results = await searchService.globalSearch(userId, q, {
+      type: type as string,
+      limit: Number(limit),
+      offset: Number(offset)
+    });
 
     sendSuccessResponse(res, results, 'Search completed successfully');
   }
@@ -32,13 +35,16 @@ export const searchDatabases = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const { q, limit = 20 } = req.query;
-    
-    // TODO: Implement database search logic
-    const results = {
-      databases: [],
-      total: 0
-    };
+    const { q, limit = 20, offset = 0 } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return next(createValidationError('Search query is required'));
+    }
+
+    const results = await searchService.searchDatabases(userId, q, {
+      limit: Number(limit),
+      offset: Number(offset)
+    });
 
     sendSuccessResponse(res, results, 'Database search completed successfully');
   }
@@ -52,13 +58,17 @@ export const searchRecords = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const { q, databaseId, limit = 20 } = req.query;
-    
-    // TODO: Implement record search logic
-    const results = {
-      records: [],
-      total: 0
-    };
+    const { q, databaseId, limit = 20, offset = 0 } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return next(createValidationError('Search query is required'));
+    }
+
+    const results = await searchService.searchRecords(userId, q, {
+      databaseId: databaseId as string,
+      limit: Number(limit),
+      offset: Number(offset)
+    });
 
     sendSuccessResponse(res, results, 'Record search completed successfully');
   }
@@ -72,10 +82,13 @@ export const getSearchSuggestions = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const { q } = req.query;
-    
-    // TODO: Implement search suggestions logic
-    const suggestions = [];
+    const { q, limit = 5 } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return sendSuccessResponse(res, [], 'Search suggestions retrieved successfully');
+    }
+
+    const suggestions = await searchService.getSearchSuggestions(userId, q, Number(limit));
 
     sendSuccessResponse(res, suggestions, 'Search suggestions retrieved successfully');
   }

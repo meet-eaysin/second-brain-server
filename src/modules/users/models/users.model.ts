@@ -105,6 +105,7 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
       virtuals: true,
       versionKey: false,
       transform: (doc, ret) => {
+        ret.id = ret._id;
         delete ret._id;
         delete ret.password;
         delete ret.passwordResetToken;

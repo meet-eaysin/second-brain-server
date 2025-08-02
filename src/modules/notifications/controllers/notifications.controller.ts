@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse, createNotFoundError } from '../../../utils';
 import { AuthenticatedRequest } from '../../../middlewares/auth';
+import * as notificationsService from '../services/notifications.service';
 
 /**
  * Get user notifications
@@ -19,18 +20,14 @@ export const getUserNotifications = catchAsync(
       sortOrder = 'desc'
     } = req.query;
     
-    // TODO: Implement get notifications logic
-    const result = {
-      notifications: [],
-      pagination: {
-        total: 0,
-        totalPages: 0,
-        currentPage: page,
-        hasNextPage: false,
-        hasPrevPage: false,
-        limit
-      }
-    };
+    const result = await notificationsService.getUserNotifications(userId, {
+      isRead: isRead === 'true' ? true : isRead === 'false' ? false : undefined,
+      type: type as string,
+      page: Number(page),
+      limit: Number(limit),
+      sortBy: sortBy as string,
+      sortOrder: sortOrder as 'asc' | 'desc'
+    });
 
     sendSuccessResponse(res, result, 'Notifications retrieved successfully');
   }
@@ -45,10 +42,13 @@ export const markNotificationAsRead = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const { id } = req.params;
-    
-    // TODO: Implement mark as read logic
 
-    sendSuccessResponse(res, null, 'Notification marked as read');
+    try {
+      const notification = await notificationsService.markNotificationAsRead(id, userId);
+      sendSuccessResponse(res, notification, 'Notification marked as read');
+    } catch (error: any) {
+      return next(error);
+    }
   }
 );
 
@@ -60,9 +60,8 @@ export const markAllNotificationsAsRead = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
     
-    // TODO: Implement mark all as read logic
-
-    sendSuccessResponse(res, null, 'All notifications marked as read');
+    const result = await notificationsService.markAllNotificationsAsRead(userId);
+    sendSuccessResponse(res, result, 'All notifications marked as read');
   }
 );
 
@@ -75,9 +74,25 @@ export const deleteNotification = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const { id } = req.params;
-    
-    // TODO: Implement delete notification logic
 
-    sendSuccessResponse(res, null, 'Notification deleted successfully');
+    try {
+      await notificationsService.deleteNotification(id, userId);
+      sendSuccessResponse(res, null, 'Notification deleted successfully');
+    } catch (error: any) {
+      return next(error);
+    }
+  }
+);
+
+/**
+ * Get unread notifications count
+ */
+export const getUnreadCount = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const count = await notificationsService.getUnreadCount(userId);
+    sendSuccessResponse(res, { count }, 'Unread count retrieved successfully');
   }
 );

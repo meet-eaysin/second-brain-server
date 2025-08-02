@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse, createNotFoundError } from '../../../utils';
 import { AuthenticatedRequest } from '../../../middlewares/auth';
+import * as tagsService from '../services/tags.service';
 
 /**
  * Get user's tags
@@ -10,12 +11,17 @@ export const getUserTags = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const { search, sortBy = 'name', sortOrder = 'asc' } = req.query;
-    
-    // TODO: Implement get user tags logic
-    const tags = [];
+    const { search, sortBy = 'name', sortOrder = 'asc', limit = 50, offset = 0 } = req.query;
 
-    sendSuccessResponse(res, tags, 'Tags retrieved successfully');
+    const result = await tagsService.getUserTags(userId, {
+      search: search as string,
+      sortBy: sortBy as string,
+      sortOrder: sortOrder as 'asc' | 'desc',
+      limit: Number(limit),
+      offset: Number(offset)
+    });
+
+    sendSuccessResponse(res, result, 'Tags retrieved successfully');
   }
 );
 
@@ -28,19 +34,13 @@ export const createTag = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const { name, color, description } = req.body;
-    
-    // TODO: Implement create tag logic
-    const tag = {
-      id: 'temp-id',
-      name,
-      color,
-      description,
-      userId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
 
-    sendSuccessResponse(res, tag, 'Tag created successfully', 201);
+    try {
+      const tag = await tagsService.createTag(userId, { name, color, description });
+      sendSuccessResponse(res, tag, 'Tag created successfully', 201);
+    } catch (error: any) {
+      return next(error);
+    }
   }
 );
 
@@ -53,15 +53,13 @@ export const getTagById = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const { id } = req.params;
-    
-    // TODO: Implement get tag by ID logic
-    const tag = null;
 
-    if (!tag) {
-      return next(createNotFoundError('Tag not found'));
+    try {
+      const tag = await tagsService.getTagById(id, userId);
+      sendSuccessResponse(res, tag, 'Tag retrieved successfully');
+    } catch (error: any) {
+      return next(error);
     }
-
-    sendSuccessResponse(res, tag, 'Tag retrieved successfully');
   }
 );
 
@@ -75,15 +73,13 @@ export const updateTag = catchAsync(
 
     const { id } = req.params;
     const { name, color, description } = req.body;
-    
-    // TODO: Implement update tag logic
-    const tag = null;
 
-    if (!tag) {
-      return next(createNotFoundError('Tag not found'));
+    try {
+      const tag = await tagsService.updateTag(id, userId, { name, color, description });
+      sendSuccessResponse(res, tag, 'Tag updated successfully');
+    } catch (error: any) {
+      return next(error);
     }
-
-    sendSuccessResponse(res, tag, 'Tag updated successfully');
   }
 );
 
@@ -96,9 +92,12 @@ export const deleteTag = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const { id } = req.params;
-    
-    // TODO: Implement delete tag logic
 
-    sendSuccessResponse(res, null, 'Tag deleted successfully');
+    try {
+      await tagsService.deleteTag(id, userId);
+      sendSuccessResponse(res, null, 'Tag deleted successfully');
+    } catch (error: any) {
+      return next(error);
+    }
   }
 );

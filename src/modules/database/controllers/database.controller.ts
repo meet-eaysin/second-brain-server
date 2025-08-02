@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync } from '../../../utils/catch-async';
 import { sendSuccessResponse } from '../../../utils/response-handler.utils';
-import { createNotFoundError } from '../../../utils/error.utils';
+import { createNotFoundError, createValidationError } from '../../../utils/error.utils';
 import { AuthenticatedRequest } from '../../../middlewares/auth';
 import * as databaseService from '../services/database.service';
 import * as exportService from '../services/export.service';
@@ -346,8 +346,8 @@ export const getProperties = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement get properties logic
-    const properties = [];
+    const database = await databaseService.getDatabaseById(id, userId);
+    const properties = database.properties || [];
     sendSuccessResponse(res, properties, 'Properties retrieved successfully');
   }
 );
@@ -359,11 +359,13 @@ export const getPropertyById = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement get property by ID logic
-    const property = null;
+    const database = await databaseService.getDatabaseById(id, userId);
+    const property = database.properties?.find(p => p.id === propertyId);
+
     if (!property) {
       return next(createNotFoundError('Property not found'));
     }
+
     sendSuccessResponse(res, property, 'Property retrieved successfully');
   }
 );
@@ -376,9 +378,12 @@ export const reorderProperties = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement reorder properties logic
-    const properties = [];
-    sendSuccessResponse(res, properties, 'Properties reordered successfully');
+    if (!Array.isArray(propertyIds)) {
+      return next(createValidationError('Property IDs array is required'));
+    }
+
+    const database = await databaseService.reorderProperties(id, userId, propertyIds);
+    sendSuccessResponse(res, database, 'Properties reordered successfully');
   }
 );
 
@@ -389,8 +394,8 @@ export const getViews = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement get views logic
-    const views = [];
+    const database = await databaseService.getDatabaseById(id, userId);
+    const views = database.views || [];
     sendSuccessResponse(res, views, 'Views retrieved successfully');
   }
 );
@@ -402,11 +407,13 @@ export const getViewById = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement get view by ID logic
-    const view = null;
+    const database = await databaseService.getDatabaseById(id, userId);
+    const view = database.views?.find(v => v.id === viewId);
+
     if (!view) {
       return next(createNotFoundError('View not found'));
     }
+
     sendSuccessResponse(res, view, 'View retrieved successfully');
   }
 );
@@ -418,11 +425,16 @@ export const getDatabasePermissions = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement get permissions logic
+    const database = await databaseService.checkDatabasePermission(id, userId, 'read');
+
     const permissions = {
-      owner: userId,
-      permissions: []
+      owner: database.userId,
+      isPublic: database.isPublic,
+      sharedWith: database.sharedWith || [],
+      userPermission: database.userId === userId ? 'admin' :
+        database.sharedWith?.find(p => p.userId === userId)?.permission || 'none'
     };
+
     sendSuccessResponse(res, permissions, 'Permissions retrieved successfully');
   }
 );
@@ -435,8 +447,17 @@ export const updateDatabasePermission = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement update permission logic
-    sendSuccessResponse(res, null, 'Permission updated successfully');
+    // Check if user has admin permission
+    const database = await databaseService.checkDatabasePermission(id, userId, 'admin');
+
+    // Update permission in database
+    const updatedDatabase = await databaseService.updateDatabase(id, userId, {
+      sharedWith: database.sharedWith?.map(p =>
+        p.userId === targetUserId ? { ...p, permission } : p
+      ) || []
+    });
+
+    sendSuccessResponse(res, updatedDatabase, 'Permission updated successfully');
   }
 );
 
@@ -448,9 +469,33 @@ export const bulkCreateRecords = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement bulk create records logic
+    // Validate input
+    if (!Array.isArray(records) || records.length === 0) {
+      return next(createValidationError('Records array is required and cannot be empty'));
+    }
+
+    // Create records in parallel with error handling
     const createdRecords = [];
-    sendSuccessResponse(res, createdRecords, 'Records created successfully', 201);
+    const errors = [];
+
+    for (let i = 0; i < records.length; i++) {
+      try {
+        const record = await databaseService.createRecord(id, userId, records[i]);
+        createdRecords.push(record);
+      } catch (error: any) {
+        errors.push({ index: i, error: error.message });
+      }
+    }
+
+    const response = {
+      created: createdRecords,
+      errors: errors,
+      total: records.length,
+      successful: createdRecords.length,
+      failed: errors.length
+    };
+
+    sendSuccessResponse(res, response, 'Bulk create completed', 201);
   }
 );
 
@@ -462,9 +507,39 @@ export const bulkUpdateRecords = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement bulk update records logic
+    // Validate input
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return next(createValidationError('Updates array is required and cannot be empty'));
+    }
+
+    // Update records with error handling
     const updatedRecords = [];
-    sendSuccessResponse(res, updatedRecords, 'Records updated successfully');
+    const errors = [];
+
+    for (let i = 0; i < updates.length; i++) {
+      try {
+        const { recordId, properties } = updates[i];
+        if (!recordId) {
+          errors.push({ index: i, error: 'Record ID is required' });
+          continue;
+        }
+
+        const record = await databaseService.updateRecord(id, recordId, userId, { properties });
+        updatedRecords.push(record);
+      } catch (error: any) {
+        errors.push({ index: i, error: error.message });
+      }
+    }
+
+    const response = {
+      updated: updatedRecords,
+      errors: errors,
+      total: updates.length,
+      successful: updatedRecords.length,
+      failed: errors.length
+    };
+
+    sendSuccessResponse(res, response, 'Bulk update completed');
   }
 );
 
@@ -476,7 +551,131 @@ export const bulkDeleteRecords = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement bulk delete records logic
-    sendSuccessResponse(res, null, 'Records deleted successfully');
+    // Validate input
+    if (!Array.isArray(recordIds) || recordIds.length === 0) {
+      return next(createValidationError('Record IDs array is required and cannot be empty'));
+    }
+
+    // Delete records with error handling
+    const deletedRecords = [];
+    const errors = [];
+
+    for (let i = 0; i < recordIds.length; i++) {
+      try {
+        const recordId = recordIds[i];
+        if (!recordId) {
+          errors.push({ index: i, error: 'Record ID is required' });
+          continue;
+        }
+
+        await databaseService.deleteRecord(id, recordId, userId);
+        deletedRecords.push(recordId);
+      } catch (error: any) {
+        errors.push({ index: i, recordId: recordIds[i], error: error.message });
+      }
+    }
+
+    const response = {
+      deleted: deletedRecords,
+      errors: errors,
+      total: recordIds.length,
+      successful: deletedRecords.length,
+      failed: errors.length
+    };
+
+    sendSuccessResponse(res, response, 'Bulk delete completed');
   }
 );
+
+// New property management controllers
+export const updatePropertyName = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.updatePropertyName(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property name updated successfully');
+  }
+);
+
+export const updatePropertyType = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.updatePropertyType(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property type updated successfully');
+  }
+);
+
+export const updatePropertyOrder = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.updatePropertyOrder(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property order updated successfully');
+  }
+);
+
+export const insertProperty = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.insertProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property inserted successfully', 201);
+  }
+);
+
+export const duplicateProperty = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.duplicateProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property duplicated successfully', 201);
+  }
+);
+
+export const updatePropertyFreeze = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.updatePropertyFreeze(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property freeze status updated successfully');
+  }
+);
+
+export const updatePropertyVisibility = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.updatePropertyVisibility(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, database, 'Property visibility updated successfully');
+  }
+);
+
+// Database freeze controller
+export const freezeDatabase = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.freezeDatabase(id, userId, req.body);
+    const message = req.body.frozen ? 'Database frozen successfully' : 'Database unfrozen successfully';
+    sendSuccessResponse(res, database, message);
+  }
+);
+
+

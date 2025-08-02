@@ -64,6 +64,15 @@ router.delete(
   databaseController.deleteDatabase
 );
 
+// Database freeze/unfreeze
+router.patch(
+  '/:id/freeze',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  validateBody(validators.databaseFreezeSchema),
+  databaseController.freezeDatabase
+);
+
 // Properties management
 router.get(
   '/:id/properties',
@@ -108,6 +117,63 @@ router.put(
   validateParams(validators.databaseIdSchema),
   validateBody(validators.reorderPropertiesSchema),
   databaseController.reorderProperties
+);
+
+// New property management routes
+router.patch(
+  '/:id/properties/:propertyId/name',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyNameUpdateSchema),
+  databaseController.updatePropertyName
+);
+
+router.patch(
+  '/:id/properties/:propertyId/type',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyTypeUpdateSchema),
+  databaseController.updatePropertyType
+);
+
+router.patch(
+  '/:id/properties/:propertyId/order',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyOrderUpdateSchema),
+  databaseController.updatePropertyOrder
+);
+
+router.post(
+  '/:id/properties/:propertyId/insert',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyInsertSchema),
+  databaseController.insertProperty
+);
+
+router.post(
+  '/:id/properties/:propertyId/duplicate',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyDuplicateSchema),
+  databaseController.duplicateProperty
+);
+
+router.patch(
+  '/:id/properties/:propertyId/freeze',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyFreezeSchema),
+  databaseController.updatePropertyFreeze
+);
+
+router.patch(
+  '/:id/properties/:propertyId/visibility',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  validateBody(validators.propertyVisibilitySchema),
+  databaseController.updatePropertyVisibility
 );
 
 // Views management

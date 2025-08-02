@@ -29,6 +29,16 @@ const selectOptionSchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a valid hex color')
 });
 
+// Schema for creating select options (ID and color are optional, will be auto-generated)
+const createSelectOptionSchema = z.object({
+  id: z.string().min(1, 'Option ID is required').optional(),
+  name: z
+    .string()
+    .min(1, 'Option name is required')
+    .max(100, 'Option name cannot exceed 100 characters'),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a valid hex color').optional()
+});
+
 const relationConfigSchema = z.object({
   relatedDatabaseId: mongoIdSchema,
   relationType: z.nativeEnum(ERelationType),
@@ -131,13 +141,13 @@ export const createPropertySchema = z.object({
   description: z.string().max(200, 'Description cannot exceed 200 characters').optional(),
   required: z.boolean().default(false).optional(),
   selectOptions: z
-    .array(selectOptionSchema)
+    .array(createSelectOptionSchema)
     .optional()
     .refine(options => {
       if (!options) return true;
-      const ids = options.map(opt => opt.id);
-      return new Set(ids).size === ids.length;
-    }, 'Option IDs must be unique'),
+      const names = options.map(opt => opt.name);
+      return new Set(names).size === names.length;
+    }, 'Option names must be unique'),
   relationConfig: relationConfigSchema.optional(),
   formulaConfig: formulaConfigSchema.optional(),
   rollupConfig: rollupConfigSchema.optional(),
@@ -155,7 +165,80 @@ export const updatePropertySchema = z.object({
   required: z.boolean().optional(),
   selectOptions: z.array(selectOptionSchema).optional(),
   isVisible: z.boolean().optional(),
-  order: z.number().int().min(0, 'Order must be a non-negative integer').optional()
+  order: z.number().int().min(0, 'Order must be a non-negative integer').optional(),
+  frozen: z.boolean().optional(),
+  hidden: z.boolean().optional(),
+  orderIndex: z.number().int().min(0, 'Order index must be a non-negative integer').optional(),
+  width: z.number().int().min(50, 'Width must be at least 50 pixels').optional()
+});
+
+// New property management validation schemas
+export const propertyNameUpdateSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Property name is required')
+    .max(100, 'Property name cannot exceed 100 characters')
+    .trim()
+});
+
+export const propertyTypeUpdateSchema = z.object({
+  type: z.nativeEnum(EPropertyType),
+  selectOptions: z.array(selectOptionSchema).optional(),
+  relationConfig: relationConfigSchema.optional(),
+  formulaConfig: formulaConfigSchema.optional(),
+  rollupConfig: rollupConfigSchema.optional()
+});
+
+export const propertyOrderUpdateSchema = z.object({
+  orderIndex: z.number().int().min(0, 'Order index must be a non-negative integer')
+});
+
+export const propertyInsertSchema = z.object({
+  position: z.enum(['left', 'right']),
+  property: createPropertySchema
+});
+
+export const propertyDuplicateSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Property name is required')
+    .max(100, 'Property name cannot exceed 100 characters')
+    .trim()
+    .optional(),
+  position: z.enum(['left', 'right']).optional()
+});
+
+export const propertyFreezeSchema = z.object({
+  frozen: z.boolean()
+});
+
+export const propertyVisibilitySchema = z.object({
+  hidden: z.boolean()
+});
+
+// View update validation schemas
+export const viewFilterSchema = z.object({
+  propertyId: z.string().min(1, 'Property ID is required'),
+  operator: z.enum([
+    'equals', 'not_equals', 'contains', 'not_contains',
+    'starts_with', 'ends_with', 'is_empty', 'is_not_empty',
+    'greater_than', 'less_than', 'greater_than_or_equal',
+    'less_than_or_equal', 'is_checked', 'is_not_checked'
+  ]),
+  value: z.any().optional()
+});
+
+export const viewSortSchema = z.object({
+  propertyId: z.string().min(1, 'Property ID is required'),
+  direction: z.enum(['asc', 'desc'])
+});
+
+export const viewUpdateSchema = z.object({
+  visibleProperties: z.array(z.string()).optional(),
+  filters: z.array(viewFilterSchema).optional(),
+  sorts: z.array(viewSortSchema).optional(),
+  name: z.string().min(1, 'View name is required').max(100, 'View name cannot exceed 100 characters').optional(),
+  type: z.nativeEnum(EViewType).optional()
 });
 
 export const propertyIdSchema = z.object({
@@ -204,8 +287,8 @@ export const updateViewSchema = z.object({
     .trim()
     .optional(),
   isDefault: z.boolean().optional(),
-  filters: z.array(filterSchema).optional(),
-  sorts: z.array(sortSchema).optional(),
+  filters: z.array(viewFilterSchema).optional(),
+  sorts: z.array(viewSortSchema).optional(),
   groupBy: z.string().optional(),
   visibleProperties: z.array(z.string()).optional(),
   propertyWidths: z.record(z.string(), z.number().positive()).optional(),
@@ -451,11 +534,77 @@ const updatePermissionLevelSchema = z.object({
   permission: z.enum(['read', 'write', 'admin'])
 });
 
+// Validation schema exports for property management
+export const validatePropertyNameUpdateSchema = z.object({
+  body: propertyNameUpdateSchema,
+  params: propertyIdSchema
+});
+
+export const validatePropertyTypeUpdateSchema = z.object({
+  body: propertyTypeUpdateSchema,
+  params: propertyIdSchema
+});
+
+export const validatePropertyOrderUpdateSchema = z.object({
+  body: propertyOrderUpdateSchema,
+  params: propertyIdSchema
+});
+
+export const validatePropertyInsertSchema = z.object({
+  body: propertyInsertSchema,
+  params: propertyIdSchema
+});
+
+export const validatePropertyDuplicateSchema = z.object({
+  body: propertyDuplicateSchema,
+  params: propertyIdSchema
+});
+
+export const validatePropertyFreezeSchema = z.object({
+  body: propertyFreezeSchema,
+  params: propertyIdSchema
+});
+
+export const validatePropertyVisibilitySchema = z.object({
+  body: propertyVisibilitySchema,
+  params: propertyIdSchema
+});
+
+export const validateViewUpdateSchema = z.object({
+  body: viewUpdateSchema,
+  params: z.object({
+    id: z.string().min(1, 'Database ID is required'),
+    viewId: z.string().min(1, 'View ID is required')
+  })
+});
+
+// Database freeze validation
+export const databaseFreezeSchema = z.object({
+  frozen: z.boolean(),
+  reason: z.string().max(500, 'Reason cannot exceed 500 characters').optional()
+});
+
+export const validateDatabaseFreezeSchema = z.object({
+  body: databaseFreezeSchema,
+  params: databaseIdSchema
+});
+
 export {
   bulkCreateRecordsSchema,
   bulkUpdateRecordsSchema,
   bulkDeleteRecordsSchema,
   reorderPropertiesSchema,
   updatePermissionSchema,
-  updatePermissionLevelSchema
+  updatePermissionLevelSchema,
+  propertyNameUpdateSchema,
+  propertyTypeUpdateSchema,
+  propertyOrderUpdateSchema,
+  propertyInsertSchema,
+  propertyDuplicateSchema,
+  propertyFreezeSchema,
+  propertyVisibilitySchema,
+  viewUpdateSchema,
+  viewFilterSchema,
+  viewSortSchema,
+  databaseFreezeSchema
 };

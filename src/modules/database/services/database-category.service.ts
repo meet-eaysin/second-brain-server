@@ -1,3 +1,4 @@
+import { DatabaseModel } from './../models/database.model';
 import { DatabaseCategoryModel, IDatabaseCategory } from '../models/database-category.model';
 import { TDatabaseCategoryCreateRequest, TDatabaseCategoryUpdateRequest } from '../types/database.types';
 import { createNotFoundError, createAppError } from '../../../utils/error.utils';
@@ -150,8 +151,11 @@ export const deleteCategory = async (
       throw createAppError('Cannot delete default category', 400, true);
     }
 
-    // TODO: Move databases in this category to uncategorized
-    // This would require updating the database service
+    // Move databases in this category to uncategorized
+    await DatabaseModel.updateMany(
+      { categoryId },
+      { $unset: { categoryId: 1 } }
+    );
 
     await DatabaseCategoryModel.findByIdAndDelete(categoryId);
   } catch (error: any) {

@@ -550,6 +550,71 @@ export const getWorkspaceStats = async (userId: string): Promise<TWorkspaceStats
     publicWorkspaces,
     totalDatabases,
     totalMembers,
-    recentActivity: [] // TODO: Implement activity tracking
+    recentActivity: [] // Will be implemented with proper activity tracking
   };
+};
+
+// Activity tracking functions
+export const getWorkspaceActivity = async (
+  workspaceId: string,
+  userId: string,
+  options: {
+    limit?: number;
+    offset?: number;
+    type?: string;
+  } = {}
+): Promise<{ activities: any[]; total: number }> => {
+  // Check workspace access
+  await getWorkspaceById(workspaceId, userId);
+
+  const { limit = 20, offset = 0, type } = options;
+
+  // This is a simplified implementation
+  const activities = await getWorkspaceRecentActivity(workspaceId, limit, type);
+
+  return {
+    activities,
+    total: activities.length
+  };
+};
+
+async function getWorkspaceRecentActivity(
+  workspaceId: string,
+  limit: number = 10,
+  type?: string
+): Promise<any[]> {
+  const activities: any[] = [];
+
+  try {
+    // Get recent databases created in this workspace
+    const recentDatabases = await DatabaseModel.find({ workspaceId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    recentDatabases.forEach(db => {
+      if (!type || type === 'database_created') {
+        activities.push({
+          id: db._id.toString(),
+          type: 'database_created',
+          title: `Database "${db.name}" created`,
+          userId: db.userId,
+          createdAt: db.createdAt,
+          data: {
+            databaseId: db._id.toString(),
+            databaseName: db.name
+          }
+        });
+      }
+    });
+
+    // Sort by date and limit
+    return activities
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+
+  } catch (error) {
+    console.error('Error getting workspace activity:', error);
+    return [];
+  }
 };

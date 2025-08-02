@@ -233,8 +233,12 @@ export const getWorkspaceActivity = catchAsync(
     // Check if user has access to workspace
     await workspaceService.getWorkspaceById(id, userId);
 
-    // TODO: Implement activity tracking
-    const activity = [];
+    const activity = await workspaceService.getWorkspaceActivity(id, userId, {
+      limit: Number(limit),
+      offset: Number(offset),
+      type: type as string
+    });
+
     sendSuccessResponse(res, activity, 'Workspace activity retrieved successfully');
   }
 );

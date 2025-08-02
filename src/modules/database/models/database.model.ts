@@ -9,7 +9,17 @@ import {
 const DatabasePropertySchema = new Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
-  type: { type: String, enum: Object.values(EPropertyType), required: true },
+  type: {
+    type: String,
+    enum: [
+      ...Object.values(EPropertyType),
+      // Support legacy lowercase values for backward compatibility
+      'text', 'number', 'date', 'boolean', 'select', 'multi_select', 'file',
+      'email', 'phone', 'url', 'checkbox', 'relation', 'formula', 'rollup',
+      'created_time', 'last_edited_time', 'created_by', 'last_edited_by'
+    ],
+    required: true
+  },
   description: String,
   required: { type: Boolean, default: false },
 
@@ -22,12 +32,28 @@ const DatabasePropertySchema = new Schema({
   ],
   relationConfig: {
     relatedDatabaseId: String,
-    relationType: { type: String, enum: Object.values(ERelationType) },
+    relationType: {
+      type: String,
+      enum: [
+        ...Object.values(ERelationType),
+        // Support legacy lowercase values for backward compatibility
+        'one_to_one', 'one_to_many', 'many_to_many'
+      ]
+    },
     relatedPropertyId: String
   },
   formulaConfig: {
     expression: String,
-    returnType: { type: String, enum: Object.values(EPropertyType) }
+    returnType: {
+      type: String,
+      enum: [
+        ...Object.values(EPropertyType),
+        // Support legacy lowercase values for backward compatibility
+        'text', 'number', 'date', 'boolean', 'select', 'multi_select', 'file',
+        'email', 'phone', 'url', 'checkbox', 'relation', 'formula', 'rollup',
+        'created_time', 'last_edited_time', 'created_by', 'last_edited_by'
+      ]
+    }
   },
   rollupConfig: {
     relationPropertyId: String,
@@ -36,7 +62,13 @@ const DatabasePropertySchema = new Schema({
   },
 
   isVisible: { type: Boolean, default: true },
-  order: { type: Number, default: 0 }
+  order: { type: Number, default: 0 },
+
+  // New property management fields
+  frozen: { type: Boolean, default: false },
+  hidden: { type: Boolean, default: false },
+  orderIndex: { type: Number, default: 0 },
+  width: { type: Number, default: 150 }
 });
 
 const FilterSchema = new Schema({
@@ -53,7 +85,15 @@ const SortSchema = new Schema({
 const DatabaseViewSchema = new Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
-  type: { type: String, enum: Object.values(EViewType), required: true },
+  type: {
+    type: String,
+    enum: [
+      ...Object.values(EViewType),
+      // Support legacy lowercase values for backward compatibility
+      'table', 'board', 'timeline', 'calendar', 'gallery', 'list'
+    ],
+    required: true
+  },
   isDefault: { type: Boolean, default: false },
 
   filters: [FilterSchema],
@@ -103,6 +143,11 @@ const DatabaseSchema = new Schema<IDatabaseDocument>(
     tags: [{ type: String, trim: true }],
     lastAccessedAt: { type: Date, default: Date.now },
     accessCount: { type: Number, default: 0 },
+
+    // Freeze functionality
+    frozen: { type: Boolean, default: false },
+    frozenAt: Date,
+    frozenBy: String,
 
     createdBy: { type: String, required: true },
     lastEditedBy: { type: String, required: true }

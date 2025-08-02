@@ -233,11 +233,12 @@ export const uploadProfileAvatar = catchAsync(
       return next(createNotFoundError('No avatar file provided'));
     }
 
-    // TODO: Implement avatar upload logic
-    // For now, return a placeholder response
-    const avatarUrl = `https://example.com/avatars/${userId}.jpg`;
+    // Upload file and get URL (this would integrate with your file upload service)
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
 
-    sendSuccessResponse(res, { avatarUrl }, 'Avatar uploaded successfully');
+    // Update user with new avatar URL
+    const user = await updateUser(userId, { avatarUrl });
+    sendSuccessResponse(res, { user, avatarUrl }, 'Avatar uploaded successfully');
   }
 );
 
@@ -249,8 +250,11 @@ export const deleteProfileAvatar = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // TODO: Implement avatar deletion logic
+    // Remove avatar URL from user profile
+    const user = await updateUser(userId, { avatarUrl: null });
 
-    sendSuccessResponse(res, null, 'Avatar removed successfully');
+    // TODO: Also delete the actual file from storage
+
+    sendSuccessResponse(res, { user }, 'Avatar removed successfully');
   }
 );

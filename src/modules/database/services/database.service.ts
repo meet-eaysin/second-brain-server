@@ -30,6 +30,45 @@ import { IValidationError } from '@/types/error.types';
 import { createNotFoundError, createAppError, createForbiddenError } from '@/utils/error.utils';
 import { DatabaseRecordModel, IDatabaseRecord } from '../models/database-record.model';
 
+// Predefined color palette for select options
+const SELECT_OPTION_COLORS = [
+  '#ef4444', // red-500
+  '#f97316', // orange-500
+  '#f59e0b', // amber-500
+  '#eab308', // yellow-500
+  '#84cc16', // lime-500
+  '#22c55e', // green-500
+  '#10b981', // emerald-500
+  '#14b8a6', // teal-500
+  '#06b6d4', // cyan-500
+  '#0ea5e9', // sky-500
+  '#3b82f6', // blue-500
+  '#6366f1', // indigo-500
+  '#8b5cf6', // violet-500
+  '#a855f7', // purple-500
+  '#d946ef', // fuchsia-500
+  '#ec4899', // pink-500
+  '#f43f5e', // rose-500
+  '#64748b', // slate-500
+  '#6b7280', // gray-500
+  '#78716c'  // stone-500
+];
+
+// Function to generate a random color for select options
+const generateSelectOptionColor = (existingColors: string[] = []): string => {
+  // Filter out already used colors
+  const availableColors = SELECT_OPTION_COLORS.filter(color => !existingColors.includes(color));
+
+  // If all predefined colors are used, generate a random one
+  if (availableColors.length === 0) {
+    const randomColor = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+    return `#${randomColor}`;
+  }
+
+  // Return a random available color
+  return availableColors[Math.floor(Math.random() * availableColors.length)];
+};
+
 // Helper function to convert frontend ID format to MongoDB ObjectId
 const convertToMongoId = (id: string): string => {
   // If it's already a valid MongoDB ObjectId, return as is
@@ -63,12 +102,75 @@ const convertToMongoId = (id: string): string => {
   return id;
 };
 
-const toDatabaseInterface = (doc: DatabaseDocument): IDatabase => {
+// Helper function to check if database is frozen and prevent edits
+const checkDatabaseNotFrozen = (database: DatabaseDocument): void => {
+  if (database.frozen) {
+    throw createValidationError(
+      `Database "${database.name}" is frozen and cannot be edited. ` +
+      `Frozen on ${database.frozenAt?.toISOString().split('T')[0] || 'unknown date'}.`
+    );
+  }
+};
+
+const toDatabaseInterface = (doc: DatabaseDocument | IDatabase): IDatabase => {
+  // If it's already a plain object, return as is
+  if (typeof doc.toJSON !== 'function') {
+    return doc as IDatabase;
+  }
+  // If it's a Mongoose document, convert it
   return doc.toJSON() as IDatabase;
 };
 
-const toRecordInterface = (doc: DatabaseRecordDocument): IDatabaseRecord => {
+const toRecordInterface = (doc: DatabaseRecordDocument | IDatabaseRecord): IDatabaseRecord => {
+  // If it's already a plain object, return as is
+  if (typeof doc.toJSON !== 'function') {
+    return doc as IDatabaseRecord;
+  }
+  // If it's a Mongoose document, convert it
   return doc.toJSON() as IDatabaseRecord;
+};
+
+// Enhanced record interface that enriches select options with full data
+const toEnrichedRecordInterface = (
+  doc: DatabaseRecordDocument | IDatabaseRecord,
+  database: IDatabase
+): IDatabaseRecord => {
+  // Convert to plain object if it's a Mongoose document
+  const record = typeof doc.toJSON === 'function' ? doc.toJSON() as IDatabaseRecord : doc as IDatabaseRecord;
+
+  // Enrich select option properties with full option data
+  const enrichedProperties: { [propertyId: string]: unknown } = {};
+
+  for (const [propertyId, value] of Object.entries(record.properties)) {
+    const property = database.properties.find(p => p.id === propertyId);
+
+    if (property && (property.type === 'SELECT' || property.type === 'MULTI_SELECT') && property.selectOptions) {
+      if (property.type === 'SELECT' && typeof value === 'string') {
+        // Single select - find the option by ID
+        const option = property.selectOptions.find(opt => opt.id === value);
+        enrichedProperties[propertyId] = option || value; // Fallback to ID if option not found
+      } else if (property.type === 'MULTI_SELECT' && Array.isArray(value)) {
+        // Multi select - find all options by IDs
+        const options = value.map(optionId => {
+          if (typeof optionId === 'string') {
+            const option = property.selectOptions!.find(opt => opt.id === optionId);
+            return option || optionId; // Fallback to ID if option not found
+          }
+          return optionId;
+        });
+        enrichedProperties[propertyId] = options;
+      } else {
+        enrichedProperties[propertyId] = value;
+      }
+    } else {
+      enrichedProperties[propertyId] = value;
+    }
+  }
+
+  return {
+    ...record,
+    properties: enrichedProperties
+  };
 };
 
 export const createDatabase = async (
@@ -374,7 +476,8 @@ export const updateDatabase = async (
   userId: string,
   data: TDatabaseUpdateRequest
 ): Promise<IDatabase> => {
-  await checkDatabasePermission(databaseId, userId, 'write');
+  const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
 
   const mongoId = convertToMongoId(databaseId);
   const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
@@ -422,6 +525,88 @@ export const deleteDatabase = async (databaseId: string, userId: string): Promis
   }
 };
 
+// Reorder properties
+export const reorderProperties = async (
+  databaseId: string,
+  userId: string,
+  propertyIds: string[]
+): Promise<IDatabase> => {
+  const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
+
+  // Validate that all property IDs exist
+  const existingPropertyIds = database.properties?.map(p => p.id) || [];
+  const invalidIds = propertyIds.filter(id => !existingPropertyIds.includes(id));
+
+  if (invalidIds.length > 0) {
+    throw createValidationError(`Invalid property IDs: ${invalidIds.join(', ')}`);
+  }
+
+  if (propertyIds.length !== existingPropertyIds.length) {
+    throw createValidationError('All properties must be included in the reorder');
+  }
+
+  // Reorder properties
+  const reorderedProperties = propertyIds.map(id =>
+    database.properties!.find(p => p.id === id)!
+  );
+
+  const mongoId = convertToMongoId(databaseId);
+  const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
+    mongoId,
+    {
+      $set: {
+        properties: reorderedProperties,
+        lastEditedBy: userId
+      }
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedDatabase) {
+    throw createNotFoundError('Database not found');
+  }
+
+  return toDatabaseInterface(updatedDatabase);
+};
+
+// Freeze/Unfreeze database
+export const freezeDatabase = async (
+  databaseId: string,
+  userId: string,
+  data: { frozen: boolean; reason?: string }
+): Promise<IDatabase> => {
+  const database = await checkDatabasePermission(databaseId, userId, 'admin');
+
+  const updateData: any = {
+    frozen: data.frozen,
+    lastEditedBy: userId
+  };
+
+  if (data.frozen) {
+    // Freezing the database
+    updateData.frozenAt = new Date();
+    updateData.frozenBy = userId;
+  } else {
+    // Unfreezing the database
+    updateData.frozenAt = undefined;
+    updateData.frozenBy = undefined;
+  }
+
+  const mongoId = convertToMongoId(databaseId);
+  const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
+    mongoId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedDatabase) {
+    throw createNotFoundError('Database not found');
+  }
+
+  return toDatabaseInterface(updatedDatabase);
+};
+
 // Property management
 export const addProperty = async (
   databaseId: string,
@@ -429,13 +614,29 @@ export const addProperty = async (
   data: TPropertyCreateRequest
 ): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
 
   const propertyId = uuidv4();
+
+  // Auto-generate IDs and colors for select options if not provided
+  const processedData = { ...data };
+  if (processedData.selectOptions && Array.isArray(processedData.selectOptions)) {
+    const existingColors = processedData.selectOptions
+      .map(option => option.color)
+      .filter(Boolean); // Get existing colors to avoid duplicates
+
+    processedData.selectOptions = processedData.selectOptions.map((option, index) => ({
+      ...option,
+      id: option.id || uuidv4(), // Generate ID if not provided
+      color: option.color || generateSelectOptionColor([...existingColors, ...processedData.selectOptions.slice(0, index).map(o => o.color).filter(Boolean)]) // Generate color if not provided
+    }));
+  }
+
   const newProperty = {
     id: propertyId,
-    ...data,
+    ...processedData,
     isVisible: true,
-    order: data.order || database.properties.length
+    order: processedData.order || database.properties.length
   };
 
   database.properties.push(newProperty);
@@ -456,14 +657,29 @@ export const updateProperty = async (
   data: TPropertyUpdateRequest
 ): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
 
   const propertyIndex = database.properties.findIndex(p => p.id === propertyId);
   if (propertyIndex === -1) {
     throw createNotFoundError('Property not found');
   }
 
+  // Process select options if provided
+  const processedData = { ...data };
+  if (processedData.selectOptions && Array.isArray(processedData.selectOptions)) {
+    const existingColors = processedData.selectOptions
+      .map(option => option.color)
+      .filter(Boolean);
+
+    processedData.selectOptions = processedData.selectOptions.map((option, index) => ({
+      ...option,
+      id: option.id || uuidv4(),
+      color: option.color || generateSelectOptionColor([...existingColors, ...processedData.selectOptions.slice(0, index).map(o => o.color).filter(Boolean)])
+    }));
+  }
+
   // Update property
-  Object.assign(database.properties[propertyIndex], data);
+  Object.assign(database.properties[propertyIndex], processedData);
   database.lastEditedBy = userId;
 
   await database.save();
@@ -551,6 +767,7 @@ export const updateView = async (
   data: TViewUpdateRequest
 ): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
 
   const viewIndex = database.views.findIndex(v => v.id === viewId);
   if (viewIndex === -1) {
@@ -608,6 +825,7 @@ export const createRecord = async (
   data: TRecordCreateRequest
 ): Promise<IDatabaseRecord> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
   const databaseInterface = toDatabaseInterface(database);
 
   // Validate properties
@@ -644,7 +862,7 @@ export const createRecord = async (
     lastEditedBy: userId
   });
 
-  return toRecordInterface(record);
+  return toEnrichedRecordInterface(record, databaseInterface);
 };
 
 export const getRecords = async (
@@ -714,8 +932,9 @@ export const getRecords = async (
     DatabaseRecordModel.countDocuments(query)
   ]);
 
+  const databaseInterface = toDatabaseInterface(database);
   const response: TRecordsListResponse = {
-    records: records.map(record => toRecordInterface(record)),
+    records: records.map(record => toEnrichedRecordInterface(record, databaseInterface)),
     pagination: {
       page,
       limit,
@@ -731,7 +950,7 @@ export const getRecords = async (
 
     response.aggregations = {
       groupedData: groupRecordsByProperty(
-        allRecords.map(r => toRecordInterface(r)),
+        allRecords.map(r => toEnrichedRecordInterface(r, databaseInterface)),
         groupByProperty!
       )
     };
@@ -745,7 +964,7 @@ export const getRecordById = async (
   recordId: string,
   userId: string
 ): Promise<IDatabaseRecord> => {
-  await getDatabaseById(databaseId, userId); // Check permissions
+  const database = await getDatabaseById(databaseId, userId); // Check permissions
 
   const mongoId = convertToMongoId(databaseId);
   const record = await DatabaseRecordModel.findOne({
@@ -757,7 +976,8 @@ export const getRecordById = async (
     throw createNotFoundError('Record not found');
   }
 
-  return toRecordInterface(record);
+  const databaseInterface = toDatabaseInterface(database);
+  return toEnrichedRecordInterface(record, databaseInterface);
 };
 
 export const updateRecord = async (
@@ -767,6 +987,7 @@ export const updateRecord = async (
   data: TRecordUpdateRequest
 ): Promise<IDatabaseRecord> => {
   const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
   const databaseInterface = toDatabaseInterface(database);
 
   // Validate properties
@@ -817,7 +1038,7 @@ export const updateRecord = async (
     throw createNotFoundError('Record not found');
   }
 
-  return toRecordInterface(record);
+  return toEnrichedRecordInterface(record, databaseInterface);
 };
 
 export const deleteRecord = async (
@@ -825,7 +1046,8 @@ export const deleteRecord = async (
   recordId: string,
   userId: string
 ): Promise<void> => {
-  await checkDatabasePermission(databaseId, userId, 'write');
+  const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
 
   const mongoId = convertToMongoId(databaseId);
   const result = await DatabaseRecordModel.findOneAndDelete({

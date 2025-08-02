@@ -5,39 +5,39 @@ export type DatabaseDocument = HydratedDocument<IDatabaseDocument>;
 export type DatabaseRecordDocument = HydratedDocument<IDatabaseRecordDocument>;
 
 export enum EPropertyType {
-  TEXT = 'text',
-  NUMBER = 'number',
-  DATE = 'date',
-  BOOLEAN = 'boolean',
-  SELECT = 'select',
-  MULTI_SELECT = 'multi_select',
-  FILE = 'file',
-  EMAIL = 'email',
-  PHONE = 'phone',
-  URL = 'url',
-  CHECKBOX = 'checkbox',
-  RELATION = 'relation',
-  FORMULA = 'formula',
-  ROLLUP = 'rollup',
-  CREATED_TIME = 'created_time',
-  LAST_EDITED_TIME = 'last_edited_time',
-  CREATED_BY = 'created_by',
-  LAST_EDITED_BY = 'last_edited_by'
+  TEXT = 'TEXT',
+  NUMBER = 'NUMBER',
+  DATE = 'DATE',
+  BOOLEAN = 'BOOLEAN',
+  SELECT = 'SELECT',
+  MULTI_SELECT = 'MULTI_SELECT',
+  FILE = 'FILE',
+  EMAIL = 'EMAIL',
+  PHONE = 'PHONE',
+  URL = 'URL',
+  CHECKBOX = 'CHECKBOX',
+  RELATION = 'RELATION',
+  FORMULA = 'FORMULA',
+  ROLLUP = 'ROLLUP',
+  CREATED_TIME = 'CREATED_TIME',
+  LAST_EDITED_TIME = 'LAST_EDITED_TIME',
+  CREATED_BY = 'CREATED_BY',
+  LAST_EDITED_BY = 'LAST_EDITED_BY'
 }
 
 export enum ERelationType {
-  ONE_TO_ONE = 'one_to_one',
-  ONE_TO_MANY = 'one_to_many',
-  MANY_TO_MANY = 'many_to_many'
+  ONE_TO_ONE = 'ONE_TO_ONE',
+  ONE_TO_MANY = 'ONE_TO_MANY',
+  MANY_TO_MANY = 'MANY_TO_MANY'
 }
 
 export enum EViewType {
-  TABLE = 'table',
-  BOARD = 'board',
-  TIMELINE = 'timeline',
-  CALENDAR = 'calendar',
-  GALLERY = 'gallery',
-  LIST = 'list'
+  TABLE = 'TABLE',
+  BOARD = 'BOARD',
+  TIMELINE = 'TIMELINE',
+  CALENDAR = 'CALENDAR',
+  GALLERY = 'GALLERY',
+  LIST = 'LIST'
 }
 
 export interface ISelectOption {
@@ -77,6 +77,12 @@ export interface IDatabaseProperty {
 
   isVisible: boolean;
   order: number;
+
+  // New property management fields
+  frozen?: boolean;
+  hidden?: boolean;
+  orderIndex?: number;
+  width?: number;
 }
 
 export interface IFilter {
@@ -96,8 +102,8 @@ export interface IDatabaseView {
   type: EViewType;
   isDefault: boolean;
 
-  filters: IFilter[];
-  sorts: ISort[];
+  filters: IViewFilter[];
+  sorts: IViewSort[];
   groupBy?: string;
 
   visibleProperties: string[];
@@ -143,6 +149,11 @@ export interface IDatabase {
   lastAccessedAt?: Date;
   accessCount?: number;
 
+  // Freeze functionality
+  frozen?: boolean;
+  frozenAt?: Date;
+  frozenBy?: string;
+
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
@@ -174,6 +185,11 @@ export interface IDatabaseDocument extends Document {
   tags?: string[];
   lastAccessedAt?: Date;
   accessCount?: number;
+
+  // Freeze functionality
+  frozen?: boolean;
+  frozenAt?: Date;
+  frozenBy?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -290,6 +306,71 @@ export interface TPropertyUpdateRequest {
   selectOptions?: ISelectOption[];
   isVisible?: boolean;
   order?: number;
+  frozen?: boolean;
+  hidden?: boolean;
+  orderIndex?: number;
+  width?: number;
+}
+
+// New property management request types
+export interface TPropertyNameUpdateRequest {
+  name: string;
+}
+
+export interface TPropertyTypeUpdateRequest {
+  type: EPropertyType;
+  selectOptions?: ISelectOption[];
+  relationConfig?: IRelationConfig;
+  formulaConfig?: IFormulaConfig;
+  rollupConfig?: IRollupConfig;
+}
+
+export interface TPropertyOrderUpdateRequest {
+  orderIndex: number;
+}
+
+export interface TPropertyInsertRequest {
+  position: 'left' | 'right';
+  property: TPropertyCreateRequest;
+}
+
+export interface TPropertyDuplicateRequest {
+  name?: string;
+  position?: 'left' | 'right';
+}
+
+export interface TPropertyFreezeRequest {
+  frozen: boolean;
+}
+
+export interface TPropertyVisibilityRequest {
+  hidden: boolean;
+}
+
+// View update request types
+export interface TViewUpdateRequest {
+  visibleProperties?: string[];
+  filters?: IViewFilter[];
+  sorts?: IViewSort[];
+  name?: string;
+  type?: EViewType;
+}
+
+// Database freeze request types
+export interface TDatabaseFreezeRequest {
+  frozen: boolean;
+  reason?: string;
+}
+
+export interface IViewFilter {
+  propertyId: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'starts_with' | 'ends_with' | 'is_empty' | 'is_not_empty' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'is_checked' | 'is_not_checked';
+  value?: any;
+}
+
+export interface IViewSort {
+  propertyId: string;
+  direction: 'asc' | 'desc';
 }
 
 export interface TViewCreateRequest {
