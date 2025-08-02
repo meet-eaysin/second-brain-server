@@ -2,7 +2,7 @@ import { DatabaseModel } from '../../database/models/database.model';
 import { DatabaseRecordModel } from '../../database/models/database-record.model';
 import { FileModel } from '../../files/models/file.model';
 import { WorkspaceModel } from '../../workspace/models/workspace.model';
-import { UserModel } from '../../users/models/user.model';
+import { UserModel } from '../../users/models/users.model';
 
 export interface IDashboardAnalytics {
   totalDatabases: number;

@@ -148,13 +148,32 @@ const toEnrichedRecordInterface = (
       if (property.type === 'SELECT' && typeof value === 'string') {
         // Single select - find the option by ID
         const option = property.selectOptions.find(opt => opt.id === value);
-        enrichedProperties[propertyId] = option || value; // Fallback to ID if option not found
+        if (option) {
+          // Transform _id to id if it exists
+          const transformedOption = { ...option };
+          if (transformedOption._id) {
+            transformedOption.id = transformedOption._id;
+            delete transformedOption._id;
+          }
+          enrichedProperties[propertyId] = transformedOption;
+        } else {
+          enrichedProperties[propertyId] = value; // Fallback to ID if option not found
+        }
       } else if (property.type === 'MULTI_SELECT' && Array.isArray(value)) {
         // Multi select - find all options by IDs
         const options = value.map(optionId => {
           if (typeof optionId === 'string') {
             const option = property.selectOptions!.find(opt => opt.id === optionId);
-            return option || optionId; // Fallback to ID if option not found
+            if (option) {
+              // Transform _id to id if it exists
+              const transformedOption = { ...option };
+              if (transformedOption._id) {
+                transformedOption.id = transformedOption._id;
+                delete transformedOption._id;
+              }
+              return transformedOption;
+            }
+            return optionId; // Fallback to ID if option not found
           }
           return optionId;
         });

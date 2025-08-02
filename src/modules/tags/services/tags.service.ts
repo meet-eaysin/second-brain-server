@@ -59,8 +59,7 @@ export const getUserTags = async (
   const tags = await TagModel.find(query)
     .sort(sort)
     .limit(limit)
-    .skip(offset)
-    .lean();
+    .skip(offset);
 
   const total = await TagModel.countDocuments(query);
 
@@ -134,7 +133,7 @@ export const getTagById = async (
   const tag = await TagModel.findOne({
     _id: tagId,
     userId
-  }).lean();
+  });
 
   if (!tag) {
     throw createNotFoundError('Tag not found');
@@ -280,13 +279,9 @@ export const getPopularTags = async (
 ): Promise<ITag[]> => {
   const tags = await TagModel.find({ userId })
     .sort({ usageCount: -1 })
-    .limit(limit)
-    .lean();
+    .limit(limit);
 
-  return tags.map(tag => ({
-    ...tag,
-    id: tag._id.toString()
-  })) as ITag[];
+  return tags.map(tag => tag.toJSON()) as ITag[];
 };
 
 // Update tag usage count

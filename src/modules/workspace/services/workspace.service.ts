@@ -589,20 +589,20 @@ async function getWorkspaceRecentActivity(
     // Get recent databases created in this workspace
     const recentDatabases = await DatabaseModel.find({ workspaceId })
       .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean();
+      .limit(limit);
 
     recentDatabases.forEach(db => {
       if (!type || type === 'database_created') {
+        const dbJson = db.toJSON();
         activities.push({
-          id: db._id.toString(),
+          id: dbJson.id,
           type: 'database_created',
-          title: `Database "${db.name}" created`,
-          userId: db.userId,
-          createdAt: db.createdAt,
+          title: `Database "${dbJson.name}" created`,
+          userId: dbJson.userId,
+          createdAt: dbJson.createdAt,
           data: {
-            databaseId: db._id.toString(),
-            databaseName: db.name
+            databaseId: dbJson.id,
+            databaseName: dbJson.name
           }
         });
       }

@@ -65,8 +65,7 @@ export const getUserNotifications = async (
     NotificationModel.find(query)
       .sort(sort)
       .limit(limit)
-      .skip(skip)
-      .lean(),
+      .skip(skip),
     NotificationModel.countDocuments(query)
   ]);
 
@@ -251,24 +250,14 @@ export const createSystemUpdateNotification = async (
 
 // Helper function to convert document to interface
 function toNotificationInterface(doc: INotificationDocument | any): INotification {
+  // Use toJSON() which already handles _id to id conversion
   if (typeof doc.toJSON === 'function') {
-    const obj = doc.toJSON();
-    return {
-      id: obj._id || obj.id,
-      userId: obj.userId,
-      type: obj.type,
-      title: obj.title,
-      message: obj.message,
-      data: obj.data,
-      isRead: obj.isRead,
-      readAt: obj.readAt,
-      createdAt: obj.createdAt,
-      updatedAt: obj.updatedAt
-    };
+    return doc.toJSON() as INotification;
   }
 
+  // Fallback for plain objects (shouldn't happen with current implementation)
   return {
-    id: doc._id?.toString() || doc.id,
+    id: doc.id || doc._id?.toString(),
     userId: doc.userId,
     type: doc.type,
     title: doc.title,

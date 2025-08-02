@@ -149,8 +149,7 @@ export const getUserFiles = async (userId: string, params: TFileQueryParams) => 
     FileModel.find(query)
       .sort(sort)
       .skip(skip)
-      .limit(limit)
-      .lean(),
+      .limit(limit),
     FileModel.countDocuments(query)
   ]);
 
