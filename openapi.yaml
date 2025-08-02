@@ -1133,7 +1133,7 @@ components:
     DatabaseCategory:
       type: object
       properties:
-        _id:
+        id:
           type: string
           description: Category identifier
           example: 507f1f77bcf86cd799439020
@@ -1351,6 +1351,428 @@ components:
           pattern: '^[0-9a-fA-F]{24}$'
           description: Category ID to move database to (null for uncategorized)
           example: 507f1f77bcf86cd799439020
+
+    # Workspace Schemas
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique workspace identifier
+          example: 507f1f77bcf86cd799439030
+        name:
+          type: string
+          description: Workspace name
+          example: Team Alpha
+        description:
+          type: string
+          description: Workspace description
+          example: Main workspace for Team Alpha projects
+        icon:
+          type: string
+          description: Workspace icon
+          example: 🚀
+        cover:
+          type: string
+          format: uri
+          description: Workspace cover image URL
+          example: https://example.com/workspace-cover.jpg
+        ownerId:
+          type: string
+          description: Workspace owner user ID
+          example: 507f1f77bcf86cd799439013
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
+          description: Workspace members
+        isPublic:
+          type: boolean
+          description: Whether workspace is publicly accessible
+          example: false
+        allowMemberInvites:
+          type: boolean
+          description: Whether members can invite others
+          example: true
+        defaultDatabasePermission:
+          type: string
+          enum: [read, write, admin]
+          description: Default permission for new databases
+          example: read
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Workspace color theme
+          example: "#3B82F6"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Workspace tags
+          example: ["development", "team-alpha"]
+        databaseCount:
+          type: integer
+          description: Number of databases in workspace
+          example: 15
+        memberCount:
+          type: integer
+          description: Number of members in workspace
+          example: 8
+        lastActivityAt:
+          type: string
+          format: date-time
+          description: Last activity timestamp
+          example: 2023-01-01T10:30:00Z
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-01-01T00:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-01-01T12:00:00Z
+        createdBy:
+          type: string
+          description: User ID who created the workspace
+          example: 507f1f77bcf86cd799439013
+        lastEditedBy:
+          type: string
+          description: User ID who last edited the workspace
+          example: 507f1f77bcf86cd799439013
+
+    WorkspaceMember:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: Member user ID
+          example: 507f1f77bcf86cd799439014
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+          description: Member role in workspace
+          example: editor
+        joinedAt:
+          type: string
+          format: date-time
+          description: When member joined workspace
+          example: 2023-01-01T08:00:00Z
+        invitedBy:
+          type: string
+          description: User ID who invited this member
+          example: 507f1f77bcf86cd799439013
+        user:
+          type: object
+          description: User details (populated in responses)
+          properties:
+            id:
+              type: string
+              example: 507f1f77bcf86cd799439014
+            email:
+              type: string
+              example: member@example.com
+            username:
+              type: string
+              example: team_member
+            firstName:
+              type: string
+              example: John
+            lastName:
+              type: string
+              example: Doe
+            profilePicture:
+              type: string
+              format: uri
+              example: https://example.com/avatar.jpg
+
+    CreateWorkspaceRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Workspace name
+          example: Team Alpha
+        description:
+          type: string
+          maxLength: 500
+          description: Workspace description
+          example: Main workspace for Team Alpha projects
+        icon:
+          type: string
+          maxLength: 50
+          description: Workspace icon
+          example: 🚀
+        cover:
+          type: string
+          format: uri
+          maxLength: 500
+          description: Workspace cover image URL
+          example: https://example.com/cover.jpg
+        isPublic:
+          type: boolean
+          description: Whether workspace is publicly accessible
+          default: false
+          example: false
+        allowMemberInvites:
+          type: boolean
+          description: Whether members can invite others
+          default: true
+          example: true
+        defaultDatabasePermission:
+          type: string
+          enum: [read, write, admin]
+          description: Default permission for new databases
+          default: read
+          example: read
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Workspace color theme
+          example: "#3B82F6"
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 20
+          description: Workspace tags
+          example: ["development", "team-alpha"]
+
+    UpdateWorkspaceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Workspace name
+          example: Updated Team Alpha
+        description:
+          type: string
+          maxLength: 500
+          description: Workspace description
+          example: Updated description for Team Alpha
+        icon:
+          type: string
+          maxLength: 50
+          description: Workspace icon
+          example: 🎯
+        cover:
+          type: string
+          format: uri
+          maxLength: 500
+          description: Workspace cover image URL
+          example: https://example.com/new-cover.jpg
+        isPublic:
+          type: boolean
+          description: Whether workspace is publicly accessible
+          example: true
+        allowMemberInvites:
+          type: boolean
+          description: Whether members can invite others
+          example: false
+        defaultDatabasePermission:
+          type: string
+          enum: [read, write, admin]
+          description: Default permission for new databases
+          example: write
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Workspace color theme
+          example: "#10B981"
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 20
+          description: Workspace tags
+          example: ["development", "updated"]
+
+    InviteMemberRequest:
+      type: object
+      required:
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email of user to invite
+          example: newmember@example.com
+        userId:
+          type: string
+          pattern: '^[0-9a-fA-F]{24}$'
+          description: User ID to invite (alternative to email)
+          example: 507f1f77bcf86cd799439015
+        role:
+          type: string
+          enum: [admin, editor, viewer]
+          description: Role to assign to new member
+          example: editor
+        message:
+          type: string
+          maxLength: 500
+          description: Optional invitation message
+          example: Welcome to our team workspace!
+
+    UpdateMemberRoleRequest:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum: [admin, editor, viewer]
+          description: New role for the member
+          example: admin
+
+    WorkspaceListResponse:
+      type: object
+      properties:
+        workspaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+          description: List of workspaces
+        total:
+          type: integer
+          description: Total number of workspaces
+          example: 25
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 3
+        currentPage:
+          type: integer
+          description: Current page number
+          example: 1
+        hasNextPage:
+          type: boolean
+          description: Whether there are more pages
+          example: true
+        hasPrevPage:
+          type: boolean
+          description: Whether there are previous pages
+          example: false
+
+    WorkspaceMembersListResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
+          description: List of workspace members
+        total:
+          type: integer
+          description: Total number of members
+          example: 8
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 1
+        currentPage:
+          type: integer
+          description: Current page number
+          example: 1
+        hasNextPage:
+          type: boolean
+          description: Whether there are more pages
+          example: false
+        hasPrevPage:
+          type: boolean
+          description: Whether there are previous pages
+          example: false
+
+    WorkspacePermissions:
+      type: object
+      properties:
+        canView:
+          type: boolean
+          description: Can view workspace
+          example: true
+        canEdit:
+          type: boolean
+          description: Can edit workspace
+          example: true
+        canAdmin:
+          type: boolean
+          description: Can admin workspace
+          example: false
+        canDelete:
+          type: boolean
+          description: Can delete workspace
+          example: false
+        canInviteMembers:
+          type: boolean
+          description: Can invite new members
+          example: true
+        canManageMembers:
+          type: boolean
+          description: Can manage existing members
+          example: false
+        canCreateDatabases:
+          type: boolean
+          description: Can create databases in workspace
+          example: true
+        role:
+          type: string
+          enum: [owner, admin, editor, viewer]
+          description: User's role in workspace
+          example: editor
+
+    WorkspaceStats:
+      type: object
+      properties:
+        totalWorkspaces:
+          type: integer
+          description: Total workspaces user has access to
+          example: 12
+        ownedWorkspaces:
+          type: integer
+          description: Workspaces owned by user
+          example: 5
+        memberWorkspaces:
+          type: integer
+          description: Workspaces user is member of
+          example: 7
+        publicWorkspaces:
+          type: integer
+          description: Public workspaces available
+          example: 25
+        totalDatabases:
+          type: integer
+          description: Total databases across user's workspaces
+          example: 45
+        totalMembers:
+          type: integer
+          description: Total members across owned workspaces
+          example: 23
+        recentActivity:
+          type: array
+          items:
+            type: object
+            properties:
+              workspaceId:
+                type: string
+                example: 507f1f77bcf86cd799439030
+              workspaceName:
+                type: string
+                example: Team Alpha
+              activityType:
+                type: string
+                enum: [created, updated, member_added, member_removed, database_added]
+                example: member_added
+              timestamp:
+                type: string
+                format: date-time
+                example: 2023-01-01T10:30:00Z
+          description: Recent workspace activity
 
 paths:
   /:
@@ -3238,7 +3660,7 @@ paths:
                           accessCount: 42
                       sidebarData:
                         categories:
-                          - _id: 507f1f77bcf86cd799439020
+                          - id: 507f1f77bcf86cd799439020
                             name: Work Projects
                             icon: 💼
                             color: "#3B82F6"
@@ -5170,7 +5592,7 @@ paths:
                     success: true
                     message: Categories retrieved successfully
                     data:
-                      - _id: 507f1f77bcf86cd799439020
+                      - id: 507f1f77bcf86cd799439020
                         name: Work Projects
                         description: Work-related databases
                         icon: 💼
@@ -5721,3 +6143,3010 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
+
+  # Additional Missing Endpoints
+  /auth/google/test-config:
+    get:
+      tags: [OAuth]
+      summary: Test Google OAuth configuration
+      description: |
+        Test endpoint to verify Google OAuth configuration.
+        **Note**: This endpoint should be removed in production.
+      operationId: testGoogleConfig
+      responses:
+        '200':
+          description: Google OAuth configuration status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Workspace Management Endpoints
+  /workspaces:
+    get:
+      tags: [Workspace Management]
+      summary: Get user's workspaces
+      description: |
+        Retrieve workspaces that the user owns or is a member of, with filtering and pagination support.
+
+        **Features**:
+        - Filter by role, public status, tags
+        - Search by name and description
+        - Sort by various criteria
+        - Pagination support
+      operationId: getUserWorkspaces
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Search query for workspace name/description
+          schema:
+            type: string
+            maxLength: 100
+          example: "team"
+        - name: role
+          in: query
+          description: Filter by user's role in workspace
+          schema:
+            type: string
+            enum: [owner, admin, editor, viewer]
+          example: "owner"
+        - name: isPublic
+          in: query
+          description: Filter by public status
+          schema:
+            type: boolean
+          example: false
+        - name: tags
+          in: query
+          description: Filter by tags (comma-separated)
+          schema:
+            type: string
+          example: "development,team"
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [name, createdAt, updatedAt, lastActivityAt, memberCount, databaseCount]
+            default: updatedAt
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Workspaces retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceListResponse'
+              examples:
+                success:
+                  summary: Successful response
+                  value:
+                    success: true
+                    message: Workspaces retrieved successfully
+                    data:
+                      workspaces:
+                        - id: 507f1f77bcf86cd799439030
+                          name: Team Alpha
+                          description: Main workspace for Team Alpha
+                          icon: 🚀
+                          ownerId: 507f1f77bcf86cd799439013
+                          isPublic: false
+                          memberCount: 8
+                          databaseCount: 15
+                          lastActivityAt: 2023-01-01T10:30:00Z
+                      total: 12
+                      totalPages: 1
+                      currentPage: 1
+                      hasNextPage: false
+                      hasPrevPage: false
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      tags: [Workspace Management]
+      summary: Create a new workspace
+      description: |
+        Create a new workspace. The user becomes the owner and first member.
+
+        **Features**:
+        - Automatic owner membership
+        - Customizable settings
+        - Tag support
+        - Color themes
+      operationId: createWorkspace
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+            examples:
+              basic_workspace:
+                summary: Basic workspace
+                value:
+                  name: Team Alpha
+                  description: Main workspace for Team Alpha projects
+                  icon: 🚀
+              full_workspace:
+                summary: Full workspace with all options
+                value:
+                  name: Development Team
+                  description: Workspace for development projects
+                  icon: 💻
+                  color: "#3B82F6"
+                  isPublic: false
+                  allowMemberInvites: true
+                  defaultDatabasePermission: read
+                  tags: ["development", "team"]
+      responses:
+        '201':
+          description: Workspace created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+              examples:
+                success:
+                  summary: Workspace created
+                  value:
+                    success: true
+                    message: Workspace created successfully
+                    data:
+                      id: 507f1f77bcf86cd799439030
+                      name: Team Alpha
+                      description: Main workspace for Team Alpha projects
+                      icon: 🚀
+                      ownerId: 507f1f77bcf86cd799439013
+                      isPublic: false
+                      memberCount: 1
+                      databaseCount: 0
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '409':
+          description: Workspace name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/public:
+    get:
+      tags: [Workspace Management]
+      summary: Get public workspaces
+      description: |
+        Retrieve publicly accessible workspaces. No authentication required.
+
+        **Features**:
+        - Browse public workspaces
+        - Search and filter capabilities
+        - Pagination support
+      operationId: getPublicWorkspaces
+      parameters:
+        - name: search
+          in: query
+          description: Search query
+          schema:
+            type: string
+            maxLength: 100
+        - name: tags
+          in: query
+          description: Filter by tags
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Public workspaces retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceListResponse'
+
+  /workspaces/search:
+    get:
+      tags: [Workspace Management]
+      summary: Search workspaces
+      description: |
+        Search workspaces with advanced filtering options.
+
+        **Features**:
+        - Full-text search
+        - Include public workspaces option
+        - Tag filtering
+        - Relevance-based sorting
+      operationId: searchWorkspaces
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: includePublic
+          in: query
+          description: Include public workspaces in results
+          schema:
+            type: boolean
+            default: true
+        - name: tags
+          in: query
+          description: Filter by tags
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/stats:
+    get:
+      tags: [Workspace Management]
+      summary: Get workspace statistics
+      description: |
+        Get comprehensive statistics about user's workspaces.
+
+        **Features**:
+        - Workspace counts by type
+        - Database and member statistics
+        - Recent activity summary
+      operationId: getWorkspaceStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceStats'
+              examples:
+                success:
+                  summary: Workspace statistics
+                  value:
+                    success: true
+                    message: Workspace statistics retrieved successfully
+                    data:
+                      totalWorkspaces: 12
+                      ownedWorkspaces: 5
+                      memberWorkspaces: 7
+                      publicWorkspaces: 25
+                      totalDatabases: 45
+                      totalMembers: 23
+                      recentActivity: []
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}:
+    get:
+      tags: [Workspace Management]
+      summary: Get workspace by ID
+      description: |
+        Retrieve detailed information about a specific workspace.
+
+        **Features**:
+        - Complete workspace details
+        - Member information
+        - Database count
+        - Permission checking
+      operationId: getWorkspaceById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      responses:
+        '200':
+          description: Workspace retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      tags: [Workspace Management]
+      summary: Update workspace
+      description: |
+        Update workspace information and settings.
+
+        **Features**:
+        - Update basic information
+        - Modify privacy settings
+        - Change appearance settings
+        - Update member permissions
+      operationId: updateWorkspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceRequest'
+      responses:
+        '200':
+          description: Workspace updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [Workspace Management]
+      summary: Delete workspace
+      description: |
+        Delete a workspace permanently. Only workspace owners can delete workspaces.
+
+        **Security Features**:
+        - Owner-only access
+        - Database dependency check
+        - Permanent deletion warning
+      operationId: deleteWorkspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      responses:
+        '200':
+          description: Workspace deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/members:
+    get:
+      tags: [Workspace Members]
+      summary: Get workspace members
+      description: |
+        Retrieve list of workspace members with user details and roles.
+
+        **Features**:
+        - Member list with user information
+        - Role-based filtering
+        - Search by user details
+        - Pagination support
+      operationId: getWorkspaceMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+        - name: role
+          in: query
+          description: Filter by member role
+          schema:
+            type: string
+            enum: [owner, admin, editor, viewer]
+        - name: search
+          in: query
+          description: Search members by name or email
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Members retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspaceMembersListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      tags: [Workspace Members]
+      summary: Add member to workspace
+      description: |
+        Invite a user to join the workspace with specified role.
+
+        **Features**:
+        - Email or user ID invitation
+        - Role assignment
+        - Permission validation
+        - Duplicate member check
+      operationId: addWorkspaceMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteMemberRequest'
+      responses:
+        '200':
+          description: Member added successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+        '400':
+          description: Validation error or user already member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/members/{memberId}:
+    delete:
+      tags: [Workspace Members]
+      summary: Remove member from workspace
+      description: |
+        Remove a member from the workspace. Admins can remove any member except owner.
+
+        **Features**:
+        - Permission-based removal
+        - Owner protection
+        - Self-removal allowed
+        - Member notification
+      operationId: removeWorkspaceMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+        - name: memberId
+          in: path
+          required: true
+          description: Member user ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439014
+      responses:
+        '200':
+          description: Member removed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions or cannot remove owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/members/{memberId}/role:
+    put:
+      tags: [Workspace Members]
+      summary: Update member role
+      description: |
+        Update a workspace member's role. Only admins and owners can change roles.
+
+        **Features**:
+        - Role hierarchy enforcement
+        - Owner role protection
+        - Permission validation
+        - Role change notification
+      operationId: updateMemberRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+        - name: memberId
+          in: path
+          required: true
+          description: Member user ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439014
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRoleRequest'
+      responses:
+        '200':
+          description: Member role updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/leave:
+    post:
+      tags: [Workspace Members]
+      summary: Leave workspace
+      description: |
+        Leave a workspace (remove yourself as a member). Owners cannot leave their own workspace.
+
+        **Features**:
+        - Self-removal from workspace
+        - Owner protection
+        - Automatic cleanup
+        - Member notification
+      operationId: leaveWorkspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      responses:
+        '200':
+          description: Left workspace successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              examples:
+                success:
+                  summary: Successfully left workspace
+                  value:
+                    success: true
+                    message: Left workspace successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Owners cannot leave their own workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/permissions:
+    get:
+      tags: [Workspace Management]
+      summary: Get workspace permissions
+      description: |
+        Get current user's permissions for the specified workspace.
+
+        **Features**:
+        - Detailed permission breakdown
+        - Role-based access information
+        - Action-specific permissions
+        - UI permission helpers
+      operationId: getWorkspacePermissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      responses:
+        '200':
+          description: Permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WorkspacePermissions'
+              examples:
+                editor_permissions:
+                  summary: Editor permissions
+                  value:
+                    success: true
+                    message: Workspace permissions retrieved successfully
+                    data:
+                      canView: true
+                      canEdit: true
+                      canAdmin: false
+                      canDelete: false
+                      canInviteMembers: true
+                      canManageMembers: false
+                      canCreateDatabases: true
+                      role: editor
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/duplicate:
+    post:
+      tags: [Workspace Management]
+      summary: Duplicate workspace
+      description: |
+        Create a copy of an existing workspace with similar settings.
+
+        **Features**:
+        - Copy workspace structure
+        - Preserve settings and appearance
+        - Create as private workspace
+        - Custom name for copy
+      operationId: duplicateWorkspace
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID to duplicate
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name for the duplicated workspace
+                  example: Team Alpha (Copy)
+      responses:
+        '201':
+          description: Workspace duplicated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Workspace'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Source workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /workspaces/{id}/activity:
+    get:
+      tags: [Workspace Management]
+      summary: Get workspace activity
+      description: |
+        Retrieve recent activity and events in the workspace.
+
+        **Features**:
+        - Recent member activities
+        - Database creation/updates
+        - Member join/leave events
+        - Chronological activity feed
+
+        **Note**: Activity tracking is currently in development.
+      operationId: getWorkspaceActivity
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Workspace ID
+          schema:
+            type: string
+          example: 507f1f77bcf86cd799439030
+        - name: limit
+          in: query
+          description: Number of activities to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Activity retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            type:
+                              type: string
+                              enum: [member_joined, member_left, database_created, workspace_updated]
+                            userId:
+                              type: string
+                            timestamp:
+                              type: string
+                              format: date-time
+                            details:
+                              type: object
+              examples:
+                activity_list:
+                  summary: Recent workspace activity
+                  value:
+                    success: true
+                    message: Workspace activity retrieved successfully
+                    data: []
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # File Management Endpoints
+  /files:
+    get:
+      tags: [File Management]
+      summary: Get user's files
+      description: |
+        Retrieve user's uploaded files with filtering and pagination.
+
+        **Features**:
+        - Category-based filtering
+        - Search by filename or description
+        - MIME type filtering
+        - Sorting and pagination
+      operationId: getUserFiles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          description: Filter by file category
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search in filename or description
+          schema:
+            type: string
+        - name: mimeType
+          in: query
+          description: Filter by MIME type
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [name, size, createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Files retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          files:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/FileResponse'
+                          pagination:
+                            $ref: '#/components/schemas/PaginationResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /files/upload:
+    post:
+      tags: [File Management]
+      summary: Upload a file
+      description: |
+        Upload a single file to the server.
+
+        **Supported File Types**:
+        - Images: JPEG, PNG, GIF, WebP
+        - Documents: PDF, Word, Excel, PowerPoint
+        - Text: Plain text, CSV, JSON
+        - Archives: ZIP
+
+        **File Size Limit**: 50MB
+      operationId: uploadFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+                description:
+                  type: string
+                  description: File description
+                category:
+                  type: string
+                  description: File category
+                isPublic:
+                  type: string
+                  enum: ['true', 'false']
+                  description: Whether file is publicly accessible
+              required:
+                - file
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FileResponse'
+        '400':
+          description: Invalid file or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /files/bulk-upload:
+    post:
+      tags: [File Management]
+      summary: Upload multiple files
+      description: |
+        Upload multiple files at once (max 10 files).
+
+        **Features**:
+        - Batch file processing
+        - Consistent metadata for all files
+        - Atomic operation (all succeed or all fail)
+      operationId: bulkUploadFiles
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 10
+                  description: Files to upload (max 10)
+                category:
+                  type: string
+                  description: Category for all files
+                isPublic:
+                  type: string
+                  enum: ['true', 'false']
+                  description: Whether files are publicly accessible
+              required:
+                - files
+      responses:
+        '201':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FileResponse'
+        '400':
+          description: Invalid files or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /files/{id}:
+    get:
+      tags: [File Management]
+      summary: Get file details
+      description: |
+        Retrieve detailed information about a specific file.
+
+        **Features**:
+        - File metadata and properties
+        - Access control validation
+        - Public file access support
+      operationId: getFileById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: File ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File details retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FileResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [File Management]
+      summary: Delete file
+      description: |
+        Delete a file permanently from the system.
+
+        **Features**:
+        - Permanent file deletion
+        - Storage cleanup
+        - Access control validation
+      operationId: deleteFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: File ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /files/{id}/download:
+    get:
+      tags: [File Management]
+      summary: Download file
+      description: |
+        Download a file from the server.
+
+        **Features**:
+        - Direct file download
+        - Proper content headers
+        - Access control validation
+        - Public file access support
+      operationId: downloadFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: File ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Search & Analytics Endpoints
+  /search:
+    get:
+      tags: [Search & Analytics]
+      summary: Global search
+      description: |
+        Search across all content types including databases, records, and files.
+
+        **Features**:
+        - Cross-content search
+        - Type-specific filtering
+        - Relevance scoring
+        - Pagination support
+      operationId: globalSearch
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+        - name: type
+          in: query
+          description: Content type filter
+          schema:
+            type: string
+            enum: [all, databases, records, files]
+            default: all
+        - name: limit
+          in: query
+          description: Maximum results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Search completed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          databases:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Database'
+                          records:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/DatabaseRecord'
+                          files:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/FileResponse'
+                          total:
+                            type: integer
+                            description: Total number of results
+        '400':
+          description: Invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /search/databases:
+    get:
+      tags: [Search & Analytics]
+      summary: Search databases
+      description: |
+        Search specifically within databases by name, description, or properties.
+
+        **Features**:
+        - Database-specific search
+        - Metadata search
+        - Access control filtering
+      operationId: searchDatabases
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+        - name: limit
+          in: query
+          description: Maximum results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Database search completed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          databases:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Database'
+                          total:
+                            type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /search/records:
+    get:
+      tags: [Search & Analytics]
+      summary: Search records
+      description: |
+        Search within database records by content and properties.
+
+        **Features**:
+        - Record content search
+        - Property-based filtering
+        - Database-specific search
+        - Full-text search capabilities
+      operationId: searchRecords
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+            minLength: 1
+        - name: databaseId
+          in: query
+          description: Limit search to specific database
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum results to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Record search completed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          records:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/DatabaseRecord'
+                          total:
+                            type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /search/suggestions:
+    get:
+      tags: [Search & Analytics]
+      summary: Get search suggestions
+      description: |
+        Get search suggestions based on user's query and content.
+
+        **Features**:
+        - Auto-complete suggestions
+        - Recent searches
+        - Popular searches
+        - Context-aware suggestions
+      operationId: getSearchSuggestions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Partial search query
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Search suggestions retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            suggestion:
+                              type: string
+                              description: Suggested search term
+                            type:
+                              type: string
+                              enum: [database, record, file, recent, popular]
+                              description: Type of suggestion
+                            count:
+                              type: integer
+                              description: Number of results for this suggestion
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /analytics/dashboard:
+    get:
+      tags: [Search & Analytics]
+      summary: Get dashboard analytics
+      description: |
+        Retrieve comprehensive analytics for the user's dashboard.
+
+        **Features**:
+        - Usage statistics
+        - Activity trends
+        - Performance metrics
+        - Growth indicators
+      operationId: getDashboardAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Dashboard analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalDatabases:
+                            type: integer
+                            description: Total number of databases
+                          totalRecords:
+                            type: integer
+                            description: Total number of records
+                          totalFiles:
+                            type: integer
+                            description: Total number of files
+                          recentActivity:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  enum: [database_created, record_created, file_uploaded]
+                                timestamp:
+                                  type: string
+                                  format: date-time
+                                details:
+                                  type: object
+                          usage:
+                            type: object
+                            properties:
+                              databasesCreated:
+                                type: integer
+                              recordsCreated:
+                                type: integer
+                              filesUploaded:
+                                type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /analytics/databases/{id}:
+    get:
+      tags: [Search & Analytics]
+      summary: Get database analytics
+      description: |
+        Retrieve analytics for a specific database.
+
+        **Features**:
+        - Database usage statistics
+        - Record creation trends
+        - View analytics
+        - Access patterns
+      operationId: getDatabaseAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+        - name: period
+          in: query
+          description: Time period for analytics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+      responses:
+        '200':
+          description: Database analytics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          databaseId:
+                            type: string
+                          totalRecords:
+                            type: integer
+                          totalViews:
+                            type: integer
+                          recordsCreated:
+                            type: integer
+                          viewsCreated:
+                            type: integer
+                          lastAccessed:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          usage:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date:
+                                  type: string
+                                  format: date
+                                records:
+                                  type: integer
+                                views:
+                                  type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /analytics/usage:
+    get:
+      tags: [Search & Analytics]
+      summary: Get usage statistics
+      description: |
+        Retrieve system-wide usage statistics (admin only).
+
+        **Features**:
+        - System-wide metrics
+        - User activity statistics
+        - Resource usage tracking
+        - Performance indicators
+
+        **Admin Access Required**
+      operationId: getUsageStatistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: Time period for statistics
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+        - name: startDate
+          in: query
+          description: Start date for custom period
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: End date for custom period
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Usage statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalUsers:
+                            type: integer
+                            description: Total number of users
+                          activeUsers:
+                            type: integer
+                            description: Number of active users
+                          totalDatabases:
+                            type: integer
+                            description: Total number of databases
+                          totalRecords:
+                            type: integer
+                            description: Total number of records
+                          totalFiles:
+                            type: integer
+                            description: Total number of files
+                          storageUsed:
+                            type: integer
+                            description: Total storage used in bytes
+                          apiCalls:
+                            type: integer
+                            description: Total API calls made
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Tags Management Endpoints
+  /tags:
+    get:
+      tags: [Tags Management]
+      summary: Get user's tags
+      description: |
+        Retrieve all tags created by the user.
+
+        **Features**:
+        - User-specific tags
+        - Search and filtering
+        - Sorting options
+        - Usage statistics
+      operationId: getUserTags
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Search tags by name
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [name, createdAt, updatedAt]
+            default: name
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Tag'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      tags: [Tags Management]
+      summary: Create new tag
+      description: |
+        Create a new tag for organizing content.
+
+        **Features**:
+        - Custom tag names
+        - Color coding
+        - Optional descriptions
+        - Duplicate prevention
+      operationId: createTag
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  description: Tag name
+                  example: Important
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  description: Hex color code
+                  example: '#FF5733'
+                description:
+                  type: string
+                  maxLength: 200
+                  description: Optional tag description
+                  example: High priority items
+              required:
+                - name
+      responses:
+        '201':
+          description: Tag created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tag'
+        '400':
+          description: Validation error or duplicate tag
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /tags/{id}:
+    get:
+      tags: [Tags Management]
+      summary: Get tag by ID
+      description: |
+        Retrieve detailed information about a specific tag.
+
+        **Features**:
+        - Tag details and metadata
+        - Usage statistics
+        - Associated content count
+      operationId: getTagById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tag ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tag retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tag'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Tag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      tags: [Tags Management]
+      summary: Update tag
+      description: |
+        Update an existing tag's properties.
+
+        **Features**:
+        - Update name, color, description
+        - Validation and duplicate checking
+        - Preserve tag associations
+      operationId: updateTag
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tag ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  description: Tag name
+                color:
+                  type: string
+                  pattern: '^#[0-9A-F]{6}$'
+                  description: Hex color code
+                description:
+                  type: string
+                  maxLength: 200
+                  description: Tag description
+      responses:
+        '200':
+          description: Tag updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Tag'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Tag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [Tags Management]
+      summary: Delete tag
+      description: |
+        Delete a tag permanently.
+
+        **Features**:
+        - Permanent tag deletion
+        - Remove tag associations
+        - Cleanup related data
+      operationId: deleteTag
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Tag ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tag deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Tag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Notifications Management Endpoints
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get user notifications
+      description: |
+        Retrieve user's notifications with filtering and pagination.
+
+        **Features**:
+        - Read/unread filtering
+        - Type-based filtering
+        - Pagination support
+        - Sorting options
+      operationId: getUserNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: isRead
+          in: query
+          description: Filter by read status
+          schema:
+            type: boolean
+        - name: type
+          in: query
+          description: Filter by notification type
+          schema:
+            type: string
+            enum: [info, warning, error, success]
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [createdAt, updatedAt]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Notifications retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          notifications:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Notification'
+                          pagination:
+                            $ref: '#/components/schemas/PaginationResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: Mark notification as read
+      description: |
+        Mark a specific notification as read.
+
+        **Features**:
+        - Individual notification marking
+        - Read status tracking
+        - Timestamp recording
+      operationId: markNotificationAsRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      description: |
+        Mark all user's notifications as read.
+
+        **Features**:
+        - Bulk read marking
+        - Efficient batch operation
+        - Complete notification clearing
+      operationId: markAllNotificationsAsRead
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /notifications/{id}:
+    delete:
+      tags: [Notifications]
+      summary: Delete notification
+      description: |
+        Delete a specific notification permanently.
+
+        **Features**:
+        - Permanent notification deletion
+        - Individual notification removal
+        - Cleanup and optimization
+      operationId: deleteNotification
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Notification ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Enhanced Database Management Endpoints
+
+  /databases/{id}/properties/reorder:
+    put:
+      tags: [Database Properties]
+      summary: Reorder database properties
+      description: |
+        Reorder database properties by providing new order sequence.
+
+        **Features**:
+        - Custom property ordering
+        - Drag-and-drop support
+        - Validation of property IDs
+        - Atomic reordering operation
+      operationId: reorderDatabaseProperties
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                propertyIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  description: Array of property IDs in desired order
+                  example: ["prop1", "prop2", "prop3"]
+              required:
+                - propertyIds
+      responses:
+        '200':
+          description: Properties reordered successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DatabaseProperty'
+        '400':
+          description: Invalid property IDs or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /databases/{id}/permissions:
+    get:
+      tags: [Database Permissions]
+      summary: Get database permissions
+      description: |
+        Retrieve permission settings for a database.
+
+        **Features**:
+        - User permission levels
+        - Access control lists
+        - Permission inheritance
+        - Role-based access
+      operationId: getDatabasePermissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          owner:
+                            type: string
+                            description: Database owner ID
+                          permissions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                userId:
+                                  type: string
+                                permission:
+                                  type: string
+                                  enum: [read, write, admin]
+                                grantedAt:
+                                  type: string
+                                  format: date-time
+                                grantedBy:
+                                  type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /databases/{id}/permissions/{userId}:
+    put:
+      tags: [Database Permissions]
+      summary: Update user permission level
+      description: |
+        Update a user's permission level for a database.
+
+        **Features**:
+        - Permission level changes
+        - Access control management
+        - Audit trail
+        - Validation checks
+      operationId: updateDatabasePermission
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission:
+                  type: string
+                  enum: [read, write, admin]
+                  description: Permission level to grant
+              required:
+                - permission
+      responses:
+        '200':
+          description: Permission updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid permission level
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /databases/{id}/records/bulk:
+    post:
+      tags: [Database Records]
+      summary: Bulk create records
+      description: |
+        Create multiple records in a single operation.
+
+        **Features**:
+        - Batch record creation
+        - Atomic operations
+        - Validation for all records
+        - Performance optimization
+      operationId: bulkCreateRecords
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                records:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      properties:
+                        type: object
+                        additionalProperties: true
+                        description: Record properties
+                  minItems: 1
+                  description: Array of records to create
+              required:
+                - records
+      responses:
+        '201':
+          description: Records created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DatabaseRecord'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    put:
+      tags: [Database Records]
+      summary: Bulk update records
+      description: |
+        Update multiple records in a single operation.
+
+        **Features**:
+        - Batch record updates
+        - Partial property updates
+        - Atomic operations
+        - Validation for all updates
+      operationId: bulkUpdateRecords
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                updates:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Record ID to update
+                      properties:
+                        type: object
+                        additionalProperties: true
+                        description: Properties to update
+                    required:
+                      - id
+                      - properties
+                  minItems: 1
+                  description: Array of record updates
+              required:
+                - updates
+      responses:
+        '200':
+          description: Records updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DatabaseRecord'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [Database Records]
+      summary: Bulk delete records
+      description: |
+        Delete multiple records in a single operation.
+
+        **Features**:
+        - Batch record deletion
+        - Atomic operations
+        - Validation of record IDs
+        - Performance optimization
+      operationId: bulkDeleteRecords
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Database ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recordIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  description: Array of record IDs to delete
+              required:
+                - recordIds
+      responses:
+        '200':
+          description: Records deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # User Profile Avatar Endpoints
+  /users/profile/avatar:
+    post:
+      tags: [User Management]
+      summary: Upload profile avatar
+      description: |
+        Upload a profile picture for the current user.
+
+        **Features**:
+        - Image file upload
+        - Automatic resizing
+        - Format validation
+        - Previous avatar replacement
+
+        **Supported Formats**: JPEG, PNG, GIF, WebP
+        **File Size Limit**: 5MB
+      operationId: uploadProfileAvatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Avatar image file
+              required:
+                - avatar
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          avatarUrl:
+                            type: string
+                            description: URL of the uploaded avatar
+                            example: https://example.com/avatars/user123.jpg
+        '400':
+          description: Invalid file format or size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    delete:
+      tags: [User Management]
+      summary: Remove profile avatar
+      description: |
+        Remove the current user's profile picture.
+
+        **Features**:
+        - Avatar deletion
+        - Revert to default avatar
+        - Storage cleanup
+      operationId: deleteProfileAvatar
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Avatar removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # Template Creation Endpoint
+  /templates/{id}/use:
+    post:
+      tags: [Database Templates]
+      summary: Create database from template
+      description: |
+        Create a new database using an existing template.
+
+        **Features**:
+        - Template-based database creation
+        - Custom database naming
+        - Workspace assignment
+        - Category assignment
+        - Property inheritance
+      operationId: createDatabaseFromTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Name for the new database
+                  example: My Project Database
+                description:
+                  type: string
+                  maxLength: 500
+                  description: Optional description for the database
+                  example: Database for tracking project tasks
+                workspaceId:
+                  type: string
+                  description: Workspace to create database in
+                categoryId:
+                  type: string
+                  description: Category to assign to database
+              required:
+                - name
+      responses:
+        '201':
+          description: Database created from template successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Database'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # System Information Endpoints
+  /version:
+    get:
+      tags: [System]
+      summary: Get API version information
+      description: |
+        Retrieve version information about the API.
+
+        **Features**:
+        - API version details
+        - Build information
+        - Environment details
+        - Release notes
+      operationId: getApiVersion
+      responses:
+        '200':
+          description: Version information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  version:
+                    type: string
+                    description: API version
+                    example: 1.0.0
+                  name:
+                    type: string
+                    description: API name
+                    example: Second Brain Server API
+                  environment:
+                    type: string
+                    description: Current environment
+                    example: production
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                    example: 2023-01-01T12:00:00Z
+
+  /status:
+    get:
+      tags: [System]
+      summary: Get system status
+      description: |
+        Retrieve current system status and health metrics.
+
+        **Features**:
+        - System operational status
+        - Uptime information
+        - Memory usage
+        - Performance metrics
+      operationId: getSystemStatus
+      responses:
+        '200':
+          description: System status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    enum: [operational, degraded, maintenance, down]
+                    description: System status
+                    example: operational
+                  uptime:
+                    type: number
+                    description: System uptime in seconds
+                    example: 86400
+                  memory:
+                    type: object
+                    properties:
+                      rss:
+                        type: number
+                        description: Resident Set Size
+                      heapTotal:
+                        type: number
+                        description: Total heap size
+                      heapUsed:
+                        type: number
+                        description: Used heap size
+                      external:
+                        type: number
+                        description: External memory usage
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Response timestamp
+                  environment:
+                    type: string
+                    description: Current environment
+                    example: production
+

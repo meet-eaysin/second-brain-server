@@ -30,6 +30,39 @@ import { IValidationError } from '@/types/error.types';
 import { createNotFoundError, createAppError, createForbiddenError } from '@/utils/error.utils';
 import { DatabaseRecordModel, IDatabaseRecord } from '../models/database-record.model';
 
+// Helper function to convert frontend ID format to MongoDB ObjectId
+const convertToMongoId = (id: string): string => {
+  // If it's already a valid MongoDB ObjectId, return as is
+  if (/^[0-9a-fA-F]{24}$/.test(id)) {
+    return id;
+  }
+
+  // Try to decode base64
+  try {
+    const decoded = Buffer.from(id, 'base64').toString('utf8');
+
+    // If decoded value is a valid MongoDB ObjectId, return it
+    if (/^[0-9a-fA-F]{24}$/.test(decoded)) {
+      return decoded;
+    }
+
+    // If decoded value looks like hex but is not 24 chars, pad it
+    if (/^[0-9a-fA-F]+$/.test(decoded)) {
+      if (decoded.length < 24) {
+        return decoded.padStart(24, '0');
+      }
+      if (decoded.length > 24) {
+        return decoded.substring(0, 24);
+      }
+    }
+  } catch (error) {
+    // If base64 decoding fails, fall through to return original
+  }
+
+  // Return original ID if no conversion is possible
+  return id;
+};
+
 const toDatabaseInterface = (doc: DatabaseDocument): IDatabase => {
   return doc.toJSON() as IDatabase;
 };
@@ -42,6 +75,20 @@ export const createDatabase = async (
   userId: string,
   data: TDatabaseCreateRequest
 ): Promise<IDatabase> => {
+  // If workspaceId is provided, verify user has access to the workspace
+  if (data.workspaceId) {
+    const { WorkspaceModel } = await import('../../workspace/models/workspace.model');
+    const workspace = await WorkspaceModel.findById(data.workspaceId);
+
+    if (!workspace) {
+      throw createNotFoundError('Workspace not found');
+    }
+
+    if (!workspace.isMember(userId)) {
+      throw createForbiddenError('You do not have access to this workspace');
+    }
+  }
+
   const database = await DatabaseModel.create({
     ...data,
     userId,
@@ -63,12 +110,25 @@ export const createDatabase = async (
     lastEditedBy: userId
   });
 
+  // Update workspace database count if applicable
+  if (data.workspaceId) {
+    const { WorkspaceModel } = await import('../../workspace/models/workspace.model');
+    await WorkspaceModel.findByIdAndUpdate(
+      data.workspaceId,
+      {
+        $inc: { databaseCount: 1 },
+        lastActivityAt: new Date()
+      }
+    );
+  }
+
   return toDatabaseInterface(database);
 };
 
 export const getDatabaseById = async (databaseId: string, userId: string): Promise<IDatabase> => {
+  const mongoId = convertToMongoId(databaseId);
   const database = await DatabaseModel.findOne({
-    _id: databaseId,
+    _id: mongoId,
     $or: [{ userId }, { isPublic: true }, { 'sharedWith.userId': userId }]
   });
 
@@ -236,8 +296,9 @@ export const toggleDatabaseFavorite = async (
 ): Promise<IDatabase> => {
   const database = await checkDatabasePermission(databaseId, userId, 'read');
 
+  const mongoId = convertToMongoId(databaseId);
   const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
-    databaseId,
+    mongoId,
     {
       $set: {
         isFavorite,
@@ -274,8 +335,9 @@ export const moveDatabaseToCategory = async (
     }
   }
 
+  const mongoId = convertToMongoId(databaseId);
   const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
-    databaseId,
+    mongoId,
     {
       $set: {
         categoryId: categoryId || undefined,
@@ -297,8 +359,9 @@ export const updateDatabaseAccess = async (
   databaseId: string,
   userId: string
 ): Promise<void> => {
+  const mongoId = convertToMongoId(databaseId);
   await DatabaseModel.findByIdAndUpdate(
-    databaseId,
+    mongoId,
     {
       $set: { lastAccessedAt: new Date() },
       $inc: { accessCount: 1 }
@@ -313,8 +376,9 @@ export const updateDatabase = async (
 ): Promise<IDatabase> => {
   await checkDatabasePermission(databaseId, userId, 'write');
 
+  const mongoId = convertToMongoId(databaseId);
   const updatedDatabase = await DatabaseModel.findByIdAndUpdate(
-    databaseId,
+    mongoId,
     {
       ...data,
       lastEditedBy: userId
@@ -332,13 +396,29 @@ export const updateDatabase = async (
 export const deleteDatabase = async (databaseId: string, userId: string): Promise<void> => {
   await checkDatabasePermission(databaseId, userId, 'admin');
 
+  // Get database to check workspace
+  const mongoId = convertToMongoId(databaseId);
+  const database = await DatabaseModel.findById(mongoId);
+  if (!database) {
+    throw createNotFoundError('Database not found');
+  }
+
   // Delete all records first
-  await DatabaseRecordModel.deleteMany({ databaseId });
+  await DatabaseRecordModel.deleteMany({ databaseId: mongoId });
 
   // Delete the database
-  const result = await DatabaseModel.findByIdAndDelete(databaseId);
-  if (!result) {
-    throw createNotFoundError('Database not found');
+  await DatabaseModel.findByIdAndDelete(mongoId);
+
+  // Update workspace database count if applicable
+  if (database.workspaceId) {
+    const { WorkspaceModel } = await import('../../workspace/models/workspace.model');
+    await WorkspaceModel.findByIdAndUpdate(
+      database.workspaceId,
+      {
+        $inc: { databaseCount: -1 },
+        lastActivityAt: new Date()
+      }
+    );
   }
 };
 
@@ -556,8 +636,9 @@ export const createRecord = async (
     userId
   );
 
+  const mongoId = convertToMongoId(databaseId);
   const record = await DatabaseRecordModel.create({
-    databaseId,
+    databaseId: mongoId,
     properties: processedProperties,
     createdBy: userId,
     lastEditedBy: userId
@@ -584,7 +665,8 @@ export const getRecords = async (
     $or?: Array<Record<string, unknown>>;
     [key: string]: unknown;
   }
-  const query: IRecordQuery = { databaseId };
+  const mongoId = convertToMongoId(databaseId);
+  const query: IRecordQuery = { databaseId: mongoId };
 
   // Apply view filters if viewId is provided
   let view = null;
@@ -665,9 +747,10 @@ export const getRecordById = async (
 ): Promise<IDatabaseRecord> => {
   await getDatabaseById(databaseId, userId); // Check permissions
 
+  const mongoId = convertToMongoId(databaseId);
   const record = await DatabaseRecordModel.findOne({
     _id: recordId,
-    databaseId
+    databaseId: mongoId
   });
 
   if (!record) {
@@ -712,8 +795,9 @@ export const updateRecord = async (
     userId
   );
 
+  const mongoId = convertToMongoId(databaseId);
   const record = await DatabaseRecordModel.findOneAndUpdate(
-    { _id: recordId, databaseId },
+    { _id: recordId, databaseId: mongoId },
     {
       $set: {
         ...Object.keys(processedProperties).reduce(
@@ -743,9 +827,10 @@ export const deleteRecord = async (
 ): Promise<void> => {
   await checkDatabasePermission(databaseId, userId, 'write');
 
+  const mongoId = convertToMongoId(databaseId);
   const result = await DatabaseRecordModel.findOneAndDelete({
     _id: recordId,
-    databaseId
+    databaseId: mongoId
   });
 
   if (!result) {
@@ -796,7 +881,8 @@ export const checkDatabasePermission = async (
   userId: string,
   requiredPermission: 'read' | 'write' | 'admin'
 ): Promise<DatabaseDocument> => {
-  const database = await DatabaseModel.findById(databaseId);
+  const mongoId = convertToMongoId(databaseId);
+  const database = await DatabaseModel.findById(mongoId);
 
   if (!database) {
     throw createNotFoundError('Database not found');

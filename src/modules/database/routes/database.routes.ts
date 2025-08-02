@@ -64,12 +64,27 @@ router.delete(
   databaseController.deleteDatabase
 );
 
+// Properties management
+router.get(
+  '/:id/properties',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  databaseController.getProperties
+);
+
 router.post(
   '/:id/properties',
   authenticateToken,
   validateParams(validators.databaseIdSchema),
   validateBody(validators.createPropertySchema),
   databaseController.addProperty
+);
+
+router.get(
+  '/:id/properties/:propertyId',
+  authenticateToken,
+  validateParams(validators.propertyIdSchema),
+  databaseController.getPropertyById
 );
 
 router.put(
@@ -87,12 +102,35 @@ router.delete(
   databaseController.deleteProperty
 );
 
+router.put(
+  '/:id/properties/reorder',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  validateBody(validators.reorderPropertiesSchema),
+  databaseController.reorderProperties
+);
+
+// Views management
+router.get(
+  '/:id/views',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  databaseController.getViews
+);
+
 router.post(
   '/:id/views',
   authenticateToken,
   validateParams(validators.databaseIdSchema),
   validateBody(validators.createViewSchema),
   databaseController.addView
+);
+
+router.get(
+  '/:id/views/:viewId',
+  authenticateToken,
+  validateParams(validators.viewIdSchema),
+  databaseController.getViewById
 );
 
 router.put(
@@ -148,6 +186,31 @@ router.delete(
   databaseController.deleteRecord
 );
 
+// Bulk record operations
+router.post(
+  '/:id/records/bulk',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  validateBody(validators.bulkCreateRecordsSchema),
+  databaseController.bulkCreateRecords
+);
+
+router.put(
+  '/:id/records/bulk',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  validateBody(validators.bulkUpdateRecordsSchema),
+  databaseController.bulkUpdateRecords
+);
+
+router.delete(
+  '/:id/records/bulk',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  validateBody(validators.bulkDeleteRecordsSchema),
+  databaseController.bulkDeleteRecords
+);
+
 router.post(
   '/:id/share',
   authenticateToken,
@@ -161,6 +224,22 @@ router.delete(
   authenticateToken,
   validateParams(validators.removeAccessSchema),
   databaseController.removeDatabaseAccess
+);
+
+// Database permissions
+router.get(
+  '/:id/permissions',
+  authenticateToken,
+  validateParams(validators.databaseIdSchema),
+  databaseController.getDatabasePermissions
+);
+
+router.put(
+  '/:id/permissions/:userId',
+  authenticateToken,
+  validateParams(validators.updatePermissionSchema),
+  validateBody(validators.updatePermissionLevelSchema),
+  databaseController.updateDatabasePermission
 );
 
 router.get(

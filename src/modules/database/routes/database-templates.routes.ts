@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { authenticateToken } from '../../../middlewares/auth';
+import { validateBody, validateParams } from '../../../middlewares/validation';
 import * as templatesController from '../controllers/database-templates.controller';
+import * as validators from '../validators/database-templates.validators';
 
 const router = Router();
 
@@ -30,6 +32,15 @@ router.get(
   '/category/:category',
   authenticateToken,
   templatesController.getTemplatesByCategory
+);
+
+// Create database from template
+router.post(
+  '/:id/use',
+  authenticateToken,
+  validateParams(validators.templateIdSchema),
+  validateBody(validators.createFromTemplateSchema),
+  templatesController.createDatabaseFromTemplate
 );
 
 export default router;

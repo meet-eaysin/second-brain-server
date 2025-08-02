@@ -220,3 +220,37 @@ export const updateUserRoleController = catchAsync(
     sendSuccessResponse(res, updatedUser, 'User role updated successfully');
   }
 );
+
+/**
+ * Upload profile avatar
+ */
+export const uploadProfileAvatar = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    if (!req.file) {
+      return next(createNotFoundError('No avatar file provided'));
+    }
+
+    // TODO: Implement avatar upload logic
+    // For now, return a placeholder response
+    const avatarUrl = `https://example.com/avatars/${userId}.jpg`;
+
+    sendSuccessResponse(res, { avatarUrl }, 'Avatar uploaded successfully');
+  }
+);
+
+/**
+ * Delete profile avatar
+ */
+export const deleteProfileAvatar = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement avatar deletion logic
+
+    sendSuccessResponse(res, null, 'Avatar removed successfully');
+  }
+);

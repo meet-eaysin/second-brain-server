@@ -338,3 +338,145 @@ export const trackDatabaseAccess = catchAsync(
     sendSuccessResponse(res, null, 'Database access tracked successfully');
   }
 );
+
+// Get database properties
+export const getProperties = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement get properties logic
+    const properties = [];
+    sendSuccessResponse(res, properties, 'Properties retrieved successfully');
+  }
+);
+
+// Get property by ID
+export const getPropertyById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, propertyId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement get property by ID logic
+    const property = null;
+    if (!property) {
+      return next(createNotFoundError('Property not found'));
+    }
+    sendSuccessResponse(res, property, 'Property retrieved successfully');
+  }
+);
+
+// Reorder properties
+export const reorderProperties = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { propertyIds } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement reorder properties logic
+    const properties = [];
+    sendSuccessResponse(res, properties, 'Properties reordered successfully');
+  }
+);
+
+// Get database views
+export const getViews = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement get views logic
+    const views = [];
+    sendSuccessResponse(res, views, 'Views retrieved successfully');
+  }
+);
+
+// Get view by ID
+export const getViewById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, viewId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement get view by ID logic
+    const view = null;
+    if (!view) {
+      return next(createNotFoundError('View not found'));
+    }
+    sendSuccessResponse(res, view, 'View retrieved successfully');
+  }
+);
+
+// Get database permissions
+export const getDatabasePermissions = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement get permissions logic
+    const permissions = {
+      owner: userId,
+      permissions: []
+    };
+    sendSuccessResponse(res, permissions, 'Permissions retrieved successfully');
+  }
+);
+
+// Update database permission
+export const updateDatabasePermission = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, userId: targetUserId } = req.params;
+    const { permission } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement update permission logic
+    sendSuccessResponse(res, null, 'Permission updated successfully');
+  }
+);
+
+// Bulk create records
+export const bulkCreateRecords = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { records } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement bulk create records logic
+    const createdRecords = [];
+    sendSuccessResponse(res, createdRecords, 'Records created successfully', 201);
+  }
+);
+
+// Bulk update records
+export const bulkUpdateRecords = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { updates } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement bulk update records logic
+    const updatedRecords = [];
+    sendSuccessResponse(res, updatedRecords, 'Records updated successfully');
+  }
+);
+
+// Bulk delete records
+export const bulkDeleteRecords = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { recordIds } = req.body;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    // TODO: Implement bulk delete records logic
+    sendSuccessResponse(res, null, 'Records deleted successfully');
+  }
+);

@@ -1,8 +1,24 @@
 import { z } from 'zod';
 import { EPropertyType, ERelationType, EViewType } from '../types/database.types';
 
-// Common schemas
-const mongoIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId');
+// Common schemas - Accept both MongoDB ObjectIds and base64-encoded strings
+const mongoIdSchema = z.string().refine((val) => {
+  // Accept valid MongoDB ObjectId (24 hex characters)
+  if (/^[0-9a-fA-F]{24}$/.test(val)) {
+    return true;
+  }
+
+  // Accept base64-encoded strings (common in frontend applications)
+  try {
+    // Check if it's valid base64
+    const decoded = Buffer.from(val, 'base64').toString('base64');
+    return decoded === val;
+  } catch (error) {
+    return false;
+  }
+}, {
+  message: 'ID must be a valid MongoDB ObjectId or base64-encoded string'
+});
 
 const selectOptionSchema = z.object({
   id: z.string().min(1, 'Option ID is required'),
@@ -401,3 +417,45 @@ export const validateImportSchema = z.object({
   body: importSchema,
   params: databaseIdSchema
 });
+
+// Bulk operations schemas
+const bulkCreateRecordsSchema = z.object({
+  records: z.array(z.object({
+    properties: z.record(z.unknown())
+  })).min(1, 'At least one record is required')
+});
+
+const bulkUpdateRecordsSchema = z.object({
+  updates: z.array(z.object({
+    id: mongoIdSchema,
+    properties: z.record(z.unknown())
+  })).min(1, 'At least one update is required')
+});
+
+const bulkDeleteRecordsSchema = z.object({
+  recordIds: z.array(mongoIdSchema).min(1, 'At least one record ID is required')
+});
+
+// Property reordering schema
+const reorderPropertiesSchema = z.object({
+  propertyIds: z.array(mongoIdSchema).min(1, 'At least one property ID is required')
+});
+
+// Permission schemas
+const updatePermissionSchema = z.object({
+  id: mongoIdSchema,
+  userId: mongoIdSchema
+});
+
+const updatePermissionLevelSchema = z.object({
+  permission: z.enum(['read', 'write', 'admin'])
+});
+
+export {
+  bulkCreateRecordsSchema,
+  bulkUpdateRecordsSchema,
+  bulkDeleteRecordsSchema,
+  reorderPropertiesSchema,
+  updatePermissionSchema,
+  updatePermissionLevelSchema
+};
