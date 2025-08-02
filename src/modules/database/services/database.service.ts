@@ -837,6 +837,35 @@ export const deleteView = async (
   return toDatabaseInterface(database);
 };
 
+export const duplicateView = async (
+  databaseId: string,
+  viewId: string,
+  userId: string,
+  data: { name: string }
+): Promise<IDatabase> => {
+  const database = await checkDatabasePermission(databaseId, userId, 'write');
+  checkDatabaseNotFrozen(database);
+
+  const originalView = database.views.find(v => v.id === viewId);
+  if (!originalView) {
+    throw createNotFoundError('View not found');
+  }
+
+  const newViewId = uuidv4();
+  const duplicatedView = {
+    ...originalView,
+    id: newViewId,
+    name: data.name,
+    isDefault: false // Duplicated views are never default
+  };
+
+  database.views.push(duplicatedView);
+  database.lastEditedBy = userId;
+
+  await database.save();
+  return toDatabaseInterface(database);
+};
+
 // Record management
 export const createRecord = async (
   databaseId: string,

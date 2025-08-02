@@ -207,11 +207,27 @@ router.put(
   databaseController.updateView
 );
 
+router.patch(
+  '/:id/views/:viewId',
+  authenticateToken,
+  validateParams(validators.viewIdSchema),
+  validateBody(validators.updateViewSchema),
+  databaseController.updateView
+);
+
 router.delete(
   '/:id/views/:viewId',
   authenticateToken,
   validateParams(validators.viewIdSchema),
   databaseController.deleteView
+);
+
+router.post(
+  '/:id/views/:viewId/duplicate',
+  authenticateToken,
+  validateParams(validators.viewIdSchema),
+  validateBody(validators.duplicateViewSchema),
+  databaseController.duplicateView
 );
 
 router.post(

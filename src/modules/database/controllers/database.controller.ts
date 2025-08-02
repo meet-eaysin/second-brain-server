@@ -139,6 +139,17 @@ export const deleteView = catchAsync(
   }
 );
 
+export const duplicateView = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id, viewId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const database = await databaseService.duplicateView(id, viewId, userId, req.body);
+    sendSuccessResponse(res, database, 'View duplicated successfully', 201);
+  }
+);
+
 export const createRecord = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;

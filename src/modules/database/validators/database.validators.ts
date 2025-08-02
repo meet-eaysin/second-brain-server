@@ -311,6 +311,14 @@ export const updateViewSchema = z.object({
     .optional()
 });
 
+export const duplicateViewSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'View name is required')
+    .max(100, 'View name cannot exceed 100 characters')
+    .trim()
+});
+
 export const viewIdSchema = z.object({
   id: mongoIdSchema,
   viewId: z.string().min(1, 'View ID is required')
