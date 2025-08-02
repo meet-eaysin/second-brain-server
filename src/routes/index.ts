@@ -9,6 +9,7 @@ import searchRoutes from '../modules/search/routes/search.routes';
 import analyticsRoutes from '../modules/analytics/routes/analytics.routes';
 import tagsRoutes from '../modules/tags/routes/tags.routes';
 import notificationsRoutes from '../modules/notifications/routes/notifications.routes';
+import secondBrainRoutes from '../modules/second-brain/routes/second-brain.routes';
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.use('/search', searchRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/tags', tagsRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/second-brain', secondBrainRoutes);
 
 export default router;
