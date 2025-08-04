@@ -5,6 +5,8 @@ import { filesRoutes } from '../modules/files';
 import swaggerRoute from './swagger.route';
 import categoryRoutes from '../modules/database/routes/database-category.routes';
 import templatesRoutes from '../modules/database/routes/database-templates.routes';
+import universalDataRoutes from '../modules/database/routes/universal-data.routes';
+import tableRoutes from '../modules/database/routes/table.routes';
 import searchRoutes from '../modules/search/routes/search.routes';
 import analyticsRoutes from '../modules/analytics/routes/analytics.routes';
 import tagsRoutes from '../modules/tags/routes/tags.routes';
@@ -19,6 +21,8 @@ router.use('/auth', auth.authRoutes);
 router.use('/users', users.usersRoutes);
 router.use('/workspaces', workspaceRoutes);
 router.use('/databases', database.databaseRoutes);
+router.use('/entities', universalDataRoutes); // Universal data API
+router.use('/tables', tableRoutes); // Generic table API
 router.use('/categories', categoryRoutes);
 router.use('/templates', templatesRoutes);
 router.use('/files', filesRoutes);

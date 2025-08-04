@@ -463,7 +463,7 @@ The project includes comprehensive VS Code configuration:
 ```
 src/
 ├── app.ts                    # Express app configuration
-├── index.ts                 # Server entry point
+├── index.tsx                 # Server entry point
 ├── config/                   # Configuration files
 │   ├── db/                   # Database configuration
 │   ├── default-config/       # Application configuration
@@ -487,7 +487,7 @@ src/
 │   ├── email/                # Email services
 │   └── users/                # User management & profiles
 ├── routes/                   # API routes
-│   ├── index.ts              # Main route aggregator
+│   ├── index.tsx              # Main route aggregator
 │   └── swagger.route.ts      # Swagger documentation route
 ├── types/                    # TypeScript type definitions
 └── utils/                    # Utility functions

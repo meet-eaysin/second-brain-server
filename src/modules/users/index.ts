@@ -1,3 +1,9 @@
+// Users Module Index - Register table configurations
+import { registerUsersTableConfig } from './config/users-table.config';
+
+// Register table configuration
+registerUsersTableConfig();
+
 // Routes
 export { default as usersRoutes } from './routes/users.routes';
 
@@ -44,3 +50,7 @@ export type {
   TUserRole,
   EAuthProvider
 } from './types/user.types';
+
+export default {
+  registerUsersTableConfig
+};

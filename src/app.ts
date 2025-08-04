@@ -9,6 +9,9 @@ import { stream } from './config/logger';
 import routes from './routes';
 import { createAppError } from './utils';
 import { validateGoogleConfig } from './config/google/google';
+import { registerAllEntities } from './modules/database/bootstrap/register-entities';
+import './modules/second-brain'; // Auto-register Second Brain tables
+import './modules/users'; // Auto-register Users tables
 
 dotenv.config();
 
@@ -16,6 +19,9 @@ const app: Express = express();
 
 app.set('trust proxy', 1);
 validateGoogleConfig();
+
+// Register all entities on startup
+registerAllEntities().catch(console.error);
 
 app.use(
   express.json({
@@ -99,7 +105,9 @@ app.get('/', (_req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       api: '/api/v1',
-      docs: '/api/v1/docs'
+      docs: '/api/v1/docs',
+      entities: '/api/v1/entities',
+      tables: '/api/v1/tables'
     },
     documentation: '/api/v1/docs'
   });
@@ -124,7 +132,9 @@ app.get('/api', (_req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       api: '/api/v1',
-      docs: '/api/v1/docs'
+      docs: '/api/v1/docs',
+      entities: '/api/v1/entities',
+      tables: '/api/v1/tables'
     },
     timestamp: new Date().toISOString()
   });

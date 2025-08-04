@@ -101,11 +101,11 @@ mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=
 ```
 second-brain-server/
 ├── src/
-│   ├── index.ts          # Main entry point (works for both server & serverless)
+│   ├── index.tsx          # Main entry point (works for both server & serverless)
 │   ├── app.ts            # Express app
 │   ├── config/
 │   │   └── db/
-│   │       └── index.ts  # Enhanced DB connection with serverless support
+│   │       └── index.tsx  # Enhanced DB connection with serverless support
 │   └── ...
 ├── vercel.json           # Vercel configuration
 └── .env.vercel          # Environment template
@@ -123,7 +123,7 @@ Key settings:
 ```json
 {
   "functions": {
-    "api/index.ts": {
+    "api/index.tsx": {
       "maxDuration": 30
     }
   },
