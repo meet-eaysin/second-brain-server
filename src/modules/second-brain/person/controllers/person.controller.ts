@@ -1,221 +1,127 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Person, Task, Project, Note } from '../second-brain';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
+import * as personService from '../services/person.service';
+
+interface AuthenticatedRequest extends Request {
+    user?: {
+        id: string;
+        email: string;
+    };
+}
 
 // Get all people with CRM features
-export const getPeople = catchAsync(async (req: Request, res: Response) => {
+export const getPeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
-    const { 
-        relationship, 
-        tags, 
+    const {
+        relationship,
+        tags,
         company,
         needsContact,
         search,
-        page = 1, 
-        limit = 50 
+        page = 1,
+        limit = 50
     } = req.query;
 
     if (!userId) {
-        throw createAppError('User not authenticated', 401);
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
-    // Build filter query
-    const filter: any = { 
-        createdBy: userId,
-        archivedAt: { $exists: false }
+    // Build filters for service
+    const filters: any = {};
+
+    if (relationship) filters.relationship = Array.isArray(relationship) ? relationship : [relationship];
+    if (tags) filters.tags = Array.isArray(tags) ? tags : [tags];
+    if (company) filters.company = company as string;
+    if (search) filters.search = search as string;
+    if (needsContact === 'true') filters.contactOverdue = true;
+
+    // Build options for service
+    const options = {
+        page: Number(page),
+        limit: Number(limit),
+        sort: search ? 'score' : 'lastName firstName',
+        populate: ['projects', 'tasks', 'notes']
     };
 
-    if (relationship) filter.relationship = relationship;
-    if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-    if (company) filter.company = new RegExp(company as string, 'i');
+    const result = await personService.getPeople(userId, filters, options);
 
-    // Filter for people who need contact
-    if (needsContact === 'true') {
-        const today = new Date();
-        filter.nextContactDate = { $lte: today };
-    }
-
-    // Add text search if provided
-    if (search) {
-        filter.$text = { $search: search as string };
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const sortQuery: any = {};
-    if (search) {
-        sortQuery.score = { $meta: 'textScore' };
-    } else {
-        sortQuery.lastName = 1;
-        sortQuery.firstName = 1;
-    }
-
-    const [people, total] = await Promise.all([
-        Person.find(filter)
-            .populate('projects', 'title status')
-            .populate('tasks', 'title status priority')
-            .populate('notes', 'title type updatedAt')
-            .sort(sortQuery)
-            .skip(skip)
-            .limit(Number(limit)),
-        Person.countDocuments(filter)
-    ]);
-
-    res.status(200).json({
-        success: true,
-        data: {
-            people,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total,
-                pages: Math.ceil(total / Number(limit))
-            }
-        }
-    });
+    sendSuccessResponse(res, result, 'People retrieved successfully');
 });
 
 // Get single person with full CRM details
-export const getPerson = catchAsync(async (req: Request, res: Response) => {
+export const getPerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
     const { id } = req.params;
 
-    const person = await Person.findOne({ 
-        _id: id, 
-        createdBy: userId 
-    })
-    .populate('projects', 'title status area completionPercentage')
-    .populate('tasks', 'title status priority dueDate')
-    .populate('notes', 'title type content updatedAt');
-
-    if (!person) {
-        throw createAppError('Person not found', 404);
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
-    // Get interaction timeline
-    const interactions = await Note.find({
-        people: person._id,
-        createdBy: userId,
-        type: 'meeting',
-        archivedAt: { $exists: false }
-    }).sort({ updatedAt: -1 }).limit(10);
+    const person = await personService.getPersonById(userId, id);
+    const interactions = await personService.getPersonInteractions(userId, id);
 
     // Calculate contact frequency insights
     const contactInsights = {
-        daysSinceLastContact: person.lastContacted 
+        daysSinceLastContact: person.lastContacted
             ? Math.floor((new Date().getTime() - new Date(person.lastContacted).getTime()) / (1000 * 60 * 60 * 24))
             : null,
         isOverdue: person.nextContactDate && new Date(person.nextContactDate) < new Date(),
         upcomingContact: person.nextContactDate && new Date(person.nextContactDate) > new Date()
     };
 
-    res.status(200).json({
-        success: true,
-        data: {
-            person,
-            interactions,
-            contactInsights
-        }
-    });
+    const result = {
+        person,
+        interactions,
+        contactInsights
+    };
+
+    sendSuccessResponse(res, result, 'Person retrieved successfully');
 });
 
 // Create person with CRM setup
-export const createPerson = catchAsync(async (req: Request, res: Response) => {
+export const createPerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
-    
+
     if (!userId) {
-        throw createAppError('User not authenticated', 401);
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
-    const personData = {
-        ...req.body,
-        createdBy: userId
-    };
+    const person = await personService.createPerson(userId, req.body);
 
-    // Set default next contact date based on relationship
-    if (!personData.nextContactDate && personData.contactFrequency) {
-        const today = new Date();
-        switch (personData.contactFrequency) {
-            case 'weekly':
-                personData.nextContactDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-                break;
-            case 'monthly':
-                personData.nextContactDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-                break;
-            case 'quarterly':
-                personData.nextContactDate = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
-                break;
-            case 'yearly':
-                personData.nextContactDate = new Date(today.getTime() + 365 * 24 * 60 * 60 * 1000);
-                break;
-        }
-    }
-
-    const person = await Person.create(personData);
-
-    res.status(201).json({
-        success: true,
-        data: person
-    });
+    sendSuccessResponse(res, person, 'Person created successfully', 201);
 });
 
 // Update person with contact tracking
-export const updatePerson = catchAsync(async (req: Request, res: Response) => {
+export const updatePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
     const { id } = req.params;
 
-    const person = await Person.findOneAndUpdate(
-        { _id: id, createdBy: userId },
-        req.body,
-        { new: true, runValidators: true }
-    );
-
-    if (!person) {
-        throw createAppError('Person not found', 404);
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
-    res.status(200).json({
-        success: true,
-        data: person
-    });
+    const person = await personService.updatePerson(userId, id, req.body);
+
+    sendSuccessResponse(res, person, 'Person updated successfully');
 });
 
 // Delete person with cleanup
-export const deletePerson = catchAsync(async (req: Request, res: Response) => {
+export const deletePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
     const { id } = req.params;
 
-    const person = await Person.findOneAndDelete({ 
-        _id: id, 
-        createdBy: userId 
-    });
-
-    if (!person) {
-        throw createAppError('Person not found', 404);
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
-    // Remove person references from projects
-    await Project.updateMany(
-        { people: person._id },
-        { $pull: { people: person._id } }
-    );
+    await personService.deletePerson(userId, id);
 
-    // Remove person references from tasks
-    await Task.updateMany(
-        { assignedTo: person._id },
-        { $unset: { assignedTo: 1 } }
-    );
-
-    // Remove person references from notes
-    await Note.updateMany(
-        { people: person._id },
-        { $pull: { people: person._id } }
-    );
-
-    res.status(204).json({
-        success: true,
-        data: null
-    });
+    sendSuccessResponse(res, null, 'Person deleted successfully', 204);
 });
 
 // Record contact interaction

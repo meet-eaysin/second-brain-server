@@ -354,21 +354,21 @@ export const updateTaskView = async (
 };
 
 // Delete task view
-export const deleteTaskView = async (viewId: string, userId: string): Promise<void> => {
+export const deleteTaskView = async (viewId: string, userId: string): Promise<boolean> => {
     const view = await TaskDocumentView.findOne({ _id: viewId, userId });
-    
+
     if (!view) {
-        throw createAppError('Task view not found', 404);
+        return false;
     }
-    
+
     // Don't allow deletion of the last view
     const viewCount = await TaskDocumentView.countDocuments({ userId });
     if (viewCount <= 1) {
         throw createAppError('Cannot delete the last view', 400);
     }
-    
+
     await TaskDocumentView.findByIdAndDelete(viewId);
-    
+
     // If this was the default view, set another as default
     if (view.isDefault) {
         const nextView = await TaskDocumentView.findOne({ userId });
@@ -377,4 +377,156 @@ export const deleteTaskView = async (viewId: string, userId: string): Promise<vo
             await nextView.save();
         }
     }
+
+    return true;
+};
+
+// Update task view properties
+export const updateTaskViewProperties = async (
+    viewId: string,
+    userId: string,
+    properties: Array<{
+        propertyId: string;
+        order: number;
+        width?: number;
+        visible?: boolean;
+        frozen?: boolean;
+    }>
+): Promise<ITaskDocumentView | null> => {
+    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+
+    if (!view) {
+        return null;
+    }
+
+    // Update property configurations
+    const updatedProperties = view.properties.map(prop => {
+        const update = properties.find(p => p.propertyId === prop.id);
+        if (update) {
+            return {
+                ...prop,
+                order: update.order,
+                width: update.width || prop.width,
+                isVisible: update.visible !== undefined ? update.visible : prop.isVisible,
+                frozen: update.frozen !== undefined ? update.frozen : prop.frozen
+            };
+        }
+        return prop;
+    });
+
+    view.properties = updatedProperties;
+    view.lastEditedBy = userId;
+
+    return await view.save();
+};
+
+// Update task view filters
+export const updateTaskViewFilters = async (
+    viewId: string,
+    userId: string,
+    filters: Array<{
+        propertyId: string;
+        operator: string;
+        value: unknown;
+        logic?: 'AND' | 'OR';
+    }>
+): Promise<ITaskDocumentView | null> => {
+    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+
+    if (!view) {
+        return null;
+    }
+
+    // Update the first view's filters (assuming single view per document for now)
+    if (view.views.length > 0) {
+        view.views[0].filters = filters;
+        view.lastEditedBy = userId;
+        return await view.save();
+    }
+
+    return view;
+};
+
+// Update task view sorts
+export const updateTaskViewSorts = async (
+    viewId: string,
+    userId: string,
+    sorts: Array<{
+        propertyId: string;
+        direction: 'asc' | 'desc';
+        order: number;
+    }>
+): Promise<ITaskDocumentView | null> => {
+    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+
+    if (!view) {
+        return null;
+    }
+
+    // Update the first view's sorts
+    if (view.views.length > 0) {
+        view.views[0].sorts = sorts;
+        view.lastEditedBy = userId;
+        return await view.save();
+    }
+
+    return view;
+};
+
+// Duplicate task view
+export const duplicateTaskView = async (
+    viewId: string,
+    userId: string,
+    newName?: string
+): Promise<ITaskDocumentView | null> => {
+    const originalView = await TaskDocumentView.findOne({ _id: viewId, userId });
+
+    if (!originalView) {
+        return null;
+    }
+
+    const duplicatedView = new TaskDocumentView({
+        ...originalView.toObject(),
+        _id: undefined,
+        name: newName || `${originalView.name} (Copy)`,
+        isDefault: false,
+        createdBy: userId,
+        lastEditedBy: userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+    });
+
+    return await duplicatedView.save();
+};
+
+// Get task view permissions
+export const getTaskViewPermissions = async (
+    viewId: string,
+    userId: string
+): Promise<Array<{ userId: string; permission: string }> | null> => {
+    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+
+    if (!view) {
+        return null;
+    }
+
+    return view.permissions;
+};
+
+// Update task view permissions
+export const updateTaskViewPermissions = async (
+    viewId: string,
+    userId: string,
+    permissions: Array<{ userId: string; permission: 'read' | 'write' | 'admin' }>
+): Promise<ITaskDocumentView | null> => {
+    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+
+    if (!view) {
+        return null;
+    }
+
+    view.permissions = permissions;
+    view.lastEditedBy = userId;
+
+    return await view.save();
 };

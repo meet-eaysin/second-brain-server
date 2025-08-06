@@ -1,48 +1,53 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Task } from '../second-brain';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
+import * as taskService from '../services/task.service';
+import * as taskAnalyticsService from '../services/task-analytics.service';
+import * as taskTimeTrackingService from '../services/task-time-tracking.service';
+import * as taskCommentsService from '../services/task-comments.service';
+import * as taskImportExportService from '../services/task-import-export.service';
+
+interface AuthenticatedRequest extends Request {
+    user?: {
+        id: string;
+        email: string;
+    };
+}
 
 // Get all tasks with filtering and pagination
-export const getTasks = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    const { 
-        status, 
-        priority, 
-        area, 
-        tags, 
-        project,
-        dueDate,
-        energy,
-        context,
-        view = 'all',
-        page = 1, 
-        limit = 50 
-    } = req.query;
-
+export const getTasks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
     if (!userId) {
-        throw createAppError('User not authenticated', 401);
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
-    // Build filter query
-    const filter: any = { 
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    };
+    const {
+        status,
+        priority,
+        area,
+        tags,
+        dueDate,
+        view = 'all',
+        page = 1,
+        limit = 50,
+        search
+    } = req.query;
 
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
-    if (area) filter.area = area;
-    if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-    if (project) filter.project = project;
-    if (energy) filter.energy = energy;
-    if (context) filter.context = { $in: Array.isArray(context) ? context : [context] };
+    // Build filters for service
+    const filters: any = {};
+
+    if (status) filters.status = Array.isArray(status) ? status : [status];
+    if (priority) filters.priority = Array.isArray(priority) ? priority : [priority];
+    if (area) filters.area = area as string;
+    if (tags) filters.tags = Array.isArray(tags) ? tags : [tags];
+    if (search) filters.search = search as string;
 
     // Handle date filters
     if (dueDate) {
         const date = new Date(dueDate as string);
         const nextDay = new Date(date);
         nextDay.setDate(nextDay.getDate() + 1);
-        filter.dueDate = { $gte: date, $lt: nextDay };
+        filters.dueDate = { from: date, to: nextDay };
     }
 
     // Handle smart views
@@ -53,227 +58,378 @@ export const getTasks = catchAsync(async (req: Request, res: Response) => {
 
     switch (view) {
         case 'today':
-            filter.dueDate = { $gte: today, $lt: tomorrow };
+            filters.dueDate = { from: today, to: tomorrow };
             break;
         case 'overdue':
-            filter.dueDate = { $lt: today };
-            filter.status = { $ne: 'completed' };
+            filters.dueDate = { to: today };
+            filters.status = ['todo', 'in-progress'];
             break;
         case 'next-actions':
-            filter.status = 'todo';
-            filter.parentTask = { $exists: false };
+            filters.status = ['todo'];
+            filters.parentTask = null;
             break;
         case 'waiting':
-            filter.tags = { $in: ['waiting', 'delegated'] };
+            filters.tags = ['waiting', 'delegated'];
             break;
         case 'someday':
-            filter.tags = { $in: ['someday', 'maybe'] };
+            filters.tags = ['someday', 'maybe'];
             break;
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
+    // Build options for service
+    const options = {
+        page: Number(page),
+        limit: Number(limit),
+        sort: '-priority dueDate -createdAt',
+        populate: ['project', 'assignedTo', 'parentTask']
+    };
 
-    const [tasks, total] = await Promise.all([
-        Task.find(filter)
-            .populate('project', 'title status')
-            .populate('assignedTo', 'firstName lastName')
-            .populate('parentTask', 'title status')
-            .sort({ priority: -1, dueDate: 1, createdAt: -1 })
-            .skip(skip)
-            .limit(Number(limit)),
-        Task.countDocuments(filter)
-    ]);
+    const result = await taskService.getTasks(userId, filters, options);
 
-    res.status(200).json({
-        success: true,
-        data: {
-            tasks,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total,
-                pages: Math.ceil(total / Number(limit))
-            }
-        }
-    });
+    sendSuccessResponse(res, result, 'Tasks retrieved successfully');
 });
 
 // Get single task
-export const getTask = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+export const getTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
     const { id } = req.params;
 
-    const task = await Task.findOne({ 
-        _id: id, 
-        createdBy: userId 
-    })
-    .populate('project', 'title status')
-    .populate('assignedTo', 'firstName lastName email')
-    .populate('parentTask', 'title status')
-    .populate('subtasks');
-
-    if (!task) {
-        throw createAppError('Task not found', 404);
-    }
-
-    res.status(200).json({
-        success: true,
-        data: task
-    });
-});
-
-// Create task
-export const createTask = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    
     if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const taskData = {
-        ...req.body,
-        createdBy: userId
-    };
-
-    const task = await Task.create(taskData);
-
-    // If this is a subtask, add it to parent's subtasks array
-    if (task.parentTask) {
-        await Task.findByIdAndUpdate(
-            task.parentTask,
-            { $push: { subtasks: task._id } }
-        );
-    }
-
-    res.status(201).json({
-        success: true,
-        data: task
-    });
-});
-
-// Update task
-export const updateTask = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    const { id } = req.params;
-
-    const task = await Task.findOneAndUpdate(
-        { _id: id, createdBy: userId },
-        req.body,
-        { new: true, runValidators: true }
-    );
-
-    if (!task) {
-        throw createAppError('Task not found', 404);
-    }
-
-    // Handle completion
-    if (req.body.status === 'completed' && !task.completedAt) {
-        task.completedAt = new Date();
-        await task.save();
-
-        // Handle recurring tasks
-        if (task.isRecurring && task.recurrencePattern) {
-            await createRecurringTask(task);
-        }
-    }
-
-    res.status(200).json({
-        success: true,
-        data: task
-    });
-});
-
-// Delete task
-export const deleteTask = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    const { id } = req.params;
-
-    const task = await Task.findOneAndDelete({ 
-        _id: id, 
-        createdBy: userId 
-    });
-
-    if (!task) {
-        throw createAppError('Task not found', 404);
-    }
-
-    // Remove from parent's subtasks if it was a subtask
-    if (task.parentTask) {
-        await Task.findByIdAndUpdate(
-            task.parentTask,
-            { $pull: { subtasks: task._id } }
-        );
-    }
-
-    // Delete all subtasks
-    await Task.deleteMany({ parentTask: task._id });
-
-    res.status(204).json({
-        success: true,
-        data: null
-    });
-});
-
-// Bulk operations
-export const bulkUpdateTasks = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
-    const { taskIds, updates } = req.body;
-
-    if (!Array.isArray(taskIds) || taskIds.length === 0) {
-        throw createAppError('Task IDs array is required', 400);
-    }
-
-    const result = await Task.updateMany(
-        { 
-            _id: { $in: taskIds },
-            createdBy: userId 
-        },
-        updates
-    );
-
-    res.status(200).json({
-        success: true,
-        data: {
-            modifiedCount: result.modifiedCount,
-            matchedCount: result.matchedCount
-        }
-    });
-});
-
-// Helper function to create recurring task
-async function createRecurringTask(originalTask: any) {
-    const { recurrencePattern } = originalTask;
-    if (!recurrencePattern) return;
-
-    const nextDate = new Date(originalTask.dueDate);
-    
-    switch (recurrencePattern.type) {
-        case 'daily':
-            nextDate.setDate(nextDate.getDate() + recurrencePattern.interval);
-            break;
-        case 'weekly':
-            nextDate.setDate(nextDate.getDate() + (7 * recurrencePattern.interval));
-            break;
-        case 'monthly':
-            nextDate.setMonth(nextDate.getMonth() + recurrencePattern.interval);
-            break;
-    }
-
-    // Check if we should create the next occurrence
-    if (recurrencePattern.endDate && nextDate > recurrencePattern.endDate) {
+        sendErrorResponse(res, 'User not authenticated', 401);
         return;
     }
 
-    // Create new task
-    const newTaskData = {
-        ...originalTask.toObject(),
-        _id: undefined,
-        status: 'todo',
-        dueDate: nextDate,
-        completedAt: undefined,
-        createdAt: new Date(),
-        updatedAt: new Date()
-    };
+    const task = await taskService.getTaskById(userId, id);
 
-    await Task.create(newTaskData);
-}
+    sendSuccessResponse(res, task, 'Task retrieved successfully');
+});
+
+// Create task
+export const createTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const task = await taskService.createTask(userId, req.body);
+
+    sendSuccessResponse(res, task, 'Task created successfully', 201);
+});
+
+// Update task
+export const updateTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const task = await taskService.updateTask(userId, id, req.body);
+
+    sendSuccessResponse(res, task, 'Task updated successfully');
+});
+
+// Delete task
+export const deleteTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    await taskService.deleteTask(userId, id);
+
+    sendSuccessResponse(res, null, 'Task deleted successfully', 204);
+});
+
+// Bulk operations
+export const bulkUpdateTasks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { taskIds, updates } = req.body;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskService.bulkUpdateTasks(userId, taskIds, updates);
+
+    sendSuccessResponse(res, result, 'Tasks updated successfully');
+});
+
+// Bulk delete tasks
+export const bulkDeleteTasks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { taskIds } = req.body;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskService.bulkDeleteTasks(userId, taskIds);
+
+    sendSuccessResponse(res, result, 'Tasks deleted successfully');
+});
+
+// Complete task
+export const completeTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const task = await taskService.completeTask(userId, id);
+
+    sendSuccessResponse(res, task, 'Task completed successfully');
+});
+
+// Archive task
+export const archiveTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const task = await taskService.archiveTask(userId, id);
+
+    sendSuccessResponse(res, task, 'Task archived successfully');
+});
+
+// Duplicate task
+export const duplicateTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const duplicatedTask = await taskService.duplicateTask(userId, id);
+
+    sendSuccessResponse(res, duplicatedTask, 'Task duplicated successfully', 201);
+});
+
+// Note: Recurring task creation is now handled in the service layer
+
+// Add subtask
+export const addSubtask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const subtask = await taskService.addSubtask(userId, id, req.body);
+
+    sendSuccessResponse(res, subtask, 'Subtask added successfully', 201);
+});
+
+// Remove subtask
+export const removeSubtask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { parentId, subtaskId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    await taskService.removeSubtask(userId, parentId, subtaskId);
+
+    sendSuccessResponse(res, null, 'Subtask removed successfully', 204);
+});
+
+// Add dependency
+export const addDependency = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+    const { dependencyId } = req.body;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const task = await taskService.addDependency(userId, id, dependencyId);
+
+    sendSuccessResponse(res, task, 'Dependency added successfully');
+});
+
+// Remove dependency
+export const removeDependency = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { taskId, dependencyId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const task = await taskService.removeDependency(userId, taskId, dependencyId);
+
+    sendSuccessResponse(res, task, 'Dependency removed successfully');
+});
+
+// Task stats
+export const getTaskStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const stats = await taskService.getTaskStats(userId);
+
+    sendSuccessResponse(res, stats, 'Task statistics retrieved successfully');
+});
+
+// Task analytics
+export const getTaskAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const { period, startDate, endDate } = req.query;
+    const options: any = {};
+
+    if (period) options.period = period as string;
+    if (startDate) options.startDate = new Date(startDate as string);
+    if (endDate) options.endDate = new Date(endDate as string);
+
+    const analytics = await taskAnalyticsService.getTaskAnalytics(userId, options);
+
+    sendSuccessResponse(res, analytics, 'Task analytics retrieved successfully');
+});
+
+export const startTimer = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskTimeTrackingService.startTimer(userId, id);
+
+    sendSuccessResponse(res, result, 'Timer started successfully');
+});
+
+export const stopTimer = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskTimeTrackingService.stopTimer(userId, id);
+
+    sendSuccessResponse(res, result, 'Timer stopped successfully');
+});
+
+export const logTime = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskTimeTrackingService.logTime(userId, id, req.body);
+
+    sendSuccessResponse(res, result, 'Time logged successfully');
+});
+
+export const addComment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskCommentsService.addComment(userId, id, req.body);
+
+    sendSuccessResponse(res, result, 'Comment added successfully', 201);
+});
+
+export const updateComment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id, commentId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskCommentsService.updateComment(userId, id, commentId, req.body);
+
+    sendSuccessResponse(res, result, 'Comment updated successfully');
+});
+
+export const deleteComment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id, commentId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await taskCommentsService.deleteComment(userId, id, commentId);
+
+    sendSuccessResponse(res, result, 'Comment deleted successfully');
+});
+
+export const importTasks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const { data, options } = req.body;
+    const result = await taskImportExportService.importTasks(userId, data, options);
+
+    sendSuccessResponse(res, result, 'Tasks imported successfully');
+});
+
+export const exportTasks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const { format = 'json', ...options } = req.query;
+    const exportOptions = { format: format as any, ...options };
+
+    const result = await taskImportExportService.exportTasks(userId, exportOptions);
+
+    sendSuccessResponse(res, result, 'Tasks exported successfully');
+});

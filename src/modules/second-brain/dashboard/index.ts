@@ -1,54 +1,23 @@
-// Export all Second Brain models
-export { Task, ITask } from '../task/models/task.model';
-export { Project, IProject } from '../project/models/project.model';
-export { Note, INote } from '../note/models/note.model';
-export { Person, IPerson } from '../person/models/person.model';
-export { Goal, IGoal } from '../goal/models/goal.model';
-export { Habit, IHabit } from '../havit/models/habit.model';
-export { Journal, IJournal } from '../journal/models/journal.model';
-export { Book, IBook } from '../books/models/book.model';
-export { Content, IContent } from '../content/models/content.model';
-export { Finance, IFinance } from '../finence/models/finance.model';
-export { Mood, IMood } from '../mood/models/mood.model';
+// Export dashboard types
+export * from './types/dashboard.types';
 
-// PARA System Types
-export type PARAArea = 'projects' | 'areas' | 'resources' | 'archive';
+// Export dashboard services
+export * as dashboardService from './services/dashboard.service';
 
-// Common interfaces
+// Export dashboard controllers
+export * as dashboardController from './controllers/dashboard.controller';
+
+// Export dashboard routes
+export { default as dashboardRoutes } from './routes/dashboard.routes';
+
+// Common interfaces for backward compatibility
 export interface BaseSecondBrainDocument {
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;
     archivedAt?: Date;
-    area?: PARAArea;
+    area?: 'projects' | 'areas' | 'resources' | 'archive';
     tags: string[];
-}
-
-// Quick Capture interface for the floating button
-export interface QuickCapture {
-    type: 'task' | 'note' | 'idea';
-    title: string;
-    content?: string;
-    tags?: string[];
-    area?: PARAArea;
-    priority?: 'low' | 'medium' | 'high' | 'urgent';
-}
-
-// Dashboard data interfaces
-export interface DashboardData {
-    todayTasks: any[];
-    upcomingDeadlines: any[];
-    activeProjects: any[];
-    recentNotes: any[];
-    currentGoals: any[];
-    todayHabits: any[];
-    moodEntry?: any;
-    weeklyStats: {
-        tasksCompleted: number;
-        projectsActive: number;
-        notesCreated: number;
-        habitsCompleted: number;
-    };
 }
 
 // Review data interfaces

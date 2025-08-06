@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
 import { Book, Project, Goal } from '../second-brain';
 
 // Get all books with filtering
@@ -17,7 +17,8 @@ export const getBooks = catchAsync(async (req: Request, res: Response) => {
     } = req.query;
 
     if (!userId) {
-        throw createAppError('User not authenticated', 401);
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
     }
 
     // Build filter query
@@ -57,18 +58,17 @@ export const getBooks = catchAsync(async (req: Request, res: Response) => {
         Book.countDocuments(filter)
     ]);
 
-    res.status(200).json({
-        success: true,
-        data: {
-            books,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total,
-                pages: Math.ceil(total / Number(limit))
-            }
+    const result = {
+        books,
+        pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            pages: Math.ceil(total / Number(limit))
         }
-    });
+    };
+
+    sendSuccessResponse(res, result, 'Books retrieved successfully');
 });
 
 // Get single book with full details
@@ -84,7 +84,8 @@ export const getBook = catchAsync(async (req: Request, res: Response) => {
     .populate('linkedGoals', 'title type status progressPercentage');
 
     if (!book) {
-        throw createAppError('Book not found', 404);
+        sendErrorResponse(res, 'Book not found', 404);
+        return;
     }
 
     // Calculate reading statistics
@@ -92,7 +93,7 @@ export const getBook = catchAsync(async (req: Request, res: Response) => {
         progressPercentage: book.readingProgress || 0,
         pagesRead: book.currentPage || 0,
         totalPages: book.pages || 0,
-        daysReading: book.startDate && book.status === 'reading' 
+        daysReading: book.startDate && book.status === 'reading'
             ? Math.ceil((new Date().getTime() - new Date(book.startDate).getTime()) / (1000 * 60 * 60 * 24))
             : 0,
         estimatedDaysToFinish: book.pages && book.currentPage && book.startDate && book.status === 'reading'
@@ -100,13 +101,12 @@ export const getBook = catchAsync(async (req: Request, res: Response) => {
             : null
     };
 
-    res.status(200).json({
-        success: true,
-        data: {
-            book,
-            readingStats
-        }
-    });
+    const result = {
+        book,
+        readingStats
+    };
+
+    sendSuccessResponse(res, result, 'Book retrieved successfully');
 });
 
 // Create book

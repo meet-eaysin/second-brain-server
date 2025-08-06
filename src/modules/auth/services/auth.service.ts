@@ -168,7 +168,7 @@ export const handleGoogleCallback = async (code: string): Promise<TAuthResponse>
 
 export const refreshAccessToken = async (
   refreshToken: string
-): Promise<{ accessToken: string }> => {
+): Promise<{ accessToken: string; refreshToken: string }> => {
   try {
     const payload = verifyRefreshToken(refreshToken);
 
@@ -196,7 +196,17 @@ export const refreshAccessToken = async (
 
     const newAccessToken = generateAccessToken(accessTokenPayload);
 
-    return { accessToken: newAccessToken };
+    // Generate new refresh token for security
+    const newRefreshTokenPayload: TRefreshTokenPayload = {
+      userId: user.id,
+      tokenVersion: 0
+    };
+    const newRefreshToken = generateRefreshToken(newRefreshTokenPayload);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    };
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error;

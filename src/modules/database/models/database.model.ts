@@ -175,4 +175,61 @@ DatabaseSchema.index({ userId: 1, categoryId: 1 });
 DatabaseSchema.index({ userId: 1, lastAccessedAt: -1 });
 DatabaseSchema.index({ tags: 1 });
 
+// Document-View Configuration for Databases
+export const DATABASE_FROZEN_PROPERTIES = {
+    // Core properties that cannot be removed or hidden
+    name: {
+        frozen: true,
+        removable: false,
+        required: true,
+        order: 0
+    },
+    description: {
+        frozen: false,
+        removable: false,
+        required: false,
+        order: 1
+    },
+    icon: {
+        frozen: false,
+        removable: false,
+        required: false,
+        order: 2
+    },
+    createdAt: {
+        frozen: false,
+        removable: false,
+        required: false,
+        order: 3
+    },
+    updatedAt: {
+        frozen: false,
+        removable: false,
+        required: false,
+        order: 4
+    }
+};
+
+export const DATABASE_PROPERTY_TYPES = {
+    name: 'TEXT',
+    description: 'TEXTAREA',
+    icon: 'ICON',
+    cover: 'IMAGE',
+    userId: 'PERSON',
+    workspaceId: 'RELATION',
+    isPublic: 'CHECKBOX',
+    isFavorite: 'CHECKBOX',
+    categoryId: 'SELECT',
+    tags: 'MULTI_SELECT',
+    lastAccessedAt: 'DATE',
+    accessCount: 'NUMBER',
+    frozen: 'CHECKBOX',
+    frozenAt: 'DATE',
+    frozenBy: 'PERSON',
+    createdBy: 'PERSON',
+    lastEditedBy: 'PERSON',
+    createdAt: 'DATE',
+    updatedAt: 'DATE'
+} as const;
+
 export const DatabaseModel = mongoose.model<IDatabaseDocument>('Database', DatabaseSchema);

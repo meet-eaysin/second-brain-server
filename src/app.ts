@@ -9,7 +9,6 @@ import { stream } from './config/logger';
 import routes from './routes';
 import { createAppError } from './utils';
 import { validateGoogleConfig } from './config/google/google';
-import { registerAllEntities } from './modules/database/bootstrap/register-entities';
 import './modules/second-brain'; // Auto-register Second Brain tables
 import './modules/users'; // Auto-register Users tables
 
@@ -19,9 +18,6 @@ const app: Express = express();
 
 app.set('trust proxy', 1);
 validateGoogleConfig();
-
-// Register all entities on startup
-registerAllEntities().catch(console.error);
 
 app.use(
   express.json({
