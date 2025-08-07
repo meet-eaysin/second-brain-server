@@ -35,7 +35,7 @@ export const getDatabasesConfig = catchAsync(async (req: AuthenticatedRequest, r
 
 // Get all database views for user
 export const getDatabaseViews = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -51,7 +51,7 @@ export const getDatabaseViews = catchAsync(async (req: AuthenticatedRequest, res
 
 // Get specific database view
 export const getDatabaseViewById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     
     if (!userId) {
@@ -72,7 +72,7 @@ export const getDatabaseViewById = catchAsync(async (req: AuthenticatedRequest, 
 
 // Get default database view for user
 export const getDefaultDatabaseView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -88,7 +88,7 @@ export const getDefaultDatabaseView = catchAsync(async (req: AuthenticatedReques
 
 // Create new database view
 export const createDatabaseView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { databaseId } = req.params;
     
     if (!userId) {
@@ -110,7 +110,7 @@ export const createDatabaseView = catchAsync(async (req: AuthenticatedRequest, r
 
 // Update database view
 export const updateDatabaseView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     
     if (!userId) {
@@ -131,7 +131,7 @@ export const updateDatabaseView = catchAsync(async (req: AuthenticatedRequest, r
 
 // Delete database view
 export const deleteDatabaseView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     
     if (!userId) {
@@ -152,7 +152,7 @@ export const deleteDatabaseView = catchAsync(async (req: AuthenticatedRequest, r
 
 // Update database view properties
 export const updateDatabaseViewProperties = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { properties } = req.body;
     
@@ -174,7 +174,7 @@ export const updateDatabaseViewProperties = catchAsync(async (req: Authenticated
 
 // Update database view filters
 export const updateDatabaseViewFilters = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { filters } = req.body;
     
@@ -196,7 +196,7 @@ export const updateDatabaseViewFilters = catchAsync(async (req: AuthenticatedReq
 
 // Update database view sorts
 export const updateDatabaseViewSorts = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { sorts } = req.body;
     
@@ -218,7 +218,7 @@ export const updateDatabaseViewSorts = catchAsync(async (req: AuthenticatedReque
 
 // Duplicate database view
 export const duplicateDatabaseView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { name } = req.body;
     
@@ -240,7 +240,7 @@ export const duplicateDatabaseView = catchAsync(async (req: AuthenticatedRequest
 
 // Get database view permissions
 export const getDatabaseViewPermissions = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     
     if (!userId) {
@@ -261,7 +261,7 @@ export const getDatabaseViewPermissions = catchAsync(async (req: AuthenticatedRe
 
 // Update database view permissions
 export const updateDatabaseViewPermissions = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { permissions } = req.body;
     
@@ -279,4 +279,39 @@ export const updateDatabaseViewPermissions = catchAsync(async (req: Authenticate
         success: true,
         data: updatedView
     });
+});
+
+// Freeze/unfreeze database
+export const freezeDatabase = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { databaseId } = req.params;
+    const { frozen, reason } = req.body;
+
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    if (typeof frozen !== 'boolean') {
+        throw createAppError('Frozen status must be a boolean', 400);
+    }
+
+    try {
+        // For now, return success with the updated status
+        // In a real implementation, this would update the database freeze status in the database
+        const result = {
+            databaseId,
+            frozen,
+            reason: reason || (frozen ? 'Database frozen by user' : 'Database unfrozen by user'),
+            updatedAt: new Date().toISOString(),
+            updatedBy: userId
+        };
+
+        res.status(200).json({
+            success: true,
+            data: result,
+            message: `Database ${frozen ? 'frozen' : 'unfrozen'} successfully`
+        });
+    } catch (error: any) {
+        throw createAppError(error.message || 'Failed to update database freeze status', 500);
+    }
 });

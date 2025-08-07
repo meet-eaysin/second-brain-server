@@ -4,7 +4,7 @@ import { Book, Project, Goal } from '../second-brain';
 
 // Get all books with filtering
 export const getBooks = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         status, 
         genre, 
@@ -73,7 +73,7 @@ export const getBooks = catchAsync(async (req: Request, res: Response) => {
 
 // Get single book with full details
 export const getBook = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const book = await Book.findOne({ 
@@ -111,7 +111,7 @@ export const getBook = catchAsync(async (req: Request, res: Response) => {
 
 // Create book
 export const createBook = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -156,7 +156,7 @@ export const createBook = catchAsync(async (req: Request, res: Response) => {
 
 // Update book with progress tracking
 export const updateBook = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const oldBook = await Book.findOne({ _id: id, createdBy: userId });
@@ -196,7 +196,7 @@ export const updateBook = catchAsync(async (req: Request, res: Response) => {
 
 // Delete book
 export const deleteBook = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const book = await Book.findOneAndDelete({ 
@@ -231,7 +231,7 @@ export const deleteBook = catchAsync(async (req: Request, res: Response) => {
 
 // Add note/highlight to book
 export const addNote = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { page, chapter, content, type = 'note' } = req.body;
 
@@ -259,7 +259,7 @@ export const addNote = catchAsync(async (req: Request, res: Response) => {
 
 // Update reading progress
 export const updateProgress = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { currentPage } = req.body;
 
@@ -286,7 +286,7 @@ export const updateProgress = catchAsync(async (req: Request, res: Response) => 
 
 // Get reading statistics
 export const getReadingStats = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const books = await Book.find({
         createdBy: userId,
@@ -328,7 +328,7 @@ export const getReadingStats = catchAsync(async (req: Request, res: Response) =>
 
 // Get currently reading books
 export const getCurrentlyReading = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const books = await Book.find({
         createdBy: userId,
@@ -345,7 +345,7 @@ export const getCurrentlyReading = catchAsync(async (req: Request, res: Response
 
 // Get book recommendations (based on genres and ratings)
 export const getRecommendations = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     // Get user's favorite genres (from highly rated books)
     const ratedBooks = await Book.find({

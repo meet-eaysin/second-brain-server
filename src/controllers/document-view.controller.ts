@@ -31,7 +31,7 @@ export class DocumentViewController {
         @Body() createViewDto: CreateViewDto,
     ): Promise<DocumentView> {
         return this.documentViewService.createView(
-            req.user.id,
+            req.user?.userId,
             databaseId,
             createViewDto,
         );
@@ -44,7 +44,7 @@ export class DocumentViewController {
         @Request() req,
         @Param('databaseId') databaseId: string,
     ): Promise<DocumentView[]> {
-        return this.documentViewService.getViewsByDatabase(req.user.id, databaseId);
+        return this.documentViewService.getViewsByDatabase(req.user?.userId, databaseId);
     }
 
     @Get(':viewId')
@@ -54,7 +54,7 @@ export class DocumentViewController {
         @Request() req,
         @Param('viewId') viewId: string,
     ): Promise<DocumentView> {
-        return this.documentViewService.getViewById(req.user.id, viewId);
+        return this.documentViewService.getViewById(req.user?.userId, viewId);
     }
 
     @Put(':viewId')
@@ -65,7 +65,7 @@ export class DocumentViewController {
         @Param('viewId') viewId: string,
         @Body() updateViewDto: Omit<UpdateViewDto, 'id'>,
     ): Promise<DocumentView> {
-        return this.documentViewService.updateView(req.user.id, {
+        return this.documentViewService.updateView(req.user?.userId, {
             ...updateViewDto,
             id: viewId,
         });
@@ -78,7 +78,7 @@ export class DocumentViewController {
         @Request() req,
         @Param('viewId') viewId: string,
     ): Promise<{ message: string }> {
-        await this.documentViewService.deleteView(req.user.id, viewId);
+        await this.documentViewService.deleteView(req.user?.userId, viewId);
         return { message: 'View deleted successfully' };
     }
 
@@ -91,7 +91,7 @@ export class DocumentViewController {
         @Body() body: { name?: string },
     ): Promise<DocumentView> {
         return this.documentViewService.duplicateView(
-            req.user.id,
+            req.user?.userId,
             viewId,
             body.name,
         );
@@ -112,7 +112,7 @@ export class DocumentViewController {
             displayConfig?: any;
         }>,
     ): Promise<DocumentView> {
-        return this.documentViewService.updateView(req.user.id, {
+        return this.documentViewService.updateView(req.user?.userId, {
             id: viewId,
             properties,
         });
@@ -131,7 +131,7 @@ export class DocumentViewController {
             order?: number;
         }>,
     ): Promise<DocumentView> {
-        return this.documentViewService.updateView(req.user.id, {
+        return this.documentViewService.updateView(req.user?.userId, {
             id: viewId,
             filters,
         });
@@ -148,7 +148,7 @@ export class DocumentViewController {
             order: number;
         }>,
     ): Promise<DocumentView> {
-        return this.documentViewService.updateView(req.user.id, {
+        return this.documentViewService.updateView(req.user?.userId, {
             id: viewId,
             sorts,
         });
@@ -161,7 +161,7 @@ export class DocumentViewController {
         @Param('viewId') viewId: string,
         @Body() config: any,
     ): Promise<DocumentView> {
-        return this.documentViewService.updateView(req.user.id, {
+        return this.documentViewService.updateView(req.user?.userId, {
             id: viewId,
             config,
         });

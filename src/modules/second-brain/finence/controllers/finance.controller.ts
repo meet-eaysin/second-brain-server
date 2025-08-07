@@ -4,7 +4,7 @@ import { Finance, Person, Project, Goal } from '../second-brain';
 
 // Get all financial records
 export const getFinances = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         type, 
         category,
@@ -63,7 +63,7 @@ export const getFinances = catchAsync(async (req: Request, res: Response) => {
 
 // Get single financial record
 export const getFinance = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const finance = await Finance.findOne({ 
@@ -86,7 +86,7 @@ export const getFinance = catchAsync(async (req: Request, res: Response) => {
 
 // Create financial record
 export const createFinance = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -110,7 +110,7 @@ export const createFinance = catchAsync(async (req: Request, res: Response) => {
 
 // Update financial record
 export const updateFinance = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const finance = await Finance.findOneAndUpdate(
@@ -133,7 +133,7 @@ export const updateFinance = catchAsync(async (req: Request, res: Response) => {
 
 // Delete financial record
 export const deleteFinance = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const finance = await Finance.findOneAndDelete({ 
@@ -153,7 +153,7 @@ export const deleteFinance = catchAsync(async (req: Request, res: Response) => {
 
 // Get financial summary
 export const getFinancialSummary = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { period = 'month', year, month } = req.query;
 
     let startDate: Date, endDate: Date;
@@ -225,7 +225,7 @@ export const getFinancialSummary = catchAsync(async (req: Request, res: Response
 
 // Get invoice dashboard
 export const getInvoiceDashboard = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const invoices = await Finance.find({
         createdBy: userId,
@@ -261,7 +261,7 @@ export const getInvoiceDashboard = catchAsync(async (req: Request, res: Response
 
 // Create invoice
 export const createInvoice = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { clientId, items, dueDate, notes } = req.body;
 
     if (!userId) {
@@ -312,7 +312,7 @@ export const createInvoice = catchAsync(async (req: Request, res: Response) => {
 
 // Update invoice status
 export const updateInvoiceStatus = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { status } = req.body;
 

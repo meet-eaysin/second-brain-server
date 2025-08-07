@@ -4,7 +4,7 @@ import { Goal, Project, Habit, Task } from '../second-brain';
 
 // Get all goals with progress tracking
 export const getGoals = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         type, 
         status, 
@@ -67,7 +67,7 @@ export const getGoals = catchAsync(async (req: Request, res: Response) => {
 
 // Get single goal with detailed progress
 export const getGoal = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const goal = await Goal.findOne({ 
@@ -108,7 +108,7 @@ export const getGoal = catchAsync(async (req: Request, res: Response) => {
 
 // Create goal with automatic relationships
 export const createGoal = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -158,7 +158,7 @@ export const createGoal = catchAsync(async (req: Request, res: Response) => {
 
 // Update goal with progress recalculation
 export const updateGoal = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const oldGoal = await Goal.findOne({ _id: id, createdBy: userId });
@@ -214,7 +214,7 @@ export const updateGoal = catchAsync(async (req: Request, res: Response) => {
 
 // Delete goal with cleanup
 export const deleteGoal = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const goal = await Goal.findOneAndDelete({ 
@@ -254,7 +254,7 @@ export const deleteGoal = catchAsync(async (req: Request, res: Response) => {
 
 // Update goal progress manually
 export const updateProgress = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { currentValue } = req.body;
 
@@ -277,7 +277,7 @@ export const updateProgress = catchAsync(async (req: Request, res: Response) => 
 
 // Get goal insights and analytics
 export const getGoalInsights = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const goals = await Goal.find({
         createdBy: userId,

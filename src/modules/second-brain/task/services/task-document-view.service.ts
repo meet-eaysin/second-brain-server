@@ -160,7 +160,10 @@ export const getDefaultTaskViews = (): ITaskView[] => [
             rowHeight: 'medium',
             showRowNumbers: false,
             enableGrouping: true,
-            pageSize: 50
+            pageSize: 50,
+            canEdit: false,    // Default views cannot be edited
+            canDelete: false,  // Default views cannot be deleted
+            isSystemView: true // Mark as system view
         }
     },
     {
@@ -174,7 +177,10 @@ export const getDefaultTaskViews = (): ITaskView[] => [
         visibleProperties: ['title', 'priority', 'dueDate', 'assignee'],
         config: {
             groupByPropertyId: 'status',
-            showUngrouped: true
+            showUngrouped: true,
+            canEdit: false,    // Default views cannot be edited
+            canDelete: false,  // Default views cannot be deleted
+            isSystemView: true // Mark as system view
         }
     },
     {
@@ -187,7 +193,10 @@ export const getDefaultTaskViews = (): ITaskView[] => [
         visibleProperties: ['title', 'status', 'priority'],
         config: {
             dateProperty: 'dueDate',
-            colorProperty: 'priority'
+            colorProperty: 'priority',
+            canEdit: false,    // Default views cannot be edited
+            canDelete: false,  // Default views cannot be deleted
+            isSystemView: true // Mark as system view
         }
     }
 ];
@@ -227,23 +236,60 @@ export const getTasksViewConfig = () => ({
 
 // Get user's task document views
 export const getUserTaskViews = async (userId: string): Promise<ITaskDocumentView[]> => {
-    return await TaskDocumentView.find({ userId }).sort({ createdAt: -1 });
+    const documentViews = await TaskDocumentView.find({ userId }).sort({ createdAt: -1 });
+
+    // Apply protection to all views dynamically
+    return documentViews.map(doc => {
+        const updatedDoc = doc.toObject();
+        updatedDoc.views = updatedDoc.views.map(view => applyViewProtection(view));
+        return updatedDoc;
+    });
 };
 
 // Get specific task document view
-export const getTaskView = async (viewId: string, userId: string): Promise<ITaskDocumentView | null> => {
-    return await TaskDocumentView.findOne({ _id: viewId, userId });
+export const getTaskView = async (viewId: string, userId: string): Promise<any | null> => {
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
+
+    if (!document) {
+        return null;
+    }
+
+    // Find the specific view within the document
+    const view = document.views.find(view => view.id === viewId);
+    if (!view) {
+        return null;
+    }
+
+    // Apply protection to the view
+    const protectedView = applyViewProtection(view);
+
+    // Return the view with document context
+    return {
+        ...document.toObject(),
+        currentView: protectedView
+    };
 };
 
 // Get default task view for user
 export const getDefaultTaskView = async (userId: string): Promise<ITaskDocumentView | null> => {
     let defaultView = await TaskDocumentView.findOne({ userId, isDefault: true });
-    
+
     if (!defaultView) {
         // Create default view if it doesn't exist
         defaultView = await createDefaultTaskView(userId);
     }
-    
+
+    if (defaultView) {
+        // Apply protection to views dynamically
+        const updatedDoc = defaultView.toObject();
+        updatedDoc.views = updatedDoc.views.map(view => applyViewProtection(view));
+        return updatedDoc;
+    }
+
     return defaultView;
 };
 
@@ -266,6 +312,10 @@ export const createDefaultTaskView = async (userId: string): Promise<ITaskDocume
         permissions: [],
         requiredProperties: config.requiredProperties,
         frozenProperties: config.frozenProperties,
+        frozen: false, // Initialize freeze status
+        frozenAt: null,
+        frozenBy: null,
+        frozenReason: null,
         createdBy: userId,
         lastEditedBy: userId
     });
@@ -284,47 +334,121 @@ export const createTaskView = async (
         isDefault?: boolean;
         isPublic?: boolean;
         config?: any;
+        filters?: any[];
+        sorts?: any[];
+        visibleProperties?: string[];
     }
 ): Promise<ITaskDocumentView> => {
     const config = getTasksViewConfig();
-    
-    // If this is set as default, unset other defaults
-    if (viewData.isDefault) {
-        await TaskDocumentView.updateMany(
-            { userId, isDefault: true },
-            { isDefault: false }
-        );
+
+    // Find existing document view or create new one
+    let documentView = await TaskDocumentView.findOne({ userId, databaseId });
+
+    if (!documentView) {
+        // Create new document view if none exists
+        documentView = new TaskDocumentView({
+            userId,
+            databaseId,
+            moduleType: 'tasks',
+            documentType: 'TASKS',
+            name: 'Tasks',
+            description: 'Task management views',
+            icon: '✅',
+            properties: config.defaultProperties,
+            views: [],
+            isPublic: false,
+            isDefault: true,
+            requiredProperties: config.requiredProperties,
+            frozenProperties: config.frozenProperties,
+            createdBy: userId,
+            lastEditedBy: userId
+        });
     }
-    
-    const newView = new TaskDocumentView({
-        userId,
-        databaseId,
-        moduleType: 'tasks',
-        documentType: 'TASKS',
+
+    // Create the new view object
+    const newView = {
+        id: uuidv4(),
         name: viewData.name,
-        description: viewData.description,
-        icon: '✅',
-        properties: config.defaultProperties,
-        views: [{
-            id: uuidv4(),
-            name: viewData.name,
-            type: viewData.type,
-            isDefault: viewData.isDefault || false,
-            filters: [],
-            sorts: [],
-            visibleProperties: ['title', 'status', 'priority', 'dueDate'],
-            config: viewData.config || {}
-        }],
-        isPublic: viewData.isPublic || false,
+        type: viewData.type,
         isDefault: viewData.isDefault || false,
-        permissions: [],
-        requiredProperties: config.requiredProperties,
-        frozenProperties: config.frozenProperties,
-        createdBy: userId,
-        lastEditedBy: userId
-    });
-    
-    return await newView.save();
+        filters: viewData.filters || [],
+        sorts: viewData.sorts || [],
+        visibleProperties: viewData.visibleProperties || ['title', 'status', 'priority', 'dueDate'],
+        config: {
+            showUngrouped: true,
+            rowHeight: 'medium',
+            showRowNumbers: false,
+            enableGrouping: true,
+            pageSize: 50,
+            canEdit: true,
+            canDelete: true,
+            ...viewData.config
+        }
+    };
+
+    // If this is set as default, unset other defaults in the views array
+    if (viewData.isDefault) {
+        documentView.views.forEach(view => {
+            view.isDefault = false;
+        });
+    }
+
+    // Add the new view to the views array
+    documentView.views.push(newView);
+    documentView.lastEditedBy = userId;
+
+    return await documentView.save();
+};
+
+// Helper function to determine if a view should be protected (system view)
+export const isSystemView = (view: any): boolean => {
+    // Check if view is explicitly marked as system view
+    if (view.config?.isSystemView === true) {
+        return true;
+    }
+
+    // Protect ONLY the specific default backend views by their exact IDs
+    // These are the IDs created in createDefaultTaskView function
+    const systemViewIds = ['all-tasks', 'kanban-board', 'calendar-view'];
+
+    // Only check by exact ID match - this is the most reliable way
+    if (systemViewIds.includes(view.id)) {
+        return true;
+    }
+
+    // Check if view is marked as default (the original default views)
+    if (view.isDefault === true) {
+        return true;
+    }
+
+    // All other views (user-created) are editable, regardless of name or type
+    return false;
+};
+
+// Helper function to apply protection to system views
+export const applyViewProtection = (view: any): any => {
+    if (isSystemView(view)) {
+        return {
+            ...view,
+            config: {
+                ...view.config,
+                canEdit: false,
+                canDelete: false,
+                isSystemView: true
+            }
+        };
+    }
+
+    // For user-created views, ensure they can be edited/deleted
+    return {
+        ...view,
+        config: {
+            ...view.config,
+            canEdit: view.config?.canEdit !== false, // Default to true unless explicitly false
+            canDelete: view.config?.canDelete !== false, // Default to true unless explicitly false
+            isSystemView: false
+        }
+    };
 };
 
 // Update task view
@@ -334,48 +458,87 @@ export const updateTaskView = async (
     updates: {
         name?: string;
         description?: string;
+        type?: string;
+        visibleProperties?: string[];
+        filters?: any[];
+        sorts?: any[];
         config?: any;
     }
 ): Promise<ITaskDocumentView | null> => {
-    const view = await TaskDocumentView.findOneAndUpdate(
-        { _id: viewId, userId },
-        { 
-            ...updates,
-            lastEditedBy: userId 
-        },
-        { new: true, runValidators: true }
-    );
-    
-    if (!view) {
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
+
+    if (!document) {
         throw createAppError('Task view not found', 404);
     }
-    
-    return view;
+
+    // Find and update the view within the document
+    const viewIndex = document.views.findIndex(view => view.id === viewId);
+    if (viewIndex === -1) {
+        throw createAppError('Task view not found', 404);
+    }
+
+    // Check if view can be edited (apply protection)
+    if (isSystemView(document.views[viewIndex])) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Update the view
+    Object.assign(document.views[viewIndex], updates);
+    document.lastEditedBy = userId;
+
+    await document.save();
+    return document;
 };
 
 // Delete task view
 export const deleteTaskView = async (viewId: string, userId: string): Promise<boolean> => {
-    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
-    if (!view) {
+    if (!document) {
         return false;
     }
 
-    // Don't allow deletion of the last view
-    const viewCount = await TaskDocumentView.countDocuments({ userId });
-    if (viewCount <= 1) {
-        throw createAppError('Cannot delete the last view', 400);
+    // Find the view within the document
+    const viewToDelete = document.views.find(view => view.id === viewId);
+    if (!viewToDelete) {
+        return false;
     }
 
-    await TaskDocumentView.findByIdAndDelete(viewId);
+    // Check if view can be deleted (apply protection)
+    if (isSystemView(viewToDelete)) {
+        throw createAppError('Cannot delete system view', 400);
+    }
+
+    // Check if user has other views across all documents
+    const allUserDocuments = await TaskDocumentView.find({ userId });
+    const totalViewCount = allUserDocuments.reduce((count, doc) => count + doc.views.length, 0);
+
+    // Don't allow deletion if this is the user's last view across all documents
+    if (totalViewCount <= 1) {
+        throw createAppError('Cannot delete the last view. You must have at least one view.', 400);
+    }
+
+    // Remove the view from the document
+    document.views = document.views.filter(view => view.id !== viewId);
 
     // If this was the default view, set another as default
-    if (view.isDefault) {
-        const nextView = await TaskDocumentView.findOne({ userId });
-        if (nextView) {
-            nextView.isDefault = true;
-            await nextView.save();
-        }
+    if (viewToDelete.isDefault && document.views.length > 0) {
+        document.views[0].isDefault = true;
+    }
+
+    // If this document has no views left, delete the entire document
+    if (document.views.length === 0) {
+        await TaskDocumentView.findByIdAndDelete(document._id);
+    } else {
+        await document.save();
     }
 
     return true;
@@ -393,14 +556,29 @@ export const updateTaskViewProperties = async (
         frozen?: boolean;
     }>
 ): Promise<ITaskDocumentView | null> => {
-    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
-    if (!view) {
+    if (!document) {
         return null;
     }
 
-    // Update property configurations
-    const updatedProperties = view.properties.map(prop => {
+    // Find and update the view within the document
+    const viewIndex = document.views.findIndex(view => view.id === viewId);
+    if (viewIndex === -1) {
+        return null;
+    }
+
+    // Check if view can be edited (apply protection)
+    if (isSystemView(document.views[viewIndex])) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Update property configurations in the document's properties array
+    const updatedProperties = document.properties.map(prop => {
         const update = properties.find(p => p.propertyId === prop.id);
         if (update) {
             return {
@@ -414,10 +592,10 @@ export const updateTaskViewProperties = async (
         return prop;
     });
 
-    view.properties = updatedProperties;
-    view.lastEditedBy = userId;
+    document.properties = updatedProperties;
+    document.lastEditedBy = userId;
 
-    return await view.save();
+    return await document.save();
 };
 
 // Update task view filters
@@ -431,20 +609,32 @@ export const updateTaskViewFilters = async (
         logic?: 'AND' | 'OR';
     }>
 ): Promise<ITaskDocumentView | null> => {
-    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
-    if (!view) {
+    if (!document) {
         return null;
     }
 
-    // Update the first view's filters (assuming single view per document for now)
-    if (view.views.length > 0) {
-        view.views[0].filters = filters;
-        view.lastEditedBy = userId;
-        return await view.save();
+    // Find and update the view within the document
+    const viewIndex = document.views.findIndex(view => view.id === viewId);
+    if (viewIndex === -1) {
+        return null;
     }
 
-    return view;
+    // Check if view can be edited (apply protection)
+    if (isSystemView(document.views[viewIndex])) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Update the specific view's filters
+    document.views[viewIndex].filters = filters;
+    document.lastEditedBy = userId;
+
+    return await document.save();
 };
 
 // Update task view sorts
@@ -457,20 +647,32 @@ export const updateTaskViewSorts = async (
         order: number;
     }>
 ): Promise<ITaskDocumentView | null> => {
-    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
-    if (!view) {
+    if (!document) {
         return null;
     }
 
-    // Update the first view's sorts
-    if (view.views.length > 0) {
-        view.views[0].sorts = sorts;
-        view.lastEditedBy = userId;
-        return await view.save();
+    // Find and update the view within the document
+    const viewIndex = document.views.findIndex(view => view.id === viewId);
+    if (viewIndex === -1) {
+        return null;
     }
 
-    return view;
+    // Check if view can be edited (apply protection)
+    if (isSystemView(document.views[viewIndex])) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Update the specific view's sorts
+    document.views[viewIndex].sorts = sorts;
+    document.lastEditedBy = userId;
+
+    return await document.save();
 };
 
 // Duplicate task view
@@ -479,24 +681,42 @@ export const duplicateTaskView = async (
     userId: string,
     newName?: string
 ): Promise<ITaskDocumentView | null> => {
-    const originalView = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
+    if (!document) {
+        return null;
+    }
+
+    // Find the specific view within the document
+    const originalView = document.views.find(view => view.id === viewId);
     if (!originalView) {
         return null;
     }
 
-    const duplicatedView = new TaskDocumentView({
-        ...originalView.toObject(),
-        _id: undefined,
+    // Create a new view by duplicating the original
+    const duplicatedView = {
+        ...JSON.parse(JSON.stringify(originalView)), // Deep copy to ensure all fields are copied
+        id: uuidv4(), // Generate new UUID
         name: newName || `${originalView.name} (Copy)`,
+        type: originalView.type, // Ensure type is explicitly copied
         isDefault: false,
-        createdBy: userId,
-        lastEditedBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-    });
+        config: {
+            ...originalView.config,
+            canEdit: true,    // User-created views are editable
+            canDelete: true,  // User-created views are deletable
+            isSystemView: false
+        }
+    };
 
-    return await duplicatedView.save();
+    // Add the duplicated view to the document
+    document.views.push(duplicatedView);
+    document.lastEditedBy = userId;
+
+    return await document.save();
 };
 
 // Get task view permissions
@@ -504,13 +724,18 @@ export const getTaskViewPermissions = async (
     viewId: string,
     userId: string
 ): Promise<Array<{ userId: string; permission: string }> | null> => {
-    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
-    if (!view) {
+    if (!document) {
         return null;
     }
 
-    return view.permissions;
+    // Return document-level permissions (views inherit document permissions)
+    return document.permissions;
 };
 
 // Update task view permissions
@@ -519,14 +744,153 @@ export const updateTaskViewPermissions = async (
     userId: string,
     permissions: Array<{ userId: string; permission: 'read' | 'write' | 'admin' }>
 ): Promise<ITaskDocumentView | null> => {
-    const view = await TaskDocumentView.findOne({ _id: viewId, userId });
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
 
-    if (!view) {
+    if (!document) {
         return null;
     }
 
-    view.permissions = permissions;
-    view.lastEditedBy = userId;
+    // Update document-level permissions (views inherit document permissions)
+    document.permissions = permissions;
+    document.lastEditedBy = userId;
 
-    return await view.save();
+    return await document.save();
+};
+
+// Add new property to task document
+export const addTaskProperty = async (
+    viewId: string,
+    userId: string,
+    property: {
+        name: string;
+        type: string;
+        description?: string;
+        required?: boolean;
+        order?: number;
+        config?: any;
+    }
+): Promise<ITaskDocumentView | null> => {
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
+
+    if (!document) {
+        return null;
+    }
+
+    // Check if view can be edited (apply protection)
+    const view = document.views.find(view => view.id === viewId);
+    if (view && isSystemView(view)) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Create new property
+    const newProperty: ITaskProperty = {
+        id: property.name.toLowerCase().replace(/\s+/g, '_'),
+        name: property.name,
+        type: property.type as any,
+        description: property.description || '',
+        required: property.required || false,
+        isVisible: true,
+        order: property.order || document.properties.length,
+        frozen: false,
+        selectOptions: property.config?.selectOptions || []
+    };
+
+    // Add property to document
+    document.properties.push(newProperty);
+    document.lastEditedBy = userId;
+
+    return await document.save();
+};
+
+// Remove property from task document
+export const removeTaskProperty = async (
+    viewId: string,
+    userId: string,
+    propertyId: string
+): Promise<ITaskDocumentView | null> => {
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
+
+    if (!document) {
+        return null;
+    }
+
+    // Check if view can be edited (apply protection)
+    const view = document.views.find(view => view.id === viewId);
+    if (view && isSystemView(view)) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Check if property exists and can be removed
+    const propertyIndex = document.properties.findIndex(prop => prop.id === propertyId);
+    if (propertyIndex === -1) {
+        throw createAppError('Property not found', 404);
+    }
+
+    const property = document.properties[propertyIndex];
+
+    // Don't allow removal of required or frozen properties
+    if (property.required || property.frozen) {
+        throw createAppError('Cannot remove required or frozen property', 400);
+    }
+
+    // Remove property from document
+    document.properties.splice(propertyIndex, 1);
+
+    // Remove property from all views' visibleProperties arrays
+    document.views.forEach(view => {
+        if (view.visibleProperties) {
+            view.visibleProperties = view.visibleProperties.filter(propId => propId !== propertyId);
+        }
+    });
+
+    document.lastEditedBy = userId;
+
+    return await document.save();
+};
+
+// Toggle property freeze state
+export const toggleTaskPropertyFreeze = async (
+    viewId: string,
+    userId: string,
+    propertyId: string,
+    frozen: boolean
+): Promise<ITaskDocumentView | null> => {
+    // Find the document that contains this view
+    const document = await TaskDocumentView.findOne({
+        userId,
+        'views.id': viewId
+    });
+
+    if (!document) {
+        return null;
+    }
+
+    // Check if view can be edited (apply protection)
+    const view = document.views.find(view => view.id === viewId);
+    if (view && isSystemView(view)) {
+        throw createAppError('Cannot edit system view', 400);
+    }
+
+    // Find and update property
+    const propertyIndex = document.properties.findIndex(prop => prop.id === propertyId);
+    if (propertyIndex === -1) {
+        throw createAppError('Property not found', 404);
+    }
+
+    document.properties[propertyIndex].frozen = frozen;
+    document.lastEditedBy = userId;
+
+    return await document.save();
 };

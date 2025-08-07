@@ -96,6 +96,11 @@ export interface ITaskView {
         showRowNumbers?: boolean;
         enableGrouping?: boolean;
         pageSize?: number;
+
+        // Protection settings
+        canEdit?: boolean;
+        canDelete?: boolean;
+        isSystemView?: boolean;
     };
 }
 
@@ -125,7 +130,13 @@ export interface ITaskDocumentView extends Document {
     // Backend-controlled configuration
     requiredProperties: string[]; // Properties that cannot be removed
     frozenProperties: string[]; // Properties that cannot be unfrozen
-    
+
+    // Freeze functionality
+    frozen: boolean;
+    frozenAt?: Date;
+    frozenBy?: string;
+    frozenReason?: string;
+
     // Metadata
     createdAt: Date;
     updatedAt: Date;
@@ -227,7 +238,12 @@ const TaskViewSchema = new Schema({
         rowHeight: { type: String, enum: ['compact', 'medium', 'tall'], default: 'medium' },
         showRowNumbers: { type: Boolean, default: false },
         enableGrouping: { type: Boolean, default: true },
-        pageSize: { type: Number, default: 50 }
+        pageSize: { type: Number, default: 50 },
+
+        // Protection settings
+        canEdit: { type: Boolean, default: true },
+        canDelete: { type: Boolean, default: true },
+        isSystemView: { type: Boolean, default: false }
     }
 });
 
@@ -257,7 +273,13 @@ const TaskDocumentViewSchema = new Schema<ITaskDocumentView>({
     // Backend-controlled configuration
     requiredProperties: [String], // Properties that cannot be removed
     frozenProperties: [String], // Properties that cannot be unfrozen
-    
+
+    // Freeze functionality
+    frozen: { type: Boolean, default: false },
+    frozenAt: Date,
+    frozenBy: String,
+    frozenReason: String,
+
     // Metadata
     createdBy: { type: String, required: true },
     lastEditedBy: { type: String, required: true }

@@ -4,7 +4,7 @@ import { Project, Task, Note, Goal, Person } from '../second-brain';
 
 // Get all projects with rich data
 export const getProjects = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         status, 
         area, 
@@ -87,7 +87,7 @@ export const getProjects = catchAsync(async (req: Request, res: Response) => {
 
 // Get single project with full details
 export const getProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const project = await Project.findOne({ 
@@ -159,7 +159,7 @@ export const getProject = catchAsync(async (req: Request, res: Response) => {
 
 // Create project with automatic relationships
 export const createProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -193,7 +193,7 @@ export const createProject = catchAsync(async (req: Request, res: Response) => {
 
 // Update project with relationship management
 export const updateProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const oldProject = await Project.findOne({ _id: id, createdBy: userId });
@@ -245,7 +245,7 @@ export const updateProject = catchAsync(async (req: Request, res: Response) => {
 
 // Delete project with cleanup
 export const deleteProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const project = await Project.findOneAndDelete({ 
@@ -285,7 +285,7 @@ export const deleteProject = catchAsync(async (req: Request, res: Response) => {
 
 // Get project statistics
 export const getProjectStats = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const project = await Project.findOne({ _id: id, createdBy: userId });
@@ -327,7 +327,7 @@ export const getProjectStats = catchAsync(async (req: Request, res: Response) =>
 
 // Add task to project
 export const addTaskToProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { taskId } = req.body;
 
@@ -361,7 +361,7 @@ export const addTaskToProject = catchAsync(async (req: Request, res: Response) =
 
 // Remove task from project
 export const removeTaskFromProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id, taskId } = req.params;
 
     const [project, task] = await Promise.all([

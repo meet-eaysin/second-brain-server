@@ -4,7 +4,7 @@ import { Journal, Task, Project, Mood } from '../second-brain';
 
 // Get all journal entries with filtering
 export const getJournalEntries = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         type, 
         tags,
@@ -74,7 +74,7 @@ export const getJournalEntries = catchAsync(async (req: Request, res: Response) 
 
 // Get single journal entry
 export const getJournalEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const entry = await Journal.findOne({ 
@@ -108,7 +108,7 @@ export const getJournalEntry = catchAsync(async (req: Request, res: Response) =>
 
 // Create journal entry with mood integration
 export const createJournalEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -171,7 +171,7 @@ export const createJournalEntry = catchAsync(async (req: Request, res: Response)
 
 // Update journal entry
 export const updateJournalEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const entry = await Journal.findOneAndUpdate(
@@ -209,7 +209,7 @@ export const updateJournalEntry = catchAsync(async (req: Request, res: Response)
 
 // Delete journal entry
 export const deleteJournalEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const entry = await Journal.findOneAndDelete({ 
@@ -229,7 +229,7 @@ export const deleteJournalEntry = catchAsync(async (req: Request, res: Response)
 
 // Get today's journal entry
 export const getTodayEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { type = 'daily' } = req.query;
 
     const today = new Date();
@@ -304,7 +304,7 @@ export const getJournalTemplates = catchAsync(async (req: Request, res: Response
 
 // Create entry from template
 export const createFromTemplate = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { templateType, date, customizations = {} } = req.body;
 
     if (!userId) {
@@ -373,7 +373,7 @@ export const createFromTemplate = catchAsync(async (req: Request, res: Response)
 
 // Get journal insights and analytics
 export const getJournalInsights = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { period = '30' } = req.query; // days
 
     const startDate = new Date();

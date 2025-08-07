@@ -4,7 +4,7 @@ import { Note, Task, Project, Person } from '../second-brain';
 
 // Get all notes with filtering and search
 export const getNotes = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         type, 
         area, 
@@ -83,7 +83,7 @@ export const getNotes = catchAsync(async (req: Request, res: Response) => {
 
 // Get single note with full details
 export const getNote = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const note = await Note.findOne({ 
@@ -124,7 +124,7 @@ export const getNote = catchAsync(async (req: Request, res: Response) => {
 
 // Create note with automatic linking
 export const createNote = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -167,7 +167,7 @@ export const createNote = catchAsync(async (req: Request, res: Response) => {
 
 // Update note with relationship management
 export const updateNote = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const oldNote = await Note.findOne({ _id: id, createdBy: userId });
@@ -238,7 +238,7 @@ export const updateNote = catchAsync(async (req: Request, res: Response) => {
 
 // Delete note with cleanup
 export const deleteNote = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const note = await Note.findOneAndDelete({ 
@@ -274,7 +274,7 @@ export const deleteNote = catchAsync(async (req: Request, res: Response) => {
 
 // Toggle favorite status
 export const toggleFavorite = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const note = await Note.findOne({ _id: id, createdBy: userId });
@@ -293,7 +293,7 @@ export const toggleFavorite = catchAsync(async (req: Request, res: Response) => 
 
 // Toggle pin status
 export const togglePin = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const note = await Note.findOne({ _id: id, createdBy: userId });
@@ -312,7 +312,7 @@ export const togglePin = catchAsync(async (req: Request, res: Response) => {
 
 // Get note templates
 export const getTemplates = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const templates = await Note.find({
         createdBy: userId,
@@ -328,7 +328,7 @@ export const getTemplates = catchAsync(async (req: Request, res: Response) => {
 
 // Create note from template
 export const createFromTemplate = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { templateId } = req.params;
     const { title, customizations = {} } = req.body;
 
@@ -368,7 +368,7 @@ export const createFromTemplate = catchAsync(async (req: Request, res: Response)
 
 // Link note to task
 export const linkToTask = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { taskId } = req.body;
 
@@ -405,7 +405,7 @@ export const linkToTask = catchAsync(async (req: Request, res: Response) => {
 
 // Unlink note from task
 export const unlinkFromTask = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id, taskId } = req.params;
 
     const [note, task] = await Promise.all([

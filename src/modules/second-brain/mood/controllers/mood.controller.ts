@@ -4,7 +4,7 @@ import { Mood, Task, Journal } from '../second-brain';
 
 // Get all mood entries
 export const getMoodEntries = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         startDate,
         endDate,
@@ -61,7 +61,7 @@ export const getMoodEntries = catchAsync(async (req: Request, res: Response) => 
 
 // Get single mood entry
 export const getMoodEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const mood = await Mood.findOne({ 
@@ -83,7 +83,7 @@ export const getMoodEntry = catchAsync(async (req: Request, res: Response) => {
 
 // Create mood entry
 export const createMoodEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -136,7 +136,7 @@ export const createMoodEntry = catchAsync(async (req: Request, res: Response) =>
 
 // Update mood entry
 export const updateMoodEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const mood = await Mood.findOneAndUpdate(
@@ -158,7 +158,7 @@ export const updateMoodEntry = catchAsync(async (req: Request, res: Response) =>
 
 // Delete mood entry
 export const deleteMoodEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const mood = await Mood.findOneAndDelete({ 
@@ -178,7 +178,7 @@ export const deleteMoodEntry = catchAsync(async (req: Request, res: Response) =>
 
 // Get today's mood entry
 export const getTodayMood = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -199,7 +199,7 @@ export const getTodayMood = catchAsync(async (req: Request, res: Response) => {
 
 // Get mood analytics and insights
 export const getMoodAnalytics = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { period = '30' } = req.query; // days
 
     const startDate = new Date();
@@ -254,7 +254,7 @@ export const getMoodAnalytics = catchAsync(async (req: Request, res: Response) =
 
 // Get mood patterns
 export const getMoodPatterns = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const moods = await Mood.find({
         createdBy: userId

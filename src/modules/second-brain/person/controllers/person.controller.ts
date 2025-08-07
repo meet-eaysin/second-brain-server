@@ -11,7 +11,7 @@ interface AuthenticatedRequest extends Request {
 
 // Get all people with CRM features
 export const getPeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const {
         relationship,
         tags,
@@ -51,7 +51,7 @@ export const getPeople = catchAsync(async (req: AuthenticatedRequest, res: Respo
 
 // Get single person with full CRM details
 export const getPerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     if (!userId) {
@@ -82,7 +82,7 @@ export const getPerson = catchAsync(async (req: AuthenticatedRequest, res: Respo
 
 // Create person with CRM setup
 export const createPerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
         sendErrorResponse(res, 'User not authenticated', 401);
@@ -96,7 +96,7 @@ export const createPerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
 // Update person with contact tracking
 export const updatePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     if (!userId) {
@@ -111,7 +111,7 @@ export const updatePerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
 // Delete person with cleanup
 export const deletePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     if (!userId) {
@@ -126,7 +126,7 @@ export const deletePerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
 // Record contact interaction
 export const recordContact = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { type = 'general', notes, nextContactDate } = req.body;
 
@@ -187,7 +187,7 @@ export const recordContact = catchAsync(async (req: Request, res: Response) => {
 
 // Get people who need contact
 export const getPeopleNeedingContact = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const today = new Date();
     const people = await Person.find({
@@ -204,7 +204,7 @@ export const getPeopleNeedingContact = catchAsync(async (req: Request, res: Resp
 
 // Get contact frequency insights
 export const getContactInsights = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const people = await Person.find({
         createdBy: userId,
@@ -239,7 +239,7 @@ export const getContactInsights = catchAsync(async (req: Request, res: Response)
 
 // Add person to project
 export const addToProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { projectId } = req.body;
 
@@ -275,7 +275,7 @@ export const addToProject = catchAsync(async (req: Request, res: Response) => {
 
 // Remove person from project
 export const removeFromProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id, projectId } = req.params;
 
     const [person, project] = await Promise.all([

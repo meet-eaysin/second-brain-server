@@ -4,7 +4,7 @@ import { Habit, Goal } from '../second-brain';
 
 // Get all habits with tracking data
 export const getHabits = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         frequency, 
         isActive, 
@@ -66,7 +66,7 @@ export const getHabits = catchAsync(async (req: Request, res: Response) => {
 
 // Get single habit with detailed tracking
 export const getHabit = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const habit = await Habit.findOne({ 
@@ -98,7 +98,7 @@ export const getHabit = catchAsync(async (req: Request, res: Response) => {
 
 // Create habit with goal linking
 export const createHabit = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -131,7 +131,7 @@ export const createHabit = catchAsync(async (req: Request, res: Response) => {
 
 // Update habit with relationship management
 export const updateHabit = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const oldHabit = await Habit.findOne({ _id: id, createdBy: userId });
@@ -176,7 +176,7 @@ export const updateHabit = catchAsync(async (req: Request, res: Response) => {
 
 // Delete habit with cleanup
 export const deleteHabit = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const habit = await Habit.findOneAndDelete({ 
@@ -204,7 +204,7 @@ export const deleteHabit = catchAsync(async (req: Request, res: Response) => {
 
 // Track habit entry
 export const trackEntry = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
     const { date, completed, value, notes } = req.body;
 
@@ -257,7 +257,7 @@ export const trackEntry = catchAsync(async (req: Request, res: Response) => {
 
 // Get today's habits
 export const getTodayHabits = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -304,7 +304,7 @@ export const getTodayHabits = catchAsync(async (req: Request, res: Response) => 
 
 // Get habit insights and analytics
 export const getHabitInsights = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const habits = await Habit.find({
         createdBy: userId,

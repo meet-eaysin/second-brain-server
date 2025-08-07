@@ -3,7 +3,7 @@ import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../
 
 interface AuthenticatedRequest extends Request {
     user?: {
-        id: string;
+        userId: string;
         email: string;
     };
 }
@@ -20,8 +20,12 @@ import {
     updateTaskViewSorts as updateTaskViewSortsService,
     duplicateTaskView as duplicateTaskViewService,
     getTaskViewPermissions as getTaskViewPermissionsService,
-    updateTaskViewPermissions as updateTaskViewPermissionsService
+    updateTaskViewPermissions as updateTaskViewPermissionsService,
+    addTaskProperty as addTaskPropertyService,
+    removeTaskProperty as removeTaskPropertyService,
+    toggleTaskPropertyFreeze as toggleTaskPropertyFreezeService
 } from '../services/task-document-view.service';
+import { TaskDocumentView } from '../models/task-document-view.model';
 
 // Get task document-view configuration
 export const getTasksConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -161,7 +165,7 @@ export const updateTaskViewProperties = catchAsync(async (req: AuthenticatedRequ
 
 // Update task view filters
 export const updateTaskViewFilters = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { filters } = req.body;
 
@@ -182,7 +186,7 @@ export const updateTaskViewFilters = catchAsync(async (req: AuthenticatedRequest
 
 // Update task view sorts
 export const updateTaskViewSorts = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { sorts } = req.body;
 
@@ -203,7 +207,7 @@ export const updateTaskViewSorts = catchAsync(async (req: AuthenticatedRequest, 
 
 // Duplicate task view
 export const duplicateTaskView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { name } = req.body;
 
@@ -224,7 +228,7 @@ export const duplicateTaskView = catchAsync(async (req: AuthenticatedRequest, re
 
 // Get task view permissions
 export const getTaskViewPermissions = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
 
     if (!userId) {
@@ -244,7 +248,7 @@ export const getTaskViewPermissions = catchAsync(async (req: AuthenticatedReques
 
 // Update task view permissions
 export const updateTaskViewPermissions = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { permissions } = req.body;
 
@@ -265,7 +269,7 @@ export const updateTaskViewPermissions = catchAsync(async (req: AuthenticatedReq
 
 // Add new property to task view
 export const addTaskProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { property } = req.body;
 
@@ -274,8 +278,7 @@ export const addTaskProperty = catchAsync(async (req: AuthenticatedRequest, res:
         return;
     }
 
-    // TODO: Implement add property logic
-    const updatedView = await updateTaskViewPropertiesService(viewId, userId, [property]);
+    const updatedView = await addTaskPropertyService(viewId, userId, property);
 
     if (!updatedView) {
         sendErrorResponse(res, 'Task view not found or access denied', 404);
@@ -287,7 +290,7 @@ export const addTaskProperty = catchAsync(async (req: AuthenticatedRequest, res:
 
 // Remove property from task view
 export const removeTaskProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId, propertyId } = req.params;
 
     if (!userId) {
@@ -295,15 +298,19 @@ export const removeTaskProperty = catchAsync(async (req: AuthenticatedRequest, r
         return;
     }
 
-    // TODO: Implement remove property logic with validation
-    // Check if property is removable (not in frozen/required list)
+    const updatedView = await removeTaskPropertyService(viewId, userId, propertyId);
 
-    sendSuccessResponse(res, null, 'Property removed successfully');
+    if (!updatedView) {
+        sendErrorResponse(res, 'Task view not found or access denied', 404);
+        return;
+    }
+
+    sendSuccessResponse(res, updatedView, 'Property removed successfully');
 });
 
 // Freeze/unfreeze property
 export const toggleTaskPropertyFreeze = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId, propertyId } = req.params;
     const { frozen } = req.body;
 
@@ -312,15 +319,19 @@ export const toggleTaskPropertyFreeze = catchAsync(async (req: AuthenticatedRequ
         return;
     }
 
-    // TODO: Implement freeze/unfreeze logic with validation
-    // Check if property can be frozen/unfrozen
+    const updatedView = await toggleTaskPropertyFreezeService(viewId, userId, propertyId, frozen);
 
-    sendSuccessResponse(res, null, `Property ${frozen ? 'frozen' : 'unfrozen'} successfully`);
+    if (!updatedView) {
+        sendErrorResponse(res, 'Task view not found or access denied', 404);
+        return;
+    }
+
+    sendSuccessResponse(res, updatedView, `Property ${frozen ? 'frozen' : 'unfrozen'} successfully`);
 });
 
 // Reorder properties
 export const reorderTaskProperties = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { viewId } = req.params;
     const { propertyOrder } = req.body;
 
@@ -342,7 +353,7 @@ export const reorderTaskProperties = catchAsync(async (req: AuthenticatedRequest
 
 // Validate property configuration
 export const validateTaskProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { property } = req.body;
 
     if (!userId) {
@@ -356,3 +367,77 @@ export const validateTaskProperty = catchAsync(async (req: AuthenticatedRequest,
 
     sendSuccessResponse(res, { isValid, errors }, 'Property validation completed');
 });
+
+// Freeze/unfreeze database
+export const freezeTaskDatabase = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { databaseId } = req.params;
+    const { frozen, reason } = req.body;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    if (typeof frozen !== 'boolean') {
+        sendErrorResponse(res, 'Frozen status must be a boolean', 400);
+        return;
+    }
+
+    try {
+        // Find and update the task document view
+        const updateData: any = {
+            frozen,
+            lastEditedBy: userId
+        };
+
+        if (frozen) {
+            updateData.frozenAt = new Date();
+            updateData.frozenBy = userId;
+            updateData.frozenReason = reason || 'Database frozen by user';
+        } else {
+            updateData.frozenAt = null;
+            updateData.frozenBy = null;
+            updateData.frozenReason = null;
+        }
+
+        let updatedDatabase = await TaskDocumentView.findOneAndUpdate(
+            { userId, databaseId },
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedDatabase) {
+            // Create default view if it doesn't exist
+            const { createDefaultTaskView } = await import('../services/task-document-view.service');
+            const defaultView = await createDefaultTaskView(userId);
+
+            // Now update the newly created view with freeze status
+            updatedDatabase = await TaskDocumentView.findOneAndUpdate(
+                { userId, databaseId },
+                updateData,
+                { new: true }
+            );
+
+            if (!updatedDatabase) {
+                sendErrorResponse(res, 'Failed to create or update database', 500);
+                return;
+            }
+        }
+
+        const result = {
+            databaseId,
+            frozen: updatedDatabase.frozen,
+            frozenAt: updatedDatabase.frozenAt,
+            frozenBy: updatedDatabase.frozenBy,
+            frozenReason: updatedDatabase.frozenReason,
+            updatedAt: updatedDatabase.updatedAt,
+            updatedBy: userId
+        };
+
+        sendSuccessResponse(res, result, `Database ${frozen ? 'frozen' : 'unfrozen'} successfully`);
+    } catch (error: any) {
+        sendErrorResponse(res, error.message || 'Failed to update database freeze status', 500);
+    }
+});
+

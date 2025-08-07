@@ -162,4 +162,11 @@ router.delete(
     taskDocumentViewController.deleteTaskView
 );
 
+// Database freeze/unfreeze (alternative route pattern)
+router.patch(
+    '/databases/:databaseId/freeze',
+    authenticateToken,
+    taskDocumentViewController.freezeTaskDatabase
+);
+
 export default router;

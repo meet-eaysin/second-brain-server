@@ -127,4 +127,11 @@ router.delete(
     databaseDocumentViewController.deleteDatabaseView
 );
 
+// Database freeze/unfreeze (alternative route pattern)
+router.patch(
+    '/databases/:databaseId/freeze',
+    authenticateToken,
+    databaseDocumentViewController.freezeDatabase
+);
+
 export default router;

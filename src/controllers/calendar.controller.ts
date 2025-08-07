@@ -38,14 +38,14 @@ export class CalendarController {
         @Request() req,
         @Body() createCalendarDto: CreateCalendarDto,
     ): Promise<Calendar> {
-        return this.calendarService.createCalendar(req.user.id, createCalendarDto);
+        return this.calendarService.createCalendar(req.user?.userId, createCalendarDto);
     }
 
     @Get('calendars')
     @ApiOperation({ summary: 'Get user calendars' })
     @ApiResponse({ status: 200, description: 'Calendars retrieved successfully' })
     async getUserCalendars(@Request() req): Promise<Calendar[]> {
-        return this.calendarService.getUserCalendars(req.user.id);
+        return this.calendarService.getUserCalendars(req.user?.userId);
     }
 
     @Get('calendars/:calendarId')
@@ -56,7 +56,7 @@ export class CalendarController {
         @Param('calendarId', ParseUUIDPipe) calendarId: string,
     ): Promise<Calendar> {
         // This would need to be implemented in the service
-        return this.calendarService.getCalendarById(req.user.id, calendarId);
+        return this.calendarService.getCalendarById(req.user?.userId, calendarId);
     }
 
     @Put('calendars/:calendarId')
@@ -67,7 +67,7 @@ export class CalendarController {
         @Param('calendarId', ParseUUIDPipe) calendarId: string,
         @Body() updateData: Partial<CreateCalendarDto>,
     ): Promise<Calendar> {
-        return this.calendarService.updateCalendar(req.user.id, calendarId, updateData);
+        return this.calendarService.updateCalendar(req.user?.userId, calendarId, updateData);
     }
 
     @Delete('calendars/:calendarId')
@@ -77,7 +77,7 @@ export class CalendarController {
         @Request() req,
         @Param('calendarId', ParseUUIDPipe) calendarId: string,
     ): Promise<{ message: string }> {
-        await this.calendarService.deleteCalendar(req.user.id, calendarId);
+        await this.calendarService.deleteCalendar(req.user?.userId, calendarId);
         return { message: 'Calendar deleted successfully' };
     }
 
@@ -90,7 +90,7 @@ export class CalendarController {
         @Param('calendarId', ParseUUIDPipe) calendarId: string,
         @Body() createEventDto: CreateEventDto,
     ): Promise<CalendarEvent> {
-        return this.calendarService.createEvent(req.user.id, calendarId, createEventDto);
+        return this.calendarService.createEvent(req.user?.userId, calendarId, createEventDto);
     }
 
     @Get('events')
@@ -100,7 +100,7 @@ export class CalendarController {
         @Request() req,
         @Query() query: CalendarEventQuery,
     ): Promise<CalendarEvent[]> {
-        return this.calendarService.getEvents(req.user.id, query);
+        return this.calendarService.getEvents(req.user?.userId, query);
     }
 
     @Get('events/:eventId')
@@ -110,7 +110,7 @@ export class CalendarController {
         @Request() req,
         @Param('eventId', ParseUUIDPipe) eventId: string,
     ): Promise<CalendarEvent> {
-        return this.calendarService.getEventById(req.user.id, eventId);
+        return this.calendarService.getEventById(req.user?.userId, eventId);
     }
 
     @Put('events/:eventId')
@@ -121,7 +121,7 @@ export class CalendarController {
         @Param('eventId', ParseUUIDPipe) eventId: string,
         @Body() updateData: Partial<CreateEventDto>,
     ): Promise<CalendarEvent> {
-        return this.calendarService.updateEvent(req.user.id, eventId, updateData);
+        return this.calendarService.updateEvent(req.user?.userId, eventId, updateData);
     }
 
     @Delete('events/:eventId')
@@ -131,7 +131,7 @@ export class CalendarController {
         @Request() req,
         @Param('eventId', ParseUUIDPipe) eventId: string,
     ): Promise<{ message: string }> {
-        await this.calendarService.deleteEvent(req.user.id, eventId);
+        await this.calendarService.deleteEvent(req.user?.userId, eventId);
         return { message: 'Event deleted successfully' };
     }
 
@@ -149,7 +149,7 @@ export class CalendarController {
         },
     ): Promise<any> {
         return this.calendarService.shareCalendar(
-            req.user.id,
+            req.user?.userId,
             calendarId,
             shareData.userId,
             shareData.level,
@@ -165,7 +165,7 @@ export class CalendarController {
         @Param('calendarId', ParseUUIDPipe) calendarId: string,
         @Param('userId', ParseUUIDPipe) userId: string,
     ): Promise<{ message: string }> {
-        await this.calendarService.revokeCalendarAccess(req.user.id, calendarId, userId);
+        await this.calendarService.revokeCalendarAccess(req.user?.userId, calendarId, userId);
         return { message: 'Access revoked successfully' };
     }
 
@@ -179,7 +179,7 @@ export class CalendarController {
         @Body() createIntegrationDto: CreateIntegrationDto,
     ): Promise<CalendarIntegration> {
         return this.integrationService.createIntegration(
-            req.user.id,
+            req.user?.userId,
             calendarId,
             createIntegrationDto,
         );
@@ -189,7 +189,7 @@ export class CalendarController {
     @ApiOperation({ summary: 'Get user integrations' })
     @ApiResponse({ status: 200, description: 'Integrations retrieved successfully' })
     async getUserIntegrations(@Request() req): Promise<CalendarIntegration[]> {
-        return this.integrationService.getUserIntegrations(req.user.id);
+        return this.integrationService.getUserIntegrations(req.user?.userId);
     }
 
     @Post('integrations/:integrationId/sync')
@@ -209,7 +209,7 @@ export class CalendarController {
         @Request() req,
         @Param('integrationId', ParseUUIDPipe) integrationId: string,
     ): Promise<{ message: string }> {
-        await this.integrationService.deleteIntegration(req.user.id, integrationId);
+        await this.integrationService.deleteIntegration(req.user?.userId, integrationId);
         return { message: 'Integration deleted successfully' };
     }
 
@@ -226,7 +226,7 @@ export class CalendarController {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59);
 
-        return this.calendarService.getEvents(req.user.id, {
+        return this.calendarService.getEvents(req.user?.userId, {
             calendarIds: [calendarId],
             startDate,
             endDate,
@@ -248,7 +248,7 @@ export class CalendarController {
         endDate.setDate(startDate.getDate() + 6);
         endDate.setHours(23, 59, 59);
 
-        return this.calendarService.getEvents(req.user.id, {
+        return this.calendarService.getEvents(req.user?.userId, {
             calendarIds: [calendarId],
             startDate,
             endDate,
@@ -267,7 +267,7 @@ export class CalendarController {
         const endDate = new Date();
         endDate.setDate(startDate.getDate() + days);
 
-        return this.calendarService.getEvents(req.user.id, {
+        return this.calendarService.getEvents(req.user?.userId, {
             startDate,
             endDate,
             limit,

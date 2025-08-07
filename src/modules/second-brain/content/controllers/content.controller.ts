@@ -4,7 +4,7 @@ import { Content, Project, Goal, Person } from '../second-brain';
 
 // Get all content with pipeline filtering
 export const getContent = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { 
         type, 
         status, 
@@ -64,7 +64,7 @@ export const getContent = catchAsync(async (req: Request, res: Response) => {
 
 // Get single content item
 export const getContentItem = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const content = await Content.findOne({ 
@@ -87,7 +87,7 @@ export const getContentItem = catchAsync(async (req: Request, res: Response) => 
 
 // Create content item
 export const createContent = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     
     if (!userId) {
         throw createAppError('User not authenticated', 401);
@@ -111,7 +111,7 @@ export const createContent = catchAsync(async (req: Request, res: Response) => {
 
 // Update content item
 export const updateContent = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const content = await Content.findOneAndUpdate(
@@ -140,7 +140,7 @@ export const updateContent = catchAsync(async (req: Request, res: Response) => {
 
 // Delete content item
 export const deleteContent = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { id } = req.params;
 
     const content = await Content.findOneAndDelete({ 
@@ -160,7 +160,7 @@ export const deleteContent = catchAsync(async (req: Request, res: Response) => {
 
 // Get content pipeline overview
 export const getPipelineOverview = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const content = await Content.find({
         createdBy: userId,
@@ -193,7 +193,7 @@ export const getPipelineOverview = catchAsync(async (req: Request, res: Response
 
 // Get content analytics
 export const getContentAnalytics = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     const content = await Content.find({
         createdBy: userId,
