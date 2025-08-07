@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ITask extends Document {
     title: string;
     description?: string;
-    status: 'todo' | 'in-progress' | 'completed' | 'cancelled';
+    status: 'todo' | 'in-progress' | 'review' | 'completed' | 'cancelled';
     priority: 'low' | 'medium' | 'high' | 'urgent';
     dueDate?: Date;
     estimatedTime?: number; // in minutes
@@ -86,7 +86,7 @@ const TaskSchema = new Schema<ITask>({
     description: { type: String, trim: true },
     status: {
         type: String,
-        enum: ['todo', 'in-progress', 'completed', 'cancelled'],
+        enum: ['todo', 'in-progress', 'review', 'completed', 'cancelled'],
         default: 'todo'
     },
     priority: {

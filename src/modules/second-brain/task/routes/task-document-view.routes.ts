@@ -169,4 +169,11 @@ router.patch(
     taskDocumentViewController.freezeTaskDatabase
 );
 
+// Record operations following view API pattern
+router.get('/records', authenticateToken, taskDocumentViewController.getTaskRecords);
+router.post('/records', authenticateToken, taskDocumentViewController.createTaskRecord);
+router.get('/records/:recordId', authenticateToken, taskDocumentViewController.getTaskRecord);
+router.put('/records/:recordId', authenticateToken, taskDocumentViewController.updateTaskRecord);
+router.delete('/records/:recordId', authenticateToken, taskDocumentViewController.deleteTaskRecord);
+
 export default router;

@@ -441,3 +441,83 @@ export const freezeTaskDatabase = catchAsync(async (req: AuthenticatedRequest, r
     }
 });
 
+// Record operations following view API pattern
+export const getTaskRecords = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    // Delegate to existing task service
+    const { getTasks } = await import('../services/task.service');
+    const result = await getTasks(userId, req.query as any, req.query as any);
+
+    sendSuccessResponse(res, result.tasks, 'Tasks retrieved successfully');
+});
+
+export const createTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    // Delegate to existing task service
+    const { createTask } = await import('../services/task.service');
+    const result = await createTask(userId, req.body);
+
+    sendSuccessResponse(res, result, 'Task created successfully', 201);
+});
+
+export const getTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { recordId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    // Delegate to existing task service
+    const { getTaskById } = await import('../services/task.service');
+    const result = await getTaskById(userId, recordId);
+
+    sendSuccessResponse(res, result, 'Task retrieved successfully');
+});
+
+export const updateTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { recordId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    console.log('🔄 UPDATE TASK RECORD:', { recordId, userId, body: req.body });
+
+    // Delegate to existing task service
+    const { updateTask } = await import('../services/task.service');
+    const result = await updateTask(userId, recordId, req.body);
+
+    console.log('✅ UPDATE TASK RESULT:', result);
+    sendSuccessResponse(res, result, 'Task updated successfully');
+});
+
+export const deleteTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { recordId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    // Delegate to existing task service
+    const { deleteTask } = await import('../services/task.service');
+    await deleteTask(userId, recordId);
+
+    sendSuccessResponse(res, null, 'Task deleted successfully');
+});
+
