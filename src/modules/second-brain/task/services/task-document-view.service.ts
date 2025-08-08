@@ -205,24 +205,60 @@ export const getDefaultTaskViews = (): ITaskView[] => [
 export const getTasksViewConfig = () => ({
     moduleType: 'tasks' as const,
     documentType: 'TASKS' as const,
-    
+
     // Backend-controlled properties (cannot be removed/disabled)
     requiredProperties: ['title', 'status', 'priority', 'dueDate'],
-    frozenProperties: ['title'], // Only title is frozen by default
-    
+
+    // Detailed frozen property configuration
+    frozenConfig: {
+        viewType: 'TASKS',
+        moduleType: 'TASKS',
+        description: 'Task management with core fields protected',
+        frozenProperties: [
+            {
+                propertyId: 'title',
+                reason: 'Primary identifier - required for task management',
+                allowEdit: true,
+                allowHide: false,
+                allowDelete: false,
+            },
+            {
+                propertyId: 'status',
+                reason: 'Task status - essential for workflow management',
+                allowEdit: true,
+                allowHide: false,
+                allowDelete: false,
+            },
+            {
+                propertyId: 'priority',
+                reason: 'Task priority - important for task organization',
+                allowEdit: true,
+                allowHide: true,
+                allowDelete: false,
+            },
+            {
+                propertyId: 'dueDate',
+                reason: 'Due date - essential for task scheduling',
+                allowEdit: true,
+                allowHide: true,
+                allowDelete: false,
+            },
+        ],
+    },
+
     // Default configuration
     defaultProperties: getDefaultTaskProperties(),
     defaultViews: getDefaultTaskViews(),
-    
+
     // Supported property types for tasks
     supportedPropertyTypes: [
-        'TEXT', 'TEXTAREA', 'SELECT', 'MULTI_SELECT', 'DATE', 'NUMBER', 
+        'TEXT', 'TEXTAREA', 'SELECT', 'MULTI_SELECT', 'DATE', 'NUMBER',
         'PERSON', 'CHECKBOX', 'URL', 'EMAIL', 'PHONE', 'RELATION'
     ],
-    
+
     // Supported view types for tasks
     supportedViewTypes: ['TABLE', 'KANBAN', 'CALENDAR', 'TIMELINE'],
-    
+
     // Permissions
     permissions: {
         canCreate: true,
@@ -311,7 +347,7 @@ export const createDefaultTaskView = async (userId: string): Promise<ITaskDocume
         isDefault: true,
         permissions: [],
         requiredProperties: config.requiredProperties,
-        frozenProperties: config.frozenProperties,
+        frozenProperties: config.frozenConfig.frozenProperties.map(fp => fp.propertyId),
         frozen: false, // Initialize freeze status
         frozenAt: null,
         frozenBy: null,
@@ -359,7 +395,7 @@ export const createTaskView = async (
             isPublic: false,
             isDefault: true,
             requiredProperties: config.requiredProperties,
-            frozenProperties: config.frozenProperties,
+            frozenProperties: config.frozenConfig.frozenProperties.map(fp => fp.propertyId),
             createdBy: userId,
             lastEditedBy: userId
         });

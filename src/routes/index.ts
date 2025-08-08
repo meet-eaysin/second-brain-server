@@ -13,6 +13,7 @@ import taskDocumentViewRoutes from '../modules/second-brain/task/routes/task-doc
 import taskRoutes from '../modules/second-brain/task/routes/task.routes';
 import dashboardRoutes from '../modules/second-brain/dashboard/routes/dashboard.routes';
 import databaseDocumentViewRoutes from '../modules/database/routes/database-document-view.routes';
+import personDocumentViewRoutes from '../modules/second-brain/person/routes/person-document-view.routes';
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use('/second-brain/tasks', taskRoutes);
 router.use('/second-brain', dashboardRoutes);
 router.use('/document-views/tasks', taskDocumentViewRoutes);
 router.use('/document-views/databases', databaseDocumentViewRoutes);
+router.use('/document-views/people', personDocumentViewRoutes);
 
 export default router;
