@@ -129,7 +129,7 @@ const DEFAULT_PEOPLE_VIEWS = [
         isSystemView: true,
         description: 'View all people in your network',
         filters: [],
-        sorts: [{ propertyId: 'lastName', direction: 'asc' }],
+        sorts: [{ propertyId: 'lastName', direction: 'asc', order: 0 }],
         visibleProperties: ['firstName', 'lastName', 'email', 'phone', 'company', 'relationship'],
         groupBy: null
     },
@@ -141,7 +141,7 @@ const DEFAULT_PEOPLE_VIEWS = [
         isSystemView: true,
         description: 'View all clients',
         filters: [{ propertyId: 'relationship', operator: 'equals', value: 'client' }],
-        sorts: [{ propertyId: 'lastName', direction: 'asc' }],
+        sorts: [{ propertyId: 'lastName', direction: 'asc', order: 0 }],
         visibleProperties: ['firstName', 'lastName', 'email', 'phone', 'company'],
         groupBy: null
     },
@@ -153,7 +153,7 @@ const DEFAULT_PEOPLE_VIEWS = [
         isSystemView: true,
         description: 'View prospects in pipeline',
         filters: [{ propertyId: 'relationship', operator: 'equals', value: 'prospect' }],
-        sorts: [{ propertyId: 'lastName', direction: 'asc' }],
+        sorts: [{ propertyId: 'lastName', direction: 'asc', order: 0 }],
         visibleProperties: ['firstName', 'lastName', 'email', 'phone', 'company'],
         groupBy: 'relationship'
     }

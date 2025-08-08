@@ -37,7 +37,10 @@ export interface IPerson extends Document {
     // Notes
     bio?: string;
     personalNotes?: string;
-    
+
+    // Custom Properties (for user-defined fields)
+    customProperties?: Record<string, any>;
+
     // Metadata
     createdBy: mongoose.Types.ObjectId;
     createdAt: Date;
@@ -89,7 +92,10 @@ const PersonSchema = new Schema<IPerson>({
     // Notes
     bio: { type: String, trim: true },
     personalNotes: { type: String, trim: true },
-    
+
+    // Custom Properties (for user-defined fields)
+    customProperties: { type: Schema.Types.Mixed, default: {} },
+
     // Metadata
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     archivedAt: { type: Date }

@@ -15,6 +15,8 @@ import {
     updatePeopleViewSorts,
     duplicatePeopleView,
     addPeopleProperty,
+    updatePeopleCustomProperty,
+    deletePeopleCustomProperty,
     getDefaultPeopleProperties,
     getDefaultPeopleViews,
     getPeopleFrozenConfig
@@ -502,4 +504,31 @@ export const deletePeopleRecord = catchAsync(async (req: AuthenticatedRequest, r
     await deletePerson(userId, recordId);
 
     sendSuccessResponse(res, null, 'Person deleted successfully', 204);
+});
+
+// Update custom property
+export const updatePeopleCustomPropertyHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { viewId, propertyId } = req.params;
+    const userId = req.user?.userId;
+    const updates = req.body;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const updatedView = await updatePeopleCustomProperty(viewId, userId, propertyId, updates);
+    sendSuccessResponse(res, updatedView, 'Custom property updated successfully');
+});
+
+// Delete custom property
+export const deletePeopleCustomPropertyHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { viewId, propertyId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const updatedView = await deletePeopleCustomProperty(viewId, userId, propertyId);
+    sendSuccessResponse(res, updatedView, 'Custom property deleted successfully');
 });

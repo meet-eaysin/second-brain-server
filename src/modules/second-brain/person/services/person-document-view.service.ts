@@ -2,6 +2,85 @@ import { Person } from '../models/person.model';
 import { PersonDocumentView } from '../models/person-document-view.model';
 import { peopleConfigService } from './person-config.service';
 
+// Database storage for custom properties using PersonDocumentView model
+const storeCustomPropertyForView = async (viewId: string, userId: string, property: any) => {
+    try {
+        // For system views, we'll store custom properties in a special document
+        // Use a query-based approach instead of custom _id
+
+        // Check if we already have a custom properties document for this view/user
+        let customPropsDoc = await PersonDocumentView.findOne({
+            name: `Custom Properties for ${viewId}`,
+            createdBy: userId,
+            type: 'CUSTOM_PROPERTIES'
+        });
+
+        if (!customPropsDoc) {
+            // Create a new custom properties document with auto-generated _id
+            customPropsDoc = new PersonDocumentView({
+                name: `Custom Properties for ${viewId}`,
+                type: 'CUSTOM_PROPERTIES',
+                isDefault: false,
+                isSystemView: false,
+                filters: [],
+                sorts: [],
+                visibleProperties: [],
+                customProperties: [],
+                createdBy: userId,
+                databaseId: 'people-main-db',
+                // Add metadata to identify this as a custom properties container
+                config: {
+                    isCustomPropertiesContainer: true,
+                    targetViewId: viewId
+                }
+            });
+        }
+
+        // Add the new property
+        if (!customPropsDoc.customProperties) {
+            customPropsDoc.customProperties = [];
+        }
+        customPropsDoc.customProperties.push(property);
+
+        await customPropsDoc.save();
+
+        console.log('🔍 Stored custom property in database:', {
+            documentId: customPropsDoc._id,
+            targetViewId: viewId,
+            property,
+            totalPropertiesForView: customPropsDoc.customProperties.length
+        });
+
+    } catch (error) {
+        console.error('Error storing custom property:', error);
+        throw error;
+    }
+};
+
+const getCustomPropertiesForView = async (viewId: string, userId: string) => {
+    try {
+        const customPropsDoc = await PersonDocumentView.findOne({
+            name: `Custom Properties for ${viewId}`,
+            createdBy: userId,
+            type: 'CUSTOM_PROPERTIES'
+        });
+
+        const properties = customPropsDoc?.customProperties || [];
+
+        console.log('🔍 Retrieved custom properties from database:', {
+            documentId: customPropsDoc?._id,
+            targetViewId: viewId,
+            propertiesCount: properties.length,
+            properties
+        });
+
+        return properties;
+    } catch (error) {
+        console.error('Error retrieving custom properties:', error);
+        return [];
+    }
+};
+
 // Dynamic person properties - fetched from configuration service
 export const getDefaultPeopleProperties = async () => {
     return await peopleConfigService.getDefaultProperties();
@@ -33,13 +112,22 @@ export const getUserPeopleViews = async (userId: string) => {
 
         const config = await getPeopleViewConfig();
 
-        // Combine user views with default views
-        const defaultViews = config.defaultViews.map((view: any) => ({
-            ...view,
-            createdBy: userId,
-            databaseId: 'people-main-db',
-            frozenProperties: config?.frozenConfig?.frozenProperties?.map((fp: any) => fp.propertyId) || [],
-            isSystemView: true
+        // Combine user views with default views, including custom properties
+        const defaultViews = await Promise.all(config.defaultViews.map(async (view: any) => {
+            const customProperties = await getCustomPropertiesForView(view.id, userId);
+            const enhancedVisibleProperties = customProperties.length > 0
+                ? [...(view.visibleProperties || []), ...customProperties.map((cp: any) => cp.id)]
+                : view.visibleProperties;
+
+            return {
+                ...view,
+                createdBy: userId,
+                databaseId: 'people-main-db',
+                frozenProperties: config?.frozenConfig?.frozenProperties?.map((fp: any) => fp.propertyId) || [],
+                isSystemView: true,
+                customProperties: customProperties.length > 0 ? customProperties : undefined,
+                visibleProperties: enhancedVisibleProperties
+            };
         }));
 
         return [...defaultViews, ...views];
@@ -57,12 +145,19 @@ export const getPeopleView = async (viewId: string, userId: string) => {
         const defaultView = config.defaultViews.find((view: any) => view.id === viewId);
 
         if (defaultView) {
+            const customProperties = await getCustomPropertiesForView(viewId, userId);
+            const enhancedVisibleProperties = customProperties.length > 0
+                ? [...(defaultView.visibleProperties || []), ...customProperties.map((cp: any) => cp.id)]
+                : defaultView.visibleProperties;
+
             return {
                 ...defaultView,
                 createdBy: userId,
                 databaseId: 'people-main-db',
                 frozenProperties: config?.frozenConfig?.frozenProperties?.map((fp: any) => fp.propertyId) || [],
-                isSystemView: true
+                isSystemView: true,
+                customProperties: customProperties.length > 0 ? customProperties : undefined,
+                visibleProperties: enhancedVisibleProperties
             };
         }
 
@@ -192,39 +287,38 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
         const isDefaultView = !viewId.match(/^[0-9a-fA-F]{24}$/);
 
         if (isDefaultView) {
-            // For default views, create a new custom view with the additional property
+            // For default views, we'll store custom properties separately and return an enhanced view
+            // This avoids creating new views and keeps the original view intact
+
             // Generate unique property ID
             const propertyId = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-            // Create new custom view based on the default view structure
-            const customViewData = {
-                name: `Custom People View`,
-                type: 'TABLE',
-                isDefault: false,
-                isSystemView: false,
-                filters: [],
-                sorts: [{ propertyId: 'lastName', direction: 'asc' }],
-                visibleProperties: ['firstName', 'lastName', 'email', 'phone', 'company', 'relationship', propertyId],
-                databaseId: 'people-main-db'
-            };
+            // Get the default view structure
+            const defaultViews = await getDefaultPeopleViews();
+            const targetView = defaultViews.find(v => v.id === viewId) || defaultViews[0];
 
-            const newView = await createPeopleView(userId, 'people-main-db', customViewData);
+            // Store the custom property in the database for this user and view
+            await storeCustomPropertyForView(viewId, userId, {
+                id: propertyId,
+                name: property.name,
+                type: property.type || 'TEXT',
+                description: property.description || '',
+                required: property.required || false,
+                order: property.order || 6,
+                isVisible: true,
+                frozen: false,
+                selectOptions: property.selectOptions || undefined
+            });
 
-            // Return the new view with property information
+            // Return the enhanced view with the new property
+            const existingCustomProps = await getCustomPropertiesForView(viewId, userId);
+
             return {
-                ...newView.toObject(),
-                message: `Created new custom view with property "${property.name}"`,
-                customProperties: [{
-                    id: propertyId,
-                    name: property.name,
-                    type: property.type || 'TEXT',
-                    description: property.description || '',
-                    required: property.required || false,
-                    order: property.order || 6,
-                    isVisible: true,
-                    frozen: false,
-                    selectOptions: property.selectOptions || undefined
-                }]
+                ...targetView,
+                id: viewId, // Keep the original view ID
+                customProperties: existingCustomProps,
+                visibleProperties: [...(targetView.visibleProperties || []), propertyId],
+                message: `Property "${property.name}" added to ${targetView.name}`
             };
         } else {
             // For custom views, add property normally
@@ -359,6 +453,109 @@ export const duplicatePeopleView = async (viewId: string, userId: string, newNam
         return await createPeopleView(userId, originalView.databaseId, duplicatedView);
     } catch (error) {
         console.error('Error duplicating people view:', error);
+        throw error;
+    }
+};
+
+// Update custom property
+export const updatePeopleCustomProperty = async (viewId: string, userId: string, propertyId: string, updates: any) => {
+    try {
+        const isDefaultView = !viewId.match(/^[0-9a-fA-F]{24}$/);
+
+        if (isDefaultView) {
+            // For system views, update the custom properties document
+            const customPropsDoc = await PersonDocumentView.findOne({
+                name: `Custom Properties for ${viewId}`,
+                createdBy: userId,
+                type: 'CUSTOM_PROPERTIES'
+            });
+
+            if (!customPropsDoc) {
+                throw new Error('Custom properties document not found');
+            }
+
+            // Find and update the specific property
+            const propertyIndex = customPropsDoc.customProperties?.findIndex((p: any) => p.id === propertyId);
+            if (propertyIndex === -1 || propertyIndex === undefined) {
+                throw new Error('Custom property not found');
+            }
+
+            // Update the property
+            Object.assign(customPropsDoc.customProperties[propertyIndex], updates);
+            await customPropsDoc.save();
+
+            console.log('🔍 Updated custom property:', {
+                propertyId,
+                updates,
+                updatedProperty: customPropsDoc.customProperties[propertyIndex]
+            });
+
+            // Return the updated view with custom properties
+            const defaultViews = await getDefaultPeopleViews();
+            const targetView = defaultViews.find(v => v.id === viewId) || defaultViews[0];
+            const customProperties = await getCustomPropertiesForView(viewId, userId);
+
+            return {
+                ...targetView,
+                id: viewId,
+                customProperties,
+                visibleProperties: [...(targetView.visibleProperties || []), ...customProperties.map((cp: any) => cp.id)],
+                message: `Property "${updates.name || 'property'}" updated successfully`
+            };
+        } else {
+            // For custom views, update normally
+            throw new Error('Custom view property updates not implemented yet');
+        }
+    } catch (error) {
+        console.error('Error updating custom property:', error);
+        throw error;
+    }
+};
+
+// Delete custom property
+export const deletePeopleCustomProperty = async (viewId: string, userId: string, propertyId: string) => {
+    try {
+        const isDefaultView = !viewId.match(/^[0-9a-fA-F]{24}$/);
+
+        if (isDefaultView) {
+            // For system views, remove from custom properties document
+            const customPropsDoc = await PersonDocumentView.findOne({
+                name: `Custom Properties for ${viewId}`,
+                createdBy: userId,
+                type: 'CUSTOM_PROPERTIES'
+            });
+
+            if (!customPropsDoc) {
+                throw new Error('Custom properties document not found');
+            }
+
+            // Remove the property
+            customPropsDoc.customProperties = customPropsDoc.customProperties?.filter((p: any) => p.id !== propertyId) || [];
+            await customPropsDoc.save();
+
+            console.log('🔍 Deleted custom property:', {
+                propertyId,
+                remainingProperties: customPropsDoc.customProperties.length
+            });
+
+            // Return the updated view
+            const defaultViews = await getDefaultPeopleViews();
+            const targetView = defaultViews.find(v => v.id === viewId) || defaultViews[0];
+            const customProperties = await getCustomPropertiesForView(viewId, userId);
+
+            return {
+                ...targetView,
+                id: viewId,
+                customProperties,
+                visibleProperties: [...(targetView.visibleProperties || []), ...customProperties.map((cp: any) => cp.id)],
+                message: `Property deleted successfully`
+            };
+        } else {
+            // For custom views, delete normally
+            throw new Error('Custom view property deletion not implemented yet');
+        }
+    } catch (error) {
+        console.error('Error deleting custom property:', error);
         throw error;
     }
 };

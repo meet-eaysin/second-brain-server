@@ -4,7 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IPersonDocumentView extends Document {
     id: string;
     name: string;
-    type: 'TABLE' | 'KANBAN' | 'GALLERY' | 'CALENDAR' | 'TIMELINE';
+    type: 'TABLE' | 'KANBAN' | 'GALLERY' | 'CALENDAR' | 'TIMELINE' | 'CUSTOM_PROPERTIES';
     description?: string;
     isDefault: boolean;
     isSystemView: boolean;
@@ -35,7 +35,23 @@ export interface IPersonDocumentView extends Document {
         frozen?: boolean;
         displayConfig?: any;
     }>;
-    
+
+    customProperties?: Array<{
+        id: string;
+        name: string;
+        type: string;
+        description?: string;
+        required?: boolean;
+        order?: number;
+        isVisible?: boolean;
+        frozen?: boolean;
+        selectOptions?: Array<{
+            value: string;
+            label: string;
+            color?: string;
+        }>;
+    }>;
+
     frozenProperties: string[];
     
     config?: {
@@ -65,7 +81,7 @@ const PersonDocumentViewSchema = new Schema<IPersonDocumentView>({
     
     type: {
         type: String,
-        enum: ['TABLE', 'KANBAN', 'GALLERY', 'CALENDAR', 'TIMELINE'],
+        enum: ['TABLE', 'KANBAN', 'GALLERY', 'CALENDAR', 'TIMELINE', 'CUSTOM_PROPERTIES'],
         default: 'TABLE',
         required: true
     },
@@ -161,7 +177,52 @@ const PersonDocumentViewSchema = new Schema<IPersonDocumentView>({
         },
         displayConfig: Schema.Types.Mixed
     }],
-    
+
+    // Custom properties added by users
+    customProperties: [{
+        id: {
+            type: String,
+            required: true
+        },
+        name: {
+            type: String,
+            required: true
+        },
+        type: {
+            type: String,
+            required: true,
+            enum: [
+                'TEXT', 'TEXTAREA', 'EMAIL', 'PHONE', 'URL', 'SELECT', 'MULTI_SELECT',
+                'DATE', 'NUMBER', 'CHECKBOX', 'PERSON', 'RELATION', 'CREATED_TIME', 'LAST_EDITED_TIME'
+            ]
+        },
+        description: {
+            type: String,
+            default: ''
+        },
+        required: {
+            type: Boolean,
+            default: false
+        },
+        order: {
+            type: Number,
+            default: 0
+        },
+        isVisible: {
+            type: Boolean,
+            default: true
+        },
+        frozen: {
+            type: Boolean,
+            default: false
+        },
+        selectOptions: [{
+            value: String,
+            label: String,
+            color: String
+        }]
+    }],
+
     frozenProperties: [{
         type: String,
         required: true

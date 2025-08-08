@@ -89,6 +89,19 @@ router.patch(
     personDocumentViewController.updatePeopleViewPropertiesHandler
 );
 
+// Individual Custom Property Management
+router.patch(
+    '/views/:viewId/properties/:propertyId',
+    authenticateToken,
+    personDocumentViewController.updatePeopleCustomPropertyHandler
+);
+
+router.delete(
+    '/views/:viewId/properties/:propertyId',
+    authenticateToken,
+    personDocumentViewController.deletePeopleCustomPropertyHandler
+);
+
 // People View Filters Management
 router.patch(
     '/views/:viewId/filters',
