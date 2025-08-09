@@ -316,6 +316,23 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
             const defaultViews = await getDefaultPeopleViews();
             const targetView = defaultViews.find(v => v.id === viewId) || defaultViews[0];
 
+            // Transform selectOptions from frontend format to backend format
+            let transformedSelectOptions = undefined;
+            if (property.selectOptions && Array.isArray(property.selectOptions) && property.selectOptions.length > 0) {
+                transformedSelectOptions = property.selectOptions.map((option: any) => ({
+                    value: option.name || option.value || option.id || `option_${Date.now()}`,
+                    label: option.name || option.label || option.value || 'Option',
+                    color: option.color || '#6b7280'
+                }));
+            } else if (['SELECT', 'MULTI_SELECT'].includes(property.type)) {
+                // Create default options for SELECT/MULTI_SELECT properties if none provided
+                transformedSelectOptions = [
+                    { value: 'option1', label: 'Option 1', color: '#3b82f6' },
+                    { value: 'option2', label: 'Option 2', color: '#10b981' },
+                    { value: 'option3', label: 'Option 3', color: '#f59e0b' }
+                ];
+            }
+
             // Store the custom property in the database for this user and view
             await storeCustomPropertyForView(viewId, userId, {
                 id: propertyId,
@@ -326,7 +343,7 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
                 order: property.order || 6,
                 isVisible: true,
                 frozen: false,
-                selectOptions: property.selectOptions || undefined
+                selectOptions: transformedSelectOptions
             });
 
             // Return the enhanced view with the new property
@@ -359,6 +376,27 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
                 updatedAt: new Date()
             });
 
+            if (!view) {
+                throw new Error('Failed to update people view');
+            }
+
+            // Transform selectOptions for custom views too
+            let transformedSelectOptions = undefined;
+            if (property.selectOptions && Array.isArray(property.selectOptions) && property.selectOptions.length > 0) {
+                transformedSelectOptions = property.selectOptions.map((option: any) => ({
+                    value: option.name || option.value || option.id || `option_${Date.now()}`,
+                    label: option.name || option.label || option.value || 'Option',
+                    color: option.color || '#6b7280'
+                }));
+            } else if (['SELECT', 'MULTI_SELECT'].includes(property.type)) {
+                // Create default options for SELECT/MULTI_SELECT properties if none provided
+                transformedSelectOptions = [
+                    { value: 'option1', label: 'Option 1', color: '#3b82f6' },
+                    { value: 'option2', label: 'Option 2', color: '#10b981' },
+                    { value: 'option3', label: 'Option 3', color: '#f59e0b' }
+                ];
+            }
+
             return {
                 ...view.toObject(),
                 customProperties: [{
@@ -370,7 +408,7 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
                     order: property.order || (currentView.visibleProperties?.length || 0),
                     isVisible: true,
                     frozen: false,
-                    selectOptions: property.selectOptions || undefined
+                    selectOptions: transformedSelectOptions
                 }]
             };
         }
@@ -495,6 +533,11 @@ export const updatePeopleCustomProperty = async (viewId: string, userId: string,
             const propertyIndex = customPropsDoc.customProperties?.findIndex((p: any) => p.id === propertyId);
             if (propertyIndex === -1 || propertyIndex === undefined) {
                 throw new Error('Custom property not found');
+            }
+
+            // Ensure customProperties array exists
+            if (!customPropsDoc.customProperties) {
+                throw new Error('Custom properties array is undefined');
             }
 
             // Update the property
