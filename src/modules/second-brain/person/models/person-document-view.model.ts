@@ -4,7 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IPersonDocumentView extends Document {
     id: string;
     name: string;
-    type: 'TABLE' | 'KANBAN' | 'GALLERY' | 'CALENDAR' | 'TIMELINE' | 'CUSTOM_PROPERTIES';
+    type: 'TABLE' | 'KANBAN' | 'GALLERY' | 'CALENDAR' | 'TIMELINE' | 'LIST' | 'CUSTOM_PROPERTIES';
     description?: string;
     isDefault: boolean;
     isSystemView: boolean;
@@ -81,7 +81,7 @@ const PersonDocumentViewSchema = new Schema<IPersonDocumentView>({
     
     type: {
         type: String,
-        enum: ['TABLE', 'KANBAN', 'GALLERY', 'CALENDAR', 'TIMELINE', 'CUSTOM_PROPERTIES'],
+        enum: ['TABLE', 'KANBAN', 'GALLERY', 'CALENDAR', 'TIMELINE', 'LIST', 'CUSTOM_PROPERTIES'],
         default: 'TABLE',
         required: true
     },

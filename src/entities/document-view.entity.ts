@@ -21,6 +21,7 @@ export enum ViewType {
     CALENDAR = 'CALENDAR',
     GALLERY = 'GALLERY',
     TIMELINE = 'TIMELINE',
+    LIST = 'LIST',
 }
 
 @Entity('document_views')

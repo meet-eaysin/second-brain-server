@@ -309,7 +309,7 @@ class PeopleConfigService {
                 // UI configuration
                 ui: {
                     defaultViewType: 'TABLE',
-                    enabledViewTypes: ['TABLE', 'KANBAN', 'GALLERY', 'CALENDAR', 'TIMELINE'],
+                    enabledViewTypes: ['TABLE', 'KANBAN', 'GALLERY', 'CALENDAR', 'TIMELINE', 'LIST'],
                     defaultSort: { propertyId: 'lastName', direction: 'asc' },
                     itemsPerPage: 50,
                     enableBulkActions: true,

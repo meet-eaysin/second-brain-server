@@ -32,6 +32,7 @@ export enum PropertyType {
 export enum ViewType {
   TABLE = 'TABLE',
   BOARD = 'BOARD',
+  KANBAN = 'KANBAN', // Add KANBAN for consistency
   GALLERY = 'GALLERY',
   LIST = 'LIST',
   CALENDAR = 'CALENDAR',

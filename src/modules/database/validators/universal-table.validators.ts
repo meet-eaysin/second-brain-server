@@ -13,7 +13,7 @@ const propertyTypeSchema = z.enum([
 
 // View Types enum validation
 const viewTypeSchema = z.enum([
-  'TABLE', 'BOARD', 'GALLERY', 'LIST', 'CALENDAR', 'TIMELINE', 'GRAPH', 'CHART'
+  'TABLE', 'BOARD', 'KANBAN', 'GALLERY', 'LIST', 'CALENDAR', 'TIMELINE', 'GRAPH', 'CHART'
 ]);
 
 // Filter Operators enum validation

@@ -257,7 +257,7 @@ export const getTasksViewConfig = () => ({
     ],
 
     // Supported view types for tasks
-    supportedViewTypes: ['TABLE', 'KANBAN', 'CALENDAR', 'TIMELINE'],
+    supportedViewTypes: ['TABLE', 'KANBAN', 'CALENDAR', 'TIMELINE', 'LIST'],
 
     // Permissions
     permissions: {
