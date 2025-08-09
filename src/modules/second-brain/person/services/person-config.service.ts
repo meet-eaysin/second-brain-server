@@ -119,14 +119,12 @@ const DEFAULT_PEOPLE_PROPERTIES = [
         frozen: false,
         required: false,
         selectOptions: [
-            { value: 'client', label: 'Client' },
-            { value: 'prospect', label: 'Prospect' },
-            { value: 'partner', label: 'Partner' },
-            { value: 'vendor', label: 'Vendor' },
-            { value: 'colleague', label: 'Colleague' },
-            { value: 'friend', label: 'Friend' },
-            { value: 'family', label: 'Family' },
-            { value: 'other', label: 'Other' }
+            { id: 'family', name: 'Family', color: '#f59e0b' },
+            { id: 'friend', name: 'Friend', color: '#10b981' },
+            { id: 'colleague', name: 'Colleague', color: '#3b82f6' },
+            { id: 'client', name: 'Client', color: '#8b5cf6' },
+            { id: 'mentor', name: 'Mentor', color: '#ef4444' },
+            { id: 'other', name: 'Other', color: '#6b7280' }
         ]
     }
 ];

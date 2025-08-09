@@ -87,7 +87,17 @@ export const getPersonById = async (userId: string, personId: string) => {
         throw createNotFoundError('Person not found');
     }
 
-    return person;
+    // Transform person to flatten custom properties
+    const personObj = person.toObject();
+
+    // Flatten custom properties to root level
+    if (personObj.customProperties) {
+        Object.keys(personObj.customProperties).forEach(key => {
+            personObj[key] = personObj.customProperties[key];
+        });
+    }
+
+    return personObj;
 };
 
 export const getPeople = async (userId: string, filters: PersonFilters = {}, options: PersonQueryOptions = {}) => {
@@ -159,10 +169,24 @@ export const getPeople = async (userId: string, filters: PersonFilters = {}, opt
         Person.countDocuments(query)
     ]);
 
+    // Transform people to flatten custom properties
+    const transformedPeople = people.map(person => {
+        const personObj = person.toObject();
+
+        // Flatten custom properties to root level
+        if (personObj.customProperties) {
+            Object.keys(personObj.customProperties).forEach(key => {
+                personObj[key] = personObj.customProperties[key];
+            });
+        }
+
+        return personObj;
+    });
+
     const totalPages = Math.ceil(total / limit);
 
     return {
-        people,
+        people: transformedPeople,
         pagination: {
             total,
             page,
@@ -180,16 +204,36 @@ export const updatePerson = async (userId: string, personId: string, updates: Up
     }
 
     try {
+        // Separate custom properties from regular updates
+        const regularUpdates: any = {};
+        const customPropertyUpdates: any = {};
+
+        for (const [key, value] of Object.entries(updates)) {
+            if (key.startsWith('custom_')) {
+                // This is a custom property
+                customPropertyUpdates[`customProperties.${key}`] = value;
+            } else {
+                // This is a regular field
+                regularUpdates[key] = value;
+            }
+        }
+
+        // Combine updates
+        const finalUpdates = {
+            ...regularUpdates,
+            ...customPropertyUpdates
+        };
+
         const person = await Person.findOneAndUpdate(
-            { 
-                _id: personId, 
+            {
+                _id: personId,
                 createdBy: userId,
                 archivedAt: { $exists: false }
             },
-            updates,
-            { 
-                new: true, 
-                runValidators: true 
+            finalUpdates,
+            {
+                new: true,
+                runValidators: true
             }
         );
 
@@ -197,7 +241,17 @@ export const updatePerson = async (userId: string, personId: string, updates: Up
             throw createNotFoundError('Person not found');
         }
 
-        return person;
+        // Transform person to flatten custom properties
+        const personObj = person.toObject();
+
+        // Flatten custom properties to root level
+        if (personObj.customProperties) {
+            Object.keys(personObj.customProperties).forEach(key => {
+                personObj[key] = personObj.customProperties[key];
+            });
+        }
+
+        return personObj;
     } catch (error: any) {
         if (error.name === 'ValidationError') {
             throw createValidationError('Person validation failed', error.errors);

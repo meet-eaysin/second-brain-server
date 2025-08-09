@@ -186,7 +186,7 @@ export const addPeoplePropertyHandler = catchAsync(async (req: AuthenticatedRequ
 
     const updatedView = await addPeopleProperty(viewId, userId, property);
 
-    sendSuccessResponse(res, updatedView, 'Property added to people view successfully', 201);
+    sendSuccessResponse(res, 'Property added to people view successfully', updatedView, 201);
 });
 
 // Update people view properties

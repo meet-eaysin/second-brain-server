@@ -336,8 +336,7 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
                 ...targetView,
                 id: viewId, // Keep the original view ID
                 customProperties: existingCustomProps,
-                visibleProperties: [...(targetView.visibleProperties || []), propertyId],
-                message: `Property "${property.name}" added to ${targetView.name}`
+                visibleProperties: [...(targetView.visibleProperties || []), propertyId]
             };
         } else {
             // For custom views, add property normally
@@ -362,7 +361,6 @@ export const addPeopleProperty = async (viewId: string, userId: string, property
 
             return {
                 ...view.toObject(),
-                message: `Added property "${property.name}" to view`,
                 customProperties: [{
                     id: propertyId,
                     name: property.name,
