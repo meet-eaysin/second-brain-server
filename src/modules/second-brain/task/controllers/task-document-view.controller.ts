@@ -174,6 +174,23 @@ export const updateTaskViewFilters = catchAsync(async (req: AuthenticatedRequest
         return;
     }
 
+    if (!Array.isArray(filters)) {
+        sendErrorResponse(res, 'Filters must be an array', 400);
+        return;
+    }
+
+    // Handle system views that are not real MongoDB ObjectIds
+    if (viewId === 'all-tasks' || viewId === 'default' || !viewId.match(/^[0-9a-fA-F]{24}$/)) {
+        // For system views, we can't update filters directly
+        // Instead, return the filters as applied (not persisted)
+        sendSuccessResponse(res, {
+            id: viewId,
+            filters: filters || [],
+            message: 'Filters applied to system view (not persisted)'
+        }, 'View filters applied successfully');
+        return;
+    }
+
     const updatedView = await updateTaskViewFiltersService(viewId, userId, filters);
 
     if (!updatedView) {
@@ -192,6 +209,23 @@ export const updateTaskViewSorts = catchAsync(async (req: AuthenticatedRequest, 
 
     if (!userId) {
         sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    if (!Array.isArray(sorts)) {
+        sendErrorResponse(res, 'Sorts must be an array', 400);
+        return;
+    }
+
+    // Handle system views that are not real MongoDB ObjectIds
+    if (viewId === 'all-tasks' || viewId === 'default' || !viewId.match(/^[0-9a-fA-F]{24}$/)) {
+        // For system views, we can't update sorts directly
+        // Instead, return the sorts as applied (not persisted)
+        sendSuccessResponse(res, {
+            id: viewId,
+            sorts: sorts || [],
+            message: 'Sorts applied to system view (not persisted)'
+        }, 'View sorts applied successfully');
         return;
     }
 

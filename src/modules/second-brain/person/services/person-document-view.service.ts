@@ -105,12 +105,27 @@ export const getPeopleViewConfig = async () => {
 // Get user's people views
 export const getUserPeopleViews = async (userId: string) => {
     try {
+        console.log('🔍 getUserPeopleViews called for userId:', userId);
+
         const views = await PersonDocumentView.find({
             createdBy: userId,
             isDeleted: { $ne: true }
         }).sort({ createdAt: -1 });
 
+        console.log('🔍 Found user views:', views.length);
+
         const config = await getPeopleViewConfig();
+        console.log('🔍 Got config:', {
+            hasConfig: !!config,
+            hasDefaultViews: !!config?.defaultViews,
+            defaultViewsCount: config?.defaultViews?.length || 0
+        });
+
+        // Ensure defaultViews exists
+        if (!config || !config.defaultViews || !Array.isArray(config.defaultViews)) {
+            console.warn('⚠️ No default views found in config, returning user views only');
+            return views;
+        }
 
         // Combine user views with default views, including custom properties
         const defaultViews = await Promise.all(config.defaultViews.map(async (view: any) => {
@@ -130,9 +145,13 @@ export const getUserPeopleViews = async (userId: string) => {
             };
         }));
 
-        return [...defaultViews, ...views];
+        console.log('🔍 Processed default views:', defaultViews.length);
+        const result = [...defaultViews, ...views];
+        console.log('🔍 Returning total views:', result.length);
+
+        return result;
     } catch (error) {
-        console.error('Error fetching people views:', error);
+        console.error('❌ Error fetching people views:', error);
         throw error;
     }
 };
@@ -556,6 +575,172 @@ export const deletePeopleCustomProperty = async (viewId: string, userId: string,
         }
     } catch (error) {
         console.error('Error deleting custom property:', error);
+        throw error;
+    }
+};
+
+// Insert property (left or right)
+export const insertPeopleProperty = async (viewId: string, userId: string, propertyId: string, insertData: any) => {
+    try {
+        const isDefaultView = !viewId.match(/^[0-9a-fA-F]{24}$/);
+
+        if (isDefaultView) {
+            // Generate unique property ID for the new property
+            const newPropertyId = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+            // Get current custom properties
+            const customProperties = await getCustomPropertiesForView(viewId, userId);
+
+            // Find the target property to determine insertion position
+            const targetIndex = customProperties.findIndex((cp: any) => cp.id === propertyId);
+            const insertIndex = insertData.position === 'left' ? targetIndex : targetIndex + 1;
+
+            // Create new property
+            const newProperty = {
+                id: newPropertyId,
+                name: insertData.name || 'New Property',
+                type: insertData.type || 'TEXT',
+                description: '',
+                required: false,
+                order: insertIndex,
+                isVisible: true,
+                frozen: false
+            };
+
+            // Store the new property
+            await storeCustomPropertyForView(viewId, userId, newProperty);
+
+            console.log('🔍 Inserted custom property:', {
+                newPropertyId,
+                position: insertData.position,
+                insertIndex
+            });
+
+            // Return the updated view
+            const defaultViews = await getDefaultPeopleViews();
+            const targetView = defaultViews.find(v => v.id === viewId) || defaultViews[0];
+            const updatedCustomProperties = await getCustomPropertiesForView(viewId, userId);
+
+            return {
+                ...targetView,
+                id: viewId,
+                customProperties: updatedCustomProperties,
+                visibleProperties: [...(targetView.visibleProperties || []), ...updatedCustomProperties.map((cp: any) => cp.id)],
+                message: `Property "${newProperty.name}" inserted successfully`
+            };
+        } else {
+            throw new Error('Custom view property insertion not implemented yet');
+        }
+    } catch (error) {
+        console.error('Error inserting custom property:', error);
+        throw error;
+    }
+};
+
+// Duplicate property
+export const duplicatePeopleProperty = async (viewId: string, userId: string, propertyId: string) => {
+    try {
+        const isDefaultView = !viewId.match(/^[0-9a-fA-F]{24}$/);
+
+        if (isDefaultView) {
+            // Get the property to duplicate
+            const customProperties = await getCustomPropertiesForView(viewId, userId);
+            const sourceProperty = customProperties.find((cp: any) => cp.id === propertyId);
+
+            if (!sourceProperty) {
+                throw new Error('Property to duplicate not found');
+            }
+
+            // Generate unique property ID for the duplicate
+            const duplicatePropertyId = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+            // Create duplicate property
+            const duplicateProperty = {
+                ...sourceProperty,
+                id: duplicatePropertyId,
+                name: `${sourceProperty.name} Copy`,
+                order: (sourceProperty.order || 0) + 1
+            };
+
+            // Store the duplicate property
+            await storeCustomPropertyForView(viewId, userId, duplicateProperty);
+
+            console.log('🔍 Duplicated custom property:', {
+                sourcePropertyId: propertyId,
+                duplicatePropertyId,
+                duplicateName: duplicateProperty.name
+            });
+
+            // Return the updated view
+            const defaultViews = await getDefaultPeopleViews();
+            const targetView = defaultViews.find(v => v.id === viewId) || defaultViews[0];
+            const updatedCustomProperties = await getCustomPropertiesForView(viewId, userId);
+
+            return {
+                ...targetView,
+                id: viewId,
+                customProperties: updatedCustomProperties,
+                visibleProperties: [...(targetView.visibleProperties || []), ...updatedCustomProperties.map((cp: any) => cp.id)],
+                message: `Property "${duplicateProperty.name}" created successfully`
+            };
+        } else {
+            throw new Error('Custom view property duplication not implemented yet');
+        }
+    } catch (error) {
+        console.error('Error duplicating custom property:', error);
+        throw error;
+    }
+};
+
+// Freeze/unfreeze people property
+export const freezePeopleProperty = async (viewId: string, userId: string, propertyId: string, frozen: boolean) => {
+    try {
+        console.log('🔍 Freezing people property:', { viewId, userId, propertyId, frozen });
+
+        // Check if this is a system view (like "all-people")
+        const isSystemView = !viewId.match(/^[0-9a-fA-F]{24}$/);
+
+        if (!isSystemView) {
+            // For custom views, get the current view
+            const currentView = await getPeopleView(viewId, userId);
+            if (!currentView) {
+                throw new Error('View not found');
+            }
+        }
+
+        // Update the custom property's frozen status
+        const customProperties = await getCustomPropertiesForView(viewId, userId);
+        const propertyToUpdate = customProperties.find((cp: any) => cp.id === propertyId);
+
+        if (propertyToUpdate) {
+            // Update the custom property in the database (this works for both system and custom views)
+            await updatePeopleCustomProperty(viewId, userId, propertyId, { frozen });
+
+            console.log('✅ Custom property frozen status updated:', { propertyId, frozen });
+        } else {
+            // Check if it's a default property (these can't be frozen/unfrozen by users)
+            const defaultProperties = await getDefaultPeopleProperties();
+            const isDefaultProperty = defaultProperties.some((dp: any) => dp.id === propertyId);
+
+            if (isDefaultProperty) {
+                throw new Error('Cannot modify freeze status of default properties');
+            } else {
+                throw new Error('Property not found');
+            }
+        }
+
+        // Return success response without trying to update the view itself
+        const updatedCustomProperties = await getCustomPropertiesForView(viewId, userId);
+
+        return {
+            propertyId,
+            frozen,
+            customProperties: updatedCustomProperties,
+            message: `Property ${frozen ? 'frozen' : 'unfrozen'} successfully`
+        };
+
+    } catch (error) {
+        console.error('Error freezing people property:', error);
         throw error;
     }
 };

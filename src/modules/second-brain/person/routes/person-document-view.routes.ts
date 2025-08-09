@@ -102,6 +102,27 @@ router.delete(
     personDocumentViewController.deletePeopleCustomPropertyHandler
 );
 
+// Property Insert Operations
+router.post(
+    '/views/:viewId/properties/:propertyId/insert',
+    authenticateToken,
+    personDocumentViewController.insertPeoplePropertyHandler
+);
+
+// Property Duplicate Operation
+router.post(
+    '/views/:viewId/properties/:propertyId/duplicate',
+    authenticateToken,
+    personDocumentViewController.duplicatePeoplePropertyHandler
+);
+
+// Property Freeze Operation
+router.patch(
+    '/views/:viewId/properties/:propertyId/freeze',
+    authenticateToken,
+    personDocumentViewController.freezePeoplePropertyHandler
+);
+
 // People View Filters Management
 router.patch(
     '/views/:viewId/filters',

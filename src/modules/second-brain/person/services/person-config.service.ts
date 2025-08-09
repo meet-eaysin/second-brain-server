@@ -4,7 +4,19 @@ import { createAppError } from '@/utils';
 export interface PeopleModuleConfig {
     moduleType: 'people';
     documentType: 'PEOPLE';
-    
+
+    // Database metadata
+    database: {
+        id: string;
+        name: string;
+        displayName: string;
+        displayNamePlural: string;
+        description: string;
+        icon: string;
+        entityKey: string;
+        collection: string;
+    };
+
     // Backend-controlled properties (cannot be removed/disabled)
     requiredProperties: string[];
     
@@ -267,23 +279,35 @@ class PeopleConfigService {
             return {
                 moduleType: 'people',
                 documentType: 'PEOPLE',
-                
+
+                // Database metadata from table config
+                database: {
+                    id: 'people-main-db',
+                    name: 'People',
+                    displayName: 'Person',
+                    displayNamePlural: 'People',
+                    description: 'Manage your personal and professional network',
+                    icon: '👥',
+                    entityKey: 'people',
+                    collection: 'people'
+                },
+
                 // Backend-controlled properties (cannot be removed/disabled)
                 requiredProperties: ['firstName', 'lastName', 'email'],
-                
+
                 // Detailed frozen property configuration
                 frozenConfig,
-                
+
                 // Default configuration
                 defaultProperties,
                 defaultViews,
-                
+
                 // Supported property types for people
                 supportedPropertyTypes: [
-                    'TEXT', 'TEXTAREA', 'EMAIL', 'PHONE', 'URL', 'SELECT', 'MULTI_SELECT', 
+                    'TEXT', 'TEXTAREA', 'EMAIL', 'PHONE', 'URL', 'SELECT', 'MULTI_SELECT',
                     'DATE', 'NUMBER', 'CHECKBOX', 'PERSON', 'RELATION', 'CREATED_TIME', 'LAST_EDITED_TIME'
                 ],
-                
+
                 // UI configuration
                 ui: {
                     defaultViewType: 'TABLE',
@@ -294,7 +318,7 @@ class PeopleConfigService {
                     enableExport: true,
                     enableImport: true
                 },
-                
+
                 // Permissions
                 permissions: {
                     canCreateViews: true,

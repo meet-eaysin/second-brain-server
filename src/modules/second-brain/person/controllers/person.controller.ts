@@ -46,7 +46,7 @@ export const getPeople = catchAsync(async (req: AuthenticatedRequest, res: Respo
 
     const result = await personService.getPeople(userId, filters, options);
 
-    sendSuccessResponse(res, result, 'People retrieved successfully');
+    sendSuccessResponse(res, 'People retrieved successfully', result);
 });
 
 // Get single person with full CRM details
@@ -77,7 +77,7 @@ export const getPerson = catchAsync(async (req: AuthenticatedRequest, res: Respo
         contactInsights
     };
 
-    sendSuccessResponse(res, result, 'Person retrieved successfully');
+    sendSuccessResponse(res, 'Person retrieved successfully', result);
 });
 
 // Create person with CRM setup
@@ -106,7 +106,7 @@ export const updatePerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
     const person = await personService.updatePerson(userId, id, req.body);
 
-    sendSuccessResponse(res, person, 'Person updated successfully');
+    sendSuccessResponse(res, 'Person updated successfully', person);
 });
 
 // Delete person with cleanup

@@ -17,6 +17,9 @@ import {
     addPeopleProperty,
     updatePeopleCustomProperty,
     deletePeopleCustomProperty,
+    insertPeopleProperty,
+    duplicatePeopleProperty,
+    freezePeopleProperty,
     getDefaultPeopleProperties,
     getDefaultPeopleViews,
     getPeopleFrozenConfig
@@ -33,28 +36,28 @@ interface AuthenticatedRequest extends Request {
 export const getPeopleConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const config = await getPeopleViewConfig();
 
-    sendSuccessResponse(res, config, 'People configuration retrieved successfully');
+    sendSuccessResponse(res, 'People configuration retrieved successfully', config);
 });
 
 // Get default people properties
 export const getDefaultPeoplePropertiesHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const properties = await getDefaultPeopleProperties();
 
-    sendSuccessResponse(res, properties, 'Default people properties retrieved successfully');
+    sendSuccessResponse(res, 'Default people properties retrieved successfully', properties);
 });
 
 // Get default people views
 export const getDefaultPeopleViewsHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const views = await getDefaultPeopleViews();
 
-    sendSuccessResponse(res, views, 'Default people views retrieved successfully');
+    sendSuccessResponse(res, 'Default people views retrieved successfully', views);
 });
 
 // Get people frozen configuration
 export const getPeopleFrozenConfigHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const frozenConfig = await getPeopleFrozenConfig();
 
-    sendSuccessResponse(res, frozenConfig, 'People frozen configuration retrieved successfully');
+    sendSuccessResponse(res, 'People frozen configuration retrieved successfully', frozenConfig);
 });
 
 // Get all people views for user
@@ -68,7 +71,7 @@ export const getPeopleViews = catchAsync(async (req: AuthenticatedRequest, res: 
 
     const views = await getUserPeopleViews(userId);
 
-    sendSuccessResponse(res, views, 'People views retrieved successfully');
+    sendSuccessResponse(res, 'People views retrieved successfully', views);
 });
 
 // Get default people view
@@ -87,7 +90,7 @@ export const getDefaultPeopleViewHandler = catchAsync(async (req: AuthenticatedR
         return;
     }
 
-    sendSuccessResponse(res, defaultView, 'Default people view retrieved successfully');
+    sendSuccessResponse(res, 'Default people view retrieved successfully', defaultView);
 });
 
 // Get specific people view by ID
@@ -107,7 +110,7 @@ export const getPeopleViewById = catchAsync(async (req: AuthenticatedRequest, re
         return;
     }
 
-    sendSuccessResponse(res, view, 'People view retrieved successfully');
+    sendSuccessResponse(res, 'People view retrieved successfully', view);
 });
 
 // Create new people view
@@ -127,7 +130,7 @@ export const createPeopleViewHandler = catchAsync(async (req: AuthenticatedReque
 
     const newView = await createPeopleView(userId, viewData.databaseId, viewData);
 
-    sendSuccessResponse(res, newView, 'People view created successfully', 201);
+    sendSuccessResponse(res, 'People view created successfully', newView, 201);
 });
 
 // Update people view
@@ -147,7 +150,7 @@ export const updatePeopleViewHandler = catchAsync(async (req: AuthenticatedReque
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'People view updated successfully');
+    sendSuccessResponse(res, 'People view updated successfully', updatedView);
 });
 
 // Delete people view
@@ -167,7 +170,7 @@ export const deletePeopleViewHandler = catchAsync(async (req: AuthenticatedReque
         return;
     }
 
-    sendSuccessResponse(res, null, 'People view deleted successfully', 204);
+    sendSuccessResponse(res, 'People view deleted successfully', null, 204);
 });
 
 // Add property to people view
@@ -209,7 +212,7 @@ export const updatePeopleViewPropertiesHandler = catchAsync(async (req: Authenti
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'People view properties updated successfully');
+    sendSuccessResponse(res, 'People view properties updated successfully', updatedView);
 });
 
 // Update people view filters
@@ -232,11 +235,11 @@ export const updatePeopleViewFiltersHandler = catchAsync(async (req: Authenticat
     if (viewId === 'all-people' || viewId === 'default' || !viewId.match(/^[0-9a-fA-F]{24}$/)) {
         // For fallback views, we can't update filters directly
         // Instead, return the filters as applied (not persisted)
-        sendSuccessResponse(res, {
+        sendSuccessResponse(res, 'View filters applied successfully', {
             id: viewId,
             filters: filters || [],
             message: 'Filters applied to fallback view (not persisted)'
-        }, 'View filters applied successfully');
+        });
         return;
     }
 
@@ -247,7 +250,7 @@ export const updatePeopleViewFiltersHandler = catchAsync(async (req: Authenticat
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'People view filters updated successfully');
+    sendSuccessResponse(res, 'People view filters updated successfully', updatedView);
 });
 
 // Update people view sorts
@@ -270,11 +273,11 @@ export const updatePeopleViewSortsHandler = catchAsync(async (req: Authenticated
     if (viewId === 'all-people' || viewId === 'default' || !viewId.match(/^[0-9a-fA-F]{24}$/)) {
         // For fallback views, we can't update sorts directly
         // Instead, return the sorts as applied (not persisted)
-        sendSuccessResponse(res, {
+        sendSuccessResponse(res, 'View sorts applied successfully', {
             id: viewId,
             sorts: sorts || [],
             message: 'Sorts applied to fallback view (not persisted)'
-        }, 'View sorts applied successfully');
+        });
         return;
     }
 
@@ -285,7 +288,7 @@ export const updatePeopleViewSortsHandler = catchAsync(async (req: Authenticated
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'People view sorts updated successfully');
+    sendSuccessResponse(res, 'People view sorts updated successfully', updatedView);
 });
 
 // Duplicate people view
@@ -301,7 +304,7 @@ export const duplicatePeopleViewHandler = catchAsync(async (req: AuthenticatedRe
 
     const duplicatedView = await duplicatePeopleView(viewId, userId, name);
 
-    sendSuccessResponse(res, duplicatedView, 'People view duplicated successfully', 201);
+    sendSuccessResponse(res, 'People view duplicated successfully', duplicatedView, 201);
 });
 
 // Record operations following view API pattern
@@ -435,13 +438,13 @@ export const getPeopleRecords = catchAsync(async (req: AuthenticatedRequest, res
     const { getPeople } = await import('../services/person.service');
     const result = await getPeople(userId, filters, options);
 
-    sendSuccessResponse(res, {
+    sendSuccessResponse(res, 'People retrieved successfully', {
         people: result.people,
         pagination: result.pagination,
         appliedFilters: filters,
         appliedSort: options.sort,
         viewId: viewId || null
-    }, 'People retrieved successfully');
+    });
 });
 
 export const createPeopleRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -455,7 +458,7 @@ export const createPeopleRecord = catchAsync(async (req: AuthenticatedRequest, r
     const { createPerson } = await import('../services/person.service');
     const result = await createPerson(userId, req.body);
 
-    sendSuccessResponse(res, result, 'Person created successfully', 201);
+    sendSuccessResponse(res, 'Person created successfully', result, 201);
 });
 
 export const getPeopleRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -471,7 +474,7 @@ export const getPeopleRecord = catchAsync(async (req: AuthenticatedRequest, res:
     const { getPersonById } = await import('../services/person.service');
     const result = await getPersonById(userId, recordId);
 
-    sendSuccessResponse(res, result, 'Person retrieved successfully');
+    sendSuccessResponse(res, 'Person retrieved successfully', result);
 });
 
 export const updatePeopleRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -487,7 +490,7 @@ export const updatePeopleRecord = catchAsync(async (req: AuthenticatedRequest, r
     const { updatePerson } = await import('../services/person.service');
     const result = await updatePerson(userId, recordId, req.body);
 
-    sendSuccessResponse(res, result, 'Person updated successfully');
+    sendSuccessResponse(res, 'Person updated successfully', result);
 });
 
 export const deletePeopleRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -503,7 +506,7 @@ export const deletePeopleRecord = catchAsync(async (req: AuthenticatedRequest, r
     const { deletePerson } = await import('../services/person.service');
     await deletePerson(userId, recordId);
 
-    sendSuccessResponse(res, null, 'Person deleted successfully', 204);
+    sendSuccessResponse(res, 'Person deleted successfully', null, 204);
 });
 
 // Update custom property
@@ -517,7 +520,7 @@ export const updatePeopleCustomPropertyHandler = catchAsync(async (req: Authenti
     }
 
     const updatedView = await updatePeopleCustomProperty(viewId, userId, propertyId, updates);
-    sendSuccessResponse(res, updatedView, 'Custom property updated successfully');
+    sendSuccessResponse(res, 'Custom property updated successfully', updatedView);
 });
 
 // Delete custom property
@@ -530,5 +533,51 @@ export const deletePeopleCustomPropertyHandler = catchAsync(async (req: Authenti
     }
 
     const updatedView = await deletePeopleCustomProperty(viewId, userId, propertyId);
-    sendSuccessResponse(res, updatedView, 'Custom property deleted successfully');
+    sendSuccessResponse(res, 'Custom property deleted successfully', updatedView);
+});
+
+// Insert property
+export const insertPeoplePropertyHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { viewId, propertyId } = req.params;
+    const userId = req.user?.userId;
+    const insertData = req.body;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const updatedView = await insertPeopleProperty(viewId, userId, propertyId, insertData);
+    sendSuccessResponse(res, 'Property inserted successfully', updatedView);
+});
+
+// Duplicate property
+export const duplicatePeoplePropertyHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { viewId, propertyId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const updatedView = await duplicatePeopleProperty(viewId, userId, propertyId);
+    sendSuccessResponse(res, 'Property duplicated successfully', updatedView);
+});
+
+// Freeze property
+export const freezePeoplePropertyHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const { viewId, propertyId } = req.params;
+    const { frozen } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    try {
+        const result = await freezePeopleProperty(viewId, userId, propertyId, frozen);
+        sendSuccessResponse(res, 'Property freeze status updated successfully', result);
+    } catch (error) {
+        console.error('Error in freezePeoplePropertyHandler:', error);
+        return sendErrorResponse(res, (error as any)?.message || 'Failed to update property freeze status', 500);
+    }
 });

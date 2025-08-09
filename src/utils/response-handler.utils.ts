@@ -1,5 +1,8 @@
 import { Response } from 'express';
 
+// ⚠️ DEPRECATED: This file is deprecated. Use response.utils.ts instead.
+// This file is kept for backward compatibility but should not be used in new code.
+
 export const sendSuccessResponse = <T>(
   res: Response,
   data: T,

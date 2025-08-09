@@ -6,7 +6,7 @@ export {
   sendSuccessResponse,
   sendErrorResponse,
   sendPaginatedResponse
-} from './response-handler.utils';
+} from './response.utils';
 
 // Error utilities
 export {
