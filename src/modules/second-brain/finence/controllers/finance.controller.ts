@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Finance, Person, Project, Goal } from '../second-brain';
+import { catchAsync, createAppError } from '../../../../utils';
 
 // Get all financial records
 export const getFinances = catchAsync(async (req: Request, res: Response) => {

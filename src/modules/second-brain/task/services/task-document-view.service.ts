@@ -930,3 +930,17 @@ export const toggleTaskPropertyFreeze = async (
 
     return await document.save();
 };
+
+// Additional service methods for API compatibility
+export const getDefaultTasksProperties = async (): Promise<ITaskProperty[]> => {
+    return getDefaultTaskProperties();
+};
+
+export const getDefaultTasksViews = async (): Promise<ITaskView[]> => {
+    return getDefaultTaskViews();
+};
+
+export const getTasksFrozenConfig = async (): Promise<any> => {
+    const config = getTasksViewConfig();
+    return config.frozenConfig;
+};

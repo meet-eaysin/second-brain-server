@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Mood, Task, Journal } from '../second-brain';
+import { catchAsync, createAppError } from '../../../../utils';
 
 // Get all mood entries
 export const getMoodEntries = catchAsync(async (req: Request, res: Response) => {

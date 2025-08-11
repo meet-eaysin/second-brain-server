@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Journal, Task, Project, Mood } from '../second-brain';
+import { catchAsync, createAppError } from '../../../../utils';
 
 // Get all journal entries with filtering
 export const getJournalEntries = catchAsync(async (req: Request, res: Response) => {

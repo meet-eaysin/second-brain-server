@@ -9,6 +9,9 @@ interface AuthenticatedRequest extends Request {
 }
 import {
     getTasksViewConfig,
+    getDefaultTasksProperties,
+    getDefaultTasksViews,
+    getTasksFrozenConfig,
     getUserTaskViews,
     getTaskView,
     getDefaultTaskView as getDefaultTaskViewService,
@@ -31,7 +34,28 @@ import { TaskDocumentView } from '../models/task-document-view.model';
 export const getTasksConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const config = getTasksViewConfig();
 
-    sendSuccessResponse(res, config, 'Task configuration retrieved successfully');
+    sendSuccessResponse(res, 'Task configuration retrieved successfully', config);
+});
+
+// Get default tasks properties
+export const getDefaultTasksPropertiesHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const properties = await getDefaultTasksProperties();
+
+    sendSuccessResponse(res, 'Default tasks properties retrieved successfully', properties);
+});
+
+// Get default tasks views
+export const getDefaultTasksViewsHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const views = await getDefaultTasksViews();
+
+    sendSuccessResponse(res, 'Default tasks views retrieved successfully', views);
+});
+
+// Get tasks frozen configuration
+export const getTasksFrozenConfigHandler = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const frozenConfig = await getTasksFrozenConfig();
+
+    sendSuccessResponse(res, 'Tasks frozen configuration retrieved successfully', frozenConfig);
 });
 
 // Get all task views for user
@@ -45,7 +69,7 @@ export const getTaskViews = catchAsync(async (req: AuthenticatedRequest, res: Re
 
     const views = await getUserTaskViews(userId);
 
-    sendSuccessResponse(res, views, 'Task views retrieved successfully');
+    sendSuccessResponse(res, 'Task views retrieved successfully', views);
 });
 
 // Get specific task view
@@ -65,7 +89,7 @@ export const getTaskViewById = catchAsync(async (req: AuthenticatedRequest, res:
         return;
     }
 
-    sendSuccessResponse(res, view, 'Task view retrieved successfully');
+    sendSuccessResponse(res, 'Task view retrieved successfully', view);
 });
 
 // Get default task view for user
@@ -79,7 +103,7 @@ export const getDefaultTaskView = catchAsync(async (req: AuthenticatedRequest, r
 
     const defaultView = await getDefaultTaskViewService(userId);
 
-    sendSuccessResponse(res, defaultView, 'Default task view retrieved successfully');
+    sendSuccessResponse(res, 'Default task view retrieved successfully', defaultView);
 });
 
 // Create new task view
@@ -99,7 +123,7 @@ export const createTaskView = catchAsync(async (req: AuthenticatedRequest, res: 
 
     const newView = await createTaskViewService(userId, viewData.databaseId, viewData);
 
-    sendSuccessResponse(res, newView, 'Task view created successfully', 201);
+    sendSuccessResponse(res, 'Task view created successfully', newView, 201);
 });
 
 // Update task view
@@ -119,7 +143,7 @@ export const updateTaskView = catchAsync(async (req: AuthenticatedRequest, res: 
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Task view updated successfully');
+    sendSuccessResponse(res, 'Task view updated successfully', updatedView);
 });
 
 // Delete task view
@@ -139,7 +163,7 @@ export const deleteTaskView = catchAsync(async (req: AuthenticatedRequest, res: 
         return;
     }
 
-    sendSuccessResponse(res, null, 'Task view deleted successfully');
+    sendSuccessResponse(res, 'Task view deleted successfully', null);
 });
 
 // Update task view properties
@@ -160,7 +184,7 @@ export const updateTaskViewProperties = catchAsync(async (req: AuthenticatedRequ
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Task view properties updated successfully');
+    sendSuccessResponse(res, 'Task view properties updated successfully', updatedView);
 });
 
 // Update task view filters
@@ -183,11 +207,11 @@ export const updateTaskViewFilters = catchAsync(async (req: AuthenticatedRequest
     if (viewId === 'all-tasks' || viewId === 'default' || !viewId.match(/^[0-9a-fA-F]{24}$/)) {
         // For system views, we can't update filters directly
         // Instead, return the filters as applied (not persisted)
-        sendSuccessResponse(res, {
+        sendSuccessResponse(res, 'View filters applied successfully', {
             id: viewId,
             filters: filters || [],
             message: 'Filters applied to system view (not persisted)'
-        }, 'View filters applied successfully');
+        });
         return;
     }
 
@@ -198,7 +222,7 @@ export const updateTaskViewFilters = catchAsync(async (req: AuthenticatedRequest
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Task view filters updated successfully');
+    sendSuccessResponse(res, 'Task view filters updated successfully', updatedView);
 });
 
 // Update task view sorts
@@ -221,11 +245,11 @@ export const updateTaskViewSorts = catchAsync(async (req: AuthenticatedRequest, 
     if (viewId === 'all-tasks' || viewId === 'default' || !viewId.match(/^[0-9a-fA-F]{24}$/)) {
         // For system views, we can't update sorts directly
         // Instead, return the sorts as applied (not persisted)
-        sendSuccessResponse(res, {
+        sendSuccessResponse(res, 'View sorts applied successfully', {
             id: viewId,
             sorts: sorts || [],
             message: 'Sorts applied to system view (not persisted)'
-        }, 'View sorts applied successfully');
+        });
         return;
     }
 
@@ -236,7 +260,7 @@ export const updateTaskViewSorts = catchAsync(async (req: AuthenticatedRequest, 
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Task view sorts updated successfully');
+    sendSuccessResponse(res, 'Task view sorts updated successfully', updatedView);
 });
 
 // Duplicate task view
@@ -257,7 +281,7 @@ export const duplicateTaskView = catchAsync(async (req: AuthenticatedRequest, re
         return;
     }
 
-    sendSuccessResponse(res, duplicatedView, 'Task view duplicated successfully', 201);
+    sendSuccessResponse(res, 'Task view duplicated successfully', duplicatedView, 201);
 });
 
 // Get task view permissions
@@ -277,7 +301,7 @@ export const getTaskViewPermissions = catchAsync(async (req: AuthenticatedReques
         return;
     }
 
-    sendSuccessResponse(res, permissions, 'Task view permissions retrieved successfully');
+    sendSuccessResponse(res, 'Task view permissions retrieved successfully', permissions);
 });
 
 // Update task view permissions
@@ -298,7 +322,7 @@ export const updateTaskViewPermissions = catchAsync(async (req: AuthenticatedReq
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Task view permissions updated successfully');
+    sendSuccessResponse(res, 'Task view permissions updated successfully', updatedView);
 });
 
 // Add new property to task view
@@ -319,7 +343,7 @@ export const addTaskProperty = catchAsync(async (req: AuthenticatedRequest, res:
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Property added successfully');
+    sendSuccessResponse(res, 'Property added successfully', updatedView);
 });
 
 // Remove property from task view
@@ -339,7 +363,7 @@ export const removeTaskProperty = catchAsync(async (req: AuthenticatedRequest, r
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Property removed successfully');
+    sendSuccessResponse(res, 'Property removed successfully', updatedView);
 });
 
 // Freeze/unfreeze property
@@ -360,7 +384,7 @@ export const toggleTaskPropertyFreeze = catchAsync(async (req: AuthenticatedRequ
         return;
     }
 
-    sendSuccessResponse(res, updatedView, `Property ${frozen ? 'frozen' : 'unfrozen'} successfully`);
+    sendSuccessResponse(res, `Property ${frozen ? 'frozen' : 'unfrozen'} successfully`, updatedView);
 });
 
 // Reorder properties
@@ -382,7 +406,7 @@ export const reorderTaskProperties = catchAsync(async (req: AuthenticatedRequest
         return;
     }
 
-    sendSuccessResponse(res, updatedView, 'Properties reordered successfully');
+    sendSuccessResponse(res, 'Properties reordered successfully', updatedView);
 });
 
 // Validate property configuration
@@ -399,7 +423,7 @@ export const validateTaskProperty = catchAsync(async (req: AuthenticatedRequest,
     const isValid = true; // Placeholder
     const errors: string[] = [];
 
-    sendSuccessResponse(res, { isValid, errors }, 'Property validation completed');
+    sendSuccessResponse(res, 'Property validation completed', { isValid, errors });
 });
 
 // Freeze/unfreeze database
@@ -469,7 +493,7 @@ export const freezeTaskDatabase = catchAsync(async (req: AuthenticatedRequest, r
             updatedBy: userId
         };
 
-        sendSuccessResponse(res, result, `Database ${frozen ? 'frozen' : 'unfrozen'} successfully`);
+        sendSuccessResponse(res, `Database ${frozen ? 'frozen' : 'unfrozen'} successfully`, result);
     } catch (error: any) {
         sendErrorResponse(res, error.message || 'Failed to update database freeze status', 500);
     }
@@ -487,7 +511,7 @@ export const getTaskRecords = catchAsync(async (req: AuthenticatedRequest, res: 
     const { getTasks } = await import('../services/task.service');
     const result = await getTasks(userId, req.query as any, req.query as any);
 
-    sendSuccessResponse(res, result.tasks, 'Tasks retrieved successfully');
+    sendSuccessResponse(res, 'Tasks retrieved successfully', result.tasks);
 });
 
 export const createTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -501,7 +525,7 @@ export const createTaskRecord = catchAsync(async (req: AuthenticatedRequest, res
     const { createTask } = await import('../services/task.service');
     const result = await createTask(userId, req.body);
 
-    sendSuccessResponse(res, result, 'Task created successfully', 201);
+    sendSuccessResponse(res, 'Task created successfully', result, 201);
 });
 
 export const getTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -517,7 +541,7 @@ export const getTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: R
     const { getTaskById } = await import('../services/task.service');
     const result = await getTaskById(userId, recordId);
 
-    sendSuccessResponse(res, result, 'Task retrieved successfully');
+    sendSuccessResponse(res, 'Task retrieved successfully', result);
 });
 
 export const updateTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -536,7 +560,7 @@ export const updateTaskRecord = catchAsync(async (req: AuthenticatedRequest, res
     const result = await updateTask(userId, recordId, req.body);
 
     console.log('✅ UPDATE TASK RESULT:', result);
-    sendSuccessResponse(res, result, 'Task updated successfully');
+    sendSuccessResponse(res, 'Task updated successfully', result);
 });
 
 export const deleteTaskRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -552,6 +576,6 @@ export const deleteTaskRecord = catchAsync(async (req: AuthenticatedRequest, res
     const { deleteTask } = await import('../services/task.service');
     await deleteTask(userId, recordId);
 
-    sendSuccessResponse(res, null, 'Task deleted successfully');
+    sendSuccessResponse(res, 'Task deleted successfully', null);
 });
 

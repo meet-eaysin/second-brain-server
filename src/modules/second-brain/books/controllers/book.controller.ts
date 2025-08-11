@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
-import { Book, Project, Goal } from '../second-brain';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
 
 // Get all books with filtering
 export const getBooks = catchAsync(async (req: Request, res: Response) => {

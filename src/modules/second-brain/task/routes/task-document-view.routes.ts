@@ -12,6 +12,27 @@ router.get(
     taskDocumentViewController.getTasksConfig
 );
 
+// Default Properties
+router.get(
+    '/properties/default',
+    authenticateToken,
+    taskDocumentViewController.getDefaultTasksPropertiesHandler
+);
+
+// Default Views
+router.get(
+    '/views/defaults',
+    authenticateToken,
+    taskDocumentViewController.getDefaultTasksViewsHandler
+);
+
+// Frozen Configuration
+router.get(
+    '/frozen-config',
+    authenticateToken,
+    taskDocumentViewController.getTasksFrozenConfigHandler
+);
+
 // Task Views Management
 router.get(
     '/views',

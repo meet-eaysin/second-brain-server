@@ -49,13 +49,41 @@ interface IDatabaseDocumentView {
 }
 
 // Get database view configuration
-export const getDatabasesViewConfig = () => {
+export const getDatabasesViewConfig = async () => {
     return {
-        moduleType: 'DATABASES',
-        documentType: 'DATABASES',
-        frozenProperties: DATABASE_FROZEN_PROPERTIES,
-        propertyTypes: DATABASE_PROPERTY_TYPES,
-        defaultProperties: [
+        moduleType: 'databases',
+        displayName: 'Database',
+        displayNamePlural: 'Databases',
+        description: 'Manage your databases and data collections',
+        icon: '🗄️',
+        canCreate: true,
+        canEdit: true,
+        canDelete: true,
+        canShare: true,
+        enableViews: true,
+        enableSearch: true,
+        enableFilters: true,
+        enableSorts: true,
+        enableGrouping: true,
+        supportedViewTypes: ['TABLE', 'BOARD', 'GALLERY', 'CALENDAR'],
+        defaultProperties: await getDefaultDatabaseProperties(),
+        defaultViews: await getDefaultDatabaseViews(),
+        database: {
+            id: 'databases',
+            displayName: 'Database',
+            displayNamePlural: 'Databases',
+            description: 'Manage your databases and data collections',
+            icon: '🗄️',
+            entityKey: 'databases'
+        },
+        frozenConfig: await getDatabaseFrozenConfig()
+    };
+};
+
+// Default database properties configuration
+export const getDefaultDatabaseProperties = async () => {
+    return {
+        properties: [
             {
                 id: 'name',
                 name: 'Name',
@@ -390,4 +418,89 @@ export const updateDatabaseViewPermissions = async (
     view.updatedAt = new Date();
     
     return view;
+};
+
+// Default database views configuration
+export const getDefaultDatabaseViews = async () => {
+    return [
+        {
+            id: 'all-databases',
+            name: 'All Databases',
+            type: 'TABLE',
+            isDefault: true,
+            isSystemView: true,
+            filters: [],
+            sorts: [
+                { propertyId: 'updatedAt', direction: 'desc' }
+            ],
+            visibleProperties: ['name', 'description', 'icon', 'updatedAt'],
+            config: {}
+        },
+        {
+            id: 'by-category',
+            name: 'By Category',
+            type: 'BOARD',
+            isDefault: false,
+            isSystemView: true,
+            filters: [],
+            sorts: [
+                { propertyId: 'updatedAt', direction: 'desc' }
+            ],
+            visibleProperties: ['name', 'description', 'updatedAt'],
+            groupBy: 'categoryId',
+            config: {}
+        },
+        {
+            id: 'favorites',
+            name: 'Favorites',
+            type: 'TABLE',
+            isDefault: false,
+            isSystemView: true,
+            filters: [
+                { propertyId: 'isFavorite', operator: 'equals', value: true }
+            ],
+            sorts: [
+                { propertyId: 'updatedAt', direction: 'desc' }
+            ],
+            visibleProperties: ['name', 'description', 'icon', 'updatedAt'],
+            config: {}
+        }
+    ];
+};
+
+// Get frozen configuration
+export const getDatabaseFrozenConfig = async () => {
+    return {
+        frozenProperties: ['name', 'createdAt', 'updatedAt'],
+        frozenViews: ['all-databases'],
+        canAddProperties: true,
+        canEditProperties: true,
+        canDeleteProperties: true,
+        canAddViews: true,
+        canEditViews: true,
+        canDeleteViews: true
+    };
+};
+
+// Property management functions (simplified)
+export const addDatabaseProperty = async (userId: string, propertyData: any) => {
+    return {
+        id: `prop-${Date.now()}`,
+        ...propertyData,
+        createdBy: userId,
+        createdAt: new Date()
+    };
+};
+
+export const updateDatabaseCustomProperty = async (userId: string, propertyId: string, updateData: any) => {
+    return {
+        id: propertyId,
+        ...updateData,
+        updatedBy: userId,
+        updatedAt: new Date()
+    };
+};
+
+export const deleteDatabaseCustomProperty = async (userId: string, propertyId: string) => {
+    return true;
 };

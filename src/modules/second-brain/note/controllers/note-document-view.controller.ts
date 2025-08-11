@@ -1,25 +1,29 @@
 import { Request, Response } from 'express';
-import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
+
+// Import services
 import {
-    getDatabasesViewConfig,
-    getUserDatabaseViews,
-    getDatabaseView,
-    getDefaultDatabaseView as getDefaultDatabaseViewService,
-    createDatabaseView as createDatabaseViewService,
-    updateDatabaseView as updateDatabaseViewService,
-    deleteDatabaseView as deleteDatabaseViewService,
-    updateDatabaseViewProperties as updateDatabaseViewPropertiesService,
-    updateDatabaseViewFilters as updateDatabaseViewFiltersService,
-    updateDatabaseViewSorts as updateDatabaseViewSortsService,
-    duplicateDatabaseView as duplicateDatabaseViewService,
-    getDatabaseViewPermissions as getDatabaseViewPermissionsService,
-    updateDatabaseViewPermissions as updateDatabaseViewPermissionsService,
-    getDefaultDatabaseProperties,
-    getDatabaseFrozenConfig,
-    addDatabaseProperty,
-    updateDatabaseCustomProperty,
-    deleteDatabaseCustomProperty
-} from '../services/database-document-view.service';
+    getNotesViewConfig,
+    getUserNotesViews,
+    getNotesView,
+    getDefaultNotesView,
+    createNotesView,
+    updateNotesView,
+    deleteNotesView,
+    updateNotesViewProperties,
+    updateNotesViewFilters,
+    updateNotesViewSorts,
+    duplicateNotesView,
+    addNotesProperty,
+    updateNotesCustomProperty,
+    deleteNotesCustomProperty,
+    insertNotesProperty,
+    duplicateNotesProperty,
+    freezeNotesProperty,
+    getDefaultNotesProperties,
+    getDefaultNotesViews,
+    getNotesFrozenConfig
+} from '../services/note-document-view.service';
 
 interface AuthenticatedRequest extends Request {
     user?: {
@@ -28,48 +32,58 @@ interface AuthenticatedRequest extends Request {
     };
 }
 
-// Get database document-view configuration
+// Get notes document-view configuration
 export const getConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const config = await getDatabasesViewConfig();
-    sendSuccessResponse(res, 'Database configuration retrieved successfully', config);
+    const config = await getNotesViewConfig();
+
+    sendSuccessResponse(res, 'Notes configuration retrieved successfully', config);
 });
 
-// Get default database properties
+// Get default notes properties
 export const getProperties = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const properties = await getDefaultDatabaseProperties();
-    sendSuccessResponse(res, 'Default database properties retrieved successfully', properties);
+    const properties = await getDefaultNotesProperties();
+
+    sendSuccessResponse(res, 'Default notes properties retrieved successfully', properties);
 });
 
-// Get database views
+// Get default notes views
 export const getViews = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const views = await getUserDatabaseViews(userId);
-    sendSuccessResponse(res, 'Database views retrieved successfully', views);
+
+    const views = await getUserNotesViews(userId);
+
+    sendSuccessResponse(res, 'Notes views retrieved successfully', views);
 });
 
 // Get specific view
 export const getView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { viewId } = req.params;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const view = await getDatabaseView(viewId, userId);
-    sendSuccessResponse(res, 'Database view retrieved successfully', view);
+
+    const view = await getNotesView(userId, viewId);
+
+    sendSuccessResponse(res, 'Notes view retrieved successfully', view);
 });
 
 // Create new view
 export const createView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const viewData = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const view = await createDatabaseViewService(userId, viewData);
-    sendSuccessResponse(res, 'Database view created successfully', view, 201);
+
+    const view = await createNotesView(userId, viewData);
+
+    sendSuccessResponse(res, 'Notes view created successfully', view, 201);
 });
 
 // Update view
@@ -77,22 +91,28 @@ export const updateView = catchAsync(async (req: AuthenticatedRequest, res: Resp
     const userId = req.user?.userId;
     const { viewId } = req.params;
     const updateData = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const view = await updateDatabaseViewService(userId, viewId, updateData);
-    sendSuccessResponse(res, 'Database view updated successfully', view);
+
+    const view = await updateNotesView(userId, viewId, updateData);
+
+    sendSuccessResponse(res, 'Notes view updated successfully', view);
 });
 
 // Delete view
 export const deleteView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { viewId } = req.params;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    await deleteDatabaseViewService(userId, viewId);
-    sendSuccessResponse(res, 'Database view deleted successfully');
+
+    await deleteNotesView(userId, viewId);
+
+    sendSuccessResponse(res, 'Notes view deleted successfully');
 });
 
 // Get database schema
@@ -101,32 +121,44 @@ export const getDatabase = catchAsync(async (req: AuthenticatedRequest, res: Res
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
     const database = {
-        id: 'databases',
-        name: 'Databases',
-        description: 'Manage your databases and data collections',
-        icon: '🗄️',
-        properties: await getDefaultDatabaseProperties(),
-        views: await getUserDatabaseViews(userId),
+        id: 'notes',
+        name: 'Notes',
+        description: 'Personal knowledge base and note-taking system',
+        icon: '📝',
+        properties: await getDefaultNotesProperties(),
+        views: await getUserNotesViews(userId),
         metadata: {
-            displayName: 'Database',
-            displayNamePlural: 'Databases',
-            description: 'Manage your databases and data collections',
-            icon: '🗄️'
+            displayName: 'Note',
+            displayNamePlural: 'Notes',
+            description: 'Manage your personal knowledge base',
+            icon: '📝'
         }
     };
-    sendSuccessResponse(res, 'Database schema retrieved successfully', database);
+
+    sendSuccessResponse(res, 'Notes database retrieved successfully', database);
 });
-// Get records with filtering
+
+// Get records (notes) with filtering
 export const getRecords = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // This would typically call the existing note controller's getNotes method
+    // For now, we'll create a simple response structure
     const records = [];
-    sendSuccessResponse(res, 'Database records retrieved successfully', {
+
+    sendSuccessResponse(res, 'Notes records retrieved successfully', {
         records,
-        pagination: { page: 1, limit: 50, total: 0, pages: 0 }
+        pagination: {
+            page: 1,
+            limit: 50,
+            total: 0,
+            pages: 0
+        }
     });
 });
 
@@ -134,22 +166,30 @@ export const getRecords = catchAsync(async (req: AuthenticatedRequest, res: Resp
 export const getRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { recordId } = req.params;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // This would call the existing note controller's getNote method
     const record = null;
-    sendSuccessResponse(res, 'Database record retrieved successfully', record);
+
+    sendSuccessResponse(res, 'Note record retrieved successfully', record);
 });
 
 // Create record
 export const createRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const recordData = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // This would call the existing note controller's createNote method
     const record = null;
-    sendSuccessResponse(res, 'Database record created successfully', record, 201);
+
+    sendSuccessResponse(res, 'Note record created successfully', record, 201);
 });
 
 // Update record
@@ -157,95 +197,128 @@ export const updateRecord = catchAsync(async (req: AuthenticatedRequest, res: Re
     const userId = req.user?.userId;
     const { recordId } = req.params;
     const updateData = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // This would call the existing note controller's updateNote method
     const record = null;
-    sendSuccessResponse(res, 'Database record updated successfully', record);
+
+    sendSuccessResponse(res, 'Note record updated successfully', record);
 });
 
 // Delete record
 export const deleteRecord = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { recordId } = req.params;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // This would call the existing note controller's deleteNote method
     await Promise.resolve();
-    sendSuccessResponse(res, 'Database record deleted successfully');
+
+    sendSuccessResponse(res, 'Note record deleted successfully');
 });
 
 // Bulk operations
 export const bulkUpdateRecords = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { recordIds, updates } = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // Implement bulk update logic
     const results = [];
-    sendSuccessResponse(res, 'Database records updated successfully', results);
+
+    sendSuccessResponse(res, 'Note records updated successfully', results);
 });
 
 export const bulkDeleteRecords = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { recordIds } = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // Implement bulk delete logic
     await Promise.resolve();
-    sendSuccessResponse(res, 'Database records deleted successfully');
+
+    sendSuccessResponse(res, 'Note records deleted successfully');
 });
 
 // Get records by view
 export const getRecordsByView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { viewId } = req.params;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
+
+    // Get view configuration and apply filters/sorts
     const records = [];
-    sendSuccessResponse(res, 'Database records by view retrieved successfully', {
+
+    sendSuccessResponse(res, 'Note records by view retrieved successfully', {
         records,
-        pagination: { page: 1, limit: 50, total: 0, pages: 0 }
+        pagination: {
+            page: 1,
+            limit: 50,
+            total: 0,
+            pages: 0
+        }
     });
 });
 
 // Get frozen configuration
 export const getFrozenConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const config = await getDatabaseFrozenConfig();
-    sendSuccessResponse(res, 'Database frozen configuration retrieved successfully', config);
+    const config = await getNotesFrozenConfig();
+
+    sendSuccessResponse(res, 'Notes frozen configuration retrieved successfully', config);
 });
 
 // Property management
 export const createProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const propertyData = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const property = await addDatabaseProperty(userId, propertyData);
-    sendSuccessResponse(res, 'Database property created successfully', property, 201);
+
+    const property = await addNotesProperty(userId, propertyData);
+
+    sendSuccessResponse(res, 'Notes property created successfully', property, 201);
 });
 
 export const updateProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { propertyId } = req.params;
     const updateData = req.body;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const property = await updateDatabaseCustomProperty(userId, propertyId, updateData);
-    sendSuccessResponse(res, 'Database property updated successfully', property);
+
+    const property = await updateNotesCustomProperty(userId, propertyId, updateData);
+
+    sendSuccessResponse(res, 'Notes property updated successfully', property);
 });
 
 export const deleteProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { propertyId } = req.params;
+
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    await deleteDatabaseCustomProperty(userId, propertyId);
-    sendSuccessResponse(res, 'Database property deleted successfully');
+
+    await deleteNotesCustomProperty(userId, propertyId);
+
+    sendSuccessResponse(res, 'Notes property deleted successfully');
 });
-
-

@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Habit, Goal } from '../second-brain';
+import { catchAsync, createAppError } from '../../../../utils';
 
 // Get all habits with tracking data
 export const getHabits = catchAsync(async (req: Request, res: Response) => {

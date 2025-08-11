@@ -1,271 +1,100 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Note, Task, Project, Person } from '../second-brain';
+import { catchAsync, sendSuccessResponse, sendErrorResponse, createAppError } from '../../../../utils';
+import * as noteService from '../services/note.service';
+
+interface AuthenticatedRequest extends Request {
+    user?: {
+        userId: string;
+        email: string;
+    };
+}
 
 // Get all notes with filtering and search
-export const getNotes = catchAsync(async (req: Request, res: Response) => {
+export const getNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { 
-        type, 
-        area, 
-        tags, 
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const {
+        type,
+        area,
+        tags,
         project,
         isFavorite,
         isPinned,
         search,
-        page = 1, 
-        limit = 50 
+        page = 1,
+        limit = 50
     } = req.query;
 
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    // Build filter query
-    const filter: any = { 
-        createdBy: userId,
-        archivedAt: { $exists: false }
+    const filters = {
+        type: type as string,
+        area: area as string,
+        tags: tags as string | string[],
+        project: project as string,
+        isFavorite: isFavorite === 'true' ? true : isFavorite === 'false' ? false : undefined,
+        isPinned: isPinned === 'true' ? true : isPinned === 'false' ? false : undefined,
+        search: search as string
     };
 
-    if (type) filter.type = type;
-    if (area) filter.area = area;
-    if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-    if (project) filter.project = project;
-    if (isFavorite !== undefined) filter.isFavorite = isFavorite === 'true';
-    if (isPinned !== undefined) filter.isPinned = isPinned === 'true';
+    const options = {
+        page: Number(page),
+        limit: Number(limit)
+    };
 
-    // Add text search if provided
-    if (search) {
-        filter.$text = { $search: search as string };
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const sortQuery: any = {};
-    if (search) {
-        sortQuery.score = { $meta: 'textScore' };
-    }
-    // Pinned notes first, then by update date
-    sortQuery.isPinned = -1;
-    sortQuery.updatedAt = -1;
-
-    const [notes, total] = await Promise.all([
-        Note.find(filter)
-            .populate('project', 'title status')
-            .populate('tasks', 'title status priority')
-            .populate('people', 'firstName lastName')
-            .sort(sortQuery)
-            .skip(skip)
-            .limit(Number(limit)),
-        Note.countDocuments(filter)
-    ]);
-
-    // Update lastAccessedAt for viewed notes
-    const noteIds = notes.map(note => note._id);
-    await Note.updateMany(
-        { _id: { $in: noteIds } },
-        { lastAccessedAt: new Date() }
-    );
-
-    res.status(200).json({
-        success: true,
-        data: {
-            notes,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total,
-                pages: Math.ceil(total / Number(limit))
-            }
-        }
-    });
+    const result = await noteService.getNotes(userId, filters, options);
+    sendSuccessResponse(res, 'Notes retrieved successfully', result);
 });
 
 // Get single note with full details
-export const getNote = catchAsync(async (req: Request, res: Response) => {
+export const getNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const note = await Note.findOne({ 
-        _id: id, 
-        createdBy: userId 
-    })
-    .populate('project', 'title status area')
-    .populate('tasks', 'title status priority dueDate')
-    .populate('people', 'firstName lastName email company');
-
-    if (!note) {
-        throw createAppError('Note not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    // Update last accessed time
-    note.lastAccessedAt = new Date();
-    await note.save();
-
-    // Get related notes (same project or shared tags)
-    const relatedNotes = await Note.find({
-        _id: { $ne: note._id },
-        createdBy: userId,
-        archivedAt: { $exists: false },
-        $or: [
-            { project: note.project },
-            { tags: { $in: note.tags } }
-        ]
-    }).limit(5).select('title type updatedAt tags');
-
-    res.status(200).json({
-        success: true,
-        data: {
-            note,
-            relatedNotes
-        }
-    });
+    const result = await noteService.getNoteWithRelated(userId, id);
+    sendSuccessResponse(res, 'Note retrieved successfully', result);
 });
 
 // Create note with automatic linking
-export const createNote = catchAsync(async (req: Request, res: Response) => {
+export const createNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    
+
     if (!userId) {
-        throw createAppError('User not authenticated', 401);
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    const noteData = {
-        ...req.body,
-        createdBy: userId
-    };
-
-    const note = await Note.create(noteData);
-
-    // If linked to a project, add this note to the project's notes array
-    if (note.project) {
-        await Project.findByIdAndUpdate(
-            note.project,
-            { $push: { notes: note._id } }
-        );
-    }
-
-    // If linked to tasks, add this note to the tasks' notes arrays
-    if (note.tasks && note.tasks.length > 0) {
-        await Task.updateMany(
-            { _id: { $in: note.tasks } },
-            { $push: { notes: note._id } }
-        );
-    }
-
-    // Populate the created note
-    const populatedNote = await Note.findById(note._id)
-        .populate('project', 'title status')
-        .populate('tasks', 'title status')
-        .populate('people', 'firstName lastName');
-
-    res.status(201).json({
-        success: true,
-        data: populatedNote
-    });
+    const note = await noteService.createNoteWithRelationships(userId, req.body);
+    sendSuccessResponse(res, 'Note created successfully', note, 201);
 });
 
 // Update note with relationship management
-export const updateNote = catchAsync(async (req: Request, res: Response) => {
+export const updateNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const oldNote = await Note.findOne({ _id: id, createdBy: userId });
-    if (!oldNote) {
-        throw createAppError('Note not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    const note = await Note.findOneAndUpdate(
-        { _id: id, createdBy: userId },
-        req.body,
-        { new: true, runValidators: true }
-    ).populate('project', 'title status')
-     .populate('tasks', 'title status')
-     .populate('people', 'firstName lastName');
-
-    if (!note) {
-        throw createAppError('Note not found', 404);
-    }
-
-    // Handle project relationship changes
-    if (req.body.project !== undefined) {
-        // Remove from old project if it existed
-        if (oldNote.project && oldNote.project.toString() !== req.body.project) {
-            await Project.findByIdAndUpdate(
-                oldNote.project,
-                { $pull: { notes: note._id } }
-            );
-        }
-        
-        // Add to new project if specified
-        if (req.body.project) {
-            await Project.findByIdAndUpdate(
-                req.body.project,
-                { $addToSet: { notes: note._id } }
-            );
-        }
-    }
-
-    // Handle task relationship changes
-    if (req.body.tasks !== undefined) {
-        // Remove from old tasks
-        const oldTaskIds = oldNote.tasks.map(t => t.toString());
-        const newTaskIds = req.body.tasks || [];
-        
-        const tasksToRemove = oldTaskIds.filter(id => !newTaskIds.includes(id));
-        const tasksToAdd = newTaskIds.filter((id: string) => !oldTaskIds.includes(id));
-
-        if (tasksToRemove.length > 0) {
-            await Task.updateMany(
-                { _id: { $in: tasksToRemove } },
-                { $pull: { notes: note._id } }
-            );
-        }
-
-        if (tasksToAdd.length > 0) {
-            await Task.updateMany(
-                { _id: { $in: tasksToAdd } },
-                { $addToSet: { notes: note._id } }
-            );
-        }
-    }
-
-    res.status(200).json({
-        success: true,
-        data: note
-    });
+    const note = await noteService.updateNoteWithRelationships(userId, id, req.body);
+    sendSuccessResponse(res, 'Note updated successfully', note);
 });
 
 // Delete note with cleanup
-export const deleteNote = catchAsync(async (req: Request, res: Response) => {
+export const deleteNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const note = await Note.findOneAndDelete({ 
-        _id: id, 
-        createdBy: userId 
-    });
-
-    if (!note) {
-        throw createAppError('Note not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    // Remove note reference from project
-    if (note.project) {
-        await Project.findByIdAndUpdate(
-            note.project,
-            { $pull: { notes: note._id } }
-        );
-    }
-
-    // Remove note reference from tasks
-    if (note.tasks && note.tasks.length > 0) {
-        await Task.updateMany(
-            { _id: { $in: note.tasks } },
-            { $pull: { notes: note._id } }
-        );
-    }
-
+    await noteService.deleteNoteWithCleanup(userId, id);
     res.status(204).json({
         success: true,
         data: null
@@ -273,165 +102,234 @@ export const deleteNote = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Toggle favorite status
-export const toggleFavorite = catchAsync(async (req: Request, res: Response) => {
+export const toggleFavorite = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const note = await Note.findOne({ _id: id, createdBy: userId });
-    if (!note) {
-        throw createAppError('Note not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    note.isFavorite = !note.isFavorite;
-    await note.save();
-
-    res.status(200).json({
-        success: true,
-        data: note
-    });
+    const note = await noteService.toggleNoteFavorite(userId, id);
+    sendSuccessResponse(res, 'Note favorite status updated', note);
 });
 
 // Toggle pin status
-export const togglePin = catchAsync(async (req: Request, res: Response) => {
+export const togglePin = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const note = await Note.findOne({ _id: id, createdBy: userId });
-    if (!note) {
-        throw createAppError('Note not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    note.isPinned = !note.isPinned;
-    await note.save();
-
-    res.status(200).json({
-        success: true,
-        data: note
-    });
+    const note = await noteService.toggleNotePin(userId, id);
+    sendSuccessResponse(res, 'Note pin status updated', note);
 });
 
 // Get note templates
-export const getTemplates = catchAsync(async (req: Request, res: Response) => {
+export const getTemplates = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
 
-    const templates = await Note.find({
-        createdBy: userId,
-        'template.isTemplate': true,
-        archivedAt: { $exists: false }
-    }).select('title template.templateName template.templateDescription type area tags');
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
 
-    res.status(200).json({
-        success: true,
-        data: templates
-    });
+    const templates = await noteService.getNoteTemplates(userId);
+    sendSuccessResponse(res, 'Templates retrieved successfully', templates);
 });
 
 // Create note from template
-export const createFromTemplate = catchAsync(async (req: Request, res: Response) => {
+export const createFromTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { templateId } = req.params;
     const { title, customizations = {} } = req.body;
 
-    const template = await Note.findOne({
-        _id: templateId,
-        createdBy: userId,
-        'template.isTemplate': true
-    });
-
-    if (!template) {
-        throw createAppError('Template not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    // Create new note from template
-    const noteData = {
-        title: title || `${template.title} - ${new Date().toLocaleDateString()}`,
-        content: template.content,
-        type: template.type,
-        area: customizations.area || template.area,
-        tags: customizations.tags || [...template.tags],
-        project: customizations.project,
-        createdBy: userId
-    };
-
-    const note = await Note.create(noteData);
-
-    const populatedNote = await Note.findById(note._id)
-        .populate('project', 'title status')
-        .populate('tasks', 'title status')
-        .populate('people', 'firstName lastName');
-
-    res.status(201).json({
-        success: true,
-        data: populatedNote
-    });
+    const note = await noteService.createNoteFromTemplate(userId, templateId, title, customizations);
+    sendSuccessResponse(res, 'Note created from template successfully', note, 201);
 });
 
 // Link note to task
-export const linkToTask = catchAsync(async (req: Request, res: Response) => {
+export const linkTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
     const { taskId } = req.body;
 
-    const [note, task] = await Promise.all([
-        Note.findOne({ _id: id, createdBy: userId }),
-        Task.findOne({ _id: taskId, createdBy: userId })
-    ]);
-
-    if (!note) {
-        throw createAppError('Note not found', 404);
-    }
-    if (!task) {
-        throw createAppError('Task not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    // Add task to note
-    if (!note.tasks.includes(taskId)) {
-        note.tasks.push(taskId);
-        await note.save();
-    }
-
-    // Add note to task (assuming Task model has notes array)
-    if (!task.notes?.includes(id)) {
-        task.notes = task.notes || [];
-        task.notes.push(id);
-        await task.save();
-    }
-
-    res.status(200).json({
-        success: true,
-        data: { note, task }
-    });
+    const result = await noteService.linkNoteToTask(userId, id, taskId);
+    sendSuccessResponse(res, 'Note linked to task successfully', result);
 });
 
 // Unlink note from task
-export const unlinkFromTask = catchAsync(async (req: Request, res: Response) => {
+export const unlinkTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { id, taskId } = req.params;
+    const { noteId, taskId } = req.params;
 
-    const [note, task] = await Promise.all([
-        Note.findOne({ _id: id, createdBy: userId }),
-        Task.findOne({ _id: taskId, createdBy: userId })
-    ]);
-
-    if (!note) {
-        throw createAppError('Note not found', 404);
-    }
-    if (!task) {
-        throw createAppError('Task not found', 404);
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    // Remove task from note
-    note.tasks = note.tasks.filter(t => t.toString() !== taskId);
-    await note.save();
+    const result = await noteService.unlinkNoteFromTask(userId, noteId, taskId);
+    sendSuccessResponse(res, 'Note unlinked from task successfully', result);
+});
 
-    // Remove note from task
-    if (task.notes) {
-        task.notes = task.notes.filter((n: any) => n.toString() !== id);
-        await task.save();
+// Link note to project
+export const linkProject = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+    const { projectId } = req.body;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    res.status(200).json({
-        success: true,
-        data: { note, task }
-    });
+    const result = await noteService.linkNoteToProject(userId, id, projectId);
+    sendSuccessResponse(res, 'Note linked to project successfully', result);
+});
+
+// Unlink note from project
+export const unlinkProject = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { noteId, projectId } = req.params;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const result = await noteService.unlinkNoteFromProject(userId, noteId, projectId);
+    sendSuccessResponse(res, 'Note unlinked from project successfully', result);
+});
+
+// Add tag to note
+export const addTag = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+    const { tag } = req.body;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const note = await noteService.addTagToNote(userId, id, tag);
+    sendSuccessResponse(res, 'Tag added to note successfully', note);
+});
+
+// Remove tag from note
+export const removeTag = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { noteId, tag } = req.params;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const note = await noteService.removeTagFromNote(userId, noteId, tag);
+    sendSuccessResponse(res, 'Tag removed from note successfully', note);
+});
+
+// Archive note
+export const archiveNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const note = await noteService.archiveNote(userId, id);
+    sendSuccessResponse(res, 'Note archived successfully', note);
+});
+
+// Duplicate note
+export const duplicateNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const note = await noteService.duplicateNote(userId, id);
+    sendSuccessResponse(res, 'Note duplicated successfully', note, 201);
+});
+
+// Get note statistics
+export const getNoteStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const stats = await noteService.getNoteStats(userId);
+    sendSuccessResponse(res, 'Note statistics retrieved successfully', stats);
+});
+
+// Get note analytics
+export const getNoteAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const analytics = await noteService.getNoteAnalytics(userId);
+    sendSuccessResponse(res, 'Note analytics retrieved successfully', analytics);
+});
+
+// Bulk update notes
+export const bulkUpdateNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { noteIds, updateData } = req.body;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const result = await noteService.bulkUpdateNotes(userId, noteIds, updateData);
+    sendSuccessResponse(res, 'Notes updated successfully', result);
+});
+
+// Bulk delete notes
+export const bulkDeleteNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const { noteIds } = req.body;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    const result = await noteService.bulkDeleteNotes(userId, noteIds);
+    sendSuccessResponse(res, 'Notes deleted successfully', result);
+});
+
+// Import notes
+export const importNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    // TODO: Implement note import functionality
+    sendSuccessResponse(res, 'Note import functionality not yet implemented', null);
+});
+
+// Export notes
+export const exportNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        return sendErrorResponse(res, 'User not authenticated', 401);
+    }
+
+    // TODO: Implement note export functionality
+    sendSuccessResponse(res, 'Note export functionality not yet implemented', null);
 });

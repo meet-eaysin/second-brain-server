@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../utils';
-import { Content, Project, Goal, Person } from '../second-brain';
+import { catchAsync, createAppError } from '../../../../utils';
 
 // Get all content with pipeline filtering
 export const getContent = catchAsync(async (req: Request, res: Response) => {

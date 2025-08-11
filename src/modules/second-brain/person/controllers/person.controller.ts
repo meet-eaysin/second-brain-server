@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
 import * as personService from '../services/person.service';
 
 interface AuthenticatedRequest extends Request {

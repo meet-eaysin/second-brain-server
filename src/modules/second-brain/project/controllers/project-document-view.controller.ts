@@ -1,25 +1,21 @@
 import { Request, Response } from 'express';
-import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
+import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
+
+// Import services
 import {
-    getDatabasesViewConfig,
-    getUserDatabaseViews,
-    getDatabaseView,
-    getDefaultDatabaseView as getDefaultDatabaseViewService,
-    createDatabaseView as createDatabaseViewService,
-    updateDatabaseView as updateDatabaseViewService,
-    deleteDatabaseView as deleteDatabaseViewService,
-    updateDatabaseViewProperties as updateDatabaseViewPropertiesService,
-    updateDatabaseViewFilters as updateDatabaseViewFiltersService,
-    updateDatabaseViewSorts as updateDatabaseViewSortsService,
-    duplicateDatabaseView as duplicateDatabaseViewService,
-    getDatabaseViewPermissions as getDatabaseViewPermissionsService,
-    updateDatabaseViewPermissions as updateDatabaseViewPermissionsService,
-    getDefaultDatabaseProperties,
-    getDatabaseFrozenConfig,
-    addDatabaseProperty,
-    updateDatabaseCustomProperty,
-    deleteDatabaseCustomProperty
-} from '../services/database-document-view.service';
+    getProjectViewConfig,
+    getUserProjectViews,
+    getProjectView,
+    getDefaultProjectView,
+    createProjectView,
+    updateProjectView,
+    deleteProjectView,
+    getDefaultProjectProperties,
+    getProjectFrozenConfig,
+    addProjectProperty,
+    updateProjectCustomProperty,
+    deleteProjectCustomProperty
+} from '../services/project-document-view.service';
 
 interface AuthenticatedRequest extends Request {
     user?: {
@@ -28,26 +24,26 @@ interface AuthenticatedRequest extends Request {
     };
 }
 
-// Get database document-view configuration
+// Get project document-view configuration
 export const getConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const config = await getDatabasesViewConfig();
-    sendSuccessResponse(res, 'Database configuration retrieved successfully', config);
+    const config = await getProjectViewConfig();
+    sendSuccessResponse(res, 'Project configuration retrieved successfully', config);
 });
 
-// Get default database properties
+// Get default project properties
 export const getProperties = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const properties = await getDefaultDatabaseProperties();
-    sendSuccessResponse(res, 'Default database properties retrieved successfully', properties);
+    const properties = await getDefaultProjectProperties();
+    sendSuccessResponse(res, 'Default project properties retrieved successfully', properties);
 });
 
-// Get database views
+// Get project views
 export const getViews = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const views = await getUserDatabaseViews(userId);
-    sendSuccessResponse(res, 'Database views retrieved successfully', views);
+    const views = await getUserProjectViews(userId);
+    sendSuccessResponse(res, 'Project views retrieved successfully', views);
 });
 
 // Get specific view
@@ -57,8 +53,8 @@ export const getView = catchAsync(async (req: AuthenticatedRequest, res: Respons
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const view = await getDatabaseView(viewId, userId);
-    sendSuccessResponse(res, 'Database view retrieved successfully', view);
+    const view = await getProjectView(userId, viewId);
+    sendSuccessResponse(res, 'Project view retrieved successfully', view);
 });
 
 // Create new view
@@ -68,8 +64,8 @@ export const createView = catchAsync(async (req: AuthenticatedRequest, res: Resp
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const view = await createDatabaseViewService(userId, viewData);
-    sendSuccessResponse(res, 'Database view created successfully', view, 201);
+    const view = await createProjectView(userId, viewData);
+    sendSuccessResponse(res, 'Project view created successfully', view, 201);
 });
 
 // Update view
@@ -80,8 +76,8 @@ export const updateView = catchAsync(async (req: AuthenticatedRequest, res: Resp
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const view = await updateDatabaseViewService(userId, viewId, updateData);
-    sendSuccessResponse(res, 'Database view updated successfully', view);
+    const view = await updateProjectView(userId, viewId, updateData);
+    sendSuccessResponse(res, 'Project view updated successfully', view);
 });
 
 // Delete view
@@ -91,8 +87,8 @@ export const deleteView = catchAsync(async (req: AuthenticatedRequest, res: Resp
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    await deleteDatabaseViewService(userId, viewId);
-    sendSuccessResponse(res, 'Database view deleted successfully');
+    await deleteProjectView(userId, viewId);
+    sendSuccessResponse(res, 'Project view deleted successfully');
 });
 
 // Get database schema
@@ -102,21 +98,22 @@ export const getDatabase = catchAsync(async (req: AuthenticatedRequest, res: Res
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const database = {
-        id: 'databases',
-        name: 'Databases',
-        description: 'Manage your databases and data collections',
-        icon: '🗄️',
-        properties: await getDefaultDatabaseProperties(),
-        views: await getUserDatabaseViews(userId),
+        id: 'projects',
+        name: 'Projects',
+        description: 'Manage your projects and initiatives',
+        icon: '📋',
+        properties: await getDefaultProjectProperties(),
+        views: await getUserProjectViews(userId),
         metadata: {
-            displayName: 'Database',
-            displayNamePlural: 'Databases',
-            description: 'Manage your databases and data collections',
-            icon: '🗄️'
+            displayName: 'Project',
+            displayNamePlural: 'Projects',
+            description: 'Manage your projects and initiatives',
+            icon: '📋'
         }
     };
-    sendSuccessResponse(res, 'Database schema retrieved successfully', database);
+    sendSuccessResponse(res, 'Project database retrieved successfully', database);
 });
+
 // Get records with filtering
 export const getRecords = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
@@ -124,7 +121,7 @@ export const getRecords = catchAsync(async (req: AuthenticatedRequest, res: Resp
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const records = [];
-    sendSuccessResponse(res, 'Database records retrieved successfully', {
+    sendSuccessResponse(res, 'Project records retrieved successfully', {
         records,
         pagination: { page: 1, limit: 50, total: 0, pages: 0 }
     });
@@ -138,7 +135,7 @@ export const getRecord = catchAsync(async (req: AuthenticatedRequest, res: Respo
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const record = null;
-    sendSuccessResponse(res, 'Database record retrieved successfully', record);
+    sendSuccessResponse(res, 'Project record retrieved successfully', record);
 });
 
 // Create record
@@ -149,7 +146,7 @@ export const createRecord = catchAsync(async (req: AuthenticatedRequest, res: Re
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const record = null;
-    sendSuccessResponse(res, 'Database record created successfully', record, 201);
+    sendSuccessResponse(res, 'Project record created successfully', record, 201);
 });
 
 // Update record
@@ -161,7 +158,7 @@ export const updateRecord = catchAsync(async (req: AuthenticatedRequest, res: Re
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const record = null;
-    sendSuccessResponse(res, 'Database record updated successfully', record);
+    sendSuccessResponse(res, 'Project record updated successfully', record);
 });
 
 // Delete record
@@ -172,7 +169,7 @@ export const deleteRecord = catchAsync(async (req: AuthenticatedRequest, res: Re
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     await Promise.resolve();
-    sendSuccessResponse(res, 'Database record deleted successfully');
+    sendSuccessResponse(res, 'Project record deleted successfully');
 });
 
 // Bulk operations
@@ -183,7 +180,7 @@ export const bulkUpdateRecords = catchAsync(async (req: AuthenticatedRequest, re
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const results = [];
-    sendSuccessResponse(res, 'Database records updated successfully', results);
+    sendSuccessResponse(res, 'Project records updated successfully', results);
 });
 
 export const bulkDeleteRecords = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -193,7 +190,7 @@ export const bulkDeleteRecords = catchAsync(async (req: AuthenticatedRequest, re
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     await Promise.resolve();
-    sendSuccessResponse(res, 'Database records deleted successfully');
+    sendSuccessResponse(res, 'Project records deleted successfully');
 });
 
 // Get records by view
@@ -204,7 +201,7 @@ export const getRecordsByView = catchAsync(async (req: AuthenticatedRequest, res
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
     const records = [];
-    sendSuccessResponse(res, 'Database records by view retrieved successfully', {
+    sendSuccessResponse(res, 'Project records by view retrieved successfully', {
         records,
         pagination: { page: 1, limit: 50, total: 0, pages: 0 }
     });
@@ -212,8 +209,8 @@ export const getRecordsByView = catchAsync(async (req: AuthenticatedRequest, res
 
 // Get frozen configuration
 export const getFrozenConfig = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const config = await getDatabaseFrozenConfig();
-    sendSuccessResponse(res, 'Database frozen configuration retrieved successfully', config);
+    const config = await getProjectFrozenConfig();
+    sendSuccessResponse(res, 'Project frozen configuration retrieved successfully', config);
 });
 
 // Property management
@@ -223,8 +220,8 @@ export const createProperty = catchAsync(async (req: AuthenticatedRequest, res: 
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const property = await addDatabaseProperty(userId, propertyData);
-    sendSuccessResponse(res, 'Database property created successfully', property, 201);
+    const property = await addProjectProperty(userId, propertyData);
+    sendSuccessResponse(res, 'Project property created successfully', property, 201);
 });
 
 export const updateProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -234,8 +231,8 @@ export const updateProperty = catchAsync(async (req: AuthenticatedRequest, res: 
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    const property = await updateDatabaseCustomProperty(userId, propertyId, updateData);
-    sendSuccessResponse(res, 'Database property updated successfully', property);
+    const property = await updateProjectCustomProperty(userId, propertyId, updateData);
+    sendSuccessResponse(res, 'Project property updated successfully', property);
 });
 
 export const deleteProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -244,8 +241,6 @@ export const deleteProperty = catchAsync(async (req: AuthenticatedRequest, res: 
     if (!userId) {
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
-    await deleteDatabaseCustomProperty(userId, propertyId);
-    sendSuccessResponse(res, 'Database property deleted successfully');
+    await deleteProjectCustomProperty(userId, propertyId);
+    sendSuccessResponse(res, 'Project property deleted successfully');
 });
-
-
