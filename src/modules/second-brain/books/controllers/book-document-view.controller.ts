@@ -167,8 +167,32 @@ export const addProperty = catchAsync(async (req: AuthenticatedRequest, res: Res
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
+    // Transform client format to server format
+    const propertyData = { ...req.body };
+
+    // If client sends selectOptions, transform to options for server storage
+    if (req.body.selectOptions && Array.isArray(req.body.selectOptions)) {
+        propertyData.options = req.body.selectOptions.map((option: any, index: number) => ({
+            name: option.name || `Option ${index + 1}`,
+            color: option.color || '#6366f1',
+            value: option.id || option.value || option.name?.toLowerCase().replace(/\s+/g, '-') || `option-${index}`
+        }));
+        // Remove selectOptions to avoid confusion
+        delete propertyData.selectOptions;
+    }
+
+    // Debug logging
+    console.log('📝 Property Creation Debug:', {
+        originalBody: req.body,
+        transformedData: propertyData,
+        hasSelectOptions: !!req.body.selectOptions,
+        hasOptions: !!propertyData.options,
+        optionsCount: propertyData.options?.length || 0
+    });
+
     // Create the new property (automatically adds to default view's visible properties)
-    const newProperty = await documentViewService.addProperty(userId, moduleType, req.body);
+    const newProperty = await documentViewService.addProperty(userId, moduleType, propertyData);
+
     sendSuccessResponse(res, 'Books property added successfully', newProperty, 201);
 });
 
@@ -183,7 +207,21 @@ export const updateProperty = catchAsync(async (req: AuthenticatedRequest, res: 
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
-    const updatedProperty = await documentViewService.updateProperty(userId, moduleType, propertyId, req.body);
+    // Transform client format to server format
+    const updateData = { ...req.body };
+
+    // If client sends selectOptions, transform to options for server storage
+    if (req.body.selectOptions && Array.isArray(req.body.selectOptions)) {
+        updateData.options = req.body.selectOptions.map((option: any, index: number) => ({
+            name: option.name || `Option ${index + 1}`,
+            color: option.color || '#6366f1',
+            value: option.id || option.value || option.name?.toLowerCase().replace(/\s+/g, '-') || `option-${index}`
+        }));
+        // Remove selectOptions to avoid confusion
+        delete updateData.selectOptions;
+    }
+
+    const updatedProperty = await documentViewService.updateProperty(userId, moduleType, propertyId, updateData);
     if (!updatedProperty) {
         return sendErrorResponse(res, 'Property not found or access denied', 404);
     }
