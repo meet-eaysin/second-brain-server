@@ -167,6 +167,7 @@ export const addProperty = catchAsync(async (req: AuthenticatedRequest, res: Res
         return sendErrorResponse(res, 'User not authenticated', 401);
     }
 
+    // Create the new property (automatically adds to default view's visible properties)
     const newProperty = await documentViewService.addProperty(userId, moduleType, req.body);
     sendSuccessResponse(res, 'Books property added successfully', newProperty, 201);
 });

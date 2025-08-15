@@ -211,7 +211,38 @@ export class DocumentViewService {
         };
 
         await documentView.addProperty(newProperty);
+
+        // Automatically add the new property to the default view's visible properties
+        await this.addPropertyToDefaultView(userId, moduleType, newProperty.id, databaseId);
+
         return newProperty;
+    }
+
+    /**
+     * Add a property to the default view's visible properties
+     */
+    private async addPropertyToDefaultView(userId: string, moduleType: ModuleType, propertyId: string, databaseId?: string): Promise<void> {
+        try {
+            const views = await this.getViews(userId, moduleType, databaseId);
+            const defaultView = views.find(view => view.isDefault);
+
+            if (defaultView && propertyId) {
+                // Add the new property to the default view's visible properties
+                const currentVisibleProperties = defaultView.visibleProperties || [];
+                if (!currentVisibleProperties.includes(propertyId)) {
+                    const updatedVisibleProperties = [...currentVisibleProperties, propertyId];
+
+                    await this.updateView(userId, moduleType, defaultView.id, {
+                        visibleProperties: updatedVisibleProperties
+                    }, databaseId);
+
+                    console.log(`✅ Added property ${propertyId} to default view ${defaultView.id} visible properties`);
+                }
+            }
+        } catch (error) {
+            console.error('⚠️ Failed to add property to default view visible properties:', error);
+            // Don't throw error - this is a nice-to-have feature
+        }
     }
 
     /**
