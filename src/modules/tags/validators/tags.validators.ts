@@ -26,9 +26,26 @@ const getTagsQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional()
 });
 
+// Alias for backward compatibility
+const tagsQuerySchema = getTagsQuerySchema;
+
+// Merge tag schema
+const mergeTagSchema = z.object({
+  sourceTagId: z.string().min(1, 'Source tag ID is required'),
+  targetTagId: z.string().min(1, 'Target tag ID is required')
+});
+
+// Bulk delete tags schema
+const bulkDeleteTagsSchema = z.object({
+  tagIds: z.array(z.string().min(1, 'Tag ID is required')).min(1, 'At least one tag ID is required')
+});
+
 export {
   tagIdSchema,
   createTagSchema,
   updateTagSchema,
-  getTagsQuerySchema
+  getTagsQuerySchema,
+  tagsQuerySchema,
+  mergeTagSchema,
+  bulkDeleteTagsSchema
 };

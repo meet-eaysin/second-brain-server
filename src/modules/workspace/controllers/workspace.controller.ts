@@ -21,7 +21,7 @@ export const createWorkspace = catchAsync(
     const workspaceData: TWorkspaceCreateRequest = req.body;
 
     const workspace = await workspaceService.createWorkspace(userId, workspaceData);
-    sendSuccessResponse(res, workspace, 'Workspace created successfully', 201);
+    sendSuccessResponse(res, 'Workspace created successfully', workspace, 201);
   }
 );
 
@@ -35,7 +35,7 @@ export const getUserWorkspaces = catchAsync(
     const queryParams: TGetWorkspacesQuery = req.query as any;
 
     const result = await workspaceService.getUserWorkspaces(userId, queryParams);
-    sendSuccessResponse(res, result, 'Workspaces retrieved successfully');
+    sendSuccessResponse(res, 'Workspaces retrieved successfully', result);
   }
 );
 
@@ -49,7 +49,7 @@ export const getWorkspaceById = catchAsync(
     const { id } = req.params;
 
     const workspace = await workspaceService.getWorkspaceById(id, userId);
-    sendSuccessResponse(res, workspace, 'Workspace retrieved successfully');
+    sendSuccessResponse(res, 'Workspace retrieved successfully', workspace);
   }
 );
 
@@ -64,7 +64,7 @@ export const updateWorkspace = catchAsync(
     const updateData: TWorkspaceUpdateRequest = req.body;
 
     const workspace = await workspaceService.updateWorkspace(id, userId, updateData);
-    sendSuccessResponse(res, workspace, 'Workspace updated successfully');
+    sendSuccessResponse(res, 'Workspace updated successfully', workspace);
   }
 );
 
@@ -78,7 +78,7 @@ export const deleteWorkspace = catchAsync(
     const { id } = req.params;
 
     await workspaceService.deleteWorkspace(id, userId);
-    sendSuccessResponse(res, null, 'Workspace deleted successfully');
+    sendSuccessResponse(res, 'Workspace deleted successfully', null);
   }
 );
 
@@ -93,7 +93,7 @@ export const getWorkspaceMembers = catchAsync(
     const queryParams: TGetWorkspaceMembersQuery = req.query as any;
 
     const result = await workspaceService.getWorkspaceMembers(id, userId, queryParams);
-    sendSuccessResponse(res, result, 'Workspace members retrieved successfully');
+    sendSuccessResponse(res, 'Workspace members retrieved successfully', result);
   }
 );
 
@@ -108,7 +108,7 @@ export const addWorkspaceMember = catchAsync(
     const inviteData: TWorkspaceInviteRequest = req.body;
 
     const workspace = await workspaceService.addWorkspaceMember(id, userId, inviteData);
-    sendSuccessResponse(res, workspace, 'Member added to workspace successfully');
+    sendSuccessResponse(res, 'Member added to workspace successfully', workspace);
   }
 );
 
@@ -122,7 +122,7 @@ export const removeWorkspaceMember = catchAsync(
     const { id, memberId } = req.params;
 
     const workspace = await workspaceService.removeWorkspaceMember(id, userId, memberId);
-    sendSuccessResponse(res, workspace, 'Member removed from workspace successfully');
+    sendSuccessResponse(res, 'Member removed from workspace successfully', workspace);
   }
 );
 
@@ -137,7 +137,7 @@ export const updateMemberRole = catchAsync(
     const updateData: TWorkspaceMemberUpdateRequest = req.body;
 
     const workspace = await workspaceService.updateMemberRole(id, userId, memberId, updateData);
-    sendSuccessResponse(res, workspace, 'Member role updated successfully');
+    sendSuccessResponse(res, 'Member role updated successfully', workspace);
   }
 );
 
@@ -151,7 +151,7 @@ export const getWorkspacePermissions = catchAsync(
     const { id } = req.params;
 
     const permissions = await workspaceService.getWorkspacePermissions(id, userId);
-    sendSuccessResponse(res, permissions, 'Workspace permissions retrieved successfully');
+    sendSuccessResponse(res, 'Workspace permissions retrieved successfully', permissions);
   }
 );
 
@@ -164,7 +164,7 @@ export const getWorkspaceStats = catchAsync(
     const userId = authReq.user.userId;
 
     const stats = await workspaceService.getWorkspaceStats(userId);
-    sendSuccessResponse(res, stats, 'Workspace statistics retrieved successfully');
+    sendSuccessResponse(res, 'Workspace statistics retrieved successfully', stats);
   }
 );
 
@@ -178,7 +178,7 @@ export const leaveWorkspace = catchAsync(
     const { id } = req.params;
 
     await workspaceService.removeWorkspaceMember(id, userId, userId);
-    sendSuccessResponse(res, null, 'Left workspace successfully');
+    sendSuccessResponse(res, 'Left workspace successfully', null);
   }
 );
 
@@ -194,7 +194,7 @@ export const getPublicWorkspaces = catchAsync(
 
     // For public workspaces, we don't need authentication but we'll use empty userId
     const result = await workspaceService.getUserWorkspaces('', queryParams);
-    sendSuccessResponse(res, result, 'Public workspaces retrieved successfully');
+    sendSuccessResponse(res, 'Public workspaces retrieved successfully', result);
   }
 );
 
@@ -217,7 +217,7 @@ export const searchWorkspaces = catchAsync(
     };
 
     const result = await workspaceService.getUserWorkspaces(userId, queryParams);
-    sendSuccessResponse(res, result, 'Workspaces search completed successfully');
+    sendSuccessResponse(res, 'Workspaces search completed successfully', result);
   }
 );
 
@@ -233,13 +233,15 @@ export const getWorkspaceActivity = catchAsync(
     // Check if user has access to workspace
     await workspaceService.getWorkspaceById(id, userId);
 
+    const { limit = '20', offset = '0', type } = req.query;
+
     const activity = await workspaceService.getWorkspaceActivity(id, userId, {
       limit: Number(limit),
       offset: Number(offset),
       type: type as string
     });
 
-    sendSuccessResponse(res, activity, 'Workspace activity retrieved successfully');
+    sendSuccessResponse(res, 'Workspace activity retrieved successfully', activity);
   }
 );
 
@@ -270,6 +272,6 @@ export const duplicateWorkspace = catchAsync(
     };
 
     const newWorkspace = await workspaceService.createWorkspace(userId, newWorkspaceData);
-    sendSuccessResponse(res, newWorkspace, 'Workspace duplicated successfully', 201);
+    sendSuccessResponse(res, 'Workspace duplicated successfully', newWorkspace, 201);
   }
 );

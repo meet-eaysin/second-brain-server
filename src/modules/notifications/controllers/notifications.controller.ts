@@ -29,7 +29,7 @@ export const getUserNotifications = catchAsync(
       sortOrder: sortOrder as 'asc' | 'desc'
     });
 
-    sendSuccessResponse(res, result, 'Notifications retrieved successfully');
+    sendSuccessResponse(res, 'Notifications retrieved successfully', result);
   }
 );
 
@@ -45,7 +45,7 @@ export const markNotificationAsRead = catchAsync(
 
     try {
       const notification = await notificationsService.markNotificationAsRead(id, userId);
-      sendSuccessResponse(res, notification, 'Notification marked as read');
+      sendSuccessResponse(res, 'Notification marked as read', notification);
     } catch (error: any) {
       return next(error);
     }
@@ -61,7 +61,7 @@ export const markAllNotificationsAsRead = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
     
     const result = await notificationsService.markAllNotificationsAsRead(userId);
-    sendSuccessResponse(res, result, 'All notifications marked as read');
+    sendSuccessResponse(res, 'All notifications marked as read', result);
   }
 );
 
@@ -77,7 +77,7 @@ export const deleteNotification = catchAsync(
 
     try {
       await notificationsService.deleteNotification(id, userId);
-      sendSuccessResponse(res, null, 'Notification deleted successfully');
+      sendSuccessResponse(res, 'Notification deleted successfully', null);
     } catch (error: any) {
       return next(error);
     }
@@ -93,6 +93,61 @@ export const getUnreadCount = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const count = await notificationsService.getUnreadCount(userId);
-    sendSuccessResponse(res, { count }, 'Unread count retrieved successfully');
+    sendSuccessResponse(res, 'Unread count retrieved successfully', { count });
+  }
+);
+
+/**
+ * Get notification by ID
+ */
+export const getNotificationById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const { id } = req.params;
+
+    try {
+      const notification = await notificationsService.getNotificationById(id, userId);
+      sendSuccessResponse(res, 'Notification retrieved successfully', notification);
+    } catch (error: any) {
+      return next(error);
+    }
+  }
+);
+
+/**
+ * Bulk update notifications
+ */
+export const bulkUpdateNotifications = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const { updates } = req.body;
+
+    try {
+      const result = await notificationsService.bulkUpdateNotifications(userId, updates);
+      sendSuccessResponse(res, 'Notifications updated successfully', result);
+    } catch (error: any) {
+      return next(error);
+    }
+  }
+);
+
+/**
+ * Get notification statistics
+ */
+export const getNotificationStats = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    try {
+      const stats = await notificationsService.getNotificationStats(userId);
+      sendSuccessResponse(res, 'Notification statistics retrieved successfully', stats);
+    } catch (error: any) {
+      return next(error);
+    }
   }
 );

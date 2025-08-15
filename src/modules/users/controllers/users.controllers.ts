@@ -11,7 +11,7 @@ import {
   updateUserRole
 } from '../services/users.services';
 import { catchAsync } from '../../../utils/catch-async';
-import { sendSuccessResponse } from '../../../utils/response-handler.utils';
+import { sendSuccessResponse } from '../../../utils/response.utils';
 import { AuthenticatedRequest } from '../../../middlewares/auth';
 import {
   createCannotModifySelfError,
@@ -31,14 +31,14 @@ export const getUser = catchAsync(
       return next(createNotFoundError('User not found'));
     }
 
-    sendSuccessResponse(res, user, 'User retrieved successfully');
+    sendSuccessResponse(res, 'User retrieved successfully', user);
   }
 );
 
 export const getProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
-    sendSuccessResponse(res, user, 'Profile retrieved successfully');
+    sendSuccessResponse(res, 'Profile retrieved successfully', user);
   }
 );
 
@@ -53,7 +53,7 @@ export const updateProfile = catchAsync(
       return next(createNotFoundError('User not found'));
     }
 
-    sendSuccessResponse(res, updatedUser, 'Profile updated successfully');
+    sendSuccessResponse(res, 'Profile updated successfully', updatedUser);
   }
 );
 
@@ -66,7 +66,7 @@ export const deleteAccount = catchAsync(
       return next(createNotFoundError('User not found'));
     }
 
-    sendSuccessResponse(res, null, 'Account deleted successfully');
+    sendSuccessResponse(res, 'Account deleted successfully', null);
   }
 );
 
@@ -94,7 +94,7 @@ export const getUsers = catchAsync(
 
     const result = await getAllUsers(parseInt(page as string), parseInt(limit as string), filters);
 
-    sendSuccessResponse(res, result, 'Users retrieved successfully');
+    sendSuccessResponse(res, 'Users retrieved successfully', result);
   }
 );
 
@@ -107,7 +107,7 @@ export const getUserDetails = catchAsync(
       return next(createUserNotFoundError(id));
     }
 
-    sendSuccessResponse(res, user, 'User details retrieved successfully');
+    sendSuccessResponse(res, 'User details retrieved successfully', user);
   }
 );
 
@@ -128,7 +128,7 @@ export const updateUserById = catchAsync(
       return next(createUserNotFoundError(id));
     }
 
-    sendSuccessResponse(res, updatedUser, 'User updated successfully');
+    sendSuccessResponse(res, 'User updated successfully', updatedUser);
   }
 );
 
@@ -148,7 +148,7 @@ export const deleteUserById = catchAsync(
       return next(createUserNotFoundError(id));
     }
 
-    sendSuccessResponse(res, null, 'User deleted successfully');
+    sendSuccessResponse(res, 'User deleted successfully', null);
   }
 );
 
@@ -163,7 +163,7 @@ export const bulkUpdateUsersController = catchAsync(
     }
 
     const result = await bulkUpdateUsers(userIds, updates);
-    sendSuccessResponse(res, result, 'Bulk update completed');
+    sendSuccessResponse(res, 'Bulk update completed', result);
   }
 );
 
@@ -175,7 +175,7 @@ export const getUserStatsController = catchAsync(
     const end = endDate ? new Date(endDate as string) : undefined;
 
     const stats = await getUserStats(period as any, start, end);
-    sendSuccessResponse(res, stats, 'User statistics retrieved successfully');
+    sendSuccessResponse(res, 'User statistics retrieved successfully', stats);
   }
 );
 
@@ -196,7 +196,7 @@ export const toggleUserStatusController = catchAsync(
     }
 
     const action = updatedUser.isActive ? 'activated' : 'deactivated';
-    sendSuccessResponse(res, updatedUser, `User ${action} successfully`);
+    sendSuccessResponse(res, `User ${action} successfully`, updatedUser);
   }
 );
 
@@ -217,7 +217,7 @@ export const updateUserRoleController = catchAsync(
       return next(createUserNotFoundError(id));
     }
 
-    sendSuccessResponse(res, updatedUser, 'User role updated successfully');
+    sendSuccessResponse(res, 'User role updated successfully', updatedUser);
   }
 );
 
@@ -237,8 +237,8 @@ export const uploadProfileAvatar = catchAsync(
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
 
     // Update user with new avatar URL
-    const user = await updateUser(userId, { avatarUrl });
-    sendSuccessResponse(res, { user, avatarUrl }, 'Avatar uploaded successfully');
+    const user = await updateUser(userId, { profilePicture: avatarUrl });
+    sendSuccessResponse(res, 'Avatar uploaded successfully', { user, avatarUrl });
   }
 );
 
@@ -251,10 +251,10 @@ export const deleteProfileAvatar = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     // Remove avatar URL from user profile
-    const user = await updateUser(userId, { avatarUrl: null });
+    const user = await updateUser(userId, { profilePicture: undefined });
 
     // TODO: Also delete the actual file from storage
 
-    sendSuccessResponse(res, { user }, 'Avatar removed successfully');
+    sendSuccessResponse(res, 'Avatar removed successfully', user);
   }
 );

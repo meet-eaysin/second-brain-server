@@ -11,15 +11,86 @@ export interface QuickCapture {
     priority?: 'low' | 'medium' | 'high' | 'urgent';
 }
 
+// Base interfaces for dashboard items
+export interface DashboardTask {
+    _id: string;
+    title: string;
+    status: 'todo' | 'in-progress' | 'completed' | 'cancelled';
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
+    dueDate?: Date;
+    project?: string;
+    assignedTo?: string;
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DashboardProject {
+    _id: string;
+    title: string;
+    status: 'planning' | 'active' | 'on-hold' | 'completed' | 'cancelled';
+    description?: string;
+    startDate?: Date;
+    endDate?: Date;
+    progress: number;
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DashboardNote {
+    _id: string;
+    title: string;
+    content?: string;
+    tags: string[];
+    project?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DashboardGoal {
+    _id: string;
+    title: string;
+    type: 'outcome' | 'process' | 'learning';
+    status: 'active' | 'completed' | 'paused' | 'cancelled';
+    targetDate?: Date;
+    progressPercentage: number;
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DashboardHabit {
+    _id: string;
+    name: string;
+    frequency: 'daily' | 'weekly' | 'monthly';
+    status: 'active' | 'paused' | 'completed';
+    streak: number;
+    completedToday: boolean;
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface DashboardMoodEntry {
+    _id: string;
+    mood: number; // 1-10 scale
+    energy: number; // 1-10 scale
+    notes?: string;
+    tags: string[];
+    date: Date;
+    createdAt: Date;
+}
+
 // Dashboard Data interface
 export interface DashboardData {
-    todayTasks: any[];
-    upcomingDeadlines: any[];
-    activeProjects: any[];
-    recentNotes: any[];
-    currentGoals: any[];
-    todayHabits: any[];
-    moodEntry?: any;
+    todayTasks: DashboardTask[];
+    upcomingDeadlines: DashboardTask[];
+    activeProjects: DashboardProject[];
+    recentNotes: DashboardNote[];
+    currentGoals: DashboardGoal[];
+    todayHabits: DashboardHabit[];
+    moodEntry?: DashboardMoodEntry;
     weeklyStats: {
         tasksCompleted: number;
         projectsActive: number;
@@ -28,14 +99,38 @@ export interface DashboardData {
     };
 }
 
+// Journal entry interface
+export interface DashboardJournalEntry {
+    _id: string;
+    title?: string;
+    content: string;
+    mood?: number;
+    tags: string[];
+    date: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+// Person interface for dashboard
+export interface DashboardPerson {
+    _id: string;
+    name: string;
+    email?: string;
+    role?: string;
+    company?: string;
+    tags: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 // My Day Data interface
 export interface MyDayData {
     date: Date;
-    plannedTasks: any[];
-    inProgressTasks: any[];
-    todayHabits: any[];
-    journalEntry?: any;
-    moodEntry?: any;
+    plannedTasks: DashboardTask[];
+    inProgressTasks: DashboardTask[];
+    todayHabits: DashboardHabit[];
+    journalEntry?: DashboardJournalEntry;
+    moodEntry?: DashboardMoodEntry;
 }
 
 // Global Search interfaces
@@ -46,10 +141,10 @@ export interface GlobalSearchFilters {
 }
 
 export interface GlobalSearchResults {
-    tasks?: any[];
-    notes?: any[];
-    projects?: any[];
-    people?: any[];
+    tasks?: DashboardTask[];
+    notes?: DashboardNote[];
+    projects?: DashboardProject[];
+    people?: DashboardPerson[];
 }
 
 // Quick Stats interface
@@ -70,7 +165,7 @@ export interface Activity {
     action: 'created' | 'updated' | 'completed' | 'deleted' | 'archived';
     title: string;
     timestamp: Date;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 // Dashboard Widget interfaces
@@ -84,7 +179,7 @@ export interface DashboardWidget {
         width: number;
         height: number;
     };
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
     isVisible: boolean;
 }
 

@@ -13,6 +13,8 @@ export interface INote extends Document {
     project?: mongoose.Types.ObjectId;
     tasks: mongoose.Types.ObjectId[]; // Linked tasks
     people: mongoose.Types.ObjectId[]; // Related people
+    linkedBooks: mongoose.Types.ObjectId[]; // Related books for reading notes
+    linkedGoals: mongoose.Types.ObjectId[]; // Related goals
     
     // Organization
     isFavorite: boolean;
@@ -52,6 +54,8 @@ const NoteSchema = new Schema<INote>({
     project: { type: Schema.Types.ObjectId, ref: 'Project' },
     tasks: [{ type: Schema.Types.ObjectId, ref: 'Task' }],
     people: [{ type: Schema.Types.ObjectId, ref: 'Person' }],
+    linkedBooks: [{ type: Schema.Types.ObjectId, ref: 'Book' }],
+    linkedGoals: [{ type: Schema.Types.ObjectId, ref: 'Goal' }],
     
     // Organization
     isFavorite: { type: Boolean, default: false },

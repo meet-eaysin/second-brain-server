@@ -30,7 +30,7 @@ export const register = catchAsync(
     const user = await createUser(userData);
     const userWithoutPassword = getUsersWithoutPassword([user])[0];
 
-    sendSuccessResponse(res, userWithoutPassword, 'User registered successfully', 201);
+    sendSuccessResponse(res, 'User registered successfully', userWithoutPassword, 201);
   }
 );
 
@@ -39,7 +39,7 @@ export const login = catchAsync(
     const loginData: TLoginRequest = req.body;
     const authResponse = await authenticateUser(loginData);
 
-    sendSuccessResponse(res, authResponse, 'Login successful');
+    sendSuccessResponse(res, 'Login successful', authResponse);
   }
 );
 
@@ -47,7 +47,7 @@ export const refreshToken = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { refreshToken } = req.body;
     const result = await refreshAccessToken(refreshToken);
-    sendSuccessResponse(res, result, 'Token refreshed successfully');
+    sendSuccessResponse(res, 'Token refreshed successfully', result);
   }
 );
 
@@ -57,7 +57,7 @@ export const changeUserPassword = catchAsync(
     const changePasswordData: TChangePasswordRequest = req.body;
 
     await changePassword(user.userId, changePasswordData);
-    sendSuccessResponse(res, null, 'Password changed successfully');
+    sendSuccessResponse(res, 'Password changed successfully', null);
   }
 );
 
@@ -65,7 +65,7 @@ export const forgotUserPassword = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const forgotPasswordData: TForgotPasswordRequest = req.body;
     await forgotPassword(forgotPasswordData);
-    sendSuccessResponse(res, null, 'Password reset email sent successfully');
+    sendSuccessResponse(res, 'Password reset email sent successfully', null);
   }
 );
 
@@ -73,7 +73,7 @@ export const resetUserPassword = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const resetPasswordData: TResetPasswordRequest = req.body;
     await resetPassword(resetPasswordData);
-    sendSuccessResponse(res, null, 'Password reset successfully');
+    sendSuccessResponse(res, 'Password reset successfully', null);
   }
 );
 
@@ -83,7 +83,7 @@ export const logout = catchAsync(
     await logoutUser(user.userId);
 
     console.log('✅ User logged out successfully');
-    sendSuccessResponse(res, null, 'Logged out successfully');
+    sendSuccessResponse(res, 'Logged out successfully', null);
   }
 );
 
@@ -93,14 +93,14 @@ export const logoutAll = catchAsync(
     await logoutAllDevices(user.userId);
 
     console.log('✅ User logged out from all devices successfully');
-    sendSuccessResponse(res, null, 'Logged out from all devices successfully');
+    sendSuccessResponse(res, 'Logged out from all devices successfully', null);
   }
 );
 
 export const getProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
-    sendSuccessResponse(res, user, 'Profile retrieved successfully');
+    sendSuccessResponse(res, 'Profile retrieved successfully', user);
   }
 );
 
@@ -148,8 +148,8 @@ export const googleCallback = catchAsync(
     // Handle OAuth errors from Google
     if (error) {
       console.error('❌ Google OAuth error:', error, error_description);
-      const errorMessage = error_description || 'Google authentication failed';
-      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=${encodeURIComponent(error as string)}&message=${encodeURIComponent(errorMessage)}`;
+      const errorMessage = String(error_description || 'Google authentication failed');
+      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=${encodeURIComponent(String(error))}&message=${encodeURIComponent(errorMessage)}`;
       return res.redirect(errorUrl);
     }
 
@@ -206,7 +206,7 @@ export const googleLoginSuccess = catchAsync(
 
     try {
       const authResponse = await handleGoogleCallback(code);
-      sendSuccessResponse(res, authResponse, 'Google login successful');
+      sendSuccessResponse(res, 'Google login successful', authResponse);
     } catch (error) {
       return next(createAuthenticationFailedError('Google OAuth failed'));
     }
@@ -222,6 +222,6 @@ export const testGoogleConfig = catchAsync(
       frontendUrl: appConfig.clientUrl,
     };
 
-    sendSuccessResponse(res, config, 'Google OAuth configuration status');
+    sendSuccessResponse(res, 'Google OAuth configuration status', config);
   }
 );

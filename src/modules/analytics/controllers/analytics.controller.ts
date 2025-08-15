@@ -15,7 +15,7 @@ export const getDashboardAnalytics = catchAsync(
 
     const analytics = await analyticsService.getDashboardAnalytics(userId, period as string);
 
-    sendSuccessResponse(res, analytics, 'Dashboard analytics retrieved successfully');
+    sendSuccessResponse(res, 'Dashboard analytics retrieved successfully', analytics);
   }
 );
 
@@ -32,7 +32,7 @@ export const getDatabaseAnalytics = catchAsync(
 
     try {
       const analytics = await analyticsService.getDatabaseAnalytics(id, userId, period as string);
-      sendSuccessResponse(res, analytics, 'Database analytics retrieved successfully');
+      sendSuccessResponse(res, 'Database analytics retrieved successfully', analytics);
     } catch (error: any) {
       return next(createNotFoundError(error.message));
     }
@@ -48,6 +48,6 @@ export const getUsageStatistics = catchAsync(
 
     const stats = await analyticsService.getUsageStatistics(period as string);
 
-    sendSuccessResponse(res, stats, 'Usage statistics retrieved successfully');
+    sendSuccessResponse(res, 'Usage statistics retrieved successfully', stats);
   }
 );

@@ -2,38 +2,18 @@ import { DatabaseModel } from '../../database/models/database.model';
 import { DatabaseRecordModel } from '../../database/models/database-record.model';
 import { FileModel } from '../../files/models/file.model';
 import { WorkspaceModel } from '../../workspace/models/workspace.model';
-
-export interface ISearchResult {
-  id: string;
-  type: 'database' | 'record' | 'file' | 'workspace';
-  title: string;
-  description?: string;
-  content?: string;
-  databaseId?: string;
-  databaseName?: string;
-  score?: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ISearchResults {
-  results: ISearchResult[];
-  total: number;
-  databases?: ISearchResult[];
-  records?: ISearchResult[];
-  files?: ISearchResult[];
-  workspaces?: ISearchResult[];
-}
+import type {
+  ISearchResult,
+  ISearchResults,
+  IGlobalSearchOptions,
+  IDatabaseSearchOptions
+} from '../types';
 
 // Global search across all content types
 export const globalSearch = async (
   userId: string,
   query: string,
-  options: {
-    type?: string;
-    limit?: number;
-    offset?: number;
-  } = {}
+  options: IGlobalSearchOptions = {}
 ): Promise<ISearchResults> => {
   const { type, limit = 20, offset = 0 } = options;
   

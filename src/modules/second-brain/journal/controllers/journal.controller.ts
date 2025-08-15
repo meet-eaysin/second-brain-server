@@ -1,17 +1,24 @@
 import { Request, Response } from 'express';
+import { TJwtPayload } from '../../../users/types/user.types';
 import { catchAsync, createAppError } from '../../../../utils';
+import { Journal } from '../models/journal.model';
+import { Mood } from '../../mood/models/mood.model';
+
+interface AuthenticatedRequest extends Request {
+    user?: TJwtPayload & { userId: string };
+}
 
 // Get all journal entries with filtering
-export const getJournalEntries = catchAsync(async (req: Request, res: Response) => {
+export const getJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { 
-        type, 
+    const {
+        type,
         tags,
         startDate,
         endDate,
         search,
-        page = 1, 
-        limit = 50 
+        page = 1,
+        limit = 50
     } = req.query;
 
     if (!userId) {
@@ -19,14 +26,14 @@ export const getJournalEntries = catchAsync(async (req: Request, res: Response) 
     }
 
     // Build filter query
-    const filter: any = { 
+    const filter: any = {
         createdBy: userId,
         archivedAt: { $exists: false }
     };
 
     if (type) filter.type = type;
     if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-    
+
     if (startDate || endDate) {
         filter.date = {};
         if (startDate) filter.date.$gte = new Date(startDate as string);
@@ -72,13 +79,13 @@ export const getJournalEntries = catchAsync(async (req: Request, res: Response) 
 });
 
 // Get single journal entry
-export const getJournalEntry = catchAsync(async (req: Request, res: Response) => {
+export const getJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const entry = await Journal.findOne({ 
-        _id: id, 
-        createdBy: userId 
+    const entry = await Journal.findOne({
+        _id: id,
+        createdBy: userId
     })
     .populate('linkedTasks', 'title status priority dueDate')
     .populate('linkedProjects', 'title status completionPercentage');
@@ -106,9 +113,9 @@ export const getJournalEntry = catchAsync(async (req: Request, res: Response) =>
 });
 
 // Create journal entry with mood integration
-export const createJournalEntry = catchAsync(async (req: Request, res: Response) => {
+export const createJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    
+
     if (!userId) {
         throw createAppError('User not authenticated', 401);
     }
@@ -169,7 +176,7 @@ export const createJournalEntry = catchAsync(async (req: Request, res: Response)
 });
 
 // Update journal entry
-export const updateJournalEntry = catchAsync(async (req: Request, res: Response) => {
+export const updateJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
@@ -207,13 +214,13 @@ export const updateJournalEntry = catchAsync(async (req: Request, res: Response)
 });
 
 // Delete journal entry
-export const deleteJournalEntry = catchAsync(async (req: Request, res: Response) => {
+export const deleteJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const entry = await Journal.findOneAndDelete({ 
-        _id: id, 
-        createdBy: userId 
+    const entry = await Journal.findOneAndDelete({
+        _id: id,
+        createdBy: userId
     });
 
     if (!entry) {
@@ -227,7 +234,7 @@ export const deleteJournalEntry = catchAsync(async (req: Request, res: Response)
 });
 
 // Get today's journal entry
-export const getTodayEntry = catchAsync(async (req: Request, res: Response) => {
+export const getTodayEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { type = 'daily' } = req.query;
 
@@ -259,7 +266,7 @@ export const getTodayEntry = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Get journal templates
-export const getJournalTemplates = catchAsync(async (req: Request, res: Response) => {
+export const getJournalTemplates = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const templates = {
         daily: {
             title: "Daily Reflection",
@@ -302,7 +309,7 @@ export const getJournalTemplates = catchAsync(async (req: Request, res: Response
 });
 
 // Create entry from template
-export const createFromTemplate = catchAsync(async (req: Request, res: Response) => {
+export const createFromTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { templateType, date, customizations = {} } = req.body;
 
@@ -371,7 +378,7 @@ export const createFromTemplate = catchAsync(async (req: Request, res: Response)
 });
 
 // Get journal insights and analytics
-export const getJournalInsights = catchAsync(async (req: Request, res: Response) => {
+export const getJournalInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { period = '30' } = req.query; // days
 
@@ -395,10 +402,10 @@ export const getJournalInsights = catchAsync(async (req: Request, res: Response)
             acc[entry.type] = (acc[entry.type] || 0) + 1;
             return acc;
         }, {} as Record<string, number>),
-        averageMood: moods.length > 0 
+        averageMood: moods.length > 0
             ? Math.round(moods.reduce((sum, mood) => sum + mood.mood.value, 0) / moods.length * 10) / 10
             : null,
-        averageEnergy: moods.length > 0 
+        averageEnergy: moods.length > 0
             ? Math.round(moods.reduce((sum, mood) => sum + mood.energy.value, 0) / moods.length * 10) / 10
             : null,
         streakDays: calculateJournalStreak(entries),
@@ -416,17 +423,17 @@ export const getJournalInsights = catchAsync(async (req: Request, res: Response)
 function calculateJournalStreak(entries: any[]) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     let streak = 0;
     let currentDate = new Date(today);
-    
+
     while (true) {
         const hasEntry = entries.some(entry => {
             const entryDate = new Date(entry.date);
             entryDate.setHours(0, 0, 0, 0);
             return entryDate.getTime() === currentDate.getTime();
         });
-        
+
         if (hasEntry) {
             streak++;
             currentDate.setDate(currentDate.getDate() - 1);
@@ -434,20 +441,20 @@ function calculateJournalStreak(entries: any[]) {
             break;
         }
     }
-    
+
     return streak;
 }
 
 // Helper function to get most common tags
 function getMostCommonTags(entries: any[]) {
     const tagCounts: Record<string, number> = {};
-    
+
     entries.forEach(entry => {
         entry.tags?.forEach((tag: string) => {
             tagCounts[tag] = (tagCounts[tag] || 0) + 1;
         });
     });
-    
+
     return Object.entries(tagCounts)
         .sort(([,a], [,b]) => b - a)
         .slice(0, 5)
@@ -457,17 +464,138 @@ function getMostCommonTags(entries: any[]) {
 // Helper function to calculate mood trend
 function calculateMoodTrend(moods: any[]) {
     if (moods.length < 2) return 'stable';
-    
+
     const sortedMoods = moods.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const firstHalf = sortedMoods.slice(0, Math.floor(sortedMoods.length / 2));
     const secondHalf = sortedMoods.slice(Math.floor(sortedMoods.length / 2));
-    
+
     const firstAvg = firstHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / firstHalf.length;
     const secondAvg = secondHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / secondHalf.length;
-    
+
     const difference = secondAvg - firstAvg;
-    
+
     if (difference > 0.5) return 'improving';
     if (difference < -0.5) return 'declining';
     return 'stable';
 }
+// Additional handlers delegating to service layer
+import * as journalService from '../services/journal.service';
+
+export const getJournalStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.getJournalStats(userId);
+  res.status(200).json({ success: true, data });
+});
+
+export const getJournalAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.getJournalAnalytics(userId);
+  res.status(200).json({ success: true, data });
+});
+
+export const getCalendarView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.getCalendarView(userId);
+  res.status(200).json({ success: true, data });
+});
+
+export const importJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.importJournalEntries(userId, req.body.entries || req.body || []);
+  res.status(200).json({ success: true, data });
+});
+
+export const exportJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.exportJournalEntries(userId);
+  res.status(200).json({ success: true, data });
+});
+
+export const bulkUpdateJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.bulkUpdateJournalEntries(userId, req.body);
+  res.status(200).json({ success: true, data });
+});
+
+export const bulkDeleteJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.bulkDeleteJournalEntries(userId, req.body.entryIds || []);
+  res.status(200).json({ success: true, data });
+});
+
+export const updateMood = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const { id } = req.params;
+  const data = await journalService.updateMood(userId, id, req.body.mood);
+  res.status(200).json({ success: true, data });
+});
+
+export const toggleFavorite = catchAsync(async (_req: AuthenticatedRequest, res: Response) => {
+  res.status(501).json({ success: false, error: 'Favorites are not supported' });
+});
+
+export const archiveEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const { id } = req.params;
+  const data = await journalService.archiveEntry(userId, id);
+  res.status(200).json({ success: true, data });
+});
+
+export const duplicateEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const { id } = req.params;
+  const data = await journalService.duplicateEntry(userId, id);
+  res.status(201).json({ success: true, data });
+});
+
+export const getTemplates = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.getTemplates(userId);
+  res.status(200).json({ success: true, data });
+});
+
+export const createTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.createTemplate(userId, req.body);
+  res.status(501).json({ success: false, error: data });
+});
+
+export const updateTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const { templateId } = req.params as any;
+  const data = await journalService.updateTemplate(userId, templateId, req.body);
+  res.status(501).json({ success: false, error: data });
+});
+
+export const deleteTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const { templateId } = req.params as any;
+  const data = await journalService.deleteTemplate(userId, templateId);
+  res.status(501).json({ success: false, error: data });
+});
+
+export const getPrompts = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.getPrompts(userId);
+  res.status(200).json({ success: true, data });
+});
+
+export const createPrompt = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.createPrompt(userId, req.body);
+  res.status(501).json({ success: false, error: data });
+});
+
+export const searchEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const q = (req.query.q as string) || (req.query.query as string) || '';
+  const data = await journalService.searchEntries(userId, q);
+  res.status(200).json({ success: true, data });
+});
+
+export const getInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId!;
+  const data = await journalService.getInsights(userId);
+  res.status(200).json({ success: true, data });
+});
+

@@ -86,7 +86,7 @@ export const getUserTags = async (
 
       return {
         ...tag,
-        id: tag._id.toString(),
+        id: tag.id.toString(),
         usedInDatabases,
         usedInFiles,
         usedInWorkspaces
@@ -160,7 +160,7 @@ export const getTagById = async (
 
   return {
     ...tag,
-    id: tag._id.toString(),
+    id: tag.id.toString(),
     usedInDatabases,
     usedInFiles,
     usedInWorkspaces
@@ -300,6 +300,142 @@ export const updateTagUsage = async (
       $inc: { usageCount: 1 }
     }
   );
+};
+
+// Alias for backward compatibility
+export const getTags = getUserTags;
+
+// Get tag usage statistics
+export const getTagUsage = async (
+  userId: string,
+  tagId?: string
+): Promise<any> => {
+  if (tagId) {
+    return await getTagById(tagId, userId);
+  }
+
+  const tags = await getUserTags(userId);
+  return tags.tags.map(tag => ({
+    tagId: tag.id,
+    tagName: tag.name,
+    usageCount: tag.usedInDatabases + tag.usedInFiles + tag.usedInWorkspaces,
+    modules: [
+      { moduleName: 'databases', count: tag.usedInDatabases },
+      { moduleName: 'files', count: tag.usedInFiles },
+      { moduleName: 'workspaces', count: tag.usedInWorkspaces }
+    ]
+  }));
+};
+
+// Merge tags
+export const mergeTag = async (
+  userId: string,
+  sourceTagId: string,
+  targetTagId: string
+): Promise<void> => {
+  const [sourceTag, targetTag] = await Promise.all([
+    TagModel.findOne({ _id: sourceTagId, userId }),
+    TagModel.findOne({ _id: targetTagId, userId })
+  ]);
+
+  if (!sourceTag || !targetTag) {
+    throw createNotFoundError('One or both tags not found');
+  }
+
+  // Update all references from source tag to target tag
+  await Promise.all([
+    DatabaseModel.updateMany(
+      { userId, tags: sourceTag.name },
+      { $set: { 'tags.$': targetTag.name } }
+    ),
+    FileModel.updateMany(
+      { userId, tags: sourceTag.name },
+      { $set: { 'tags.$': targetTag.name } }
+    ),
+    WorkspaceModel.updateMany(
+      {
+        $or: [
+          { ownerId: userId },
+          { 'members.userId': userId }
+        ],
+        tags: sourceTag.name
+      },
+      { $set: { 'tags.$': targetTag.name } }
+    )
+  ]);
+
+  // Delete the source tag
+  await TagModel.findByIdAndDelete(sourceTagId);
+};
+
+// Bulk delete tags
+export const bulkDeleteTags = async (
+  userId: string,
+  tagIds: string[]
+): Promise<{ deletedCount: number }> => {
+  const tags = await TagModel.find({
+    _id: { $in: tagIds },
+    userId
+  });
+
+  if (tags.length === 0) {
+    return { deletedCount: 0 };
+  }
+
+  const tagNames = tags.map(tag => tag.name);
+
+  // Remove tags from all collections
+  await Promise.all([
+    DatabaseModel.updateMany(
+      { userId, tags: { $in: tagNames } },
+      { $pullAll: { tags: tagNames } }
+    ),
+    FileModel.updateMany(
+      { userId, tags: { $in: tagNames } },
+      { $pullAll: { tags: tagNames } }
+    ),
+    WorkspaceModel.updateMany(
+      {
+        $or: [
+          { ownerId: userId },
+          { 'members.userId': userId }
+        ],
+        tags: { $in: tagNames }
+      },
+      { $pullAll: { tags: tagNames } }
+    )
+  ]);
+
+  // Delete the tags
+  const result = await TagModel.deleteMany({
+    _id: { $in: tagIds },
+    userId
+  });
+
+  return { deletedCount: result.deletedCount || 0 };
+};
+
+// Get tag suggestions
+export const getTagSuggestions = async (
+  userId: string,
+  query?: string,
+  limit: number = 10
+): Promise<any[]> => {
+  let filter: any = { userId };
+
+  if (query) {
+    filter.name = { $regex: query, $options: 'i' };
+  }
+
+  const tags = await TagModel.find(filter)
+    .sort({ usageCount: -1, name: 1 })
+    .limit(limit);
+
+  return tags.map(tag => ({
+    name: tag.name,
+    color: tag.color,
+    relevanceScore: tag.usageCount
+  }));
 };
 
 // Helper functions

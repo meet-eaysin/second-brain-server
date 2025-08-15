@@ -17,7 +17,8 @@ export {
   createForbiddenError,
   createConflictError,
   createAuthError,
-  createValidationErrorFromSchema
+  createValidationErrorFromSchema,
+  createBadRequestError
 } from './error.utils';
 
 // Email utilities
@@ -27,3 +28,6 @@ export {
 
 // Validation utilities
 export { convertToValidationError } from './validation-error-converter';
+
+// Mongoose utilities
+export * from './mongoose-helpers';

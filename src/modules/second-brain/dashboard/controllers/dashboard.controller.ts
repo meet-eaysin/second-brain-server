@@ -70,7 +70,7 @@ export const quickCapture = catchAsync(async (req: AuthenticatedRequest, res: Re
             return;
     }
 
-    sendSuccessResponse(res, result, `${type.charAt(0).toUpperCase() + type.slice(1)} captured successfully`, 201);
+    sendSuccessResponse(res, `${type.charAt(0).toUpperCase() + type.slice(1)} captured successfully`, result, 201);
 });
 
 // Dashboard - Main overview
@@ -84,7 +84,7 @@ export const getDashboard = catchAsync(async (req: AuthenticatedRequest, res: Re
 
     const dashboardData = await dashboardService.getDashboardData(userId);
 
-    sendSuccessResponse(res, dashboardData, 'Dashboard data retrieved successfully');
+    sendSuccessResponse(res, 'Dashboard data retrieved successfully', dashboardData);
 });
 
 // My Day - Today's focus
@@ -98,7 +98,7 @@ export const getMyDay = catchAsync(async (req: AuthenticatedRequest, res: Respon
 
     const myDayData = await dashboardService.getMyDayData(userId);
 
-    sendSuccessResponse(res, myDayData, 'My Day data retrieved successfully');
+    sendSuccessResponse(res, 'My Day data retrieved successfully', myDayData);
 });
 
 // Search across all modules
@@ -119,7 +119,7 @@ export const globalSearch = catchAsync(async (req: AuthenticatedRequest, res: Re
 
     const results = await dashboardService.globalSearch(userId, searchFilters);
 
-    sendSuccessResponse(res, results, 'Search completed successfully');
+    sendSuccessResponse(res, 'Search completed successfully', results);
 });
 
 // Get quick stats overview
@@ -133,7 +133,7 @@ export const getQuickStats = catchAsync(async (req: AuthenticatedRequest, res: R
 
     const stats = await dashboardService.getQuickStats(userId);
 
-    sendSuccessResponse(res, stats, 'Quick stats retrieved successfully');
+    sendSuccessResponse(res, 'Quick stats retrieved successfully', stats);
 });
 
 // Get recent activity
@@ -148,5 +148,5 @@ export const getRecentActivity = catchAsync(async (req: AuthenticatedRequest, re
 
     const activities = await dashboardService.getRecentActivity(userId, Number(limit));
 
-    sendSuccessResponse(res, activities, 'Recent activity retrieved successfully');
+    sendSuccessResponse(res, 'Recent activity retrieved successfully', activities);
 });

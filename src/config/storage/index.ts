@@ -78,6 +78,34 @@ export const uploadToS3 = async (file: Express.Multer.File): Promise<string> => 
   }
 };
 
+// Upload directly from memory buffer (for multer.memoryStorage)
+export const uploadBufferToS3 = async (
+  buffer: Buffer,
+  originalName: string,
+  mimeType: string
+): Promise<string> => {
+  try {
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME as string,
+      Key: `uploads/${Date.now()}-${originalName}`,
+      Body: buffer,
+      ContentType: mimeType,
+      ACL: 'public-read'
+    };
+
+    const result = await s3.upload(params).promise();
+    logger.info(`File uploaded to S3 (buffer): ${result.Location}`);
+    return result.Location;
+  } catch (error) {
+    if (error instanceof Error) {
+      logger.error(`S3 upload (buffer) failed: ${error.message}`);
+    } else {
+      logger.error('Unknown error during S3 upload (buffer)');
+    }
+    throw error;
+  }
+};
+
 export const deleteFromS3 = async (fileUrl: string): Promise<boolean> => {
   try {
     const key = fileUrl.split('.com/')[1];

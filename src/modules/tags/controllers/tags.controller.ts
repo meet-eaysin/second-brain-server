@@ -21,7 +21,7 @@ export const getUserTags = catchAsync(
       offset: Number(offset)
     });
 
-    sendSuccessResponse(res, result, 'Tags retrieved successfully');
+    sendSuccessResponse(res, 'Tags retrieved successfully', result);
   }
 );
 
@@ -37,7 +37,7 @@ export const createTag = catchAsync(
 
     try {
       const tag = await tagsService.createTag(userId, { name, color, description });
-      sendSuccessResponse(res, tag, 'Tag created successfully', 201);
+      sendSuccessResponse(res, 'Tag created successfully', tag, 201);
     } catch (error: any) {
       return next(error);
     }
@@ -56,7 +56,7 @@ export const getTagById = catchAsync(
 
     try {
       const tag = await tagsService.getTagById(id, userId);
-      sendSuccessResponse(res, tag, 'Tag retrieved successfully');
+      sendSuccessResponse(res, 'Tag retrieved successfully', tag);
     } catch (error: any) {
       return next(error);
     }
@@ -76,7 +76,7 @@ export const updateTag = catchAsync(
 
     try {
       const tag = await tagsService.updateTag(id, userId, { name, color, description });
-      sendSuccessResponse(res, tag, 'Tag updated successfully');
+      sendSuccessResponse(res, 'Tag updated successfully', tag);
     } catch (error: any) {
       return next(error);
     }
@@ -95,7 +95,69 @@ export const deleteTag = catchAsync(
 
     try {
       await tagsService.deleteTag(id, userId);
-      sendSuccessResponse(res, null, 'Tag deleted successfully');
+      sendSuccessResponse(res, 'Tag deleted successfully', null);
+    } catch (error: any) {
+      return next(error);
+    }
+  }
+);
+
+/**
+ * Get tags (alias for getUserTags)
+ */
+export const getTags = getUserTags;
+
+/**
+ * Get tag usage statistics
+ */
+export const getTagUsage = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const { id } = req.params;
+
+    try {
+      const usage = await tagsService.getTagUsage(userId, id);
+      sendSuccessResponse(res, 'Tag usage retrieved successfully', usage);
+    } catch (error: any) {
+      return next(error);
+    }
+  }
+);
+
+/**
+ * Merge tags
+ */
+export const mergeTag = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const { sourceTagId, targetTagId } = req.body;
+
+    try {
+      await tagsService.mergeTag(userId, sourceTagId, targetTagId);
+      sendSuccessResponse(res, 'Tags merged successfully', null);
+    } catch (error: any) {
+      return next(error);
+    }
+  }
+);
+
+/**
+ * Bulk delete tags
+ */
+export const bulkDeleteTags = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as AuthenticatedRequest).user.userId;
+    if (!userId) return next(createNotFoundError('User authentication required'));
+
+    const { tagIds } = req.body;
+
+    try {
+      const result = await tagsService.bulkDeleteTags(userId, tagIds);
+      sendSuccessResponse(res, 'Tags deleted successfully', result);
     } catch (error: any) {
       return next(error);
     }

@@ -1,50 +1,24 @@
 import { Goal } from '../models/goal.model';
-import { Project } from '../../project/models/project.model';
-import { Task } from '../../task/models/task.model';
 import { createAppError, createNotFoundError, createValidationError } from '../../../../utils';
+// Import services instead of models
+import * as projectService from '../../project/services/project.service';
+import * as taskService from '../../task/services/task.service';
 import { Types } from 'mongoose';
-
-export interface CreateGoalRequest {
-    title: string;
-    description?: string;
-    type: 'outcome' | 'process' | 'learning' | 'health' | 'financial' | 'career' | 'personal';
-    status?: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
-    startDate?: Date;
-    endDate?: Date;
-    area?: 'projects' | 'areas' | 'resources' | 'archive';
-    tags?: string[];
-    parentGoal?: string;
-    subGoals?: string[];
-    projects?: string[];
-    habits?: string[];
-    targetValue?: number;
-    currentValue?: number;
-    unit?: string;
-    progressPercentage?: number;
-}
-
-export interface UpdateGoalRequest extends Partial<CreateGoalRequest> {
-    archivedAt?: Date;
-    completedAt?: Date;
-}
-
-export interface GoalFilters {
-    type?: string | string[];
-    status?: string | string[];
-    area?: string | string[];
-    tags?: string | string[];
-    search?: string;
-    parentGoal?: string;
-    isArchived?: boolean;
-}
-
-export interface GoalPaginationOptions {
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-    includeProgress?: boolean;
-}
+import type {
+    IGoal,
+    CreateGoalRequest,
+    UpdateGoalRequest,
+    GoalFilters,
+    GoalQueryOptions,
+    GoalInsights,
+    GoalStats,
+    TimeInsights,
+    GoalWithDetails,
+    BulkUpdateGoalsRequest,
+    BulkDeleteGoalsRequest,
+    GoalImportData,
+    GoalExportOptions
+} from '../types/goal.types';
 
 // Create a new goal
 export const createGoal = async (userId: string, goalData: CreateGoalRequest) => {
@@ -68,9 +42,9 @@ export const createGoal = async (userId: string, goalData: CreateGoalRequest) =>
 
 // Get all goals for a user with filtering
 export const getGoals = async (
-    userId: string, 
-    filters: GoalFilters = {}, 
-    options: GoalPaginationOptions = {}
+    userId: string,
+    filters: GoalFilters = {},
+    options: GoalQueryOptions = {}
 ) => {
     try {
         const {
@@ -247,9 +221,9 @@ export const deleteGoal = async (userId: string, goalId: string) => {
 // Archive/unarchive a goal
 export const archiveGoal = async (userId: string, goalId: string, archive: boolean = true) => {
     try {
-        const updateData = archive 
+        const updateData: UpdateGoalRequest = archive
             ? { isArchived: true, archivedAt: new Date() }
-            : { isArchived: false, archivedAt: null };
+            : { isArchived: false, archivedAt: undefined };
 
         const goal = await updateGoal(userId, goalId, updateData);
         return goal;
@@ -331,11 +305,7 @@ export const getGoalWithDetails = async (userId: string, goalId: string) => {
         await calculateGoalProgress(goal);
 
         // Get related tasks from projects
-        const relatedTasks = await Task.find({
-            project: { $in: goal.projects },
-            createdBy: new Types.ObjectId(userId),
-            archivedAt: { $exists: false }
-        }).populate('project', 'title').limit(10);
+        const relatedTasks = await taskService.getTasksByProjects(userId, goal.projects, { limit: 10 });
 
         // Calculate time-based insights
         const timeInsights = calculateTimeInsights(goal);
@@ -373,10 +343,7 @@ export const createGoalWithRelationships = async (userId: string, goalData: Crea
 
         // Link to existing projects if specified
         if (goal.projects && goal.projects.length > 0) {
-            await Project.updateMany(
-                { _id: { $in: goal.projects } },
-                { goal: goal._id }
-            );
+            await projectService.linkProjectsToGoal(goal.projects, goal._id.toString());
         }
 
         const populatedGoal = await Goal.findById(goal._id)
@@ -477,10 +444,7 @@ export const deleteGoalWithCleanup = async (userId: string, goalId: string) => {
         }
 
         // Update projects to remove goal reference
-        await Project.updateMany(
-            { goal: goal._id },
-            { $unset: { goal: 1 } }
-        );
+        await projectService.unlinkProjectsFromGoal(goal._id.toString());
 
         return goal;
     } catch (error: any) {
@@ -515,7 +479,7 @@ export const updateGoalProgress = async (userId: string, goalId: string, current
 };
 
 // Get goal insights and analytics
-export const getGoalInsights = async (userId: string) => {
+export const getGoalInsights = async (userId: string): Promise<GoalInsights> => {
     try {
         const goals = await Goal.find({
             createdBy: new Types.ObjectId(userId),
@@ -523,7 +487,9 @@ export const getGoalInsights = async (userId: string) => {
         }).populate('projects', 'completionPercentage')
          .populate('habits', 'completionRate');
 
-        const insights = {
+        const completedGoals = goals.filter(goal => goal.status === 'completed').length;
+
+        const insights: GoalInsights = {
             totalGoals: goals.length,
             byStatus: goals.reduce((acc, goal) => {
                 acc[goal.status] = (acc[goal.status] || 0) + 1;
@@ -545,11 +511,88 @@ export const getGoalInsights = async (userId: string) => {
             overdue: goals.filter(goal => {
                 if (!goal.endDate || goal.status === 'completed') return false;
                 return new Date(goal.endDate) < new Date();
-            }).length
+            }).length,
+            completionRate: goals.length > 0 ? Math.round((completedGoals / goals.length) * 100) : 0,
+            activeGoalsCount: goals.filter(goal => goal.status === 'active').length
         };
 
         return insights;
     } catch (error: any) {
         throw createAppError('Failed to get goal insights', 500);
+    }
+};
+
+// Get detailed goal statistics
+export const getGoalStats = async (userId: string): Promise<GoalStats> => {
+    try {
+        const allGoals = await Goal.find({
+            createdBy: new Types.ObjectId(userId)
+        });
+
+        const completedGoals = allGoals.filter(goal => goal.status === 'completed');
+        const activeGoals = allGoals.filter(goal => goal.status === 'active');
+        const overdueGoals = allGoals.filter(goal => {
+            if (!goal.endDate || goal.status === 'completed') return false;
+            return new Date(goal.endDate) < new Date();
+        });
+
+        // Calculate average completion time for completed goals
+        const completionTimes = completedGoals
+            .filter(goal => goal.completedAt && goal.createdAt)
+            .map(goal => {
+                const completed = new Date(goal.completedAt!);
+                const created = new Date(goal.createdAt);
+                return Math.floor((completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+            });
+
+        const averageCompletionTime = completionTimes.length > 0
+            ? Math.round(completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length)
+            : 0;
+
+        // Monthly progress for the last 12 months
+        const monthlyProgress = [];
+        for (let i = 11; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+            const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+            const created = allGoals.filter(goal =>
+                goal.createdAt >= monthStart && goal.createdAt <= monthEnd
+            ).length;
+
+            const completed = completedGoals.filter(goal =>
+                goal.completedAt && goal.completedAt >= monthStart && goal.completedAt <= monthEnd
+            ).length;
+
+            monthlyProgress.push({
+                month: date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+                created,
+                completed
+            });
+        }
+
+        const stats: GoalStats = {
+            totalGoals: allGoals.length,
+            completedGoals: completedGoals.length,
+            activeGoals: activeGoals.length,
+            overdueGoals: overdueGoals.length,
+            averageCompletionTime,
+            goalsByType: allGoals.reduce((acc, goal) => {
+                acc[goal.type] = (acc[goal.type] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>),
+            goalsByArea: allGoals.reduce((acc, goal) => {
+                if (goal.area) {
+                    acc[goal.area] = (acc[goal.area] || 0) + 1;
+                }
+                return acc;
+            }, {} as Record<string, number>),
+            monthlyProgress
+        };
+
+        return stats;
+    } catch (error: any) {
+        throw createAppError('Failed to get goal statistics', 500);
     }
 };

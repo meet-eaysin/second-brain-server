@@ -36,6 +36,8 @@ export interface IJournal extends Document {
     // Relationships
     linkedTasks: mongoose.Types.ObjectId[];
     linkedProjects: mongoose.Types.ObjectId[];
+    linkedGoals: mongoose.Types.ObjectId[];
+    linkedHabits: mongoose.Types.ObjectId[];
     tags: string[];
     
     // Metadata
@@ -85,6 +87,8 @@ const JournalSchema = new Schema<IJournal>({
     // Relationships
     linkedTasks: [{ type: Schema.Types.ObjectId, ref: 'Task' }],
     linkedProjects: [{ type: Schema.Types.ObjectId, ref: 'Project' }],
+    linkedGoals: [{ type: Schema.Types.ObjectId, ref: 'Goal' }],
+    linkedHabits: [{ type: Schema.Types.ObjectId, ref: 'Habit' }],
     tags: [{ type: String, trim: true }],
     
     // Metadata

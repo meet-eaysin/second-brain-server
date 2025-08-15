@@ -15,7 +15,7 @@ export const encryptData = (data: unknown): string => {
   try {
     const dataString = typeof data === 'string' ? data : JSON.stringify(data);
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(ALGORITHM, ENCRYPTION_SECRET);
+    const cipher = crypto.createCipheriv(ALGORITHM, ENCRYPTION_SECRET, iv);
 
     let encrypted = cipher.update(dataString, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -36,7 +36,7 @@ export const decryptData = (encryptedData: string): string => {
     const iv = Buffer.from(parts[0], 'hex');
     const encrypted = parts[1];
 
-    const decipher = crypto.createDecipher(ALGORITHM, ENCRYPTION_SECRET);
+    const decipher = crypto.createDecipheriv(ALGORITHM, ENCRYPTION_SECRET, iv);
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
 

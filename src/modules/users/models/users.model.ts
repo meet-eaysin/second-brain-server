@@ -97,6 +97,15 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
     },
     lastLoginAt: {
       type: Date
+    },
+    // Add password reset fields (optional)
+    passwordResetToken: {
+      type: String,
+      select: false
+    },
+    passwordResetExpires: {
+      type: Date,
+      select: false
     }
   },
   {

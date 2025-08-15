@@ -5,26 +5,27 @@ export interface IContent extends Document {
     title: string;
     description?: string;
     type: 'blog' | 'video' | 'podcast' | 'social' | 'newsletter' | 'course' | 'other';
-    
+
     // Content Pipeline
     status: 'idea' | 'draft' | 'in-review' | 'scheduled' | 'published' | 'archived';
-    
+
     // Content Data
     content?: string; // Main content/script
+    notes?: string; // Simple notes field managed via service helpers
     outline?: string[];
     keywords?: string[];
-    
+
     // Publishing Details
     platform?: string[]; // YouTube, Blog, LinkedIn, etc.
     publishDate?: Date;
     scheduledDate?: Date;
     url?: string;
-    
+
     // SEO & Marketing
     seoTitle?: string;
     metaDescription?: string;
     thumbnail?: string;
-    
+
     // Performance Tracking
     metrics?: {
         views?: number;
@@ -34,7 +35,7 @@ export interface IContent extends Document {
         engagement?: number;
         revenue?: number;
     };
-    
+
     // Collaboration
     collaborators?: mongoose.Types.ObjectId[];
     sponsors?: {
@@ -42,15 +43,18 @@ export interface IContent extends Document {
         amount?: number;
         requirements?: string[];
     }[];
-    
+
     // PARA Classification
     area: 'projects' | 'areas' | 'resources' | 'archive';
     tags: string[];
-    
+
     // Relationships
     linkedProjects: mongoose.Types.ObjectId[];
     linkedGoals: mongoose.Types.ObjectId[];
-    
+
+    // Favorites
+    isFavorite?: boolean;
+
     // Metadata
     createdBy: mongoose.Types.ObjectId;
     createdAt: Date;
@@ -78,9 +82,10 @@ const ContentSchema = new Schema<IContent>({
     
     // Content Data
     content: { type: String, trim: true },
+    notes: { type: String, trim: true },
     outline: [{ type: String, trim: true }],
     keywords: [{ type: String, trim: true }],
-    
+
     // Publishing Details
     platform: [{ type: String, trim: true }],
     publishDate: { type: Date },

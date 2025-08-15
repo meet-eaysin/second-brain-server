@@ -24,7 +24,7 @@ export interface CreateNoteRequest {
 }
 
 export interface UpdateNoteRequest extends Partial<CreateNoteRequest> {
-    archivedAt?: Date;
+    archivedAt?: Date | null;
 }
 
 export interface NoteFilters {

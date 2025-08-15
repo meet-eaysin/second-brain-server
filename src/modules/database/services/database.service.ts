@@ -14,7 +14,6 @@ import {
   TDatabasePermissionRequest,
   TRecordsListResponse,
   TPropertyValidationError,
-  FILTER_OPERATORS,
   IDatabase,
   DatabaseDocument,
   DatabaseRecordDocument,
@@ -29,6 +28,9 @@ import {
 import { IValidationError } from '@/types/error.types';
 import { createNotFoundError, createAppError, createForbiddenError } from '@/utils/error.utils';
 import { DatabaseRecordModel, IDatabaseRecord } from '../models/database-record.model';
+import { createValidationError } from '@/utils/response.utils';
+import { DocumentViewService } from '../../document-view/services/document-view.service';
+import type { GenericDocumentView } from '../../document-view/types/document-view.types';
 
 // Predefined color palette for select options
 const SELECT_OPTION_COLORS = [
@@ -112,22 +114,22 @@ const checkDatabaseNotFrozen = (database: DatabaseDocument): void => {
   }
 };
 
+const hasToJSON = (obj: unknown): obj is { toJSON: () => unknown } => {
+  return !!obj && typeof (obj as any).toJSON === 'function';
+};
+
 const toDatabaseInterface = (doc: DatabaseDocument | IDatabase): IDatabase => {
-  // If it's already a plain object, return as is
-  if (typeof doc.toJSON !== 'function') {
-    return doc as IDatabase;
+  if (hasToJSON(doc)) {
+    return doc.toJSON() as IDatabase;
   }
-  // If it's a Mongoose document, convert it
-  return doc.toJSON() as IDatabase;
+  return doc as IDatabase;
 };
 
 const toRecordInterface = (doc: DatabaseRecordDocument | IDatabaseRecord): IDatabaseRecord => {
-  // If it's already a plain object, return as is
-  if (typeof doc.toJSON !== 'function') {
-    return doc as IDatabaseRecord;
+  if (hasToJSON(doc)) {
+    return doc.toJSON() as IDatabaseRecord;
   }
-  // If it's a Mongoose document, convert it
-  return doc.toJSON() as IDatabaseRecord;
+  return doc as IDatabaseRecord;
 };
 
 // Enhanced record interface that enriches select options with full data
@@ -135,8 +137,7 @@ const toEnrichedRecordInterface = (
   doc: DatabaseRecordDocument | IDatabaseRecord,
   database: IDatabase
 ): IDatabaseRecord => {
-  // Convert to plain object if it's a Mongoose document
-  const record = typeof doc.toJSON === 'function' ? doc.toJSON() as IDatabaseRecord : doc as IDatabaseRecord;
+  const record = hasToJSON(doc) ? (doc.toJSON() as IDatabaseRecord) : (doc as IDatabaseRecord);
 
   // Enrich select option properties with full option data
   const enrichedProperties: { [propertyId: string]: unknown } = {};
@@ -149,13 +150,8 @@ const toEnrichedRecordInterface = (
         // Single select - find the option by ID
         const option = property.selectOptions.find(opt => opt.id === value);
         if (option) {
-          // Transform _id to id if it exists
-          const transformedOption = { ...option };
-          if (transformedOption._id) {
-            transformedOption.id = transformedOption._id;
-            delete transformedOption._id;
-          }
-          enrichedProperties[propertyId] = transformedOption;
+          // Option already matches ISelectOption shape
+          enrichedProperties[propertyId] = option;
         } else {
           enrichedProperties[propertyId] = value; // Fallback to ID if option not found
         }
@@ -165,13 +161,8 @@ const toEnrichedRecordInterface = (
           if (typeof optionId === 'string') {
             const option = property.selectOptions!.find(opt => opt.id === optionId);
             if (option) {
-              // Transform _id to id if it exists
-              const transformedOption = { ...option };
-              if (transformedOption._id) {
-                transformedOption.id = transformedOption._id;
-                delete transformedOption._id;
-              }
-              return transformedOption;
+              // Option already matches ISelectOption shape
+              return option;
             }
             return optionId; // Fallback to ID if option not found
           }
@@ -355,13 +346,10 @@ export const getDatabasesWithSidebar = async (
   const skip = (page - 1) * limit;
 
   // Execute query
-  const [databases, total] = await Promise.all([
-    DatabaseModel.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit),
-    DatabaseModel.countDocuments(query)
-  ]);
+  const databases = await DatabaseModel.find(query)
+    .sort(sortOptions)
+    .skip(skip)
+    .limit(limit);
 
   const result: TDatabaseListResponse = {
     databases: databases.map(db => toDatabaseInterface(db))
@@ -640,14 +628,16 @@ export const addProperty = async (
   // Auto-generate IDs and colors for select options if not provided
   const processedData = { ...data };
   if (processedData.selectOptions && Array.isArray(processedData.selectOptions)) {
-    const existingColors = processedData.selectOptions
-      .map(option => option.color)
-      .filter(Boolean); // Get existing colors to avoid duplicates
+    const optionsArr = processedData.selectOptions;
+    const existingColors = optionsArr.map(option => option.color).filter(Boolean);
 
-    processedData.selectOptions = processedData.selectOptions.map((option, index) => ({
+    processedData.selectOptions = optionsArr.map((option, index) => ({
       ...option,
-      id: option.id || uuidv4(), // Generate ID if not provided
-      color: option.color || generateSelectOptionColor([...existingColors, ...processedData.selectOptions.slice(0, index).map(o => o.color).filter(Boolean)]) // Generate color if not provided
+      id: option.id || uuidv4(),
+      color: option.color || generateSelectOptionColor([
+        ...existingColors,
+        ...optionsArr.slice(0, index).map(o => o.color).filter(Boolean)
+      ])
     }));
   }
 
@@ -686,14 +676,16 @@ export const updateProperty = async (
   // Process select options if provided
   const processedData = { ...data };
   if (processedData.selectOptions && Array.isArray(processedData.selectOptions)) {
-    const existingColors = processedData.selectOptions
-      .map(option => option.color)
-      .filter(Boolean);
+    const optionsArr = processedData.selectOptions;
+    const existingColors = optionsArr.map(option => option.color).filter(Boolean);
 
-    processedData.selectOptions = processedData.selectOptions.map((option, index) => ({
+    processedData.selectOptions = optionsArr.map((option, index) => ({
       ...option,
       id: option.id || uuidv4(),
-      color: option.color || generateSelectOptionColor([...existingColors, ...processedData.selectOptions.slice(0, index).map(o => o.color).filter(Boolean)])
+      color: option.color || generateSelectOptionColor([
+        ...existingColors,
+        ...optionsArr.slice(0, index).map(o => o.color).filter(Boolean)
+      ])
     }));
   }
 
@@ -746,36 +738,20 @@ export const addView = async (
   const database = await checkDatabasePermission(databaseId, userId, 'write');
 
   const viewId = uuidv4();
-  const newView = {
-    id: viewId,
+  // Delegate view creation to centralized document-view module
+  await checkDatabasePermission(databaseId, userId, 'write');
+  const docViews = new DocumentViewService();
+  await docViews.createView(userId, 'databases', {
     name: data.name,
     type: data.type,
-    isDefault: data.isDefault || false,
+    isDefault: !!data.isDefault,
     visibleProperties: data.visibleProperties || database.properties.map(p => p.id),
     filters: data.filters || [],
     sorts: data.sorts || [],
     groupBy: data.groupBy,
-    propertyWidths: data.propertyWidths,
-    boardSettings: data.boardSettings
-      ? {
-          groupByPropertyId: data.boardSettings.groupByPropertyId,
-          showUngrouped: data.boardSettings.showUngrouped ?? true
-        }
-      : undefined,
-    timelineSettings: data.timelineSettings,
-    calendarSettings: data.calendarSettings
-  };
+  }, databaseId);
 
-  if (data.isDefault) {
-    database.views.forEach(view => {
-      view.isDefault = false;
-    });
-  }
-
-  database.views.push(newView);
-  database.lastEditedBy = userId;
-
-  await database.save();
+  // Return current database; views are managed by document-view module
   return toDatabaseInterface(database);
 };
 
@@ -1368,8 +1344,10 @@ const processPropertyValues = async (
   return processed;
 };
 
-const buildMongoFilter = (filter: IFilter): Record<string, unknown> => {
-  const { propertyId, operator, value } = filter;
+type AnyFilter = Pick<IFilter, 'propertyId' | 'operator'> & { value?: IFilter['value'] };
+const buildMongoFilter = (filter: AnyFilter): Record<string, unknown> => {
+  const { propertyId, operator } = filter;
+  const value = (filter as any).value;
   const fieldPath = `properties.${propertyId}`;
 
   switch (operator) {

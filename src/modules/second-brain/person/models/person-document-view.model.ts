@@ -270,11 +270,13 @@ const PersonDocumentViewSchema = new Schema<IPersonDocumentView>({
 }, {
     timestamps: true,
     toJSON: {
-        transform: function(doc, ret) {
-            ret.id = ret._id;
+        virtuals: true,
+        versionKey: false,
+        transform: function(_: unknown, ret: any) {
+            ret.id = String(ret._id);
             delete ret._id;
             delete ret.__v;
-            return ret;
+            return ret as IPersonDocumentView;
         }
     }
 });

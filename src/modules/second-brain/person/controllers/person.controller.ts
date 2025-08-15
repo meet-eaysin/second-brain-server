@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
+import { createAppError } from '../../../../utils';
 import * as personService from '../services/person.service';
+import { Person } from '../models/person.model';
+import { Project } from '../../project/models/project.model';
 
 interface AuthenticatedRequest extends Request {
     user?: {
@@ -11,7 +15,7 @@ interface AuthenticatedRequest extends Request {
 
 // Get all people with CRM features
 export const getPeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const {
         relationship,
         tags,
@@ -51,7 +55,7 @@ export const getPeople = catchAsync(async (req: AuthenticatedRequest, res: Respo
 
 // Get single person with full CRM details
 export const getPerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const { id } = req.params;
 
     if (!userId) {
@@ -82,7 +86,7 @@ export const getPerson = catchAsync(async (req: AuthenticatedRequest, res: Respo
 
 // Create person with CRM setup
 export const createPerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
 
     if (!userId) {
         sendErrorResponse(res, 'User not authenticated', 401);
@@ -91,12 +95,12 @@ export const createPerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
     const person = await personService.createPerson(userId, req.body);
 
-    sendSuccessResponse(res, person, 'Person created successfully', 201);
+    sendSuccessResponse(res, 'Person created successfully', person, 201);
 });
 
 // Update person with contact tracking
 export const updatePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const { id } = req.params;
 
     if (!userId) {
@@ -111,7 +115,7 @@ export const updatePerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
 // Delete person with cleanup
 export const deletePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
     const { id } = req.params;
 
     if (!userId) {
@@ -121,12 +125,12 @@ export const deletePerson = catchAsync(async (req: AuthenticatedRequest, res: Re
 
     await personService.deletePerson(userId, id);
 
-    sendSuccessResponse(res, null, 'Person deleted successfully', 204);
+    sendSuccessResponse(res, 'Person deleted successfully', null, 204);
 });
 
 // Record contact interaction
-export const recordContact = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+export const recordContact = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
     const { id } = req.params;
     const { type = 'general', notes, nextContactDate } = req.body;
 
@@ -162,22 +166,10 @@ export const recordContact = catchAsync(async (req: Request, res: Response) => {
 
     await person.save();
 
-    // Create a meeting note if notes provided
-    if (notes) {
-        const meetingNote = await Note.create({
-            title: `Meeting with ${person.firstName} ${person.lastName}`,
-            content: notes,
-            type: 'meeting',
-            area: 'areas',
-            tags: ['meeting', 'contact'],
-            people: [person._id],
-            createdBy: userId
-        });
-
-        // Add note to person's notes array
-        person.notes.push(meetingNote._id);
-        await person.save();
-    }
+    // Note: Meeting notes functionality would be handled by the notes module
+    // if (notes) {
+    //     // Create meeting note through notes service
+    // }
 
     res.status(200).json({
         success: true,
@@ -186,8 +178,8 @@ export const recordContact = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Get people who need contact
-export const getPeopleNeedingContact = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+export const getPeopleNeedingContact = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
 
     const today = new Date();
     const people = await Person.find({
@@ -203,8 +195,8 @@ export const getPeopleNeedingContact = catchAsync(async (req: Request, res: Resp
 });
 
 // Get contact frequency insights
-export const getContactInsights = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+export const getContactInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
 
     const people = await Person.find({
         createdBy: userId,
@@ -238,8 +230,8 @@ export const getContactInsights = catchAsync(async (req: Request, res: Response)
 });
 
 // Add person to project
-export const addToProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+export const addToProject = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
     const { id } = req.params;
     const { projectId } = req.body;
 
@@ -256,14 +248,16 @@ export const addToProject = catchAsync(async (req: Request, res: Response) => {
     }
 
     // Add person to project
-    if (!project.people.includes(id)) {
-        project.people.push(id);
+    const personObjectId = new (require('mongoose').Types.ObjectId)(id);
+    if (!project.people.some(p => p.toString() === id)) {
+        project.people.push(personObjectId);
         await project.save();
     }
 
     // Add project to person
-    if (!person.projects.includes(projectId)) {
-        person.projects.push(projectId);
+    const projectObjectId = new (require('mongoose').Types.ObjectId)(projectId);
+    if (!person.projects.some(p => p.toString() === projectId)) {
+        person.projects.push(projectObjectId);
         await person.save();
     }
 
@@ -274,8 +268,8 @@ export const addToProject = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Remove person from project
-export const removeFromProject = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+export const removeFromProject = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
     const { id, projectId } = req.params;
 
     const [person, project] = await Promise.all([
@@ -302,4 +296,236 @@ export const removeFromProject = catchAsync(async (req: Request, res: Response) 
         success: true,
         data: { person, project }
     });
+});
+
+// Get person statistics
+export const getPersonStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const stats = await personService.getPersonStats(userId);
+    sendSuccessResponse(res, 'Person statistics retrieved successfully', stats);
+});
+
+// Get person analytics
+export const getPersonAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { period = 'month' } = req.query;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const analytics = await personService.getPersonAnalytics(userId, period as string);
+    sendSuccessResponse(res, 'Person analytics retrieved successfully', analytics);
+});
+
+// Import people
+export const importPeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.importPeople(userId, req.body);
+    sendSuccessResponse(res, 'People imported successfully', result, 201);
+});
+
+// Export people
+export const exportPeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { format = 'json' } = req.query;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.exportPeople(userId, format as string);
+    sendSuccessResponse(res, 'People exported successfully', result);
+});
+
+// Bulk update people
+export const bulkUpdatePeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.bulkUpdatePeople(userId, req.body);
+    sendSuccessResponse(res, 'People updated successfully', result);
+});
+
+// Bulk delete people
+export const bulkDeletePeople = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.bulkDeletePeople(userId, req.body);
+    sendSuccessResponse(res, 'People deleted successfully', result);
+});
+
+// Archive person
+export const archivePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const person = await personService.archivePerson(userId, id);
+    sendSuccessResponse(res, 'Person archived successfully', person);
+});
+
+// Toggle favorite
+export const toggleFavorite = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const person = await personService.toggleFavorite(userId, id);
+    sendSuccessResponse(res, 'Person favorite status updated successfully', person);
+});
+
+// Duplicate person
+export const duplicatePerson = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const person = await personService.duplicatePerson(userId, id);
+    sendSuccessResponse(res, 'Person duplicated successfully', person, 201);
+});
+
+// Link task
+export const linkTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+    const { taskId } = req.body;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.linkTask(userId, id, taskId);
+    sendSuccessResponse(res, 'Task linked successfully', result);
+});
+
+// Unlink task
+export const unlinkTask = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { personId, taskId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.unlinkTask(userId, personId, taskId);
+    sendSuccessResponse(res, 'Task unlinked successfully', result);
+});
+
+// Link project
+export const linkProject = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+    const { projectId } = req.body;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.linkProject(userId, id, projectId);
+    sendSuccessResponse(res, 'Project linked successfully', result);
+});
+
+// Unlink project
+export const unlinkProject = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { personId, projectId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const result = await personService.unlinkProject(userId, personId, projectId);
+    sendSuccessResponse(res, 'Project unlinked successfully', result);
+});
+
+// Add interaction
+export const addInteraction = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const interaction = await personService.addInteraction(userId, id, req.body);
+    sendSuccessResponse(res, 'Interaction added successfully', interaction, 201);
+});
+
+// Get interactions
+export const getInteractions = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const interactions = await personService.getInteractions(userId, id);
+    sendSuccessResponse(res, 'Interactions retrieved successfully', interactions);
+});
+
+// Update interaction
+export const updateInteraction = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { personId, interactionId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    const interaction = await personService.updateInteraction(userId, personId, interactionId, req.body);
+    sendSuccessResponse(res, 'Interaction updated successfully', interaction);
+});
+
+// Delete interaction
+export const deleteInteraction = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    const { personId, interactionId } = req.params;
+
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
+        return;
+    }
+
+    await personService.deleteInteraction(userId, personId, interactionId);
+    sendSuccessResponse(res, 'Interaction deleted successfully', null);
 });

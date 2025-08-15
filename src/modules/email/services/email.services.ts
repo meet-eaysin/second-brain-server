@@ -1,11 +1,6 @@
-interface EmailOptions {
-  to: string;
-  subject: string;
-  text?: string;
-  html?: string;
-}
+import type { IEmailOptions } from '../types';
 
-export const sendEmail = async (options: EmailOptions): Promise<boolean> => {
+export const sendEmail = async (options: IEmailOptions): Promise<boolean> => {
   try {
     console.log('📧 Sending email:', {
       to: options.to,
@@ -28,7 +23,7 @@ export const sendPasswordResetEmail = async (
 ): Promise<boolean> => {
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
 
-  const emailOptions: EmailOptions = {
+  const emailOptions: IEmailOptions = {
     to: email,
     subject: 'Password Reset Request',
     html: `
@@ -57,8 +52,52 @@ export const sendPasswordResetEmail = async (
   return await sendEmail(emailOptions);
 };
 
+export const sendWelcomeEmail = async (
+  email: string,
+  name: string
+): Promise<boolean> => {
+  const emailOptions: IEmailOptions = {
+    to: email,
+    subject: 'Welcome to Second Brain!',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Welcome to Second Brain, ${name}!</h2>
+        <p>Thank you for joining Second Brain. We're excited to help you organize your thoughts and ideas.</p>
+        <p>Here are some things you can do to get started:</p>
+        <ul>
+          <li>Create your first database</li>
+          <li>Add some records to track your information</li>
+          <li>Explore the different views and properties</li>
+          <li>Set up your workspace preferences</li>
+        </ul>
+        <p>If you have any questions, feel free to reach out to our support team.</p>
+        <p>Happy organizing!</p>
+        <p>The Second Brain Team</p>
+      </div>
+    `,
+    text: `
+      Welcome to Second Brain, ${name}!
+
+      Thank you for joining Second Brain. We're excited to help you organize your thoughts and ideas.
+
+      Here are some things you can do to get started:
+      - Create your first database
+      - Add some records to track your information
+      - Explore the different views and properties
+      - Set up your workspace preferences
+
+      If you have any questions, feel free to reach out to our support team.
+
+      Happy organizing!
+      The Second Brain Team
+    `
+  };
+
+  return await sendEmail(emailOptions);
+};
+
 export const sendPasswordResetConfirmation = async (email: string): Promise<boolean> => {
-  const emailOptions: EmailOptions = {
+  const emailOptions: IEmailOptions = {
     to: email,
     subject: 'Password Reset Successful',
     html: `

@@ -1,6 +1,6 @@
 import { createNotFoundError, createBadRequestError } from '../../../utils';
 import { FileModel } from '../models/file.model';
-import { uploadToS3, deleteFromS3 } from '../../../config';
+import { uploadBufferToS3, deleteFromS3 } from '../../../config';
 import { TFileUploadData, TFileQueryParams, TFileResponse } from '../types/files.types';
 
 /**
@@ -8,9 +8,9 @@ import { TFileUploadData, TFileQueryParams, TFileResponse } from '../types/files
  */
 export const uploadFile = async (userId: string, fileData: TFileUploadData): Promise<TFileResponse> => {
   try {
-    // Upload to S3 or local storage
-    const fileUrl = await uploadToS3(fileData.buffer, fileData.originalName, fileData.mimeType);
-    
+    // Upload to S3 directly from memory buffer
+    const fileUrl = await uploadBufferToS3(fileData.buffer, fileData.originalName, fileData.mimeType);
+
     const file = new FileModel({
       userId,
       originalName: fileData.originalName,

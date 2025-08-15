@@ -1,8 +1,5 @@
 import { IWorkspace, IWorkspaceDocument } from '../models/workspace.model';
 
-// Re-export the main interfaces
-export { IWorkspace, IWorkspaceDocument };
-
 // Workspace member types
 export interface IWorkspaceMember {
   userId: string;

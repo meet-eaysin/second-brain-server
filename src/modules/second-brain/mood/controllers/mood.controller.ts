@@ -1,23 +1,31 @@
 import { Request, Response } from 'express';
-import { catchAsync, createAppError } from '../../../../utils';
+import { TJwtPayload } from '../../../users/types/user.types';
+import { catchAsync, createAppError, createValidationError } from '../../../../utils';
+import * as moodService from '../services/mood.service';
+import { Mood } from '../models/mood.model';
+import { Journal } from '../../journal/models/journal.model';
+
+interface AuthenticatedRequest extends Request {
+    user?: TJwtPayload & { userId: string };
+}
 
 // Get all mood entries
-export const getMoodEntries = catchAsync(async (req: Request, res: Response) => {
+export const getMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { 
+    const {
         startDate,
         endDate,
         minMood,
         maxMood,
-        page = 1, 
-        limit = 50 
+        page = 1,
+        limit = 50
     } = req.query;
 
     if (!userId) {
         throw createAppError('User not authenticated', 401);
     }
 
-    const filter: any = { 
+    const filter: any = {
         createdBy: userId
     };
 
@@ -59,13 +67,13 @@ export const getMoodEntries = catchAsync(async (req: Request, res: Response) => 
 });
 
 // Get single mood entry
-export const getMoodEntry = catchAsync(async (req: Request, res: Response) => {
+export const getMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const mood = await Mood.findOne({ 
-        _id: id, 
-        createdBy: userId 
+    const mood = await Mood.findOne({
+        _id: id,
+        createdBy: userId
     })
     .populate('linkedTasks', 'title status priority dueDate')
     .populate('linkedJournal', 'title type content');
@@ -81,9 +89,9 @@ export const getMoodEntry = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Create mood entry
-export const createMoodEntry = catchAsync(async (req: Request, res: Response) => {
+export const createMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    
+
     if (!userId) {
         throw createAppError('User not authenticated', 401);
     }
@@ -119,7 +127,7 @@ export const createMoodEntry = catchAsync(async (req: Request, res: Response) =>
     });
 
     if (journalEntry) {
-        mood.linkedJournal = journalEntry._id;
+        mood.linkedJournal = journalEntry._id as import('mongoose').Types.ObjectId;
         await mood.save();
     }
 
@@ -134,7 +142,7 @@ export const createMoodEntry = catchAsync(async (req: Request, res: Response) =>
 });
 
 // Update mood entry
-export const updateMoodEntry = catchAsync(async (req: Request, res: Response) => {
+export const updateMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
@@ -156,13 +164,13 @@ export const updateMoodEntry = catchAsync(async (req: Request, res: Response) =>
 });
 
 // Delete mood entry
-export const deleteMoodEntry = catchAsync(async (req: Request, res: Response) => {
+export const deleteMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
 
-    const mood = await Mood.findOneAndDelete({ 
-        _id: id, 
-        createdBy: userId 
+    const mood = await Mood.findOneAndDelete({
+        _id: id,
+        createdBy: userId
     });
 
     if (!mood) {
@@ -176,7 +184,7 @@ export const deleteMoodEntry = catchAsync(async (req: Request, res: Response) =>
 });
 
 // Get today's mood entry
-export const getTodayMood = catchAsync(async (req: Request, res: Response) => {
+export const getTodayMood = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
 
     const today = new Date();
@@ -196,63 +204,15 @@ export const getTodayMood = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
-// Get mood analytics and insights
-export const getMoodAnalytics = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    const { period = '30' } = req.query; // days
-
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - Number(period));
-
-    const moods = await Mood.find({
-        createdBy: userId,
-        date: { $gte: startDate }
-    }).sort({ date: 1 });
-
-    if (moods.length === 0) {
-        return res.status(200).json({
-            success: true,
-            data: {
-                totalEntries: 0,
-                averageMood: null,
-                averageEnergy: null,
-                trend: 'stable',
-                insights: []
-            }
-        });
-    }
-
-    const analytics = {
-        totalEntries: moods.length,
-        averageMood: Math.round(moods.reduce((sum, mood) => sum + mood.mood.value, 0) / moods.length * 10) / 10,
-        averageEnergy: Math.round(moods.reduce((sum, mood) => sum + mood.energy.value, 0) / moods.length * 10) / 10,
-        averageStress: moods.filter(m => m.stress).length > 0 
-            ? Math.round(moods.filter(m => m.stress).reduce((sum, mood) => sum + (mood.stress || 0), 0) / moods.filter(m => m.stress).length * 10) / 10
-            : null,
-        averageProductivity: moods.filter(m => m.productivity).length > 0 
-            ? Math.round(moods.filter(m => m.productivity).reduce((sum, mood) => sum + (mood.productivity || 0), 0) / moods.filter(m => m.productivity).length * 10) / 10
-            : null,
-        trend: calculateMoodTrend(moods),
-        moodDistribution: calculateMoodDistribution(moods),
-        correlations: calculateCorrelations(moods),
-        insights: generateInsights(moods),
-        chartData: moods.map(mood => ({
-            date: mood.date,
-            mood: mood.mood.value,
-            energy: mood.energy.value,
-            stress: mood.stress,
-            productivity: mood.productivity
-        }))
-    };
-
-    res.status(200).json({
-        success: true,
-        data: analytics
-    });
+// Get mood analytics and insights (service-backed)
+export const getMoodAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getMoodAnalytics(userId);
+    res.status(200).json({ success: true, data });
 });
 
 // Get mood patterns
-export const getMoodPatterns = catchAsync(async (req: Request, res: Response) => {
+export const getMoodPatterns = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
 
     const moods = await Mood.find({
@@ -275,15 +235,15 @@ export const getMoodPatterns = catchAsync(async (req: Request, res: Response) =>
 // Helper functions
 function calculateMoodTrend(moods: any[]) {
     if (moods.length < 2) return 'stable';
-    
+
     const firstHalf = moods.slice(0, Math.floor(moods.length / 2));
     const secondHalf = moods.slice(Math.floor(moods.length / 2));
-    
+
     const firstAvg = firstHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / firstHalf.length;
     const secondAvg = secondHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / secondHalf.length;
-    
+
     const difference = secondAvg - firstAvg;
-    
+
     if (difference > 0.5) return 'improving';
     if (difference < -0.5) return 'declining';
     return 'stable';
@@ -291,20 +251,20 @@ function calculateMoodTrend(moods: any[]) {
 
 function calculateMoodDistribution(moods: any[]) {
     const distribution = { low: 0, medium: 0, high: 0 };
-    
+
     moods.forEach(mood => {
         if (mood.mood.value <= 3) distribution.low++;
         else if (mood.mood.value <= 7) distribution.medium++;
         else distribution.high++;
     });
-    
+
     return distribution;
 }
 
 function calculateCorrelations(moods: any[]) {
     // Simple correlation calculations
     const correlations: any = {};
-    
+
     if (moods.some(m => m.stress)) {
         const moodStressCorr = calculateSimpleCorrelation(
             moods.filter(m => m.stress).map(m => m.mood.value),
@@ -312,7 +272,7 @@ function calculateCorrelations(moods: any[]) {
         );
         correlations.moodVsStress = Math.round(moodStressCorr * 100) / 100;
     }
-    
+
     if (moods.some(m => m.productivity)) {
         const moodProductivityCorr = calculateSimpleCorrelation(
             moods.filter(m => m.productivity).map(m => m.mood.value),
@@ -320,46 +280,46 @@ function calculateCorrelations(moods: any[]) {
         );
         correlations.moodVsProductivity = Math.round(moodProductivityCorr * 100) / 100;
     }
-    
+
     return correlations;
 }
 
 function calculateSimpleCorrelation(x: number[], y: number[]) {
     if (x.length !== y.length || x.length === 0) return 0;
-    
+
     const n = x.length;
     const sumX = x.reduce((a, b) => a + b, 0);
     const sumY = y.reduce((a, b) => a + b, 0);
     const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
     const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
     const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
-    
+
     const numerator = n * sumXY - sumX * sumY;
     const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-    
+
     return denominator === 0 ? 0 : numerator / denominator;
 }
 
 function generateInsights(moods: any[]) {
     const insights = [];
-    
+
     const avgMood = moods.reduce((sum, mood) => sum + mood.mood.value, 0) / moods.length;
-    
+
     if (avgMood >= 8) {
         insights.push("Your mood has been consistently high! Keep up the great work.");
     } else if (avgMood <= 4) {
         insights.push("Your mood has been lower recently. Consider what might be affecting it.");
     }
-    
+
     const recentMoods = moods.slice(-7);
     const recentAvg = recentMoods.reduce((sum, mood) => sum + mood.mood.value, 0) / recentMoods.length;
-    
+
     if (recentAvg > avgMood + 1) {
         insights.push("Your mood has been improving lately!");
     } else if (recentAvg < avgMood - 1) {
         insights.push("Your mood has been declining recently. Consider self-care activities.");
     }
-    
+
     return insights;
 }
 
@@ -368,19 +328,19 @@ function calculateDayOfWeekPatterns(moods: any[]) {
         Sunday: [], Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: []
     };
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
+
     moods.forEach(mood => {
         const dayName = days[new Date(mood.date).getDay()];
         patterns[dayName].push(mood.mood.value);
     });
-    
+
     const averages: Record<string, number> = {};
     Object.keys(patterns).forEach(day => {
-        averages[day] = patterns[day].length > 0 
+        averages[day] = patterns[day].length > 0
             ? Math.round(patterns[day].reduce((sum, val) => sum + val, 0) / patterns[day].length * 10) / 10
             : 0;
     });
-    
+
     return averages;
 }
 
@@ -391,7 +351,7 @@ function calculateTimeOfMonthPatterns(moods: any[]) {
         return date > 10 && date <= 20;
     });
     const late = moods.filter(m => new Date(m.date).getDate() > 20);
-    
+
     return {
         earlyMonth: early.length > 0 ? Math.round(early.reduce((sum, m) => sum + m.mood.value, 0) / early.length * 10) / 10 : 0,
         midMonth: mid.length > 0 ? Math.round(mid.reduce((sum, m) => sum + m.mood.value, 0) / mid.length * 10) / 10 : 0,
@@ -400,8 +360,8 @@ function calculateTimeOfMonthPatterns(moods: any[]) {
 }
 
 function calculateSeasonalPatterns(moods: any[]) {
-    const seasons = { spring: [], summer: [], fall: [], winter: [] };
-    
+    const seasons: { spring: number[]; summer: number[]; fall: number[]; winter: number[] } = { spring: [], summer: [], fall: [], winter: [] };
+
     moods.forEach(mood => {
         const month = new Date(mood.date).getMonth();
         if (month >= 2 && month <= 4) seasons.spring.push(mood.mood.value);
@@ -409,35 +369,145 @@ function calculateSeasonalPatterns(moods: any[]) {
         else if (month >= 8 && month <= 10) seasons.fall.push(mood.mood.value);
         else seasons.winter.push(mood.mood.value);
     });
-    
+
     const averages: Record<string, number> = {};
-    Object.keys(seasons).forEach(season => {
-        const values = seasons[season as keyof typeof seasons];
-        averages[season] = values.length > 0 
+    (Object.keys(seasons) as Array<keyof typeof seasons>).forEach(season => {
+        const values = seasons[season];
+        averages[season] = values.length > 0
             ? Math.round(values.reduce((sum, val) => sum + val, 0) / values.length * 10) / 10
             : 0;
     });
-    
+
     return averages;
 }
 
 function calculateActivityCorrelations(moods: any[]) {
     const activities: Record<string, number[]> = {};
-    
+
     moods.forEach(mood => {
         mood.activities?.forEach((activity: string) => {
             if (!activities[activity]) activities[activity] = [];
             activities[activity].push(mood.mood.value);
         });
     });
-    
+
     const correlations: Record<string, number> = {};
     Object.keys(activities).forEach(activity => {
         const values = activities[activity];
-        correlations[activity] = values.length > 0 
+        correlations[activity] = values.length > 0
             ? Math.round(values.reduce((sum, val) => sum + val, 0) / values.length * 10) / 10
             : 0;
     });
-    
+
     return correlations;
 }
+
+// ---- Additional Controllers wired to mood.service ----
+
+export const getMoodStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getMoodStats(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const getMoodTrends = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getMoodTrends(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const getCalendarView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getCalendarView(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const importMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const entries = Array.isArray(req.body?.entries) ? req.body.entries : [];
+    const data = await moodService.importMoodEntries(userId, entries);
+    res.status(200).json({ success: true, data });
+});
+
+export const exportMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.exportMoodEntries(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const bulkUpdateMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.bulkUpdateMoodEntries(userId, req.body);
+    res.status(200).json({ success: true, data });
+});
+
+export const bulkDeleteMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const entryIds: string[] = req.body?.entryIds || [];
+    const data = await moodService.bulkDeleteMoodEntries(userId, entryIds);
+    res.status(200).json({ success: true, data });
+});
+
+export const duplicateEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const { id } = req.params;
+    const data = await moodService.duplicateEntry(userId, id);
+    res.status(201).json({ success: true, data });
+});
+
+export const getMoodInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getMoodInsights(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const getMoodCorrelations = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getMoodCorrelations(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const getDailySummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getDailySummary(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const getWeeklySummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getWeeklySummary(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const getMonthlySummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getMonthlySummary(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const createReminder = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.createReminder(userId, req.body);
+    res.status(201).json({ success: true, data });
+});
+
+export const getReminders = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const data = await moodService.getReminders(userId);
+    res.status(200).json({ success: true, data });
+});
+
+export const updateReminder = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const { reminderId } = req.params as { reminderId: string };
+    const data = await moodService.updateReminder(userId, reminderId, req.body);
+    res.status(200).json({ success: true, data });
+});
+
+export const deleteReminder = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId!;
+    const { reminderId } = req.params as { reminderId: string };
+    const data = await moodService.deleteReminder(userId, reminderId);
+    res.status(200).json({ success: true, data });
+});
+

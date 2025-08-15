@@ -9,7 +9,7 @@ import * as templatesService from '../services/database-templates.service';
 export const getAllTemplates = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const templates = templatesService.getAllTemplates();
-    sendSuccessResponse(res, templates, 'Database templates retrieved successfully');
+    sendSuccessResponse(res, 'Database templates retrieved successfully', templates);
   }
 );
 
@@ -22,11 +22,11 @@ export const getTemplateById = catchAsync(
     const template = templatesService.getTemplateById(id);
     
     if (!template) {
-      sendSuccessResponse(res, null, 'Template not found', 404);
+      sendSuccessResponse(res, 'Template not found', null, 404);
       return;
     }
     
-    sendSuccessResponse(res, template, 'Template retrieved successfully');
+    sendSuccessResponse(res, 'Template retrieved successfully', template);
   }
 );
 
@@ -37,7 +37,7 @@ export const getTemplatesByCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { category } = req.params;
     const templates = templatesService.getTemplatesByCategory(category);
-    sendSuccessResponse(res, templates, 'Templates retrieved successfully');
+    sendSuccessResponse(res, 'Templates retrieved successfully', templates);
   }
 );
 
@@ -49,12 +49,12 @@ export const searchTemplates = catchAsync(
     const { q } = req.query;
 
     if (!q || typeof q !== 'string') {
-      sendSuccessResponse(res, [], 'Search query is required', 400);
+      sendSuccessResponse(res, 'Search query is required', [], 400);
       return;
     }
 
     const templates = templatesService.searchTemplates(q);
-    sendSuccessResponse(res, templates, 'Templates search completed');
+    sendSuccessResponse(res, 'Templates search completed', templates);
   }
 );
 
@@ -68,7 +68,7 @@ export const createDatabaseFromTemplate = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
 
     if (!userId) {
-      sendSuccessResponse(res, null, 'User authentication required', 401);
+      sendSuccessResponse(res, 'User authentication required', null, 401);
       return;
     }
 
@@ -82,6 +82,6 @@ export const createDatabaseFromTemplate = catchAsync(
       { name, description, workspaceId, categoryId }
     );
 
-    sendSuccessResponse(res, database, 'Database created from template successfully', 201);
+    sendSuccessResponse(res, 'Database created from template successfully', database, 201);
   }
 );

@@ -28,7 +28,7 @@ export const uploadFile = catchAsync(
     };
 
     const file = await filesService.uploadFile(userId, fileData);
-    sendSuccessResponse(res, file, 'File uploaded successfully', 201);
+    sendSuccessResponse(res, 'File uploaded successfully', file, 201);
   }
 );
 
@@ -57,7 +57,7 @@ export const bulkUploadFiles = catchAsync(
     }));
 
     const uploadedFiles = await filesService.bulkUploadFiles(userId, filesData);
-    sendSuccessResponse(res, uploadedFiles, 'Files uploaded successfully', 201);
+    sendSuccessResponse(res, 'Files uploaded successfully', uploadedFiles, 201);
   }
 );
 
@@ -71,7 +71,7 @@ export const getFileById = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const file = await filesService.getFileById(id, userId);
-    sendSuccessResponse(res, file, 'File retrieved successfully');
+    sendSuccessResponse(res, 'File retrieved successfully', file);
   }
 );
 
@@ -104,7 +104,7 @@ export const deleteFile = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     await filesService.deleteFile(id, userId);
-    sendSuccessResponse(res, null, 'File deleted successfully');
+    sendSuccessResponse(res, 'File deleted successfully', null);
   }
 );
 
@@ -127,6 +127,6 @@ export const getUserFiles = catchAsync(
     };
 
     const result = await filesService.getUserFiles(userId, queryParams);
-    sendSuccessResponse(res, result, 'Files retrieved successfully');
+    sendSuccessResponse(res, 'Files retrieved successfully', result);
   }
 );

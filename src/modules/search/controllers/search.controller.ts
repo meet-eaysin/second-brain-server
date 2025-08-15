@@ -23,7 +23,7 @@ export const globalSearch = catchAsync(
       offset: Number(offset)
     });
 
-    sendSuccessResponse(res, results, 'Search completed successfully');
+    sendSuccessResponse(res, 'Search completed successfully', results);
   }
 );
 
@@ -46,7 +46,7 @@ export const searchDatabases = catchAsync(
       offset: Number(offset)
     });
 
-    sendSuccessResponse(res, results, 'Database search completed successfully');
+    sendSuccessResponse(res, 'Database search completed successfully', results);
   }
 );
 
@@ -70,7 +70,7 @@ export const searchRecords = catchAsync(
       offset: Number(offset)
     });
 
-    sendSuccessResponse(res, results, 'Record search completed successfully');
+    sendSuccessResponse(res, 'Record search completed successfully', results);
   }
 );
 
@@ -85,11 +85,11 @@ export const getSearchSuggestions = catchAsync(
     const { q, limit = 5 } = req.query;
 
     if (!q || typeof q !== 'string') {
-      return sendSuccessResponse(res, [], 'Search suggestions retrieved successfully');
+      return sendSuccessResponse(res, 'Search suggestions retrieved successfully', []);
     }
 
     const suggestions = await searchService.getSearchSuggestions(userId, q, Number(limit));
 
-    sendSuccessResponse(res, suggestions, 'Search suggestions retrieved successfully');
+    sendSuccessResponse(res, 'Search suggestions retrieved successfully', suggestions);
   }
 );

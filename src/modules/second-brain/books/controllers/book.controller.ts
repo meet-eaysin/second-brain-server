@@ -1,373 +1,153 @@
 import { Request, Response } from 'express';
-import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
+import { catchAsync, sendSuccessResponse, sendErrorResponse, createAppError } from '../../../../utils';
+import { TJwtPayload } from '../../../users/types/user.types';
+import * as bookService from '../services/book.service';
+
+interface AuthenticatedRequest extends Request {
+    user?: TJwtPayload & { userId: string };
+}
 
 // Get all books with filtering
-export const getBooks = catchAsync(async (req: Request, res: Response) => {
+export const getBooks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { 
-        status, 
-        genre, 
-        area, 
-        tags,
-        rating,
-        search,
-        page = 1, 
-        limit = 50 
-    } = req.query;
-
     if (!userId) {
         sendErrorResponse(res, 'User not authenticated', 401);
         return;
     }
 
-    // Build filter query
-    const filter: any = { 
-        createdBy: userId,
-        archivedAt: { $exists: false }
+    const filters = {
+        status: req.query.status as string,
+        genre: req.query.genre as string | string[],
+        area: req.query.area as string,
+        tags: req.query.tags as string | string[],
+        rating: req.query.rating ? Number(req.query.rating) : undefined,
+        search: req.query.search as string
     };
 
-    if (status) filter.status = status;
-    if (genre) filter.genre = { $in: Array.isArray(genre) ? genre : [genre] };
-    if (area) filter.area = area;
-    if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-    if (rating) filter.rating = { $gte: Number(rating) };
-
-    // Add text search if provided
-    if (search) {
-        filter.$text = { $search: search as string };
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const sortQuery: any = {};
-    if (search) {
-        sortQuery.score = { $meta: 'textScore' };
-    } else {
-        sortQuery.status = 1; // Reading first, then want-to-read, then completed
-        sortQuery.updatedAt = -1;
-    }
-
-    const [books, total] = await Promise.all([
-        Book.find(filter)
-            .populate('linkedProjects', 'title status')
-            .populate('linkedGoals', 'title type status')
-            .sort(sortQuery)
-            .skip(skip)
-            .limit(Number(limit)),
-        Book.countDocuments(filter)
-    ]);
-
-    const result = {
-        books,
-        pagination: {
-            page: Number(page),
-            limit: Number(limit),
-            total,
-            pages: Math.ceil(total / Number(limit))
-        }
+    const options = {
+        page: Number(req.query.page) || 1,
+        limit: Number(req.query.limit) || 50,
+        sort: req.query.sort as string,
+        populate: ['linkedProjects', 'linkedGoals']
     };
 
-    sendSuccessResponse(res, result, 'Books retrieved successfully');
+    const result = await bookService.getBooks(userId, filters, options);
+    sendSuccessResponse(res, 'Books retrieved successfully', result);
 });
 
 // Get single book with full details
-export const getBook = catchAsync(async (req: Request, res: Response) => {
+export const getBook = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { id } = req.params;
-
-    const book = await Book.findOne({ 
-        _id: id, 
-        createdBy: userId 
-    })
-    .populate('linkedProjects', 'title status area')
-    .populate('linkedGoals', 'title type status progressPercentage');
-
-    if (!book) {
-        sendErrorResponse(res, 'Book not found', 404);
+    if (!userId) {
+        sendErrorResponse(res, 'User not authenticated', 401);
         return;
     }
 
-    // Calculate reading statistics
-    const readingStats = {
-        progressPercentage: book.readingProgress || 0,
-        pagesRead: book.currentPage || 0,
-        totalPages: book.pages || 0,
-        daysReading: book.startDate && book.status === 'reading'
-            ? Math.ceil((new Date().getTime() - new Date(book.startDate).getTime()) / (1000 * 60 * 60 * 24))
-            : 0,
-        estimatedDaysToFinish: book.pages && book.currentPage && book.startDate && book.status === 'reading'
-            ? Math.ceil(((book.pages - book.currentPage) / (book.currentPage / Math.max(1, Math.ceil((new Date().getTime() - new Date(book.startDate).getTime()) / (1000 * 60 * 60 * 24))))))
-            : null
-    };
+    const { id } = req.params;
+    const book = await bookService.getBook(userId, id);
+    const progress = await bookService.getProgress(userId, id);
 
     const result = {
         book,
-        readingStats
+        readingStats: progress
     };
 
-    sendSuccessResponse(res, result, 'Book retrieved successfully');
+    sendSuccessResponse(res, 'Book retrieved successfully', result);
 });
 
 // Create book
-export const createBook = catchAsync(async (req: Request, res: Response) => {
+export const createBook = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    
     if (!userId) {
         throw createAppError('User not authenticated', 401);
     }
 
-    const bookData = {
-        ...req.body,
-        createdBy: userId
-    };
-
-    // Set start date if status is reading
-    if (bookData.status === 'reading' && !bookData.startDate) {
-        bookData.startDate = new Date();
-    }
-
-    const book = await Book.create(bookData);
-
-    // Link to projects and goals if specified
-    if (book.linkedProjects && book.linkedProjects.length > 0) {
-        await Project.updateMany(
-            { _id: { $in: book.linkedProjects } },
-            { $push: { books: book._id } }
-        );
-    }
-
-    if (book.linkedGoals && book.linkedGoals.length > 0) {
-        await Goal.updateMany(
-            { _id: { $in: book.linkedGoals } },
-            { $push: { books: book._id } }
-        );
-    }
-
-    const populatedBook = await Book.findById(book._id)
-        .populate('linkedProjects', 'title status')
-        .populate('linkedGoals', 'title type');
-
-    res.status(201).json({
-        success: true,
-        data: populatedBook
-    });
+    const book = await bookService.createBook(userId, req.body);
+    sendSuccessResponse(res, 'Book created successfully', book, 201);
 });
 
 // Update book with progress tracking
-export const updateBook = catchAsync(async (req: Request, res: Response) => {
+export const updateBook = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
     const { id } = req.params;
-
-    const oldBook = await Book.findOne({ _id: id, createdBy: userId });
-    if (!oldBook) {
-        throw createAppError('Book not found', 404);
-    }
-
-    const book = await Book.findOneAndUpdate(
-        { _id: id, createdBy: userId },
-        req.body,
-        { new: true, runValidators: true }
-    ).populate('linkedProjects', 'title status')
-     .populate('linkedGoals', 'title type');
-
-    if (!book) {
-        throw createAppError('Book not found', 404);
-    }
-
-    // Handle status changes
-    if (req.body.status) {
-        if (req.body.status === 'reading' && oldBook.status !== 'reading' && !book.startDate) {
-            book.startDate = new Date();
-        } else if (req.body.status === 'completed' && oldBook.status !== 'completed') {
-            book.endDate = new Date();
-            if (book.pages) {
-                book.currentPage = book.pages;
-            }
-        }
-        await book.save();
-    }
-
-    res.status(200).json({
-        success: true,
-        data: book
-    });
+    const book = await bookService.updateBook(userId, id, req.body);
+    sendSuccessResponse(res, 'Book updated successfully', book);
 });
 
 // Delete book
-export const deleteBook = catchAsync(async (req: Request, res: Response) => {
+export const deleteBook = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
     const { id } = req.params;
-
-    const book = await Book.findOneAndDelete({ 
-        _id: id, 
-        createdBy: userId 
-    });
-
-    if (!book) {
-        throw createAppError('Book not found', 404);
-    }
-
-    // Remove book references from projects and goals
-    if (book.linkedProjects && book.linkedProjects.length > 0) {
-        await Project.updateMany(
-            { _id: { $in: book.linkedProjects } },
-            { $pull: { books: book._id } }
-        );
-    }
-
-    if (book.linkedGoals && book.linkedGoals.length > 0) {
-        await Goal.updateMany(
-            { _id: { $in: book.linkedGoals } },
-            { $pull: { books: book._id } }
-        );
-    }
-
-    res.status(204).json({
-        success: true,
-        data: null
-    });
+    const result = await bookService.deleteBook(userId, id);
+    sendSuccessResponse(res, result.message, null, 204);
 });
 
 // Add note/highlight to book
-export const addNote = catchAsync(async (req: Request, res: Response) => {
+export const addNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    const { id } = req.params;
-    const { page, chapter, content, type = 'note' } = req.body;
-
-    const book = await Book.findOne({ _id: id, createdBy: userId });
-    if (!book) {
-        throw createAppError('Book not found', 404);
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
     }
 
-    const noteData = {
-        page: page || undefined,
-        chapter: chapter || undefined,
-        content,
-        type,
-        createdAt: new Date()
-    };
-
-    book.notes.push(noteData);
-    await book.save();
-
-    res.status(200).json({
-        success: true,
-        data: book
-    });
+    const { id } = req.params;
+    const result = await bookService.addNote(userId, id, req.body);
+    sendSuccessResponse(res, 'Note added successfully', result);
 });
 
 // Update reading progress
-export const updateProgress = catchAsync(async (req: Request, res: Response) => {
+export const updateProgress = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
     const { id } = req.params;
-    const { currentPage } = req.body;
-
-    const book = await Book.findOne({ _id: id, createdBy: userId });
-    if (!book) {
-        throw createAppError('Book not found', 404);
-    }
-
-    book.currentPage = currentPage;
-
-    // Auto-complete if reached the end
-    if (book.pages && currentPage >= book.pages && book.status !== 'completed') {
-        book.status = 'completed';
-        book.endDate = new Date();
-    }
-
-    await book.save();
-
-    res.status(200).json({
-        success: true,
-        data: book
-    });
+    const result = await bookService.updateProgress(userId, id, req.body);
+    sendSuccessResponse(res, 'Progress updated successfully', result);
 });
 
 // Get reading statistics
-export const getReadingStats = catchAsync(async (req: Request, res: Response) => {
+export const getBookStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
 
-    const books = await Book.find({
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    });
-
-    const currentYear = new Date().getFullYear();
-    const thisYearBooks = books.filter(book => 
-        book.endDate && new Date(book.endDate).getFullYear() === currentYear
-    );
-
-    const stats = {
-        totalBooks: books.length,
-        booksRead: books.filter(b => b.status === 'completed').length,
-        currentlyReading: books.filter(b => b.status === 'reading').length,
-        wantToRead: books.filter(b => b.status === 'want-to-read').length,
-        thisYearRead: thisYearBooks.length,
-        averageRating: books.filter(b => b.rating).length > 0 
-            ? Math.round(books.filter(b => b.rating).reduce((sum, book) => sum + (book.rating || 0), 0) / books.filter(b => b.rating).length * 10) / 10
-            : null,
-        totalPages: books.filter(b => b.status === 'completed' && b.pages).reduce((sum, book) => sum + (book.pages || 0), 0),
-        byGenre: books.reduce((acc, book) => {
-            book.genre?.forEach(g => {
-                acc[g] = (acc[g] || 0) + 1;
-            });
-            return acc;
-        }, {} as Record<string, number>),
-        byStatus: books.reduce((acc, book) => {
-            acc[book.status] = (acc[book.status] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>)
-    };
-
-    res.status(200).json({
-        success: true,
-        data: stats
-    });
+    const stats = await bookService.getBookStats(userId);
+    sendSuccessResponse(res, 'Book statistics retrieved successfully', stats);
 });
 
 // Get currently reading books
-export const getCurrentlyReading = catchAsync(async (req: Request, res: Response) => {
+export const getCurrentlyReading = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
 
-    const books = await Book.find({
-        createdBy: userId,
-        status: 'reading',
-        archivedAt: { $exists: false }
-    }).populate('linkedProjects', 'title status')
-     .populate('linkedGoals', 'title type');
-
-    res.status(200).json({
-        success: true,
-        data: books
-    });
+    const filters = { status: 'reading' };
+    const options = { populate: ['linkedProjects', 'linkedGoals'] };
+    const result = await bookService.getBooks(userId, filters, options);
+    sendSuccessResponse(res, 'Currently reading books retrieved successfully', result.books);
 });
 
 // Get book recommendations (based on genres and ratings)
-export const getRecommendations = catchAsync(async (req: Request, res: Response) => {
+export const getRecommendations = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
 
-    // Get user's favorite genres (from highly rated books)
-    const ratedBooks = await Book.find({
-        createdBy: userId,
-        rating: { $gte: 4 },
-        archivedAt: { $exists: false }
-    });
-
-    const favoriteGenres = ratedBooks.reduce((acc, book) => {
-        book.genre?.forEach(g => {
-            acc[g] = (acc[g] || 0) + 1;
-        });
-        return acc;
-    }, {} as Record<string, number>);
-
-    const topGenres = Object.entries(favoriteGenres)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 3)
-        .map(([genre]) => genre);
-
-    // Simple recommendation logic (in a real app, this would be more sophisticated)
+    // Simple recommendation logic (would be more sophisticated in real app)
     const recommendations = {
-        basedOnGenres: topGenres,
+        basedOnGenres: [],
         suggestedActions: [
             'Continue reading your current books',
             'Add books from your favorite genres to your want-to-read list',
@@ -376,14 +156,11 @@ export const getRecommendations = catchAsync(async (req: Request, res: Response)
         ]
     };
 
-    res.status(200).json({
-        success: true,
-        data: recommendations
-    });
+    sendSuccessResponse(res, 'Book recommendations retrieved successfully', recommendations);
 });
 
 // Search books (external API integration would go here)
-export const searchBooks = catchAsync(async (req: Request, res: Response) => {
+export const searchBooks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const { query } = req.query;
 
     if (!query) {
@@ -402,4 +179,151 @@ export const searchBooks = catchAsync(async (req: Request, res: Response) => {
         success: true,
         data: searchResults
     });
+});
+
+// Book analytics
+export const getBookAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const analytics = await bookService.getBookAnalytics(userId);
+    sendSuccessResponse(res, 'Book analytics retrieved successfully', analytics);
+});
+
+// Import/Export operations
+export const importBooks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const result = await bookService.importBooks(userId, req.body.books || []);
+    sendSuccessResponse(res, 'Books imported successfully', result);
+});
+
+export const exportBooks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const books = await bookService.exportBooks(userId);
+    sendSuccessResponse(res, 'Books exported successfully', books);
+});
+
+// Bulk operations
+export const bulkUpdateBooks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const result = await bookService.bulkUpdateBooks(userId, req.body);
+    sendSuccessResponse(res, 'Books updated successfully', result);
+});
+
+export const bulkDeleteBooks = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const result = await bookService.bulkDeleteBooks(userId, req.body.bookIds);
+    sendSuccessResponse(res, 'Books deleted successfully', result);
+});
+
+// Status and utility operations
+export const updateReadingStatus = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+    const result = await bookService.updateReadingStatus(userId, id, status);
+    sendSuccessResponse(res, 'Reading status updated successfully', result);
+});
+
+export const toggleFavorite = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const { id } = req.params;
+    const result = await bookService.toggleFavorite(userId, id);
+    sendSuccessResponse(res, 'Favorite status toggled successfully', result);
+});
+
+export const archiveBook = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const { id } = req.params;
+    const result = await bookService.archiveBook(userId, id);
+    sendSuccessResponse(res, 'Book archived successfully', result);
+});
+
+export const duplicateBook = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+        throw createAppError('User not authenticated', 401);
+    }
+
+    const { id } = req.params;
+    const result = await bookService.duplicateBook(userId, id);
+    sendSuccessResponse(res, 'Book duplicated successfully', result);
+});
+
+export const getProgress = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const getNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const updateNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const deleteNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const addHighlight = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const getHighlights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const updateHighlight = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const deleteHighlight = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const addReview = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const getReview = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const updateReview = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
+});
+
+export const deleteReview = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+    res.status(501).json({ success: false, message: 'Not implemented yet' });
 });

@@ -22,8 +22,9 @@ export interface CreateProjectRequest {
 }
 
 export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-    archivedAt?: Date;
+    archivedAt?: Date | null;
     completedAt?: Date;
+    isFavorite?: boolean;
 }
 
 export interface ProjectFilters {
@@ -691,5 +692,35 @@ export const getProjectAnalytics = async (userId: string) => {
         };
     } catch (error: any) {
         throw createAppError('Failed to get project analytics', 500);
+    }
+};
+
+// Link projects to a goal
+export const linkProjectsToGoal = async (projectIds: string[], goalId: string) => {
+    try {
+        const objectIds = projectIds.map(id => new Types.ObjectId(id));
+
+        const result = await Project.updateMany(
+            { _id: { $in: objectIds } },
+            { goal: new Types.ObjectId(goalId) }
+        );
+
+        return result;
+    } catch (error: any) {
+        throw createAppError('Failed to link projects to goal', 500);
+    }
+};
+
+// Unlink projects from a goal
+export const unlinkProjectsFromGoal = async (goalId: string) => {
+    try {
+        const result = await Project.updateMany(
+            { goal: new Types.ObjectId(goalId) },
+            { $unset: { goal: 1 } }
+        );
+
+        return result;
+    } catch (error: any) {
+        throw createAppError('Failed to unlink projects from goal', 500);
     }
 };

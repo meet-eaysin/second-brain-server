@@ -43,7 +43,7 @@ export interface IWorkspaceDocument extends Document {
   description?: string;
   icon?: string;
   cover?: string;
-  
+
   ownerId: string;
   members: Array<{
     userId: string;
@@ -51,22 +51,29 @@ export interface IWorkspaceDocument extends Document {
     joinedAt: Date;
     invitedBy: string;
   }>;
-  
+
   isPublic: boolean;
   allowMemberInvites: boolean;
   defaultDatabasePermission: 'read' | 'write' | 'admin';
-  
+
   color?: string;
   tags?: string[];
-  
+
   databaseCount?: number;
   memberCount?: number;
   lastActivityAt?: Date;
-  
+
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
   lastEditedBy: string;
+
+  // Instance methods declared on the schema
+  isMember(userId: string): boolean;
+  getUserRole(userId: string): 'owner' | 'admin' | 'editor' | 'viewer' | null;
+  canUserEdit(userId: string): boolean;
+  canUserAdmin(userId: string): boolean;
+  isOwner(userId: string): boolean;
 }
 
 // Member schema

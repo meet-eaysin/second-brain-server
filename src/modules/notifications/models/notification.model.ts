@@ -13,8 +13,16 @@ export interface INotification {
   updatedAt: Date;
 }
 
-export interface INotificationDocument extends INotification, Document {
-  _id: mongoose.Types.ObjectId;
+export interface INotificationDocument extends Document {
+  userId: string;
+  type: 'database_shared' | 'record_created' | 'workspace_invite' | 'system_update' | 'reminder';
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  isRead: boolean;
+  readAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const NotificationSchema = new Schema<INotificationDocument>(
@@ -57,10 +65,10 @@ const NotificationSchema = new Schema<INotificationDocument>(
     toJSON: {
       virtuals: true,
       versionKey: false,
-      transform: (doc, ret) => {
-        ret.id = ret._id;
+      transform: (_: unknown, ret: any) => {
+        ret.id = String(ret._id);
         delete ret._id;
-        return ret;
+        return ret as INotification;
       }
     }
   }

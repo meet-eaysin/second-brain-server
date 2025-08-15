@@ -398,7 +398,7 @@ export interface TViewCreateRequest {
 export interface TViewUpdateRequest {
   name?: string;
   isDefault?: boolean;
-  filters?: IFilter[];
+  filters?: IViewFilter[];
   sorts?: ISort[];
   groupBy?: string;
   visibleProperties?: string[];

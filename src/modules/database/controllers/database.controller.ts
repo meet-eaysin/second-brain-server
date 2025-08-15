@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync } from '../../../utils/catch-async';
-import { sendSuccessResponse } from '../../../utils/response-handler.utils';
+import { sendSuccessResponse } from '../../../utils/response.utils';
 import { createNotFoundError, createValidationError } from '../../../utils/error.utils';
 import { AuthenticatedRequest } from '../../../middlewares/auth';
 import * as databaseService from '../services/database.service';
 import * as exportService from '../services/export.service';
 import { TDatabaseExportOptions, TDatabaseImportOptions } from '../types/database.types';
+import { DocumentViewService } from '../../document-view/services/document-view.service';
+
+const documentViewService = new DocumentViewService();
 
 export const createDatabase = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -13,7 +16,7 @@ export const createDatabase = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.createDatabase(userId, req.body);
-    sendSuccessResponse(res, database, 'Database created successfully', 201);
+    sendSuccessResponse(res, 'Database created successfully', database, 201);
   }
 );
 
@@ -24,7 +27,7 @@ export const getDatabaseById = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.getDatabaseById(id, userId);
-    sendSuccessResponse(res, database, 'Database retrieved successfully');
+    sendSuccessResponse(res, 'Database retrieved successfully', database);
   }
 );
 
@@ -47,7 +50,7 @@ export const getUserDatabases = catchAsync(
     };
 
     const result = await databaseService.getDatabasesWithSidebar(userId, queryParams);
-    sendSuccessResponse(res, result, 'Databases retrieved successfully');
+    sendSuccessResponse(res, 'Databases retrieved successfully', result);
   }
 );
 
@@ -58,7 +61,7 @@ export const updateDatabase = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.updateDatabase(id, userId, req.body);
-    sendSuccessResponse(res, database, 'Database updated successfully');
+    sendSuccessResponse(res, 'Database updated successfully', database);
   }
 );
 
@@ -69,7 +72,7 @@ export const deleteDatabase = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     await databaseService.deleteDatabase(id, userId);
-    sendSuccessResponse(res, null, 'Database deleted successfully');
+    sendSuccessResponse(res, 'Database deleted successfully', null);
   }
 );
 
@@ -79,8 +82,8 @@ export const addProperty = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.addProperty(id, userId, req.body);
-    sendSuccessResponse(res, database, 'Property added successfully', 201);
+    const property = await documentViewService.addProperty(userId, 'databases', req.body, id);
+    sendSuccessResponse(res, 'Property added successfully', property, 201);
   }
 );
 
@@ -90,8 +93,9 @@ export const updateProperty = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property updated successfully');
+    const updated = await documentViewService.updateProperty(userId, 'databases', propertyId, req.body, id);
+    if (!updated) return next(createNotFoundError('Property not found'));
+    sendSuccessResponse(res, 'Property updated successfully', updated);
   }
 );
 
@@ -101,8 +105,9 @@ export const deleteProperty = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.deleteProperty(id, propertyId, userId);
-    sendSuccessResponse(res, database, 'Property deleted successfully');
+    const deleted = await documentViewService.deleteProperty(userId, 'databases', propertyId, id);
+    if (!deleted) return next(createNotFoundError('Property not found'));
+    sendSuccessResponse(res, 'Property deleted successfully', null);
   }
 );
 
@@ -112,8 +117,8 @@ export const addView = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.addView(id, userId, req.body);
-    sendSuccessResponse(res, database, 'View added successfully', 201);
+    const newView = await documentViewService.createView(userId, 'databases', req.body, id);
+    sendSuccessResponse(res, 'View added successfully', newView, 201);
   }
 );
 
@@ -123,8 +128,9 @@ export const updateView = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updateView(id, viewId, userId, req.body);
-    sendSuccessResponse(res, database, 'View updated successfully');
+    const updatedView = await documentViewService.updateView(userId, 'databases', viewId, req.body, id);
+    if (!updatedView) return next(createNotFoundError('View not found'));
+    sendSuccessResponse(res, 'View updated successfully', updatedView);
   }
 );
 
@@ -134,8 +140,9 @@ export const deleteView = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.deleteView(id, viewId, userId);
-    sendSuccessResponse(res, database, 'View deleted successfully');
+    const deleted = await documentViewService.deleteView(userId, 'databases', viewId, id);
+    if (!deleted) return next(createNotFoundError('View not found'));
+    sendSuccessResponse(res, 'View deleted successfully', null);
   }
 );
 
@@ -145,8 +152,9 @@ export const duplicateView = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.duplicateView(id, viewId, userId, req.body);
-    sendSuccessResponse(res, database, 'View duplicated successfully', 201);
+    const duplicatedView = await documentViewService.duplicateView(userId, 'databases', viewId, req.body?.name, id);
+    if (!duplicatedView) return next(createNotFoundError('View not found'));
+    sendSuccessResponse(res, 'View duplicated successfully', duplicatedView, 201);
   }
 );
 
@@ -157,7 +165,7 @@ export const createRecord = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const record = await databaseService.createRecord(id, userId, req.body);
-    sendSuccessResponse(res, record, 'Record created successfully', 201);
+    sendSuccessResponse(res, 'Record created successfully', record, 201);
   }
 );
 
@@ -181,7 +189,7 @@ export const getRecords = catchAsync(
     };
 
     const result = await databaseService.getRecords(id, userId, queryParams);
-    sendSuccessResponse(res, result, 'Records retrieved successfully');
+    sendSuccessResponse(res, 'Records retrieved successfully', result);
   }
 );
 
@@ -192,7 +200,7 @@ export const getRecordById = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const record = await databaseService.getRecordById(id, recordId, userId);
-    sendSuccessResponse(res, record, 'Record retrieved successfully');
+    sendSuccessResponse(res, 'Record retrieved successfully', record);
   }
 );
 
@@ -203,7 +211,7 @@ export const updateRecord = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const record = await databaseService.updateRecord(id, recordId, userId, req.body);
-    sendSuccessResponse(res, record, 'Record updated successfully');
+    sendSuccessResponse(res, 'Record updated successfully', record);
   }
 );
 
@@ -216,7 +224,7 @@ export const deleteRecord = catchAsync(
     }
 
     await databaseService.deleteRecord(id, recordId, userId);
-    sendSuccessResponse(res, null, 'Record deleted successfully');
+    sendSuccessResponse(res, 'Record deleted successfully', null);
   }
 );
 
@@ -230,7 +238,7 @@ export const shareDatabase = catchAsync(
     }
 
     const database = await databaseService.shareDatabase(id, userId, req.body);
-    sendSuccessResponse(res, database, 'Database shared successfully');
+    sendSuccessResponse(res, 'Database shared successfully', database);
   }
 );
 
@@ -243,7 +251,7 @@ export const removeDatabaseAccess = catchAsync(
     }
 
     const database = await databaseService.removeDatabaseAccess(id, userId, targetUserId);
-    sendSuccessResponse(res, database, 'Database access removed successfully');
+    sendSuccessResponse(res, 'Database access removed successfully', database);
   }
 );
 
@@ -308,7 +316,7 @@ export const importData = catchAsync(
     };
 
     const result = await exportService.importData(id, userId, req.file, importOptions);
-    sendSuccessResponse(res, result, 'Data imported successfully');
+    sendSuccessResponse(res, 'Data imported successfully', result);
   }
 );
 
@@ -321,7 +329,7 @@ export const toggleDatabaseFavorite = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.toggleDatabaseFavorite(id, userId, isFavorite);
-    sendSuccessResponse(res, database, 'Database favorite status updated successfully');
+    sendSuccessResponse(res, 'Database favorite status updated successfully', database);
   }
 );
 
@@ -334,7 +342,7 @@ export const moveDatabaseToCategory = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const database = await databaseService.moveDatabaseToCategory(id, userId, categoryId);
-    sendSuccessResponse(res, database, 'Database moved to category successfully');
+    sendSuccessResponse(res, 'Database moved to category successfully', database);
   }
 );
 
@@ -346,38 +354,37 @@ export const trackDatabaseAccess = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     await databaseService.updateDatabaseAccess(id, userId);
-    sendSuccessResponse(res, null, 'Database access tracked successfully');
+    sendSuccessResponse(res, 'Database access tracked successfully', null);
   }
 );
 
-// Get database properties
+// Get database properties (via document-view)
 export const getProperties = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.getDatabaseById(id, userId);
-    const properties = database.properties || [];
-    sendSuccessResponse(res, properties, 'Properties retrieved successfully');
+    const properties = await documentViewService.getProperties(userId, 'databases', id);
+    sendSuccessResponse(res, 'Properties retrieved successfully', properties);
   }
 );
 
-// Get property by ID
+// Get property by ID (via document-view)
 export const getPropertyById = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, propertyId } = req.params;
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.getDatabaseById(id, userId);
-    const property = database.properties?.find(p => p.id === propertyId);
+    const properties = await documentViewService.getProperties(userId, 'databases', id);
+    const property = properties.find(p => p.id === propertyId);
 
     if (!property) {
       return next(createNotFoundError('Property not found'));
     }
 
-    sendSuccessResponse(res, property, 'Property retrieved successfully');
+    sendSuccessResponse(res, 'Property retrieved successfully', property);
   }
 );
 
@@ -394,38 +401,33 @@ export const reorderProperties = catchAsync(
     }
 
     const database = await databaseService.reorderProperties(id, userId, propertyIds);
-    sendSuccessResponse(res, database, 'Properties reordered successfully');
+    sendSuccessResponse(res, 'Properties reordered successfully', database);
   }
 );
 
-// Get database views
+// Get database views (via document-view)
 export const getViews = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.getDatabaseById(id, userId);
-    const views = database.views || [];
-    sendSuccessResponse(res, views, 'Views retrieved successfully');
+    const views = await documentViewService.getViews(userId, 'databases', id);
+    sendSuccessResponse(res, 'Views retrieved successfully', views);
   }
 );
 
-// Get view by ID
+// Get view by ID (via document-view)
 export const getViewById = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id, viewId } = req.params;
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.getDatabaseById(id, userId);
-    const view = database.views?.find(v => v.id === viewId);
+    const view = await documentViewService.getView(userId, 'databases', viewId, id);
+    if (!view) return next(createNotFoundError('View not found'));
 
-    if (!view) {
-      return next(createNotFoundError('View not found'));
-    }
-
-    sendSuccessResponse(res, view, 'View retrieved successfully');
+    sendSuccessResponse(res, 'View retrieved successfully', view);
   }
 );
 
@@ -446,7 +448,7 @@ export const getDatabasePermissions = catchAsync(
         database.sharedWith?.find(p => p.userId === userId)?.permission || 'none'
     };
 
-    sendSuccessResponse(res, permissions, 'Permissions retrieved successfully');
+    sendSuccessResponse(res, 'Permissions retrieved successfully', permissions);
   }
 );
 
@@ -458,17 +460,13 @@ export const updateDatabasePermission = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    // Check if user has admin permission
-    const database = await databaseService.checkDatabasePermission(id, userId, 'admin');
-
-    // Update permission in database
-    const updatedDatabase = await databaseService.updateDatabase(id, userId, {
-      sharedWith: database.sharedWith?.map(p =>
-        p.userId === targetUserId ? { ...p, permission } : p
-      ) || []
+    // Update permission using the shareDatabase method
+    const updatedDatabase = await databaseService.shareDatabase(id, userId, {
+      userId: targetUserId,
+      permission
     });
 
-    sendSuccessResponse(res, updatedDatabase, 'Permission updated successfully');
+    sendSuccessResponse(res, 'Permission updated successfully', updatedDatabase);
   }
 );
 
@@ -506,7 +504,7 @@ export const bulkCreateRecords = catchAsync(
       failed: errors.length
     };
 
-    sendSuccessResponse(res, response, 'Bulk create completed', 201);
+    sendSuccessResponse(res, 'Bulk create completed', response, 201);
   }
 );
 
@@ -550,7 +548,7 @@ export const bulkUpdateRecords = catchAsync(
       failed: errors.length
     };
 
-    sendSuccessResponse(res, response, 'Bulk update completed');
+    sendSuccessResponse(res, 'Bulk update completed', response);
   }
 );
 
@@ -594,7 +592,7 @@ export const bulkDeleteRecords = catchAsync(
       failed: errors.length
     };
 
-    sendSuccessResponse(res, response, 'Bulk delete completed');
+    sendSuccessResponse(res, 'Bulk delete completed', response);
   }
 );
 
@@ -605,8 +603,8 @@ export const updatePropertyName = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updatePropertyName(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property name updated successfully');
+    const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, 'Property name updated successfully', database);
   }
 );
 
@@ -616,8 +614,8 @@ export const updatePropertyType = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updatePropertyType(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property type updated successfully');
+    const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, 'Property type updated successfully', database);
   }
 );
 
@@ -627,30 +625,30 @@ export const updatePropertyOrder = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updatePropertyOrder(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property order updated successfully');
+    const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, 'Property order updated successfully', database);
   }
 );
 
 export const insertProperty = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id, propertyId } = req.params;
+    const { id } = req.params;
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.insertProperty(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property inserted successfully', 201);
+    const database = await databaseService.addProperty(id, userId, req.body);
+    sendSuccessResponse(res, 'Property inserted successfully', database, 201);
   }
 );
 
 export const duplicateProperty = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id, propertyId } = req.params;
+    const { id } = req.params;
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.duplicateProperty(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property duplicated successfully', 201);
+    const database = await databaseService.addProperty(id, userId, req.body);
+    sendSuccessResponse(res, 'Property duplicated successfully', database, 201);
   }
 );
 
@@ -660,8 +658,8 @@ export const updatePropertyFreeze = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updatePropertyFreeze(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property freeze status updated successfully');
+    const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, 'Property freeze status updated successfully', database);
   }
 );
 
@@ -671,8 +669,8 @@ export const updatePropertyVisibility = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const database = await databaseService.updatePropertyVisibility(id, propertyId, userId, req.body);
-    sendSuccessResponse(res, database, 'Property visibility updated successfully');
+    const database = await databaseService.updateProperty(id, propertyId, userId, req.body);
+    sendSuccessResponse(res, 'Property visibility updated successfully', database);
   }
 );
 
@@ -685,7 +683,7 @@ export const freezeDatabase = catchAsync(
 
     const database = await databaseService.freezeDatabase(id, userId, req.body);
     const message = req.body.frozen ? 'Database frozen successfully' : 'Database unfrozen successfully';
-    sendSuccessResponse(res, database, message);
+    sendSuccessResponse(res, message, database);
   }
 );
 

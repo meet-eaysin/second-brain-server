@@ -82,3 +82,7 @@ export const createConflictError = (message: string): TAppError => {
 export const createTooManyRequestsError = (message: string = 'Too many requests'): TAppError => {
   return createAppError(message, 429);
 };
+
+export const createBadRequestError = (message: string = 'Bad request'): TAppError => {
+  return createAppError(message, 400);
+};

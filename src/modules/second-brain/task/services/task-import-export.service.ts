@@ -3,8 +3,60 @@ import { createValidationError, createAppError } from '@/utils';
 import { Types } from 'mongoose';
 import { CreateTaskRequest } from './task.service';
 
+
+export type ImportableTaskStatus = 'todo' | 'in-progress' | 'completed' | 'cancelled';
+export type ImportablePriority = 'low' | 'medium' | 'high' | 'urgent';
+export type ImportableEnergy = 'low' | 'medium' | 'high';
+
+export type RawTaskInput = {
+    title?: string;
+    description?: string;
+    status?: ImportableTaskStatus;
+    priority?: ImportablePriority;
+    dueDate?: string | Date;
+    startDate?: string | Date;
+    endDate?: string | Date;
+    estimatedTime?: number | string;
+    area?: string;
+    tags?: string[] | string;
+    energy?: ImportableEnergy;
+    context?: string[] | string;
+    color?: string;
+    icon?: string;
+};
+
+export type TaskExportRow = {
+    title?: string;
+    description?: string;
+    status?: import('../models/task.model').ITask['status'];
+    priority?: import('../models/task.model').ITask['priority'];
+    dueDate?: Date;
+    estimatedTime?: number;
+    actualTime?: number;
+    area?: string;
+    tags?: string[];
+    energy?: import('../models/task.model').ITask['energy'];
+    context?: string[];
+    createdAt?: Date;
+    completedAt?: Date;
+};
+
+type ExportJsonResult = {
+    format: 'json';
+    data: TaskExportRow[];
+    metadata: { exportedAt: Date; totalTasks: number; filters?: ExportOptions['filters'] };
+};
+
+type ExportCsvResult = {
+    format: 'csv';
+    data: string;
+    metadata: { exportedAt: Date; totalTasks: number; filters?: ExportOptions['filters'] };
+};
+
+type ExportResult = ExportJsonResult | ExportCsvResult;
+
 export interface ExportOptions {
-    format: 'json' | 'csv' | 'markdown';
+    format: 'json' | 'csv' | 'xls';
     includeArchived?: boolean;
     includeCompleted?: boolean;
     filters?: {
@@ -106,17 +158,6 @@ export const exportTasks = async (userId: string, options: ExportOptions) => {
                 }
             };
 
-        case 'markdown':
-            return {
-                format: 'markdown',
-                data: convertTasksToMarkdown(tasks),
-                metadata: {
-                    exportedAt: new Date(),
-                    totalTasks: tasks.length,
-                    filters: options.filters
-                }
-            };
-
         default:
             throw createValidationError('Unsupported export format');
     }
@@ -143,7 +184,7 @@ export const importTasks = async (userId: string, data: any[], options: ImportOp
     for (let i = 0; i < data.length; i++) {
         try {
             const taskData = format === 'csv' ? parseCSVRow(data[i]) : data[i];
-            
+
             // Validate required fields
             if (!taskData.title || typeof taskData.title !== 'string') {
                 result.errors.push({
@@ -255,8 +296,8 @@ function convertTasksToCSV(tasks: any[]): string {
     if (tasks.length === 0) return '';
 
     const headers = [
-        'title', 'description', 'status', 'priority', 'dueDate', 
-        'estimatedTime', 'actualTime', 'area', 'tags', 'energy', 
+        'title', 'description', 'status', 'priority', 'dueDate',
+        'estimatedTime', 'actualTime', 'area', 'tags', 'energy',
         'context', 'createdAt', 'completedAt'
     ];
 
@@ -265,7 +306,7 @@ function convertTasksToCSV(tasks: any[]): string {
     tasks.forEach(task => {
         const row = headers.map(header => {
             let value = task[header];
-            
+
             if (Array.isArray(value)) {
                 value = value.join(';');
             } else if (value instanceof Date) {
@@ -273,61 +314,19 @@ function convertTasksToCSV(tasks: any[]): string {
             } else if (value === null || value === undefined) {
                 value = '';
             }
-            
+
             // Escape commas and quotes
             if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
                 value = `"${value.replace(/"/g, '""')}"`;
             }
-            
+
             return value;
         });
-        
+
         csvRows.push(row.join(','));
     });
 
     return csvRows.join('\n');
-}
-
-function convertTasksToMarkdown(tasks: any[]): string {
-    if (tasks.length === 0) return '# No tasks to export\n';
-
-    let markdown = '# Task Export\n\n';
-    markdown += `Exported on: ${new Date().toLocaleDateString()}\n`;
-    markdown += `Total tasks: ${tasks.length}\n\n`;
-
-    // Group by status
-    const groupedTasks = tasks.reduce((groups, task) => {
-        const status = task.status || 'unknown';
-        if (!groups[status]) groups[status] = [];
-        groups[status].push(task);
-        return groups;
-    }, {});
-
-    Object.entries(groupedTasks).forEach(([status, statusTasks]: [string, any[]]) => {
-        markdown += `## ${status.charAt(0).toUpperCase() + status.slice(1)} Tasks\n\n`;
-        
-        statusTasks.forEach(task => {
-            const checkbox = status === 'completed' ? '[x]' : '[ ]';
-            markdown += `${checkbox} **${task.title}**\n`;
-            
-            if (task.description) {
-                markdown += `   ${task.description}\n`;
-            }
-            
-            const details = [];
-            if (task.priority) details.push(`Priority: ${task.priority}`);
-            if (task.dueDate) details.push(`Due: ${new Date(task.dueDate).toLocaleDateString()}`);
-            if (task.tags && task.tags.length > 0) details.push(`Tags: ${task.tags.join(', ')}`);
-            
-            if (details.length > 0) {
-                markdown += `   *${details.join(' | ')}*\n`;
-            }
-            
-            markdown += '\n';
-        });
-    });
-
-    return markdown;
 }
 
 function parseCSVRow(row: any): any {
@@ -341,14 +340,14 @@ function parseCSVRow(row: any): any {
         // Simple CSV parsing - in production, use a proper CSV parser
         const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         const headers = ['title', 'description', 'status', 'priority', 'dueDate', 'estimatedTime', 'area', 'tags', 'energy', 'context'];
-        
+
         const parsed: any = {};
         headers.forEach((header, index) => {
             if (values[index]) {
                 parsed[header] = values[index];
             }
         });
-        
+
         return parsed;
     }
 
@@ -403,16 +402,19 @@ function sanitizeTaskData(data: any): Partial<CreateTaskRequest> {
     // Array fields
     if (data.tags) {
         if (Array.isArray(data.tags)) {
-            sanitized.tags = data.tags.filter(tag => typeof tag === 'string');
+            sanitized.tags = data.tags.filter((tag: unknown) => typeof tag === 'string');
         } else if (typeof data.tags === 'string') {
-            sanitized.tags = data.tags.split(/[,;]/).map(tag => tag.trim()).filter(Boolean);
+            sanitized.tags = data.tags.split(/[,;]/).map((tag: string) => tag.trim()).filter(Boolean);
         }
     }
     if (data.context) {
         if (Array.isArray(data.context)) {
-            sanitized.context = data.context.filter(ctx => typeof ctx === 'string');
+            sanitized.context = (data.context as unknown[]).filter((ctx: unknown): ctx is string => typeof ctx === 'string');
         } else if (typeof data.context === 'string') {
-            sanitized.context = data.context.split(/[,;]/).map(ctx => ctx.trim()).filter(Boolean);
+            sanitized.context = data.context
+                .split(/[,;]/)
+                .map((ctx: string) => ctx.trim())
+                .filter((s: string) => Boolean(s));
         }
     }
 

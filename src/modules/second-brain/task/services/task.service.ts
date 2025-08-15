@@ -493,3 +493,23 @@ const createRecurringTask = async (originalTask: any) => {
 
     await createTask(originalTask.createdBy.toString(), newTaskData);
 };
+
+// Get tasks by project IDs
+export const getTasksByProjects = async (userId: string, projectIds: string[], options: { limit?: number } = {}) => {
+    try {
+        const { limit = 10 } = options;
+
+        const tasks = await Task.find({
+            project: { $in: projectIds.map(id => new Types.ObjectId(id)) },
+            createdBy: new Types.ObjectId(userId),
+            archivedAt: { $exists: false }
+        })
+        .populate('project', 'title')
+        .limit(limit)
+        .sort({ createdAt: -1 });
+
+        return tasks;
+    } catch (error: any) {
+        throw createAppError('Failed to get tasks by projects', 500);
+    }
+};

@@ -22,10 +22,8 @@ export {
 export * as databaseService from './services/database.service';
 export * as exportService from './services/export.service';
 
-// Models
-export { DatabaseModel } from './models/database.model';
-export { DatabaseRecordModel } from './models/database-record.model';
-export { DatabaseCategoryModel } from './models/database-category.model';
+// Note: Models should not be exported from module index
+// Other modules should use services instead of direct model access
 
 // Types
 export type {
@@ -42,5 +40,3 @@ export type {
   TGetDatabasesQuery
 } from './types/database.types';
 
-// Validators
-export * as validators from './validators/database.validators';

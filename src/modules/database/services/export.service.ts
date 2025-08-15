@@ -92,7 +92,7 @@ export const exportDatabase = async (
         return JSON.stringify(
           {
             database: {
-              id: database._id,
+              id: database.id,
               name: database.name,
               description: database.description,
               properties: includedProperties

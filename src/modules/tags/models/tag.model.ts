@@ -11,9 +11,7 @@ export interface ITag {
   updatedAt: Date;
 }
 
-export interface ITagDocument extends ITag, Document {
-  _id: mongoose.Types.ObjectId;
-}
+export interface ITagDocument extends Omit<ITag, 'id'>, Document {}
 
 const TagSchema = new Schema<ITagDocument>(
   {
@@ -51,8 +49,8 @@ const TagSchema = new Schema<ITagDocument>(
       virtuals: true,
       versionKey: false,
       transform: (doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
+        (ret as any).id = ret._id?.toString ? ret._id.toString() : String(ret._id);
+        delete (ret as any)._id;
         return ret;
       }
     }

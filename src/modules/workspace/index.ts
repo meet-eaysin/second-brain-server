@@ -38,12 +38,10 @@ export {
 } from './services/workspace.service';
 
 // Models
-export { WorkspaceModel, IWorkspace, IWorkspaceDocument } from './models/workspace.model';
+export { WorkspaceModel } from './models/workspace.model';
 
 // Types
 export type {
-  IWorkspace,
-  IWorkspaceDocument,
   IWorkspaceMember,
   TWorkspaceRole,
   TWorkspacePermission,
@@ -65,6 +63,10 @@ export type {
   TWorkspaceError,
   WorkspaceDocument
 } from './types/workspace.types';
+
+
+// Re-export model types explicitly
+export type { IWorkspace, IWorkspaceDocument } from './models/workspace.model';
 
 // Validators
 export {

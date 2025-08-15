@@ -25,7 +25,7 @@ import {
 // Transform workspace document to interface
 export const toWorkspaceInterface = (workspace: IWorkspaceDocument): IWorkspace => {
   return {
-    id: workspace._id.toString(),
+    id: String(workspace._id),
     name: workspace.name,
     description: workspace.description,
     icon: workspace.icon,
@@ -46,6 +46,7 @@ export const toWorkspaceInterface = (workspace: IWorkspaceDocument): IWorkspace 
     lastEditedBy: workspace.lastEditedBy
   };
 };
+
 
 // Create a new workspace
 export const createWorkspace = async (
@@ -167,8 +168,8 @@ export const getUserWorkspaces = async (
   // Update database counts for each workspace
   const workspacesWithCounts = await Promise.all(
     workspaces.map(async (workspace) => {
-      const databaseCount = await DatabaseModel.countDocuments({ 
-        workspaceId: workspace._id.toString() 
+      const databaseCount = await DatabaseModel.countDocuments({
+        workspaceId: String(workspace._id)
       });
       workspace.databaseCount = databaseCount;
       return toWorkspaceInterface(workspace);
@@ -532,7 +533,7 @@ export const getWorkspaceStats = async (userId: string): Promise<TWorkspaceStats
     ]
   }).select('_id');
 
-  const workspaceIds = userWorkspaces.map(w => w._id.toString());
+  const workspaceIds = userWorkspaces.map(w => String(w._id));
   const totalDatabases = await DatabaseModel.countDocuments({
     workspaceId: { $in: workspaceIds }
   });
@@ -540,7 +541,7 @@ export const getWorkspaceStats = async (userId: string): Promise<TWorkspaceStats
   // Get total members across user's owned workspaces
   const ownedWorkspaceDetails = await WorkspaceModel.find({ ownerId: userId });
   const totalMembers = ownedWorkspaceDetails.reduce((sum, workspace) =>
-    sum + workspace.memberCount, 0
+    sum + (workspace.memberCount ?? 0), 0
   );
 
   return {

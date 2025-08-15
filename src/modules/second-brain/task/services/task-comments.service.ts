@@ -156,7 +156,7 @@ export const updateComment = async (userId: string, taskId: string, commentId: s
     const comment = comments[commentIndex];
 
     // Check if user is the author of the comment
-    if (comment.author !== userId) {
+    if (comment.author.toString() !== userId) {
         throw createForbiddenError('You can only edit your own comments');
     }
 
@@ -171,7 +171,7 @@ export const updateComment = async (userId: string, taskId: string, commentId: s
     }
 
     if (updates.mentions !== undefined) {
-        comment.mentions = updates.mentions;
+        comment.mentions = updates.mentions.map(id => new Types.ObjectId(id));
     }
 
     if (updates.attachments !== undefined) {
@@ -224,7 +224,7 @@ export const deleteComment = async (userId: string, taskId: string, commentId: s
     const comment = comments[commentIndex];
 
     // Check if user is the author of the comment or the task owner
-    if (comment.author !== userId && task.createdBy.toString() !== userId) {
+    if (comment.author.toString() !== userId && task.createdBy.toString() !== userId) {
         throw createForbiddenError('You can only delete your own comments or comments on your tasks');
     }
 

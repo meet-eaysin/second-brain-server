@@ -14,6 +14,7 @@ import {
 import { UserModel } from '../models/users.model';
 import { TGoogleUserProfile } from '../../auth/types/auth.types';
 import { transformUserDocument } from '../utils';
+import { findById, findByIdAndUpdate, deleteOne } from '../../../utils/mongoose-helpers';
 import {
   createInvalidEmailError,
   createInvalidUsernameError,
@@ -133,7 +134,7 @@ export const getUserById = async (id: string): Promise<TUser | null> => {
       throw createInvalidUserIdError();
     }
 
-    const user = await UserModel.findById(id);
+    const user = await findById(UserModel, id);
     return user ? user.toJSON() : null;
   } catch (error: any) {
     // If it's already a structured error, re-throw it
@@ -186,7 +187,7 @@ export const updateUser = async (
   try {
     if (!isValidObjectId(id)) throw createInvalidUserIdError();
 
-    const user = await UserModel.findById(id);
+    const user = await findById(UserModel, id);
     if (!user) throw createUserNotFoundError(id);
 
     if (updateData.email && !validateEmail(updateData.email)) {
@@ -249,10 +250,10 @@ export const deleteUser = async (id: string): Promise<boolean> => {
   try {
     if (!isValidObjectId(id)) throw createInvalidUserIdError();
 
-    const user = await UserModel.findById(id);
+    const user = await findById(UserModel, id);
     if (!user) throw createUserNotFoundError(id);
 
-    const result = await UserModel.deleteOne({ _id: id });
+    const result = await deleteOne(UserModel, { _id: id });
     return result.deletedCount === 1;
   } catch (error: any) {
     if (error.statusCode) throw error;
@@ -333,7 +334,7 @@ export const bulkUpdateUsers = async (
     try {
       if (!isValidObjectId(userId)) continue;
 
-      const user = await UserModel.findById(userId);
+      const user = await findById(UserModel, userId);
       if (!user) {
         errors.push(`User with ID ${userId} not found`);
         continue;
@@ -417,7 +418,7 @@ export const toggleUserStatus = async (userId: string): Promise<TUser | null> =>
   try {
     if (!isValidObjectId(userId)) throw createInvalidUserIdError();
 
-    const user = await UserModel.findById(userId);
+    const user = await findById(UserModel, userId);
     if (!user) throw createUserNotFoundError(userId);
 
     user.isActive = !user.isActive;
@@ -434,7 +435,7 @@ export const updateUserRole = async (userId: string, role: TUserRole): Promise<T
     if (!isValidObjectId(userId)) throw createInvalidUserIdError();
     if (!Object.values(TUserRole).includes(role)) throw createInvalidRoleError(role);
 
-    const user = await UserModel.findByIdAndUpdate(userId, { role }, { new: true });
+    const user = await findByIdAndUpdate(UserModel, userId, { role }, { new: true });
     if (!user) throw createUserNotFoundError(userId);
 
     return user.toJSON();

@@ -29,5 +29,8 @@ export type {
   TFilesListResponse
 } from './types/files.types';
 
+// Validators
+export * from './validators/files.validators';
+
 // Models
 export { FileModel, type IFile } from './models/file.model';

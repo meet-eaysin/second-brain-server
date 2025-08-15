@@ -25,6 +25,9 @@ export type TUser = {
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
+  // Optional password reset fields (not exposed in API responses)
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
 };
 
 export type TUserCreateRequest = {

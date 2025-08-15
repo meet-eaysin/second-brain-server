@@ -1,37 +1,19 @@
 import { NotificationModel, INotification, INotificationDocument } from '../models/notification.model';
 import { createNotFoundError } from '../../../utils/error.utils';
-
-export interface INotificationCreateRequest {
-  userId: string;
-  type: 'database_shared' | 'record_created' | 'workspace_invite' | 'system_update' | 'reminder';
-  title: string;
-  message: string;
-  data?: Record<string, any>;
-}
-
-export interface INotificationsResult {
-  notifications: INotification[];
-  pagination: {
-    total: number;
-    totalPages: number;
-    currentPage: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-    limit: number;
-  };
-}
+import type {
+  INotificationCreateRequest,
+  INotificationsResult,
+  INotificationQuery,
+  INotificationUpdateRequest,
+  IBulkNotificationUpdateRequest,
+  INotificationStats,
+  NotificationResponse
+} from '../types';
 
 // Get user notifications
 export const getUserNotifications = async (
   userId: string,
-  options: {
-    isRead?: boolean;
-    type?: string;
-    page?: number;
-    limit?: number;
-    sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
-  } = {}
+  options: INotificationQuery = {}
 ): Promise<INotificationsResult> => {
   const {
     isRead,
@@ -87,7 +69,7 @@ export const getUserNotifications = async (
 // Create notification
 export const createNotification = async (
   data: INotificationCreateRequest
-): Promise<INotification> => {
+): Promise<NotificationResponse> => {
   const notification = await NotificationModel.create(data);
   return toNotificationInterface(notification);
 };
@@ -96,7 +78,7 @@ export const createNotification = async (
 export const markNotificationAsRead = async (
   notificationId: string,
   userId: string
-): Promise<INotification> => {
+): Promise<NotificationResponse> => {
   const notification = await NotificationModel.findOneAndUpdate(
     {
       _id: notificationId,
@@ -172,7 +154,7 @@ export const getUnreadCount = async (userId: string): Promise<number> => {
 // Bulk create notifications
 export const createBulkNotifications = async (
   notifications: INotificationCreateRequest[]
-): Promise<INotification[]> => {
+): Promise<NotificationResponse[]> => {
   const createdNotifications = await NotificationModel.insertMany(notifications);
   return createdNotifications.map(toNotificationInterface);
 };
@@ -183,7 +165,7 @@ export const createDatabaseSharedNotification = async (
   databaseName: string,
   sharedBy: string,
   permission: string
-): Promise<INotification> => {
+): Promise<NotificationResponse> => {
   return createNotification({
     userId,
     type: 'database_shared',
@@ -202,7 +184,7 @@ export const createRecordCreatedNotification = async (
   databaseName: string,
   recordTitle: string,
   createdBy: string
-): Promise<INotification> => {
+): Promise<NotificationResponse> => {
   return createNotification({
     userId,
     type: 'record_created',
@@ -220,7 +202,7 @@ export const createWorkspaceInviteNotification = async (
   userId: string,
   workspaceName: string,
   invitedBy: string
-): Promise<INotification> => {
+): Promise<NotificationResponse> => {
   return createNotification({
     userId,
     type: 'workspace_invite',
@@ -238,7 +220,7 @@ export const createSystemUpdateNotification = async (
   title: string,
   message: string,
   data?: Record<string, any>
-): Promise<INotification> => {
+): Promise<NotificationResponse> => {
   return createNotification({
     userId,
     type: 'system_update',
@@ -248,16 +230,129 @@ export const createSystemUpdateNotification = async (
   });
 };
 
-// Helper function to convert document to interface
-function toNotificationInterface(doc: INotificationDocument | any): INotification {
-  // Use toJSON() which already handles _id to id conversion
-  if (typeof doc.toJSON === 'function') {
-    return doc.toJSON() as INotification;
+// Get notification by ID
+export const getNotificationById = async (
+  notificationId: string,
+  userId: string
+): Promise<NotificationResponse> => {
+  const notification = await NotificationModel.findOne({
+    _id: notificationId,
+    userId
+  });
+
+  if (!notification) {
+    throw createNotFoundError('Notification not found');
   }
 
-  // Fallback for plain objects (shouldn't happen with current implementation)
+  return toNotificationInterface(notification);
+};
+
+// Update notification
+export const updateNotification = async (
+  notificationId: string,
+  userId: string,
+  data: INotificationUpdateRequest
+): Promise<NotificationResponse> => {
+  const notification = await NotificationModel.findOneAndUpdate(
+    {
+      _id: notificationId,
+      userId
+    },
+    {
+      $set: data
+    },
+    { new: true }
+  );
+
+  if (!notification) {
+    throw createNotFoundError('Notification not found');
+  }
+
+  return toNotificationInterface(notification);
+};
+
+// Bulk update notifications
+export const bulkUpdateNotifications = async (
+  userId: string,
+  updates: IBulkNotificationUpdateRequest[]
+): Promise<{ modifiedCount: number }> => {
+  let totalModified = 0;
+
+  for (const update of updates) {
+    const result = await NotificationModel.updateMany(
+      {
+        _id: { $in: update.notificationIds },
+        userId
+      },
+      {
+        $set: update.data
+      }
+    );
+    totalModified += result.modifiedCount;
+  }
+
+  return { modifiedCount: totalModified };
+};
+
+// Get notification statistics
+export const getNotificationStats = async (
+  userId: string
+): Promise<INotificationStats> => {
+  const [
+    totalNotifications,
+    unreadNotifications,
+    notificationsByType,
+    recentNotifications
+  ] = await Promise.all([
+    NotificationModel.countDocuments({ userId }),
+    NotificationModel.countDocuments({ userId, isRead: false }),
+    NotificationModel.aggregate([
+      { $match: { userId } },
+      { $group: { _id: '$type', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]),
+    NotificationModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('type title createdAt isRead')
+  ]);
+
   return {
-    id: doc.id || doc._id?.toString(),
+    totalNotifications,
+    unreadNotifications,
+    readNotifications: totalNotifications - unreadNotifications,
+    notificationsByType: notificationsByType.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {} as Record<string, number>),
+    recentNotifications: recentNotifications.map(toNotificationInterface)
+  };
+};
+
+// Helper function to convert document to interface
+function toNotificationInterface(doc: INotificationDocument | any): NotificationResponse {
+  // Use toJSON() which already handles _id to id conversion
+  if (typeof doc.toJSON === 'function') {
+    const obj = doc.toJSON();
+    return {
+      _id: obj._id || obj.id,
+      id: obj._id || obj.id,
+      userId: obj.userId,
+      type: obj.type,
+      title: obj.title,
+      message: obj.message,
+      data: obj.data,
+      isRead: obj.isRead,
+      readAt: obj.readAt,
+      createdAt: obj.createdAt,
+      updatedAt: obj.updatedAt
+    } as NotificationResponse;
+  }
+
+  // Fallback for plain objects
+  return {
+    _id: doc._id?.toString() || doc.id,
+    id: doc._id?.toString() || doc.id,
     userId: doc.userId,
     type: doc.type,
     title: doc.title,
@@ -267,5 +362,5 @@ function toNotificationInterface(doc: INotificationDocument | any): INotificatio
     readAt: doc.readAt,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt
-  };
+  } as NotificationResponse;
 }

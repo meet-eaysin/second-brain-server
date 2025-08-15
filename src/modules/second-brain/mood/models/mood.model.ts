@@ -22,6 +22,7 @@ export interface IMood extends Document {
         hours: number;
         quality: number; // 1-10 scale
     };
+    moodScore?: number; // derived aggregate score
     
     // Context
     activities?: string[]; // What did you do today?
@@ -36,6 +37,7 @@ export interface IMood extends Document {
     // Relationships
     linkedTasks?: mongoose.Types.ObjectId[];
     linkedJournal?: mongoose.Types.ObjectId;
+    linkedHabits?: mongoose.Types.ObjectId[];
     tags: string[];
     
     // Metadata
@@ -66,6 +68,7 @@ const MoodSchema = new Schema<IMood>({
         hours: { type: Number, min: 0, max: 24 },
         quality: { type: Number, min: 1, max: 10 }
     },
+    moodScore: { type: Number, min: 0, max: 10 }, // derived aggregate score
     
     // Context
     activities: [{ type: String, trim: true }],
@@ -80,6 +83,7 @@ const MoodSchema = new Schema<IMood>({
     // Relationships
     linkedTasks: [{ type: Schema.Types.ObjectId, ref: 'Task' }],
     linkedJournal: { type: Schema.Types.ObjectId, ref: 'Journal' },
+    linkedHabits: [{ type: Schema.Types.ObjectId, ref: 'Habit' }],
     tags: [{ type: String, trim: true }],
     
     // Metadata

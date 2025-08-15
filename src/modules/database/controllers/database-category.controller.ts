@@ -12,7 +12,7 @@ export const createCategory = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
 
     const category = await categoryService.createCategory(userId, req.body);
-    sendSuccessResponse(res, category, 'Category created successfully', 201);
+    sendSuccessResponse(res, 'Category created successfully', category, 201);
   }
 );
 
@@ -24,7 +24,7 @@ export const getUserCategories = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
 
     const categories = await categoryService.getUserCategories(userId);
-    sendSuccessResponse(res, categories, 'Categories retrieved successfully');
+    sendSuccessResponse(res, 'Categories retrieved successfully', categories);
   }
 );
 
@@ -38,7 +38,7 @@ export const getCategoryById = catchAsync(
     const userId = authReq.user.userId;
 
     const category = await categoryService.getCategoryById(id, userId);
-    sendSuccessResponse(res, category, 'Category retrieved successfully');
+    sendSuccessResponse(res, 'Category retrieved successfully', category);
   }
 );
 
@@ -52,7 +52,7 @@ export const updateCategory = catchAsync(
     const userId = authReq.user.userId;
 
     const category = await categoryService.updateCategory(id, userId, req.body);
-    sendSuccessResponse(res, category, 'Category updated successfully');
+    sendSuccessResponse(res, 'Category updated successfully', category);
   }
 );
 
@@ -66,7 +66,7 @@ export const deleteCategory = catchAsync(
     const userId = authReq.user.userId;
 
     await categoryService.deleteCategory(id, userId);
-    sendSuccessResponse(res, null, 'Category deleted successfully');
+    sendSuccessResponse(res, 'Category deleted successfully', null);
   }
 );
 
@@ -80,6 +80,6 @@ export const reorderCategories = catchAsync(
     const userId = authReq.user.userId;
 
     const categories = await categoryService.reorderCategories(userId, categoryIds);
-    sendSuccessResponse(res, categories, 'Categories reordered successfully');
+    sendSuccessResponse(res, 'Categories reordered successfully', categories);
   }
 );

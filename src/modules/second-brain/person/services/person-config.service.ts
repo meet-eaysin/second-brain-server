@@ -35,8 +35,21 @@ export interface PeopleModuleConfig {
     };
     
     // Default configuration
-    defaultProperties: any[];
-    defaultViews: any[];
+    defaultProperties: Array<{
+        id: string;
+        name: string;
+        type: string;
+        required?: boolean;
+        defaultValue?: unknown;
+        options?: Array<{ name: string; color?: string; value?: unknown }>;
+    }>;
+    defaultViews: Array<{
+        id: string;
+        name: string;
+        type: string;
+        isDefault?: boolean;
+        config?: Record<string, unknown>;
+    }>;
     
     // Supported property types for people
     supportedPropertyTypes: string[];

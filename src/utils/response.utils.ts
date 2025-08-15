@@ -1,7 +1,24 @@
 // Response Utilities - Standardized API responses
 import { Response } from 'express';
 
-export interface ApiResponse<T = any> {
+export interface DatabaseProperty {
+  id: string;
+  name: string;
+  type: string;
+  required: boolean;
+  options?: Array<{ value: string; label: string; color?: string }>;
+}
+
+export interface PermissionConfig {
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canShare: boolean;
+  canExport: boolean;
+  canImport: boolean;
+}
+
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -14,13 +31,13 @@ export interface ApiResponse<T = any> {
     hasPrev?: boolean;
   };
   schema?: {
-    properties?: any[];
-    permissions?: any;
+    properties?: DatabaseProperty[];
+    permissions?: PermissionConfig;
     views?: string[];
   };
   error?: {
     code?: string;
-    details?: any;
+    details?: Record<string, unknown>;
     stack?: string;
   };
   timestamp: string;
@@ -30,13 +47,13 @@ export interface ApiResponse<T = any> {
 /**
  * Send success response
  */
-export function sendSuccessResponse<T = any>(
+export function sendSuccessResponse<T = unknown>(
   res: Response,
   message: string,
   data?: T,
   statusCode: number = 200,
-  meta?: any,
-  schema?: any
+  meta?: Record<string, unknown>,
+  schema?: Record<string, unknown>
 ): void {
   const response: ApiResponse<T> = {
     success: true,

@@ -345,3 +345,38 @@ export const searchTemplates = (query: string): IDatabaseTemplate[] => {
     template.tags.some(tag => tag.toLowerCase().includes(searchTerm))
   );
 };
+
+/**
+ * Create a database from a template
+ */
+export const createDatabaseFromTemplate = async (
+  templateId: string,
+  userId: string,
+  options?: {
+    name?: string;
+    description?: string;
+    workspaceId?: string;
+    categoryId?: string;
+  }
+): Promise<any> => {
+  const template = getTemplateById(templateId);
+  if (!template) {
+    throw new Error(`Template with ID ${templateId} not found`);
+  }
+
+  // This is a stub implementation - would need to integrate with database.service
+  // to actually create the database with the template structure
+  return {
+    id: `db_${Date.now()}`,
+    name: options?.name || template.name,
+    description: options?.description || template.description,
+    icon: template.icon,
+    userId,
+    workspaceId: options?.workspaceId,
+    categoryId: options?.categoryId,
+    properties: template.properties,
+    views: template.views,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+};

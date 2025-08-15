@@ -3,75 +3,14 @@ import { DatabaseRecordModel } from '../../database/models/database-record.model
 import { FileModel } from '../../files/models/file.model';
 import { WorkspaceModel } from '../../workspace/models/workspace.model';
 import { UserModel } from '../../users/models/users.model';
-
-export interface IDashboardAnalytics {
-  totalDatabases: number;
-  totalRecords: number;
-  totalFiles: number;
-  totalWorkspaces: number;
-  recentActivity: IActivityItem[];
-  usage: {
-    databasesCreated: number;
-    recordsCreated: number;
-    filesUploaded: number;
-    workspacesCreated: number;
-  };
-  trends: {
-    databases: ITrendData[];
-    records: ITrendData[];
-    files: ITrendData[];
-  };
-}
-
-export interface IDatabaseAnalytics {
-  databaseId: string;
-  databaseName: string;
-  totalRecords: number;
-  totalViews: number;
-  totalProperties: number;
-  recordsCreated: number;
-  viewsCreated: number;
-  lastAccessed: Date | null;
-  accessCount: number;
-  usage: ITrendData[];
-  topProperties: IPropertyUsage[];
-  recordActivity: IActivityItem[];
-}
-
-export interface IUsageStatistics {
-  totalUsers: number;
-  activeUsers: number;
-  totalDatabases: number;
-  totalRecords: number;
-  totalFiles: number;
-  totalWorkspaces: number;
-  storageUsed: number;
-  apiCalls: number;
-  userGrowth: ITrendData[];
-  contentGrowth: ITrendData[];
-}
-
-export interface IActivityItem {
-  id: string;
-  type: 'database_created' | 'record_created' | 'file_uploaded' | 'workspace_created';
-  title: string;
-  description?: string;
-  userId: string;
-  createdAt: Date;
-}
-
-export interface ITrendData {
-  date: string;
-  value: number;
-}
-
-export interface IPropertyUsage {
-  propertyId: string;
-  propertyName: string;
-  propertyType: string;
-  usageCount: number;
-  percentage: number;
-}
+import type {
+  IDashboardAnalytics,
+  IDatabaseAnalytics,
+  IUsageStatistics,
+  IActivityItem,
+  ITrendData,
+  IPropertyUsage
+} from '../types';
 
 // Get dashboard analytics for a user
 export const getDashboardAnalytics = async (
@@ -191,8 +130,8 @@ export const getDatabaseAnalytics = async (
 
   const totalViews = database.views?.length || 0;
   const totalProperties = database.properties?.length || 0;
-  const viewsCreated = database.views?.filter(v => 
-    new Date(v.createdAt || database.createdAt) >= periodStart
+  const viewsCreated = database.views?.filter(v =>
+    new Date(database.createdAt) >= periodStart
   ).length || 0;
 
   // Get usage trend data
@@ -393,7 +332,13 @@ async function getTopPropertiesUsage(databaseId: string): Promise<IPropertyUsage
   for (const property of database.properties) {
     const usageCount = await DatabaseRecordModel.countDocuments({
       databaseId,
-      [`properties.${property.id}`]: { $exists: true, $ne: null, $ne: '' }
+      [`properties.${property.id}`]: {
+        $exists: true,
+        $and: [
+          { $ne: null },
+          { $ne: '' }
+        ]
+      }
     });
 
     propertyUsage.push({
@@ -418,7 +363,7 @@ async function getRecordActivity(databaseId: string, limit: number): Promise<IAc
     id: record._id.toString(),
     type: 'record_created' as const,
     title: `Record created`,
-    description: record.properties?.title || record.properties?.name || 'Untitled Record',
+    description: (record.properties?.title || record.properties?.name || 'Untitled Record') as string,
     userId: record.createdBy,
     createdAt: record.createdAt
   }));
