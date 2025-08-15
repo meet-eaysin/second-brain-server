@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { DocumentViewConfig, GenericProperty, GenericDocumentView, ModuleType } from '../types/document-view.types';
+import { DocumentViewConfig, Property, DocumentView, ModuleType } from '../types/document-view.types';
 
 // Property Schema
-const PropertySchema = new Schema<GenericProperty>({
+const PropertySchema = new Schema<Property>({
     id: { type: String, required: true },
     name: { type: String, required: true },
     type: { 
@@ -32,7 +32,7 @@ const PropertySchema = new Schema<GenericProperty>({
 }, { _id: false });
 
 // View Schema
-const ViewSchema = new Schema<GenericDocumentView>({
+const ViewSchema = new Schema<DocumentView>({
     id: { type: String, required: true },
     name: { type: String, required: true },
     type: { 
@@ -118,14 +118,14 @@ DocumentViewSchema.index({ userId: 1, databaseId: 1 });
 DocumentViewSchema.index({ userId: 1, moduleType: 1, databaseId: 1 }, { unique: true });
 
 // Instance methods
-DocumentViewSchema.methods.addView = function(view: GenericDocumentView) {
+DocumentViewSchema.methods.addView = function(view: DocumentView) {
     this.views.push(view);
     this.lastEditedBy = this.userId;
     return this.save();
 };
 
-DocumentViewSchema.methods.updateView = function(viewId: string, updates: Partial<GenericDocumentView>) {
-    const viewIndex = this.views.findIndex((v: GenericDocumentView) => v.id === viewId);
+DocumentViewSchema.methods.updateView = function(viewId: string, updates: Partial<DocumentView>) {
+    const viewIndex = this.views.findIndex((v: DocumentView) => v.id === viewId);
     if (viewIndex === -1) {
         throw new Error('View not found');
     }
@@ -136,19 +136,19 @@ DocumentViewSchema.methods.updateView = function(viewId: string, updates: Partia
 };
 
 DocumentViewSchema.methods.removeView = function(viewId: string) {
-    this.views = this.views.filter((v: GenericDocumentView) => v.id !== viewId);
+    this.views = this.views.filter((v: DocumentView) => v.id !== viewId);
     this.lastEditedBy = this.userId;
     return this.save();
 };
 
-DocumentViewSchema.methods.addProperty = function(property: GenericProperty) {
+DocumentViewSchema.methods.addProperty = function(property: Property) {
     this.properties.push(property);
     this.lastEditedBy = this.userId;
     return this.save();
 };
 
-DocumentViewSchema.methods.updateProperty = function(propertyId: string, updates: Partial<GenericProperty>) {
-    const propertyIndex = this.properties.findIndex((p: GenericProperty) => p.id === propertyId);
+DocumentViewSchema.methods.updateProperty = function(propertyId: string, updates: Partial<Property>) {
+    const propertyIndex = this.properties.findIndex((p: Property) => p.id === propertyId);
     if (propertyIndex === -1) {
         throw new Error('Property not found');
     }
@@ -164,7 +164,7 @@ DocumentViewSchema.methods.removeProperty = function(propertyId: string) {
         throw new Error('Cannot remove required or frozen property');
     }
     
-    this.properties = this.properties.filter((p: GenericProperty) => p.id !== propertyId);
+    this.properties = this.properties.filter((p: Property) => p.id !== propertyId);
     this.lastEditedBy = this.userId;
     return this.save();
 };
@@ -179,11 +179,11 @@ DocumentViewSchema.statics.findByDatabase = function(userId: string, databaseId:
 };
 
 export interface IDocumentView extends DocumentViewConfig, Document {
-    addView(view: GenericDocumentView): Promise<IDocumentView>;
-    updateView(viewId: string, updates: Partial<GenericDocumentView>): Promise<IDocumentView>;
+    addView(view: DocumentView): Promise<IDocumentView>;
+    updateView(viewId: string, updates: Partial<DocumentView>): Promise<IDocumentView>;
     removeView(viewId: string): Promise<IDocumentView>;
-    addProperty(property: GenericProperty): Promise<IDocumentView>;
-    updateProperty(propertyId: string, updates: Partial<GenericProperty>): Promise<IDocumentView>;
+    addProperty(property: Property): Promise<IDocumentView>;
+    updateProperty(propertyId: string, updates: Partial<Property>): Promise<IDocumentView>;
     removeProperty(propertyId: string): Promise<IDocumentView>;
 }
 

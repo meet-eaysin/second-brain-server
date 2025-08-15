@@ -1,4 +1,4 @@
-import { ModuleConfig, ModuleType, GenericProperty, GenericDocumentView } from '../types/document-view.types';
+import { ModuleConfig, ModuleType, Property, DocumentView } from '../types/document-view.types';
 
 /**
  * Factory function to create module configurations with sensible defaults
@@ -9,8 +9,8 @@ export function createModuleConfig(options: {
     displayNamePlural: string;
     description: string;
     icon: string;
-    defaultProperties: GenericProperty[];
-    defaultViews: GenericDocumentView[];
+    defaultProperties: Property[];
+    defaultViews: DocumentView[];
     recordService: string;
     modelName: string;
     databaseId: string;
@@ -26,7 +26,6 @@ export function createModuleConfig(options: {
         displayNamePlural: options.displayNamePlural,
         description: options.description,
         icon: options.icon,
-        
         capabilities: {
             canCreate: true,
             canEdit: true,
@@ -36,7 +35,6 @@ export function createModuleConfig(options: {
             canImport: true,
             ...options.capabilities
         },
-        
         ui: {
             enableViews: true,
             enableSearch: true,
@@ -47,20 +45,17 @@ export function createModuleConfig(options: {
             defaultViewType: 'TABLE',
             ...options.ui
         },
-        
         data: {
             defaultProperties: options.defaultProperties,
             defaultViews: options.defaultViews,
             requiredProperties: options.requiredProperties || [],
             frozenProperties: options.frozenProperties || []
         },
-        
         services: {
             recordService: options.recordService,
             modelName: options.modelName,
             databaseId: options.databaseId
         },
-        
         frozenConfig: options.frozenConfig
     };
 }
@@ -71,15 +66,15 @@ export function createModuleConfig(options: {
 export function createProperty(options: {
     id: string;
     name: string;
-    type: GenericProperty['type'];
+    type: Property['type'];
     description?: string;
     required?: boolean;
     defaultValue?: any;
-    options?: GenericProperty['options'];
+    options?: Property['options'];
     frozen?: boolean;
     order?: number;
-    validation?: GenericProperty['validation'];
-}): GenericProperty {
+    validation?: Property['validation'];
+}): Property {
     return {
         id: options.id,
         name: options.name,
@@ -102,15 +97,15 @@ export function createProperty(options: {
 export function createView(options: {
     id: string;
     name: string;
-    type: GenericDocumentView['type'];
+    type: DocumentView['type'];
     description?: string;
     isDefault?: boolean;
-    filters?: GenericDocumentView['filters'];
-    sorts?: GenericDocumentView['sorts'];
+    filters?: DocumentView['filters'];
+    sorts?: DocumentView['sorts'];
     groupBy?: string;
     visibleProperties?: string[];
     config?: Record<string, any>;
-}): GenericDocumentView {
+}): DocumentView {
     return {
         id: options.id,
         name: options.name,

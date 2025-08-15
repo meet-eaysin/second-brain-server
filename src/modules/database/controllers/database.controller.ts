@@ -6,9 +6,7 @@ import { AuthenticatedRequest } from '../../../middlewares/auth';
 import * as databaseService from '../services/database.service';
 import * as exportService from '../services/export.service';
 import { TDatabaseExportOptions, TDatabaseImportOptions } from '../types/database.types';
-import { DocumentViewService } from '../../document-view/services/document-view.service';
-
-const documentViewService = new DocumentViewService();
+import { documentViewService } from '../../document-view/services/document-view.service';
 
 export const createDatabase = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

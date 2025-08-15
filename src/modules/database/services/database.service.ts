@@ -30,7 +30,7 @@ import { createNotFoundError, createAppError, createForbiddenError } from '@/uti
 import { DatabaseRecordModel, IDatabaseRecord } from '../models/database-record.model';
 import { createValidationError } from '@/utils/response.utils';
 import { DocumentViewService } from '../../document-view/services/document-view.service';
-import type { GenericDocumentView } from '../../document-view/types/document-view.types';
+import type { DocumentView } from '../../document-view/types/document-view.types';
 
 // Predefined color palette for select options
 const SELECT_OPTION_COLORS = [

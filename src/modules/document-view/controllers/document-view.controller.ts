@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { DocumentViewService } from '../services/document-view.service';
+import { documentViewService } from '../services/document-view.service';
 import { ModuleType } from '../types/document-view.types';
 import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../utils';
 
@@ -11,15 +11,10 @@ interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Generic Document View Controller
+ * Document View Controller
  * Handles all document-view operations for any module type
  */
 export class DocumentViewController {
-    private documentViewService: DocumentViewService;
-
-    constructor() {
-        this.documentViewService = new DocumentViewService();
-    }
 
     /**
      * Get module configuration

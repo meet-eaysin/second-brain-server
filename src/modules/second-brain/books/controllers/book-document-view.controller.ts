@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { catchAsync, sendSuccessResponse, sendErrorResponse } from '../../../../utils';
-import { DocumentViewService } from '../../../document-view/services/document-view.service';
+import { documentViewService } from '../../../document-view/services/document-view.service';
 import { getModuleConfig } from '../../../document-view/config/module-config-registry';
-import { ModuleType } from '../../../document-view/types/document-view.types';
+import { ModuleType, TSelectOptions } from '../../../document-view/types/document-view.types';
 import { TJwtPayload } from '../../../users/types/user.types';
 import * as bookService from '../services/book.service';
 
@@ -10,8 +10,6 @@ interface AuthenticatedRequest extends Request {
     user?: TJwtPayload & { userId: string };
 }
 
-// Initialize document view service instance
-const documentViewService = new DocumentViewService();
 const moduleType: ModuleType = 'books';
 
 /**
@@ -163,34 +161,18 @@ export const getProperties = catchAsync(async (req: AuthenticatedRequest, res: R
  */
 export const addProperty = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.userId;
-    if (!userId) {
-        return sendErrorResponse(res, 'User not authenticated', 401);
-    }
+    if (!userId) return sendErrorResponse(res, 'User not authenticated', 401);
 
-    // Transform client format to server format
     const propertyData = { ...req.body };
 
-    // If client sends selectOptions, transform to options for server storage
-    if (req.body.selectOptions && Array.isArray(req.body.selectOptions)) {
-        propertyData.options = req.body.selectOptions.map((option: any, index: number) => ({
+    if (req.body?.options && Array.isArray(req.body?.options)) {
+        propertyData.options = req.body?.options?.map((option: TSelectOptions, index: number) => ({
             name: option.name || `Option ${index + 1}`,
             color: option.color || '#6366f1',
-            value: option.id || option.value || option.name?.toLowerCase().replace(/\s+/g, '-') || `option-${index}`
-        }));
-        // Remove selectOptions to avoid confusion
-        delete propertyData.selectOptions;
+            value: option.value || option.name?.toLowerCase().replace(/\s+/g, '-') || `option-${index}`
+        })) || [];
     }
 
-    // Debug logging
-    console.log('📝 Property Creation Debug:', {
-        originalBody: req.body,
-        transformedData: propertyData,
-        hasSelectOptions: !!req.body.selectOptions,
-        hasOptions: !!propertyData.options,
-        optionsCount: propertyData.options?.length || 0
-    });
-
-    // Create the new property (automatically adds to default view's visible properties)
     const newProperty = await documentViewService.addProperty(userId, moduleType, propertyData);
 
     sendSuccessResponse(res, 'Books property added successfully', newProperty, 201);

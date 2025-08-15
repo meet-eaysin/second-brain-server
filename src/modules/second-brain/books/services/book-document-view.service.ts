@@ -1,16 +1,15 @@
-import { DocumentViewService } from '../../../document-view/services/document-view.service';
-import { ModuleType, GenericRecord, RecordQueryOptions } from '../../../document-view/types/document-view.types';
+import { documentViewService } from '../../../document-view/services/document-view.service';
+import { ModuleType, Record, RecordQueryOptions } from '../../../document-view/types/document-view.types';
 import * as bookService from './book.service';
 import { IBook } from '../models/book.model';
 
 // Initialize document view service instance
-const documentViewService = new DocumentViewService();
 const moduleType: ModuleType = 'books';
 
 /**
  * Transform a book model to document-view record format
  */
-function transformBookToRecord(book: IBook): GenericRecord {
+function transformBookToRecord(book: IBook): Record {
     return {
         id: (book._id as any).toString(),
         properties: {
@@ -49,7 +48,7 @@ function transformRecordToBook(record: any): any {
  * Get books as document-view records
  */
 export async function getRecords(userId: string, options: RecordQueryOptions = {}): Promise<{
-    records: GenericRecord[];
+    records: Record[];
     pagination?: any;
 }> {
     // Convert document-view query options to book service options
@@ -74,7 +73,7 @@ export async function getRecords(userId: string, options: RecordQueryOptions = {
 /**
  * Get a single book as document-view record
  */
-export async function getRecord(userId: string, recordId: string): Promise<GenericRecord | null> {
+export async function getRecord(userId: string, recordId: string): Promise<Record | null> {
     const book = await bookService.getBook(userId, recordId);
     if (!book) {
         return null;
@@ -86,7 +85,7 @@ export async function getRecord(userId: string, recordId: string): Promise<Gener
 /**
  * Create a new book from document-view record
  */
-export async function createRecord(userId: string, recordData: any): Promise<GenericRecord> {
+export async function createRecord(userId: string, recordData: any): Promise<Record> {
     const bookData = transformRecordToBook(recordData);
     const newBook = await bookService.createBook(userId, bookData);
 
@@ -96,7 +95,7 @@ export async function createRecord(userId: string, recordData: any): Promise<Gen
 /**
  * Update a book from document-view record
  */
-export async function updateRecord(userId: string, recordId: string, updateData: any): Promise<GenericRecord | null> {
+export async function updateRecord(userId: string, recordId: string, updateData: any): Promise<Record | null> {
     const bookData = transformRecordToBook(updateData);
     const updatedBook = await bookService.updateBook(userId, recordId, bookData);
 
@@ -119,7 +118,7 @@ export async function deleteRecord(userId: string, recordId: string): Promise<bo
  * Search books with document-view compatible results
  */
 export async function searchRecords(userId: string, query: string, options: RecordQueryOptions = {}): Promise<{
-    records: GenericRecord[];
+    records: Record[];
     pagination?: any;
 }> {
     const searchOptions = {
@@ -134,7 +133,7 @@ export async function searchRecords(userId: string, query: string, options: Reco
  * Get books filtered by view configuration
  */
 export async function getRecordsByView(userId: string, viewId: string, options: RecordQueryOptions = {}): Promise<{
-    records: GenericRecord[];
+    records: Record[];
     pagination?: any;
 }> {
     // Get the view configuration

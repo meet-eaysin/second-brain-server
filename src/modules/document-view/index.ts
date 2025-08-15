@@ -12,9 +12,9 @@ export { DocumentView, type IDocumentView, type IDocumentViewModel } from './mod
 export type {
     ModuleConfig,
     DocumentViewConfig,
-    GenericDocumentView,
-    GenericProperty,
-    GenericRecord,
+    DocumentView,
+    Property,
+    Record,
     ModuleType,
     RecordQueryOptions,
     ApiResponse

@@ -1,4 +1,3 @@
-import { Document } from 'mongoose';
 
 /**
  * Supported module types
@@ -18,9 +17,9 @@ export type ModuleType =
     | 'databases';
 
 /**
- * Generic property definition that can be used across all modules
+ * property definition that can be used across all modules
  */
-export interface GenericProperty {
+export interface Property {
     id: string;
     name: string;
     type: 'text' | 'number' | 'date' | 'select' | 'multiSelect' | 'checkbox' | 'url' | 'email' | 'phone' | 'file' | 'relation';
@@ -43,9 +42,9 @@ export interface GenericProperty {
 }
 
 /**
- * Generic view definition that can be used across all modules
+ * view definition that can be used across all modules
  */
-export interface GenericDocumentView {
+export interface DocumentView {
     id: string;
     name: string;
     type: 'TABLE' | 'BOARD' | 'KANBAN' | 'GALLERY' | 'LIST' | 'CALENDAR' | 'TIMELINE';
@@ -66,7 +65,7 @@ export interface GenericDocumentView {
     }>;
     groupBy?: string;
     visibleProperties?: string[];
-    customProperties?: GenericProperty[];
+    customProperties?: Property[];
     config?: Record<string, any>;
     permissions?: Array<{
         userId: string;
@@ -79,9 +78,9 @@ export interface GenericDocumentView {
 }
 
 /**
- * Generic record interface that can be extended by specific modules
+ * record interface that can be extended by specific modules
  */
-export interface GenericRecord {
+export interface Record {
     id: string;
     [key: string]: any;
     createdAt?: Date;
@@ -99,8 +98,6 @@ export interface ModuleConfig {
     displayNamePlural: string;
     description: string;
     icon: string;
-    
-    // Capabilities
     capabilities: {
         canCreate: boolean;
         canEdit: boolean;
@@ -109,8 +106,6 @@ export interface ModuleConfig {
         canExport: boolean;
         canImport: boolean;
     };
-    
-    // UI Configuration
     ui: {
         enableViews: boolean;
         enableSearch: boolean;
@@ -120,23 +115,17 @@ export interface ModuleConfig {
         supportedViewTypes: Array<'TABLE' | 'BOARD' | 'KANBAN' | 'GALLERY' | 'LIST' | 'CALENDAR' | 'TIMELINE'>;
         defaultViewType: 'TABLE' | 'BOARD' | 'KANBAN' | 'GALLERY' | 'LIST' | 'CALENDAR' | 'TIMELINE';
     };
-    
-    // Data Configuration
     data: {
-        defaultProperties: GenericProperty[];
-        defaultViews: GenericDocumentView[];
+        defaultProperties: Property[];
+        defaultViews: DocumentView[];
         requiredProperties: string[];
         frozenProperties: string[];
     };
-    
-    // Service Configuration
     services: {
         recordService: string; // Path to the module's record service
         modelName: string; // Mongoose model name
         databaseId: string; // Default database ID
     };
-    
-    // Frozen Configuration
     frozenConfig?: {
         viewType: string;
         moduleType: string;
@@ -154,38 +143,28 @@ export interface ModuleConfig {
 /**
  * Document view configuration for the centralized system
  */
-export interface DocumentViewConfig {
+export type DocumentViewConfig = {
     userId: string;
     moduleType: ModuleType;
     databaseId: string;
-    
-    // View configuration
+
     name: string;
     description?: string;
     icon?: string;
-    
-    // Properties and views
-    properties: GenericProperty[];
-    views: GenericDocumentView[];
-    
-    // Permissions and access
+    properties: Property[];
+    views: DocumentView[];
     isPublic: boolean;
     isDefault: boolean;
     frozen?: boolean;
     frozenAt?: Date;
     frozenBy?: string;
     frozenReason?: string;
-    
     permissions: Array<{
         userId: string;
         permission: 'read' | 'write' | 'admin';
     }>;
-    
-    // Required and frozen properties
     requiredProperties: string[];
     frozenProperties: string[];
-    
-    // Metadata
     createdBy: string;
     lastEditedBy: string;
     createdAt?: Date;
@@ -195,27 +174,11 @@ export interface DocumentViewConfig {
 /**
  * Query options for records
  */
-export interface RecordQueryOptions {
+export type RecordQueryOptions = {
     filters?: Record<string, any>;
     sorts?: Array<{ propertyId: string; direction: 'asc' | 'desc'; order?: number }>;
     pagination?: { page?: number; limit?: number };
     search?: string;
     viewId?: string;
-    // Module-specific query options
     moduleSpecific?: Record<string, any>;
-}
-
-/**
- * API Response wrapper
- */
-export interface ApiResponse<T> {
-    success: boolean;
-    message: string;
-    data: T;
-    pagination?: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
 }
