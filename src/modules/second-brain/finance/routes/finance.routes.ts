@@ -1,239 +1,163 @@
 import { Router } from 'express';
-import { authenticateToken } from '../../../../middlewares/auth';
-import { validateBody, validateParams, validateQuery } from '../../../../middlewares/validation';
-import * as financeController from '../controllers/finance.controller.impl';
+import { authenticateToken } from '@/middlewares/auth';
+import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
+
+// Finance controllers
+import {
+  // Transaction CRUD
+  createTransaction,
+  getTransactions,
+  getTransactionById,
+  updateTransaction,
+  deleteTransaction,
+  
+  // Transaction analytics
+  getIncomeTransactions,
+  getExpenseTransactions,
+  getTransactionsByCategory,
+  getTransactionsByAccount,
+  getRecurringTransactions,
+  getUnverifiedTransactions,
+  searchTransactions,
+  verifyTransaction,
+  duplicateTransaction,
+  bulkUpdateTransactions,
+  bulkDeleteTransactions,
+  
+  // Statistics
+  getFinanceStats
+} from '../controllers/finance.controller';
+
+// Validators
+import {
+  transactionIdSchema,
+  createTransactionSchema,
+  updateTransactionSchema,
+  getTransactionsQuerySchema,
+  duplicateTransactionSchema,
+  bulkUpdateTransactionsSchema,
+  bulkDeleteTransactionsSchema,
+  searchTransactionsSchema,
+  financeStatsQuerySchema,
+  categoryParamSchema,
+  accountIdSchema
+} from '../validators/finance.validators';
 
 const router = Router();
 
-// Get all transactions with filtering and pagination
-router.get(
-    '/',
-    authenticateToken,
-    financeController.getTransactions
-);
+// All routes require authentication
+router.use(authenticateToken);
 
-// Create new transaction
-router.post(
-    '/',
-    authenticateToken,
-    financeController.createTransaction
-);
-
-// Financial analytics and reporting (MUST be before /:id routes)
-router.get(
-    '/stats',
-    authenticateToken,
-    financeController.getFinancialStats
-);
-
-router.get(
-    '/analytics',
-    authenticateToken,
-    financeController.getFinancialAnalytics
-);
-
-router.get(
-    '/summary',
-    authenticateToken,
-    financeController.getFinancialSummary
-);
-
-// Transaction categories (MUST be before /:id routes)
-router.get(
-    '/categories',
-    authenticateToken,
-    financeController.getCategories
-);
+// ===== TRANSACTION CRUD OPERATIONS =====
 
 router.post(
-    '/categories',
-    authenticateToken,
-    financeController.createCategory
-);
-
-router.patch(
-    '/categories/:categoryId',
-    authenticateToken,
-    financeController.updateCategory
-);
-
-router.delete(
-    '/categories/:categoryId',
-    authenticateToken,
-    financeController.deleteCategory
-);
-
-// Financial import/export (MUST be before /:id routes)
-router.post(
-    '/import',
-    authenticateToken,
-    financeController.importTransactions
+  '/transactions',
+  validateBody(createTransactionSchema),
+  createTransaction
 );
 
 router.get(
-    '/export',
-    authenticateToken,
-    financeController.exportTransactions
+  '/transactions',
+  validateQuery(getTransactionsQuerySchema),
+  getTransactions
 );
 
-// Get transaction by ID
 router.get(
-    '/:id',
-    authenticateToken,
-    financeController.getTransaction
+  '/transactions/stats',
+  validateQuery(financeStatsQuerySchema),
+  getFinanceStats
 );
 
-// Update transaction
+router.get(
+  '/transactions/income',
+  validateQuery(getTransactionsQuerySchema),
+  getIncomeTransactions
+);
+
+router.get(
+  '/transactions/expenses',
+  validateQuery(getTransactionsQuerySchema),
+  getExpenseTransactions
+);
+
+router.get(
+  '/transactions/recurring',
+  validateQuery(getTransactionsQuerySchema),
+  getRecurringTransactions
+);
+
+router.get(
+  '/transactions/unverified',
+  validateQuery(getTransactionsQuerySchema),
+  getUnverifiedTransactions
+);
+
+router.get(
+  '/transactions/search',
+  validateQuery(searchTransactionsSchema),
+  searchTransactions
+);
+
+router.get(
+  '/transactions/category/:category',
+  validateParams(categoryParamSchema),
+  validateQuery(getTransactionsQuerySchema),
+  getTransactionsByCategory
+);
+
+router.get(
+  '/transactions/account/:accountId',
+  validateParams(accountIdSchema),
+  validateQuery(getTransactionsQuerySchema),
+  getTransactionsByAccount
+);
+
+router.get(
+  '/transactions/:id',
+  validateParams(transactionIdSchema),
+  getTransactionById
+);
+
 router.put(
-    '/:id',
-    authenticateToken,
-    financeController.updateTransaction
-);
-
-// Update transaction (PATCH)
-router.patch(
-    '/:id',
-    authenticateToken,
-    financeController.updateTransaction
-);
-
-// Delete transaction
-router.delete(
-    '/:id',
-    authenticateToken,
-    financeController.deleteTransaction
-);
-
-// Bulk operations
-router.patch(
-    '/bulk',
-    authenticateToken,
-    financeController.bulkUpdateTransactions
+  '/transactions/:id',
+  validateParams(transactionIdSchema),
+  validateBody(updateTransactionSchema),
+  updateTransaction
 );
 
 router.delete(
-    '/bulk',
-    authenticateToken,
-    financeController.bulkDeleteTransactions
+  '/transactions/:id',
+  validateParams(transactionIdSchema),
+  deleteTransaction
 );
 
-// Transaction-specific operations
-router.patch(
-    '/:id/status',
-    authenticateToken,
-    financeController.updateStatus
+// ===== TRANSACTION ACTIONS =====
+
+router.post(
+  '/transactions/:id/verify',
+  validateParams(transactionIdSchema),
+  verifyTransaction
 );
 
 router.post(
-    '/:id/duplicate',
-    authenticateToken,
-    financeController.duplicateTransaction
+  '/transactions/:id/duplicate',
+  validateParams(transactionIdSchema),
+  validateBody(duplicateTransactionSchema),
+  duplicateTransaction
 );
 
-// Budgets
-router.get(
-    '/budgets',
-    authenticateToken,
-    financeController.getBudgets
+// ===== BULK OPERATIONS =====
+
+router.post(
+  '/transactions/bulk/update',
+  validateBody(bulkUpdateTransactionsSchema),
+  bulkUpdateTransactions
 );
 
 router.post(
-    '/budgets',
-    authenticateToken,
-    financeController.createBudget
-);
-
-router.patch(
-    '/budgets/:budgetId',
-    authenticateToken,
-    financeController.updateBudget
-);
-
-router.delete(
-    '/budgets/:budgetId',
-    authenticateToken,
-    financeController.deleteBudget
-);
-
-router.get(
-    '/budgets/:budgetId/progress',
-    authenticateToken,
-    financeController.getBudgetProgress
-);
-
-// Accounts
-router.get(
-    '/accounts',
-    authenticateToken,
-    financeController.getAccounts
-);
-
-router.post(
-    '/accounts',
-    authenticateToken,
-    financeController.createAccount
-);
-
-router.patch(
-    '/accounts/:accountId',
-    authenticateToken,
-    financeController.updateAccount
-);
-
-router.delete(
-    '/accounts/:accountId',
-    authenticateToken,
-    financeController.deleteAccount
-);
-
-router.get(
-    '/accounts/:accountId/balance',
-    authenticateToken,
-    financeController.getAccountBalance
-);
-
-// Financial goals
-router.get(
-    '/goals',
-    authenticateToken,
-    financeController.getFinancialGoals
-);
-
-router.post(
-    '/goals',
-    authenticateToken,
-    financeController.createFinancialGoal
-);
-
-router.patch(
-    '/goals/:goalId',
-    authenticateToken,
-    financeController.updateFinancialGoal
-);
-
-router.delete(
-    '/goals/:goalId',
-    authenticateToken,
-    financeController.deleteFinancialGoal
-);
-
-// Reports
-router.get(
-    '/reports/income-expense',
-    authenticateToken,
-    financeController.getIncomeExpenseReport
-);
-
-router.get(
-    '/reports/category-breakdown',
-    authenticateToken,
-    financeController.getCategoryBreakdownReport
-);
-
-router.get(
-    '/reports/monthly-summary',
-    authenticateToken,
-    financeController.getMonthlySummaryReport
+  '/transactions/bulk/delete',
+  validateBody(bulkDeleteTransactionsSchema),
+  bulkDeleteTransactions
 );
 
 export default router;

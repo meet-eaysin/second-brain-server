@@ -32,6 +32,7 @@ import {
   createInvalidRoleError
 } from '../utils/user-errors';
 import { isValidObjectId } from 'mongoose';
+import { workspaceService } from '@/modules/workspace/services/workspace.service';
 
 export const createUser = async (userData: TUserCreateRequest): Promise<TUser> => {
   try {
@@ -59,6 +60,17 @@ export const createUser = async (userData: TUserCreateRequest): Promise<TUser> =
       authProvider: userData.authProvider || EAuthProvider.LOCAL,
       isEmailVerified: userData.isEmailVerified || false
     });
+
+    // Create default workspace for the new user
+    try {
+      await workspaceService.createDefaultWorkspace(newUser.id, {
+        firstName: userData.firstName,
+        lastName: userData.lastName
+      });
+    } catch (error) {
+      // Log error but don't fail user creation
+      console.error('Failed to create default workspace for user:', newUser.id, error);
+    }
 
     return newUser.toJSON();
   } catch (error: any) {
@@ -116,6 +128,17 @@ export const createOrUpdateGoogleUser = async (
         lastLoginAt: new Date()
       });
 
+      // Create default workspace for the new user
+      try {
+        await workspaceService.createDefaultWorkspace(newUser.id, {
+          firstName: googleProfile.given_name,
+          lastName: googleProfile.family_name
+        });
+      } catch (error) {
+        // Log error but don't fail user creation
+        console.error('Failed to create default workspace for OAuth user:', newUser.id, error);
+      }
+
       return newUser.toJSON();
     }
   } catch (error: any) {
@@ -135,7 +158,7 @@ export const getUserById = async (id: string): Promise<TUser | null> => {
     }
 
     const user = await findById(UserModel, id);
-    return user ? user.toJSON() : null;
+    return user ? transformUserDocument(user) : null;
   } catch (error: any) {
     // If it's already a structured error, re-throw it
     if (error.statusCode) {
@@ -226,7 +249,7 @@ export const updateUser = async (
 
     Object.assign(user, updateData);
     await user.save();
-    return user.toJSON();
+    return transformUserDocument(user);
   } catch (error: any) {
     if (error.statusCode) {
       throw error;
@@ -423,7 +446,7 @@ export const toggleUserStatus = async (userId: string): Promise<TUser | null> =>
 
     user.isActive = !user.isActive;
     await user.save();
-    return user.toJSON();
+    return transformUserDocument(user);
   } catch (error: any) {
     if (error.statusCode) throw error;
     throw createUpdateFailedError(error.message);
@@ -438,7 +461,7 @@ export const updateUserRole = async (userId: string, role: TUserRole): Promise<T
     const user = await findByIdAndUpdate(UserModel, userId, { role }, { new: true });
     if (!user) throw createUserNotFoundError(userId);
 
-    return user.toJSON();
+    return transformUserDocument(user);
   } catch (error: any) {
     if (error.statusCode) throw error;
     throw createUpdateFailedError(error.message);

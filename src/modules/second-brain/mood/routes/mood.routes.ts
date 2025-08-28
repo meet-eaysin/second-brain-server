@@ -1,176 +1,161 @@
 import { Router } from 'express';
-import { authenticateToken } from '../../../../middlewares/auth';
-import { validateBody, validateParams, validateQuery } from '../../../../middlewares/validation';
-import * as moodController from '../controllers/mood.controller';
+import { authenticateToken } from '@/middlewares/auth';
+import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
+
+// Mood controllers
+import {
+  // Mood entry CRUD
+  createMoodEntry,
+  getMoodEntries,
+  getMoodEntryById,
+  updateMoodEntry,
+  deleteMoodEntry,
+  
+  // Mood analytics
+  getMoodAnalytics,
+  getMoodsByScale,
+  getMoodsByCategory,
+  getMoodsByTrigger,
+  getPositiveMoods,
+  getNegativeMoods,
+  getTodaysMood,
+  getWeeklyMoods,
+  getMonthlyMoods,
+  searchMoodEntries,
+  
+  // Quick actions
+  quickMoodEntry,
+  moodCheckIn
+} from '../controllers/mood.controller';
+
+// Validators
+import {
+  moodEntryIdSchema,
+  createMoodEntrySchema,
+  updateMoodEntrySchema,
+  getMoodEntriesQuerySchema,
+  moodAnalyticsQuerySchema,
+  quickMoodEntrySchema,
+  moodCheckInSchema,
+  searchMoodEntriesSchema,
+  scaleParamSchema,
+  categoryParamSchema,
+  triggerParamSchema
+} from '../validators/mood.validators';
 
 const router = Router();
 
-// Get all mood entries with filtering and pagination
-router.get(
-    '/',
-    authenticateToken,
-    moodController.getMoodEntries
-);
+// All routes require authentication
+router.use(authenticateToken);
 
-// Create new mood entry
+// ===== MOOD ENTRY CRUD OPERATIONS =====
+
 router.post(
-    '/',
-    authenticateToken,
-    moodController.createMoodEntry
-);
-
-// Mood analytics and reporting (MUST be before /:id routes)
-router.get(
-    '/stats',
-    authenticateToken,
-    moodController.getMoodStats
+  '/',
+  validateBody(createMoodEntrySchema),
+  createMoodEntry
 );
 
 router.get(
-    '/analytics',
-    authenticateToken,
-    moodController.getMoodAnalytics
-);
-
-// Mood trends (MUST be before /:id routes)
-router.get(
-    '/trends',
-    authenticateToken,
-    moodController.getMoodTrends
-);
-
-// Mood calendar view (MUST be before /:id routes)
-router.get(
-    '/calendar',
-    authenticateToken,
-    moodController.getCalendarView
-);
-
-// Mood import/export (MUST be before /:id routes)
-router.post(
-    '/import',
-    authenticateToken,
-    moodController.importMoodEntries
+  '/',
+  validateQuery(getMoodEntriesQuerySchema),
+  getMoodEntries
 );
 
 router.get(
-    '/export',
-    authenticateToken,
-    moodController.exportMoodEntries
+  '/analytics',
+  validateQuery(moodAnalyticsQuerySchema),
+  getMoodAnalytics
 );
 
-// Get mood entry by ID
 router.get(
-    '/:id',
-    authenticateToken,
-    moodController.getMoodEntry
+  '/search',
+  validateQuery(searchMoodEntriesSchema),
+  searchMoodEntries
 );
 
-// Update mood entry
+router.get(
+  '/today',
+  validateQuery(getMoodEntriesQuerySchema),
+  getTodaysMood
+);
+
+router.get(
+  '/weekly',
+  validateQuery(getMoodEntriesQuerySchema),
+  getWeeklyMoods
+);
+
+router.get(
+  '/monthly',
+  validateQuery(getMoodEntriesQuerySchema),
+  getMonthlyMoods
+);
+
+router.get(
+  '/positive',
+  validateQuery(getMoodEntriesQuerySchema),
+  getPositiveMoods
+);
+
+router.get(
+  '/negative',
+  validateQuery(getMoodEntriesQuerySchema),
+  getNegativeMoods
+);
+
+router.get(
+  '/scale/:scale',
+  validateParams(scaleParamSchema),
+  validateQuery(getMoodEntriesQuerySchema),
+  getMoodsByScale
+);
+
+router.get(
+  '/category/:category',
+  validateParams(categoryParamSchema),
+  validateQuery(getMoodEntriesQuerySchema),
+  getMoodsByCategory
+);
+
+router.get(
+  '/trigger/:trigger',
+  validateParams(triggerParamSchema),
+  validateQuery(getMoodEntriesQuerySchema),
+  getMoodsByTrigger
+);
+
+router.get(
+  '/:id',
+  validateParams(moodEntryIdSchema),
+  getMoodEntryById
+);
+
 router.put(
-    '/:id',
-    authenticateToken,
-    moodController.updateMoodEntry
-);
-
-// Update mood entry (PATCH)
-router.patch(
-    '/:id',
-    authenticateToken,
-    moodController.updateMoodEntry
-);
-
-// Delete mood entry
-router.delete(
-    '/:id',
-    authenticateToken,
-    moodController.deleteMoodEntry
-);
-
-// Bulk operations
-router.patch(
-    '/bulk',
-    authenticateToken,
-    moodController.bulkUpdateMoodEntries
+  '/:id',
+  validateParams(moodEntryIdSchema),
+  validateBody(updateMoodEntrySchema),
+  updateMoodEntry
 );
 
 router.delete(
-    '/bulk',
-    authenticateToken,
-    moodController.bulkDeleteMoodEntries
+  '/:id',
+  validateParams(moodEntryIdSchema),
+  deleteMoodEntry
 );
 
-// Mood-specific operations
+// ===== QUICK MOOD ACTIONS =====
+
 router.post(
-    '/:id/duplicate',
-    authenticateToken,
-    moodController.duplicateEntry
+  '/quick',
+  validateBody(quickMoodEntrySchema),
+  quickMoodEntry
 );
 
-// Mood patterns and insights
-router.get(
-    '/patterns',
-    authenticateToken,
-    moodController.getMoodPatterns
-);
-
-router.get(
-    '/insights',
-    authenticateToken,
-    moodController.getMoodInsights
-);
-
-// Mood correlations
-router.get(
-    '/correlations',
-    authenticateToken,
-    moodController.getMoodCorrelations
-);
-
-// Daily mood summary
-router.get(
-    '/daily-summary',
-    authenticateToken,
-    moodController.getDailySummary
-);
-
-// Weekly mood summary
-router.get(
-    '/weekly-summary',
-    authenticateToken,
-    moodController.getWeeklySummary
-);
-
-// Monthly mood summary
-router.get(
-    '/monthly-summary',
-    authenticateToken,
-    moodController.getMonthlySummary
-);
-
-// Mood reminders
 router.post(
-    '/reminders',
-    authenticateToken,
-    moodController.createReminder
-);
-
-router.get(
-    '/reminders',
-    authenticateToken,
-    moodController.getReminders
-);
-
-router.patch(
-    '/reminders/:reminderId',
-    authenticateToken,
-    moodController.updateReminder
-);
-
-router.delete(
-    '/reminders/:reminderId',
-    authenticateToken,
-    moodController.deleteReminder
+  '/checkin',
+  validateBody(moodCheckInSchema),
+  moodCheckIn
 );
 
 export default router;

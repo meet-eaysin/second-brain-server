@@ -1,507 +1,550 @@
-import { Journal } from '../models/journal.model';
-import { createAppError, createNotFoundError, createValidationError } from '../../../../utils';
-import { Types } from 'mongoose';
+import { ObjectId } from 'mongodb';
+import { RecordModel } from '@/modules/database/models/record.model';
+import { DatabaseModel } from '@/modules/database/models/database.model';
+import { EDatabaseType } from '@/modules/core/types/database.types';
+import { createNotFoundError } from '@/utils/response.utils';
+import { createAppError } from '@/utils';
 
-export interface CreateJournalEntryRequest {
-    // Entry Details
-    date?: Date;
-    type: 'daily' | 'weekly' | 'monthly' | 'reflection';
-    title?: string;
-    content: string;
-
-    // Mood & Energy
-    mood?: { value: number; emoji?: string; notes?: string };
-    energy?: { value: number; notes?: string };
-
-    // Daily Template Fields
-    gratitude?: string[];
-    wins?: string[];
-    challenges?: string[];
-    learnings?: string[];
-    tomorrowFocus?: string[];
-
-    // Weekly/Monthly Template Fields
-    weeklyReflection?: {
-        accomplishments: string[];
-        challenges: string[];
-        insights: string[];
-        nextWeekGoals: string[];
-    };
-
-    // Relationships & Tags
-    linkedTasks?: string[];
-    linkedProjects?: string[];
-    linkedGoals?: string[];
-    linkedHabits?: string[];
-    tags?: string[];
+export interface IJournalEntry {
+  id: string;
+  date: string;
+  title?: string;
+  mood?: string;
+  energyLevel?: number;
+  gratitude?: string;
+  highlights?: string;
+  challenges?: string;
+  lessonsLearned?: string;
+  tomorrowGoals?: string;
+  tags?: string[];
+  content?: any[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface UpdateJournalEntryRequest extends Partial<CreateJournalEntryRequest> {
-    archivedAt?: Date;
+export interface IJournalStats {
+  totalEntries: number;
+  currentStreak: number;
+  longestStreak: number;
+  averageMood: number;
+  averageEnergyLevel: number;
+  moodDistribution: { [mood: string]: number };
+  entriesThisMonth: number;
+  entriesThisYear: number;
+  topTags: Array<{ tag: string; count: number }>;
 }
 
-export interface JournalFilters {
-    type?: 'daily' | 'weekly' | 'monthly' | 'reflection' | Array<'daily' | 'weekly' | 'monthly' | 'reflection'>;
-    tags?: string | string[];
-    dateFrom?: Date;
-    dateTo?: Date;
-    search?: string;
+export interface IMoodTrend {
+  date: string;
+  mood: string;
+  energyLevel: number;
+  moodScore: number; // Numeric representation of mood
 }
 
-export interface JournalOptions {
-    page?: number;
-    limit?: number;
-    sort?: string;
-    populate?: string[];
-}
-
-// Get journal entries with filtering and pagination
-export async function getJournalEntries(userId: string, filters: JournalFilters = {}, options: JournalOptions = {}) {
-    const {
-        type,
-        tags,
-        dateFrom,
-        dateTo,
-        search
-    } = filters as any;
-
-    const {
-        page = 1,
-        limit = 50,
-        sort = '-date',
-        populate = []
-    } = options;
-
-    // Build filter query
-    const filter: Record<string, any> = {
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    };
-
-    if (type) {
-        filter.type = Array.isArray(type) ? { $in: type } : type;
-    }
-
-    if (tags) {
-        filter.tags = Array.isArray(tags) ? { $in: tags } : { $in: [tags] };
-    }
-
-    if (dateFrom || dateTo) {
-        filter.date = {};
-        if (dateFrom) filter.date.$gte = new Date(dateFrom);
-        if (dateTo) filter.date.$lte = new Date(dateTo);
-    }
-
-    if (search) {
-        filter.$or = [
-            { title: { $regex: search, $options: 'i' } },
-            { content: { $regex: search, $options: 'i' } }
-        ];
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [entries, total] = await Promise.all([
-        Journal.find(filter)
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .populate(populate)
-            .lean(),
-        Journal.countDocuments(filter)
-    ]);
-
-    return {
-        entries,
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit)
-        }
-    };
-}
-
-// Get single journal entry by ID
-export async function getJournalEntry(userId: string, entryId: string) {
-    if (!Types.ObjectId.isValid(entryId)) {
-        throw createValidationError('Invalid journal entry ID');
-    }
-
-    const entry = await Journal.findOne({
-        _id: entryId,
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    }).lean();
-
-    if (!entry) {
-        throw createNotFoundError('Journal entry not found');
-    }
-
-    return entry;
-}
-
-// Create new journal entry
-export async function createJournalEntry(userId: string, entryData: CreateJournalEntryRequest) {
-    const entry = new Journal({
-        ...entryData,
-        createdBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        date: entryData.date || new Date()
+export class JournalService {
+  // Create a new journal entry
+  async createJournalEntry(
+    entryData: Partial<IJournalEntry>,
+    userId: string
+  ): Promise<IJournalEntry> {
+    // Find or create journal database
+    const journalDb = await DatabaseModel.findOne({
+      type: EDatabaseType.JOURNAL,
+      createdBy: userId
     });
 
-    await entry.save();
-    return entry.toObject();
-}
-
-// Update journal entry
-export async function updateJournalEntry(userId: string, entryId: string, updates: UpdateJournalEntryRequest) {
-    if (!Types.ObjectId.isValid(entryId)) {
-        throw createValidationError('Invalid journal entry ID');
+    if (!journalDb) {
+      throw createNotFoundError('Journal database not found. Please initialize journal module first.');
     }
 
+    // Check if entry already exists for this date
+    const existingEntry = await RecordModel.findOne({
+      databaseId: journalDb.id.toString(),
+      'properties.Date': entryData.date,
+      isDeleted: { $ne: true }
+    });
 
-    const entry = await Journal.findOneAndUpdate(
-        {
-            _id: entryId,
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            ...updates,
-            updatedAt: new Date()
-        },
-        { new: true, runValidators: true }
-    ).lean();
+    if (existingEntry) {
+      throw createAppError('Journal entry already exists for this date', 400);
+    }
 
+    // Create journal entry
+    const journalEntry = new RecordModel({
+      databaseId: journalDb.id.toString(),
+      properties: {
+        'Date': entryData.date,
+        'Title': entryData.title || `Journal Entry - ${entryData.date}`,
+        'Mood': entryData.mood,
+        'Energy Level': entryData.energyLevel,
+        'Gratitude': entryData.gratitude,
+        'Highlights': entryData.highlights,
+        'Challenges': entryData.challenges,
+        'Lessons Learned': entryData.lessonsLearned,
+        'Tomorrow Goals': entryData.tomorrowGoals,
+        'Tags': entryData.tags || []
+      },
+      content: entryData.content || [],
+      createdBy: userId,
+      lastEditedBy: userId
+    });
+
+    await journalEntry.save();
+
+    return this.formatJournalEntry(journalEntry);
+  }
+
+  // Update journal entry
+  async updateJournalEntry(
+    entryId: string,
+    updateData: Partial<IJournalEntry>,
+    userId: string
+  ): Promise<IJournalEntry> {
+    const entry = await RecordModel.findById(entryId);
     if (!entry) {
-        throw createNotFoundError('Journal entry not found');
+      throw createNotFoundError('Journal entry not found');
     }
 
-    return entry;
-}
+    // Update properties
+    const updates: any = {
+      lastEditedAt: new Date(),
+      lastEditedBy: userId
+    };
 
-// Delete journal entry
-export async function deleteJournalEntry(userId: string, entryId: string) {
-    if (!Types.ObjectId.isValid(entryId)) {
-        throw createValidationError('Invalid journal entry ID');
-    }
+    if (updateData.title !== undefined) updates['properties.Title'] = updateData.title;
+    if (updateData.mood !== undefined) updates['properties.Mood'] = updateData.mood;
+    if (updateData.energyLevel !== undefined) updates['properties.Energy Level'] = updateData.energyLevel;
+    if (updateData.gratitude !== undefined) updates['properties.Gratitude'] = updateData.gratitude;
+    if (updateData.highlights !== undefined) updates['properties.Highlights'] = updateData.highlights;
+    if (updateData.challenges !== undefined) updates['properties.Challenges'] = updateData.challenges;
+    if (updateData.lessonsLearned !== undefined) updates['properties.Lessons Learned'] = updateData.lessonsLearned;
+    if (updateData.tomorrowGoals !== undefined) updates['properties.Tomorrow Goals'] = updateData.tomorrowGoals;
+    if (updateData.tags !== undefined) updates['properties.Tags'] = updateData.tags;
+    if (updateData.content !== undefined) updates.content = updateData.content;
 
-    const entry = await Journal.findOneAndUpdate(
-        {
-            _id: entryId,
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            archivedAt: new Date(),
-            updatedAt: new Date()
-        },
-        { new: true }
+    const updatedEntry = await RecordModel.findByIdAndUpdate(
+      entryId,
+      { $set: updates },
+      { new: true }
     );
 
-    if (!entry) {
-        throw createNotFoundError('Journal entry not found');
+    return this.formatJournalEntry(updatedEntry!);
+  }
+
+  // Get journal entry by date
+  async getJournalEntryByDate(date: string, userId: string): Promise<IJournalEntry | null> {
+    const journalDb = await DatabaseModel.findOne({
+      type: EDatabaseType.JOURNAL,
+      createdBy: userId
+    });
+
+    if (!journalDb) {
+      return null;
     }
 
-    return { message: 'Journal entry deleted successfully' };
-}
+    const entry = await RecordModel.findOne({
+      databaseId: journalDb.id.toString(),
+      'properties.Date': date,
+      isDeleted: { $ne: true }
+    });
 
-// Get journal statistics
-export async function getJournalStats(userId: string) {
-    const stats = await Journal.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false }
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                totalEntries: { $sum: 1 },
-                entriesThisMonth: {
-                    $sum: {
-                        $cond: [
-                            { $gte: ['$date', new Date(new Date().getFullYear(), new Date().getMonth(), 1)] },
-                            1,
-                            0
-                        ]
-                    }
-                }
-            }
-        }
-    ]);
+    return entry ? this.formatJournalEntry(entry) : null;
+  }
 
-    const moodBreakdown = await Journal.aggregate([
-        { $match: { createdBy: new Types.ObjectId(userId), archivedAt: { $exists: false }, 'mood.value': { $exists: true } } },
-        { $group: { _id: '$mood.value', count: { $sum: 1 } } },
-        { $sort: { count: -1 } }
-    ]);
+  // Get journal entries with pagination
+  async getJournalEntries(
+    userId: string,
+    options: {
+      startDate?: string;
+      endDate?: string;
+      limit?: number;
+      offset?: number;
+      tags?: string[];
+      mood?: string;
+    } = {}
+  ): Promise<{ entries: IJournalEntry[]; total: number }> {
+    const journalDb = await DatabaseModel.findOne({
+      type: EDatabaseType.JOURNAL,
+      createdBy: userId
+    });
+
+    if (!journalDb) {
+      return { entries: [], total: 0 };
+    }
+
+    // Build query
+    const query: any = {
+      databaseId: journalDb.id.toString(),
+      isDeleted: { $ne: true }
+    };
+
+    if (options.startDate || options.endDate) {
+      query['properties.Date'] = {};
+      if (options.startDate) query['properties.Date'].$gte = options.startDate;
+      if (options.endDate) query['properties.Date'].$lte = options.endDate;
+    }
+
+    if (options.mood) {
+      query['properties.Mood'] = options.mood;
+    }
+
+    if (options.tags && options.tags.length > 0) {
+      query['properties.Tags'] = { $in: options.tags };
+    }
+
+    // Get total count
+    const total = await RecordModel.countDocuments(query);
+
+    // Get entries with pagination
+    const entriesQuery = RecordModel.find(query)
+      .sort({ 'properties.Date': -1 });
+
+    if (options.limit) {
+      entriesQuery.limit(options.limit);
+    }
+
+    if (options.offset) {
+      entriesQuery.skip(options.offset);
+    }
+
+    const entries = await entriesQuery.exec();
 
     return {
-        overview: stats[0] || { totalEntries: 0, entriesThisMonth: 0 },
-        moodBreakdown
+      entries: entries.map(entry => this.formatJournalEntry(entry)),
+      total
     };
-}
+  }
 
-// Get journal analytics
-export async function getJournalAnalytics(userId: string) {
-    const writingTrends = await Journal.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    year: { $year: '$date' },
-                    month: { $month: '$date' }
-                },
-                entriesCount: { $sum: 1 },
-                totalWords: { $sum: '$wordCount' }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
+  // Calculate journal statistics
+  async calculateJournalStats(userId: string): Promise<IJournalStats> {
+    const journalDb = await DatabaseModel.findOne({
+      type: EDatabaseType.JOURNAL,
+      createdBy: userId
+    });
 
-    const moodTrends = await Journal.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                mood: { $exists: true }
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    year: { $year: '$date' },
-                    month: { $month: '$date' },
-                    mood: '$mood'
-                },
-                count: { $sum: 1 }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
+    if (!journalDb) {
+      return this.getEmptyStats();
+    }
+
+    const entries = await RecordModel.find({
+      databaseId: journalDb.id.toString(),
+      isDeleted: { $ne: true }
+    }).sort({ 'properties.Date': 1 });
+
+    if (entries.length === 0) {
+      return this.getEmptyStats();
+    }
+
+    // Calculate basic stats
+    const totalEntries = entries.length;
+    const currentStreak = this.calculateCurrentStreak(entries);
+    const longestStreak = this.calculateLongestStreak(entries);
+
+    // Calculate mood stats
+    const moodEntries = entries.filter(e => {
+      const mood = e.properties?.['Mood'];
+      return typeof mood === 'string';
+    });
+    const moodDistribution: { [mood: string]: number } = {};
+    let totalMoodScore = 0;
+
+    moodEntries.forEach(entry => {
+      const mood = entry.properties?.['Mood'];
+      if (typeof mood === 'string') {
+        moodDistribution[mood] = (moodDistribution[mood] || 0) + 1;
+        totalMoodScore += this.getMoodScore(mood);
+      }
+    });
+
+    const averageMood = moodEntries.length > 0 ? totalMoodScore / moodEntries.length : 0;
+
+    // Calculate energy level average
+    const energyEntries = entries.filter(e => {
+      const energyLevel = e.properties?.['Energy Level'];
+      return typeof energyLevel === 'number';
+    });
+    const averageEnergyLevel = energyEntries.length > 0
+      ? energyEntries.reduce((sum, e) => {
+          const energyLevel = e.properties?.['Energy Level'];
+          return sum + (typeof energyLevel === 'number' ? energyLevel : 0);
+        }, 0) / energyEntries.length
+      : 0;
+
+    // Calculate time-based stats
+    const now = new Date();
+    const thisMonth = now.toISOString().substring(0, 7);
+    const thisYear = now.getFullYear().toString();
+
+    const entriesThisMonth = entries.filter(e => {
+      const date = e.properties?.['Date'];
+      return typeof date === 'string' && date.startsWith(thisMonth);
+    }).length;
+
+    const entriesThisYear = entries.filter(e => {
+      const date = e.properties?.['Date'];
+      return typeof date === 'string' && date.startsWith(thisYear);
+    }).length;
+
+    // Calculate top tags
+    const tagCounts: { [tag: string]: number } = {};
+    entries.forEach(entry => {
+      const tagsProperty = entry.properties?.['Tags'];
+      const tags = Array.isArray(tagsProperty) ? tagsProperty : [];
+      tags.forEach((tag) => {
+        if (typeof tag === 'string') {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        }
+      });
+    });
+
+    const topTags = Object.entries(tagCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
 
     return {
-        writingTrends,
-        moodTrends,
-        currentMonth: new Date().getMonth() + 1,
-        currentYear: new Date().getFullYear()
+      totalEntries,
+      currentStreak,
+      longestStreak,
+      averageMood: Math.round(averageMood * 100) / 100,
+      averageEnergyLevel: Math.round(averageEnergyLevel * 100) / 100,
+      moodDistribution,
+      entriesThisMonth,
+      entriesThisYear,
+      topTags
     };
-}
+  }
 
-// Get calendar view
-export async function getCalendarView(userId: string) {
-    const entries = await Journal.find({
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    })
-    .select('date title mood category')
-    .sort({ date: 1 })
-    .lean();
+  // Get mood trends over time
+  async getMoodTrends(
+    userId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<IMoodTrend[]> {
+    const { entries } = await this.getJournalEntries(userId, {
+      startDate,
+      endDate
+    });
 
-    // Group entries by date
-    const calendarData = entries.reduce((acc: Record<string, any[]>, entry) => {
-        const dateKey = new Date(entry.date).toISOString().split('T')[0];
-        if (!acc[dateKey]) {
-            acc[dateKey] = [];
-        }
-        acc[dateKey].push(entry);
-        return acc;
-    }, {} as Record<string, any[]>);
+    return entries
+      .filter(entry => entry.mood && entry.energyLevel !== undefined)
+      .map(entry => ({
+        date: entry.date,
+        mood: entry.mood!,
+        energyLevel: entry.energyLevel!,
+        moodScore: this.getMoodScore(entry.mood!)
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
 
-    return calendarData;
-}
+  // Search journal entries
+  async searchJournalEntries(
+    userId: string,
+    searchTerm: string,
+    options: {
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<{ entries: IJournalEntry[]; total: number }> {
+    const journalDb = await DatabaseModel.findOne({
+      type: EDatabaseType.JOURNAL,
+      createdBy: userId
+    });
 
-// Update mood
-export async function updateMood(userId: string, entryId: string, mood: { value: number; emoji?: string; notes?: string }) {
-    return await updateJournalEntry(userId, entryId, { mood });
-}
+    if (!journalDb) {
+      return { entries: [], total: 0 };
+    }
 
-// Toggle favorite status (not supported by Journal model)
-export async function toggleFavorite() {
-    throw createAppError('Favorites are not supported for journal entries', 501);
-}
-
-// Archive entry
-export async function archiveEntry(userId: string, entryId: string) {
-    return await updateJournalEntry(userId, entryId, { archivedAt: new Date() });
-}
-
-// Duplicate entry
-export async function duplicateEntry(userId: string, entryId: string) {
-    const original: any = await getJournalEntry(userId, entryId);
-    const clone: CreateJournalEntryRequest = {
-        type: original.type,
-        title: `${original.title || ''} (Copy)`,
-        content: original.content,
-        mood: original.mood,
-        energy: original.energy,
-        gratitude: original.gratitude,
-        wins: original.wins,
-        challenges: original.challenges,
-        learnings: original.learnings,
-        tomorrowFocus: original.tomorrowFocus,
-        weeklyReflection: original.weeklyReflection,
-        linkedTasks: (original.linkedTasks || []).map((id: any) => id.toString?.() || String(id)),
-        linkedProjects: (original.linkedProjects || []).map((id: any) => id.toString?.() || String(id)),
-        linkedGoals: (original.linkedGoals || []).map((id: any) => id.toString?.() || String(id)),
-        linkedHabits: (original.linkedHabits || []).map((id: any) => id.toString?.() || String(id)),
-        tags: original.tags
+    // Build search query
+    const searchRegex = new RegExp(searchTerm, 'i');
+    const query = {
+      databaseId: journalDb.id.toString(),
+      isDeleted: { $ne: true },
+      $or: [
+        { 'properties.Title': searchRegex },
+        { 'properties.Gratitude': searchRegex },
+        { 'properties.Highlights': searchRegex },
+        { 'properties.Challenges': searchRegex },
+        { 'properties.Lessons Learned': searchRegex },
+        { 'properties.Tomorrow Goals': searchRegex }
+      ]
     };
-    return await createJournalEntry(userId, { ...clone, date: new Date() });
-}
 
-// Bulk operations
-export async function bulkUpdateJournalEntries(userId: string, updates: { entryIds: string[], updates: any }) {
-    const { entryIds, updates: updateData } = updates;
-    
-    const result = await Journal.updateMany(
-        {
-            _id: { $in: entryIds },
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            ...updateData,
-            updatedAt: new Date()
-        }
-    );
+    const total = await RecordModel.countDocuments(query);
 
-    return { modifiedCount: result.modifiedCount };
-}
+    const entriesQuery = RecordModel.find(query)
+      .sort({ 'properties.Date': -1 });
 
-export async function bulkDeleteJournalEntries(userId: string, entryIds: string[]) {
-    const result = await Journal.updateMany(
-        {
-            _id: { $in: entryIds },
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            archivedAt: new Date(),
-            updatedAt: new Date()
-        }
-    );
+    if (options.limit) {
+      entriesQuery.limit(options.limit);
+    }
 
-    return { deletedCount: result.modifiedCount };
-}
+    if (options.offset) {
+      entriesQuery.skip(options.offset);
+    }
 
-// Import/Export operations
-export async function importJournalEntries(userId: string, entriesData: any[]) {
-    const entries = entriesData.map((e: any) => ({
-        date: e.date ? new Date(e.date) : new Date(),
-        type: e.type || 'daily',
-        title: e.title,
-        content: e.content || '',
-        mood: e.mood,
-        energy: e.energy,
-        gratitude: e.gratitude,
-        wins: e.wins,
-        challenges: e.challenges,
-        learnings: e.learnings,
-        tomorrowFocus: e.tomorrowFocus,
-        weeklyReflection: e.weeklyReflection,
-        linkedTasks: e.linkedTasks,
-        linkedProjects: e.linkedProjects,
-        linkedGoals: e.linkedGoals,
-        linkedHabits: e.linkedHabits,
-        tags: e.tags,
-        createdBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-    }));
+    const entries = await entriesQuery.exec();
 
-    const result = await Journal.insertMany(entries);
-    return { importedCount: result.length };
-}
+    return {
+      entries: entries.map(entry => this.formatJournalEntry(entry)),
+      total
+    };
+  }
 
-export async function exportJournalEntries(userId: string) {
-    const entries = await Journal.find({
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    }).lean();
-
-    return entries;
-}
-
-// Template operations (placeholder)
-export async function getTemplates(userId: string) {
-    // TODO: Implement with separate JournalTemplate model
-    return [
-        {
-            id: 'daily-reflection',
-            name: 'Daily Reflection',
-            content: 'What went well today?\n\nWhat could have been better?\n\nWhat am I grateful for?'
-        },
-        {
-            id: 'gratitude',
-            name: 'Gratitude Journal',
-            content: 'Three things I\'m grateful for today:\n1. \n2. \n3. '
-        }
+  // Get journal prompts for today
+  getJournalPrompts(): string[] {
+    const prompts = [
+      "What are three things you're grateful for today?",
+      'What was the highlight of your day?',
+      'What challenge did you face and how did you handle it?',
+      'What did you learn about yourself today?',
+      'What would make tomorrow even better?',
+      'How are you feeling right now and why?',
+      'What progress did you make toward your goals?',
+      'What made you smile today?',
+      'What would you do differently if you could repeat today?',
+      'What are you looking forward to tomorrow?'
     ];
-}
 
-export async function createTemplate(_userId: string, _templateData: any) {
-    // TODO: Implement with separate JournalTemplate model
-    throw createAppError('Template functionality not yet implemented', 501);
-}
+    // Return 3 random prompts
+    const shuffled = prompts.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 3);
+  }
 
-export async function updateTemplate(_userId: string, _templateId: string, _updates: any) {
-    // TODO: Implement with separate JournalTemplate model
-    throw createAppError('Template functionality not yet implemented', 501);
-}
+  // Private helper methods
+  private formatJournalEntry(entry: any): IJournalEntry {
+    return {
+      id: entry._id.toString(),
+      date: entry.properties?.Date,
+      title: entry.properties?.Title,
+      mood: entry.properties?.Mood,
+      energyLevel: entry.properties?.['Energy Level'],
+      gratitude: entry.properties?.Gratitude,
+      highlights: entry.properties?.Highlights,
+      challenges: entry.properties?.Challenges,
+      lessonsLearned: entry.properties?.['Lessons Learned'],
+      tomorrowGoals: entry.properties?.['Tomorrow Goals'],
+      tags: entry.properties?.Tags || [],
+      content: entry.content || [],
+      createdAt: entry.createdAt,
+      updatedAt: entry.lastEditedAt || entry.createdAt
+    };
+  }
 
-export async function deleteTemplate(_userId: string, _templateId: string) {
-    // TODO: Implement with separate JournalTemplate model
-    throw createAppError('Template functionality not yet implemented', 501);
-}
+  private getEmptyStats(): IJournalStats {
+    return {
+      totalEntries: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      averageMood: 0,
+      averageEnergyLevel: 0,
+      moodDistribution: {},
+      entriesThisMonth: 0,
+      entriesThisYear: 0,
+      topTags: []
+    };
+  }
 
-// Prompt operations (placeholder)
-export async function getPrompts(_userId: string) {
-    // TODO: Implement with separate JournalPrompt model
-    return [
-        'What made you smile today?',
-        'Describe a challenge you overcame recently.',
-        'What are you looking forward to?',
-        'Write about someone who inspired you.',
-        'What did you learn today?'
-    ];
-}
+  private calculateCurrentStreak(entries: any[]): number {
+    if (entries.length === 0) return 0;
 
-export async function createPrompt(_userId: string, _promptData: any) {
-    // TODO: Implement with separate JournalPrompt model
-    throw createAppError('Prompt functionality not yet implemented', 501);
-}
+    // Filter entries with valid dates and sort them
+    const validEntries = entries.filter(e => {
+      const date = e.properties?.['Date'];
+      return typeof date === 'string';
+    });
 
-// Search entries
-export async function searchEntries(userId: string, query: string) {
-    return await getJournalEntries(userId, { search: query }, { limit: 20 });
-}
+    const sortedEntries = validEntries.sort((a, b) => {
+      const dateA = a.properties?.['Date'];
+      const dateB = b.properties?.['Date'];
+      if (typeof dateA === 'string' && typeof dateB === 'string') {
+        return dateB.localeCompare(dateA);
+      }
+      return 0;
+    });
 
-// Get insights
-export async function getInsights(userId: string) {
-    const recentEntries = await Journal.find({
-        createdBy: userId,
-        archivedAt: { $exists: false },
-        date: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
-    }).sort({ date: -1 }).limit(10).lean();
+    let streak = 0;
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
 
-    const insights = {
-        writingFrequency: recentEntries.length,
-        averageLength: recentEntries.reduce((sum, entry) => sum + (entry.content?.split(/\s+/).length || 0), 0) / (recentEntries.length || 1),
-        mostCommonMood: null as number | null,
-        longestEntry: recentEntries.reduce((max, entry) =>
-            ((entry.content?.split(/\s+/).length || 0) > (max.content?.split(/\s+/).length || 0) ? entry : max), recentEntries[0] || {} as any),
-        writingStreak: 0 // TODO: Calculate actual writing streak
+    for (const entry of sortedEntries) {
+      const entryDateStr = entry.properties?.['Date'];
+      if (typeof entryDateStr === 'string') {
+        const entryDate = new Date(entryDateStr);
+        entryDate.setHours(0, 0, 0, 0);
+
+        const daysDiff = Math.floor((currentDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysDiff === streak) {
+          streak++;
+          currentDate = entryDate;
+        } else if (daysDiff === streak + 1) {
+          // Allow for missing today if checking current streak
+          continue;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return streak;
+  }
+
+  private calculateLongestStreak(entries: any[]): number {
+    if (entries.length === 0) return 0;
+
+    // Filter entries with valid dates and sort them
+    const validEntries = entries.filter(e => {
+      const date = e.properties?.['Date'];
+      return typeof date === 'string';
+    });
+
+    if (validEntries.length === 0) return 0;
+
+    const sortedEntries = validEntries.sort((a, b) => {
+      const dateA = a.properties?.['Date'];
+      const dateB = b.properties?.['Date'];
+      if (typeof dateA === 'string' && typeof dateB === 'string') {
+        return dateA.localeCompare(dateB);
+      }
+      return 0;
+    });
+
+    let longestStreak = 1;
+    let currentStreak = 1;
+
+    for (let i = 1; i < sortedEntries.length; i++) {
+      const prevDateStr = sortedEntries[i - 1].properties?.['Date'];
+      const currDateStr = sortedEntries[i].properties?.['Date'];
+
+      if (typeof prevDateStr === 'string' && typeof currDateStr === 'string') {
+        const prevDate = new Date(prevDateStr);
+        const currDate = new Date(currDateStr);
+
+        const daysDiff = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysDiff === 1) {
+          currentStreak++;
+          longestStreak = Math.max(longestStreak, currentStreak);
+        } else {
+          currentStreak = 1;
+        }
+      }
+    }
+
+    return longestStreak;
+  }
+
+  private getMoodScore(mood: string): number {
+    const moodScores: { [mood: string]: number } = {
+      'terrible': 1,
+      'bad': 2,
+      'okay': 3,
+      'good': 4,
+      'amazing': 5
     };
 
-    return insights;
+    return moodScores[mood] || 3;
+  }
 }
+
+export const journalService = new JournalService();

@@ -3,10 +3,15 @@ import { FileModel } from '../models/file.model';
 import { uploadBufferToS3, deleteFromS3 } from '../../../config';
 import { TFileUploadData, TFileQueryParams, TFileResponse } from '../types/files.types';
 
-/**
- * Upload a single file
- */
-export const uploadFile = async (userId: string, fileData: TFileUploadData): Promise<TFileResponse> => {
+// ===================================
+// FILES SERVICE
+// ===================================
+
+export class FilesService {
+  /**
+   * Upload a single file
+   */
+  async uploadFile(userId: string, fileData: TFileUploadData): Promise<TFileResponse> {
   try {
     // Upload to S3 directly from memory buffer
     const fileUrl = await uploadBufferToS3(fileData.buffer, fileData.originalName, fileData.mimeType);
@@ -24,7 +29,7 @@ export const uploadFile = async (userId: string, fileData: TFileUploadData): Pro
     });
 
     await file.save();
-    return toFileResponse(file);
+    return this.toFileResponse(file);
   } catch (error) {
     throw createBadRequestError('Failed to upload file');
   }
@@ -33,15 +38,18 @@ export const uploadFile = async (userId: string, fileData: TFileUploadData): Pro
 /**
  * Upload multiple files
  */
-export const bulkUploadFiles = async (userId: string, filesData: TFileUploadData[]): Promise<TFileResponse[]> => {
-  const uploadPromises = filesData.map(fileData => uploadFile(userId, fileData));
-  return Promise.all(uploadPromises);
-};
+  /**
+   * Upload multiple files
+   */
+  async bulkUploadFiles(userId: string, filesData: TFileUploadData[]): Promise<TFileResponse[]> {
+    const uploadPromises = filesData.map(fileData => this.uploadFile(userId, fileData));
+    return Promise.all(uploadPromises);
+  }
 
-/**
- * Get file by ID
- */
-export const getFileById = async (fileId: string, userId: string): Promise<TFileResponse> => {
+  /**
+   * Get file by ID
+   */
+  async getFileById(fileId: string, userId: string): Promise<TFileResponse> {
   const file = await FileModel.findOne({
     _id: fileId,
     $or: [
@@ -54,13 +62,16 @@ export const getFileById = async (fileId: string, userId: string): Promise<TFile
     throw createNotFoundError('File not found');
   }
 
-  return toFileResponse(file);
+  return this.toFileResponse(file);
 };
 
 /**
  * Download file
  */
-export const downloadFile = async (fileId: string, userId: string) => {
+  /**
+   * Download file
+   */
+  async downloadFile(fileId: string, userId: string) {
   const file = await FileModel.findOne({
     _id: fileId,
     $or: [
@@ -86,7 +97,10 @@ export const downloadFile = async (fileId: string, userId: string) => {
 /**
  * Delete file
  */
-export const deleteFile = async (fileId: string, userId: string): Promise<void> => {
+  /**
+   * Delete file
+   */
+  async deleteFile(fileId: string, userId: string): Promise<void> {
   const file = await FileModel.findOne({
     _id: fileId,
     userId
@@ -109,7 +123,10 @@ export const deleteFile = async (fileId: string, userId: string): Promise<void> 
 /**
  * Get user's files with pagination and filtering
  */
-export const getUserFiles = async (userId: string, params: TFileQueryParams) => {
+  /**
+   * Get user's files with pagination and filtering
+   */
+  async getUserFiles(userId: string, params: TFileQueryParams) {
   const {
     category,
     search,
@@ -156,7 +173,7 @@ export const getUserFiles = async (userId: string, params: TFileQueryParams) => 
   const totalPages = Math.ceil(total / limit);
 
   return {
-    files: files.map(toFileResponse),
+    files: files.map(file => this.toFileResponse(file)),
     pagination: {
       total,
       totalPages,
@@ -166,12 +183,24 @@ export const getUserFiles = async (userId: string, params: TFileQueryParams) => 
       limit
     }
   };
-};
+  }
 
-/**
- * Convert file document to response format
- */
-const toFileResponse = (file: any): TFileResponse => {
-  // Use toJSON() which already handles _id to id conversion
-  return file.toJSON() as TFileResponse;
-};
+  /**
+   * Convert file document to response format
+   */
+  private toFileResponse(file: any): TFileResponse {
+    // Use toJSON() which already handles _id to id conversion
+    return file.toJSON() as TFileResponse;
+  }
+}
+
+// Export singleton instance
+export const filesService = new FilesService();
+
+// Export legacy functions for backward compatibility
+export const uploadFile = (userId: string, fileData: TFileUploadData) => filesService.uploadFile(userId, fileData);
+export const bulkUploadFiles = (userId: string, filesData: TFileUploadData[]) => filesService.bulkUploadFiles(userId, filesData);
+export const getFileById = (fileId: string, userId: string) => filesService.getFileById(fileId, userId);
+export const downloadFile = (fileId: string, userId: string) => filesService.downloadFile(fileId, userId);
+export const deleteFile = (fileId: string, userId: string) => filesService.deleteFile(fileId, userId);
+export const getUserFiles = (userId: string, params: TFileQueryParams) => filesService.getUserFiles(userId, params);

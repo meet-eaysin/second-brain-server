@@ -1,7 +1,6 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import AWS from 'aws-sdk';
 import dotenv from 'dotenv';
 import logger from '../logger';
 
@@ -13,13 +12,33 @@ if (!fs.existsSync(LOCAL_STORAGE_PATH)) {
   fs.mkdirSync(LOCAL_STORAGE_PATH, { recursive: true });
 }
 
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1'
-});
+// Initialize AWS S3 only if credentials are provided
+let s3: any = null;
+let isS3Configured = false;
 
-const s3 = new AWS.S3();
+try {
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_BUCKET_NAME) {
+    try {
+      const AWS = require('aws-sdk');
+      AWS.config.update({
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        region: process.env.AWS_REGION || 'us-east-1'
+      });
+      s3 = new AWS.S3();
+      isS3Configured = true;
+      logger.info('AWS S3 configured successfully');
+    } catch (awsError) {
+      logger.warn('AWS SDK not available or misconfigured. Using local storage only.');
+      isS3Configured = false;
+    }
+  } else {
+    logger.warn('AWS S3 credentials not provided. File uploads will use local storage only.');
+  }
+} catch (error) {
+  logger.error('Failed to configure AWS S3:', error);
+  isS3Configured = false;
+}
 
 export const storage = {
   local: multer.diskStorage({
@@ -53,6 +72,10 @@ export const upload = multer({
 });
 
 export const uploadToS3 = async (file: Express.Multer.File): Promise<string> => {
+  if (!isS3Configured || !s3) {
+    throw new Error('AWS S3 is not configured. Please provide valid AWS credentials.');
+  }
+
   try {
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME as string,
@@ -84,6 +107,10 @@ export const uploadBufferToS3 = async (
   originalName: string,
   mimeType: string
 ): Promise<string> => {
+  if (!isS3Configured || !s3) {
+    throw new Error('AWS S3 is not configured. Please provide valid AWS credentials.');
+  }
+
   try {
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME as string,
@@ -107,6 +134,11 @@ export const uploadBufferToS3 = async (
 };
 
 export const deleteFromS3 = async (fileUrl: string): Promise<boolean> => {
+  if (!isS3Configured || !s3) {
+    logger.warn('AWS S3 is not configured. Cannot delete file from S3.');
+    return false;
+  }
+
   try {
     const key = fileUrl.split('.com/')[1];
 

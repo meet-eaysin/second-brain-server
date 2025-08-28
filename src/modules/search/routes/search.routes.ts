@@ -1,41 +1,15 @@
-import { Router } from 'express';
-import { authenticateToken } from '../../../middlewares/auth';
-import { validateQuery } from '../../../middlewares/validation';
-import * as searchController from '../controllers/search.controller';
-import * as validators from '../validators/search.validators';
+import express from 'express';
+import { searchController } from '../controllers/search.controller';
+import { authenticateToken } from '@/middlewares';
 
-const router = Router();
+const router = express.Router();
 
-// Global search across all content
-router.get(
-  '/',
-  authenticateToken,
-  validateQuery(validators.globalSearchSchema),
-  searchController.globalSearch
-);
+router.use(authenticateToken);
 
-// Search databases
-router.get(
-  '/databases',
-  authenticateToken,
-  validateQuery(validators.searchDatabasesSchema),
-  searchController.searchDatabases
-);
-
-// Search records
-router.get(
-  '/records',
-  authenticateToken,
-  validateQuery(validators.searchRecordsSchema),
-  searchController.searchRecords
-);
-
-// Get search suggestions
-router.get(
-  '/suggestions',
-  authenticateToken,
-  validateQuery(validators.searchSuggestionsSchema),
-  searchController.getSearchSuggestions
-);
+router.get('/', searchController.globalSearch);
+router.get('/databases', searchController.searchDatabases);
+router.get('/records', searchController.searchRecords);
+router.get('/suggestions', searchController.getSearchSuggestions);
+router.get('/recent', searchController.getRecentSearches);
 
 export default router;

@@ -1,364 +1,468 @@
-import { Request, Response } from 'express';
-import { catchAsync, createAppError, sendSuccessResponse } from '../../../../utils';
-import { TJwtPayload } from '../../../users/types/user.types';
-import * as contentService from '../services/content.service';
-import { Content } from '../models/content.model';
-import type { UpdateStatusRequest } from '../types';
+import { Request, Response, NextFunction } from 'express';
+import { contentService } from '../services/content.service';
+import { getUserId } from '@/modules/auth';
+import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
+import {
+  ICreateContentRequest,
+  IUpdateContentRequest,
+  IContentQueryParams,
+  EContentType,
+  EContentStatus,
+  EContentPriority,
+  EWorkflowStage
+} from '../types/content.types';
 
-interface AuthenticatedRequest extends Request {
-    user?: TJwtPayload & { userId: string };
-}
+export const createContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const data: ICreateContentRequest = req.body;
+    const userId = getUserId(req);
 
-// Get all content with pipeline filtering
-export const getContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const {
-        type,
-        status,
-        platform,
-        area,
-        tags,
-        search,
-        page = 1,
-        limit = 50
-    } = req.query;
+    const content = await contentService.createContent(data, userId);
 
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const filter: any = {
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    };
-
-    if (type) filter.type = type;
-    if (status) filter.status = status;
-    if (platform) filter.platform = { $in: Array.isArray(platform) ? platform : [platform] };
-    if (area) filter.area = area;
-    if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-
-    if (search) {
-        filter.$text = { $search: search as string };
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const filters = {
-        type: type as string,
-        status: status as string,
-        platform: platform as string | string[],
-        area: area as string,
-        tags: tags as string | string[],
-        search: search as string
-    };
-
-    const options = {
-        page: Number(page),
-        limit: Number(limit),
-        populate: ['collaborators', 'linkedProjects', 'linkedGoals']
-    };
-
-    const result = await contentService.getContent(userId, filters, options);
-    sendSuccessResponse(res, 'Content retrieved successfully', result);
-});
-
-// Get single content item
-export const getContentItem = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const { id } = req.params;
-    const content = await contentService.getContentItem(userId, id);
-    sendSuccessResponse(res, 'Content item retrieved successfully', content);
-});
-
-// Create content item
-export const createContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const content = await contentService.createContent(userId, req.body);
     sendSuccessResponse(res, 'Content created successfully', content, 201);
-});
+  }
+);
 
-// Update content item
-export const updateContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
+export const getContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IContentQueryParams = req.query as any;
+    const userId = getUserId(req);
 
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, 'Content retrieved successfully', result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
+  }
+);
+
+export const getContentById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const content = await contentService.updateContent(userId, id, req.body);
+    const userId = getUserId(req);
+
+    const content = await contentService.getContentById(id, userId);
+
+    sendSuccessResponse(res, 'Content retrieved successfully', content);
+  }
+);
+
+export const updateContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const data: IUpdateContentRequest = req.body;
+    const userId = getUserId(req);
+
+    const content = await contentService.updateContent(id, data, userId);
+
     sendSuccessResponse(res, 'Content updated successfully', content);
-});
+  }
+);
 
-// Delete content item
-export const deleteContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+export const deleteContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
+    const { permanent } = req.query;
+    const userId = getUserId(req);
 
-    const content = await Content.findOneAndDelete({
-        _id: id,
-        createdBy: userId
+    await contentService.deleteContent(id, userId, permanent === 'true');
+
+    sendSuccessResponse(res, 'Content deleted successfully', null, 204);
+  }
+);
+
+export const getContentByType = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { type } = req.params;
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      type: [type as EContentType]
+    };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, `Content of type "${type}" retrieved successfully`, result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
     });
+  }
+);
 
-    if (!content) {
-        throw createAppError('Content not found', 404);
-    }
+export const getContentByStatus = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { status } = req.params;
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      status: [status as EContentStatus]
+    };
+    const userId = getUserId(req);
 
-    res.status(204).json({
-        success: true,
-        data: null
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      `Content with status "${status}" retrieved successfully`,
+      result.content,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+export const getContentByStage = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { stage } = req.params;
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      stage: [stage as EWorkflowStage]
+    };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      `Content in stage "${stage}" retrieved successfully`,
+      result.content,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+export const getContentBySeries = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { series } = req.params;
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      series: decodeURIComponent(series)
+    };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      `Content in series "${series}" retrieved successfully`,
+      result.content,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+export const getDraftContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      status: [EContentStatus.DRAFT]
+    };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, 'Draft content retrieved successfully', result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
     });
-});
+  }
+);
 
-// Get content pipeline overview
-export const getPipelineOverview = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+export const getPublishedContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      status: [EContentStatus.PUBLISHED]
+    };
+    const userId = getUserId(req);
 
-    const content = await Content.find({
-        createdBy: userId,
-        archivedAt: { $exists: false }
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, 'Published content retrieved successfully', result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
     });
+  }
+);
 
-    const pipeline = {
-        idea: content.filter(c => c.status === 'idea').length,
-        draft: content.filter(c => c.status === 'draft').length,
-        inReview: content.filter(c => c.status === 'in-review').length,
-        scheduled: content.filter(c => c.status === 'scheduled').length,
-        published: content.filter(c => c.status === 'published').length,
-        total: content.length
+export const getScheduledContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      status: [EContentStatus.SCHEDULED]
+    };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, 'Scheduled content retrieved successfully', result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
+  }
+);
+
+export const getContentTemplates = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IContentQueryParams = {
+      ...(req.query as any),
+      isTemplate: true
+    };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, 'Content templates retrieved successfully', result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
+  }
+);
+
+export const searchContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { q: search } = req.query;
+    const params: IContentQueryParams = { ...(req.query as any), search: search as string };
+    const userId = getUserId(req);
+
+    const result = await contentService.getContent(params, userId);
+
+    sendPaginatedResponse(res, 'Content search completed successfully', result.content, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
+  }
+);
+
+export const duplicateContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { title, databaseId } = req.body;
+    const userId = getUserId(req);
+
+    const originalContent = await contentService.getContentById(id, userId);
+
+    const duplicateData: ICreateContentRequest = {
+      databaseId: databaseId || originalContent.databaseId,
+      title: title || `${originalContent.title} (Copy)`,
+      subtitle: originalContent.subtitle,
+      description: originalContent.description,
+      type: originalContent.type,
+      priority: originalContent.priority,
+      content: originalContent.content,
+      excerpt: originalContent.excerpt,
+      seoTitle: originalContent.seoTitle,
+      metaDescription: originalContent.metaDescription,
+      keywords: [...originalContent.keywords],
+      currentStage: EWorkflowStage.IDEATION,
+      reviewers: [...originalContent.reviewers],
+      approvers: [...originalContent.approvers],
+      categories: [...originalContent.categories],
+      tags: [...originalContent.tags],
+      series: originalContent.series,
+      relatedContentIds: [...originalContent.relatedContentIds],
+      sourceNoteIds: [...originalContent.sourceNoteIds],
+      sourceResourceIds: [...originalContent.sourceResourceIds],
+      featuredImage: originalContent.featuredImage
+        ? { ...originalContent.featuredImage }
+        : undefined,
+      isTemplate: false,
+      autoPublish: false,
+      autoPromote: false,
+      isPublic: false,
+      allowComments: originalContent.allowComments,
+      requireApproval: originalContent.requireApproval,
+      customFields: { ...originalContent.customFields }
     };
 
-    const upcomingScheduled = content.filter(c =>
-        c.status === 'scheduled' &&
-        c.scheduledDate &&
-        new Date(c.scheduledDate) > new Date()
-    ).sort((a, b) => new Date(a.scheduledDate!).getTime() - new Date(b.scheduledDate!).getTime());
+    const duplicatedContent = await contentService.createContent(duplicateData, userId);
 
-    res.status(200).json({
-        success: true,
-        data: {
-            pipeline,
-            upcomingScheduled: upcomingScheduled.slice(0, 5)
-        }
+    sendSuccessResponse(res, 'Content duplicated successfully', duplicatedContent, 201);
+  }
+);
+
+export const bulkUpdateContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { contentIds, updates } = req.body;
+    const userId = getUserId(req);
+
+    const results = await Promise.allSettled(
+      contentIds.map((contentId: string) =>
+        contentService.updateContent(contentId, updates, userId)
+      )
+    );
+
+    const successful = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.filter(result => result.status === 'rejected').length;
+
+    sendSuccessResponse(res, 'Bulk update completed', {
+      successful,
+      failed,
+      total: contentIds.length,
+      results: results.map((result, index) => ({
+        contentId: contentIds[index],
+        status: result.status,
+        data: result.status === 'fulfilled' ? result.value : null,
+        error: result.status === 'rejected' ? result.reason.message : null
+      }))
     });
-});
+  }
+);
 
-// Get content analytics
-export const getContentAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+export const bulkDeleteContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { contentIds, permanent } = req.body;
+    const userId = getUserId(req);
 
-    const content = await Content.find({
-        createdBy: userId,
-        status: 'published',
-        archivedAt: { $exists: false }
+    const results = await Promise.allSettled(
+      contentIds.map((contentId: string) =>
+        contentService.deleteContent(contentId, userId, permanent)
+      )
+    );
+
+    const successful = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.filter(result => result.status === 'rejected').length;
+
+    sendSuccessResponse(res, 'Bulk delete completed', {
+      successful,
+      failed,
+      total: contentIds.length
     });
+  }
+);
 
-    const analytics = {
-        totalPublished: content.length,
-        totalViews: content.reduce((sum, c) => sum + (c.metrics?.views || 0), 0),
-        totalLikes: content.reduce((sum, c) => sum + (c.metrics?.likes || 0), 0),
-        totalShares: content.reduce((sum, c) => sum + (c.metrics?.shares || 0), 0),
-        totalRevenue: content.reduce((sum, c) => sum + (c.metrics?.revenue || 0), 0),
-        byType: content.reduce((acc, c) => {
-            acc[c.type] = (acc[c.type] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>),
-        byPlatform: content.reduce((acc, c) => {
-            c.platform?.forEach(p => {
-                acc[p] = (acc[p] || 0) + 1;
-            });
-            return acc;
-        }, {} as Record<string, number>),
-        topPerforming: content
-            .sort((a, b) => (b.metrics?.views || 0) - (a.metrics?.views || 0))
-            .slice(0, 5)
-            .map(c => ({
-                id: c._id,
-                title: c.title,
-                type: c.type,
-                views: c.metrics?.views || 0,
-                engagement: c.metrics?.engagement || 0
-            }))
+export const moveToNextStage = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const userId = getUserId(req);
+
+    const content = await contentService.getContentById(id, userId);
+
+    const stageProgression: Record<EWorkflowStage, EWorkflowStage> = {
+      [EWorkflowStage.IDEATION]: EWorkflowStage.RESEARCH,
+      [EWorkflowStage.RESEARCH]: EWorkflowStage.OUTLINE,
+      [EWorkflowStage.OUTLINE]: EWorkflowStage.WRITING,
+      [EWorkflowStage.WRITING]: EWorkflowStage.EDITING,
+      [EWorkflowStage.EDITING]: EWorkflowStage.REVIEW,
+      [EWorkflowStage.REVIEW]: EWorkflowStage.APPROVAL,
+      [EWorkflowStage.APPROVAL]: EWorkflowStage.DESIGN,
+      [EWorkflowStage.DESIGN]: EWorkflowStage.SCHEDULING,
+      [EWorkflowStage.SCHEDULING]: EWorkflowStage.PUBLISHING,
+      [EWorkflowStage.PUBLISHING]: EWorkflowStage.PROMOTION,
+      [EWorkflowStage.PROMOTION]: EWorkflowStage.ANALYSIS,
+      [EWorkflowStage.ANALYSIS]: EWorkflowStage.ANALYSIS // Stay at final stage
     };
 
-    res.status(200).json({
-        success: true,
-        data: analytics
-    });
-});
+    const nextStage = stageProgression[content.currentStage];
 
-// Content stats
-export const getContentStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) throw createAppError('User not authenticated', 401);
-    const result = await contentService.getContentStats(userId);
-    res.status(200).json({ success: true, data: result });
-});
+    const updatedContent = await contentService.updateContent(
+      id,
+      {
+        currentStage: nextStage,
+        editorNotes: notes
+      },
+      userId
+    );
 
-// Import/Export
-export const importContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) throw createAppError('User not authenticated', 401);
-    const items = (req.body && (req.body.content || req.body.items || req.body)) as any[];
-    const result = await contentService.importContent(userId, Array.isArray(items) ? items : []);
-    res.status(200).json({ success: true, data: result });
-});
+    sendSuccessResponse(res, `Content moved to ${nextStage} stage successfully`, updatedContent);
+  }
+);
 
-export const exportContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) throw createAppError('User not authenticated', 401);
-    const result = await contentService.exportContent(userId);
-    res.status(200).json({ success: true, data: result });
-});
-
-// Bulk operations
-export const bulkUpdateContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) throw createAppError('User not authenticated', 401);
-    const result = await contentService.bulkUpdateContent(userId, req.body);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const bulkDeleteContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) throw createAppError('User not authenticated', 401);
-    const { contentIds } = req.body as { contentIds: string[] };
-    const result = await contentService.bulkDeleteContent(userId, contentIds || []);
-    res.status(200).json({ success: true, data: result });
-});
-
-// Status & favorite & archive & duplicate
-export const updateStatus = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) throw createAppError('User not authenticated', 401);
-
+export const assignContent = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const { status } = req.body as UpdateStatusRequest;
+    const { assignedTo, notes } = req.body;
+    const userId = getUserId(req);
 
-    const result = await contentService.updateStatus(userId, id, status);
-    sendSuccessResponse(res, 'Content status updated successfully', result);
-});
+    const content = await contentService.updateContent(
+      id,
+      {
+        assignedTo,
+        editorNotes: notes
+      },
+      userId
+    );
 
-export const toggleFavorite = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.toggleFavorite(userId, id);
-    res.status(200).json({ success: true, data: result });
-});
+    sendSuccessResponse(res, 'Content assigned successfully', content);
+  }
+);
 
-export const archiveContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.archiveContent(userId, id);
-    res.status(200).json({ success: true, data: result });
-});
+export const getContentStats = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { databaseId } = req.query;
+    const userId = getUserId(req);
 
-export const duplicateContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.duplicateContent(userId, id);
-    res.status(201).json({ success: true, data: result });
-});
+    const stats = {
+      totalContent: 0,
+      byType: {},
+      byStatus: {},
+      byStage: {},
+      totalWords: 0,
+      averageReadingTime: 0,
+      publishingFrequency: {
+        daily: 0,
+        weekly: 0,
+        monthly: 0
+      },
+      topPerformingContent: [],
+      workflowBottlenecks: [],
+      seoMetrics: {
+        averageWordCount: 0,
+        averageReadingTime: 0,
+        keywordOptimization: 0,
+        metaCompleteness: 0
+      }
+    };
 
-
-// Tags
-export const addTags = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const { tags } = req.body as { tags: string[] };
-    const result = await contentService.addTags(userId, id, tags || []);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const removeTags = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const { tags } = req.body as { tags: string[] };
-    const result = await contentService.removeTags(userId, id, tags || []);
-    res.status(200).json({ success: true, data: result });
-});
-
-// Notes
-export const addNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.addNote(userId, id, req.body);
-    res.status(201).json({ success: true, data: result });
-});
-
-export const getNotes = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.getNotes(userId, id);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const updateNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { contentId, noteId } = req.params; const result = await contentService.updateNote(userId, contentId, noteId, req.body);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const deleteNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { contentId, noteId } = req.params; const result = await contentService.deleteNote(userId, contentId, noteId);
-    res.status(200).json({ success: true, data: result });
-});
-
-// Sharing
-export const shareContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.shareContent(userId, id, req.body);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const getShareInfo = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.getShareInfo(userId, id);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const unshareContent = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { id } = req.params; const result = await contentService.unshareContent(userId, id);
-    res.status(200).json({ success: true, data: result });
-});
-
-// Collections
-export const createCollection = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const result = await contentService.createCollection(userId, req.body);
-    res.status(201).json({ success: true, data: result });
-});
-
-export const getCollections = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const result = await contentService.getCollections(userId);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const updateCollection = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { collectionId } = req.params; const result = await contentService.updateCollection(userId, collectionId, req.body);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const deleteCollection = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { collectionId } = req.params; const result = await contentService.deleteCollection(userId, collectionId);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const addToCollection = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { collectionId } = req.params; const { itemId } = req.body as { itemId: string };
-    const result = await contentService.addToCollection(userId, collectionId, itemId);
-    res.status(200).json({ success: true, data: result });
-});
-
-export const removeFromCollection = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId; if (!userId) throw createAppError('User not authenticated', 401);
-    const { collectionId, itemId } = req.params; const result = await contentService.removeFromCollection(userId, collectionId, itemId);
-    res.status(200).json({ success: true, data: result });
-});
+    sendSuccessResponse(res, 'Content statistics retrieved successfully', stats);
+  }
+);

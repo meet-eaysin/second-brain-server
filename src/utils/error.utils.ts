@@ -1,5 +1,5 @@
 import { convertErrorArrayToRecord, convertToValidationError } from './validation-error-converter';
-import {IValidationError, TAppError} from '@/types/error.types';
+import {IValidationError, TAppError} from "@/types";
 
 export const createAppError = (
   message: string,
@@ -7,7 +7,8 @@ export const createAppError = (
   isOperational: boolean = true,
   stack?: string
 ): TAppError => {
-  const status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+  const statusCodeStr = String(statusCode);
+  const status = statusCodeStr.startsWith('4') ? 'fail' : 'error';
 
   const error: TAppError = {
     name: 'AppError',

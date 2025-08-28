@@ -13,12 +13,11 @@
       "@/modules/*": ["modules/*"],
       "@/middlewares/*": ["middlewares/*"],
       "@/utils/*": ["utils/*"],
-      "@/types/*": ["types/*"],
       "@/routes/*": ["routes/*"],
-      "@/database/*": ["modules/database/*"],
       "@/auth/*": ["modules/auth/*"],
       "@/users/*": ["modules/users/*"],
-      "@/email/*": ["modules/email/*"]
+      "@/email/*": ["modules/email/*"],
+      "@/shared/*": ["modules/second-brain/shared/*"]
     },
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
@@ -51,7 +50,7 @@
     "src/**/*",
     "types/**/*",
     "openapi.yaml"
-  ],
+, "tsconfig.build.json"  ],
   "exclude": [
     "node_modules",
     "dist",

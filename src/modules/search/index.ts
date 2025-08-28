@@ -1,35 +1,15 @@
-// Routes
+// Search module exports
+export { searchService } from './services/search.service';
+export { searchController } from './controllers/search.controller';
 export { default as searchRoutes } from './routes/search.routes';
 
-// Controllers
-export {
-  globalSearch,
-  searchDatabases,
-  searchRecords,
-  advancedSearch
-} from './controllers/search.controller';
-
-// Services
-export {
-  globalSearch as globalSearchService,
-  searchInDatabase,
-  searchRecords as searchRecordsService,
-  buildSearchQuery
-} from './services/search.service';
-
 // Types
-export type {
-  ISearchResult,
-  ISearchResults,
-  ISearchQuery,
-  IGlobalSearchOptions,
-  IDatabaseSearchOptions,
-  IAdvancedSearchFilters
-} from './types';
+export * from './types/search.types';
 
-// Validators
-export {
-  globalSearchSchema,
-  databaseSearchSchema,
-  advancedSearchSchema
-} from './validators/search.validators';
+// Models
+export { SearchHistoryModel } from './models/search-history.model';
+
+// Re-export for convenience
+export { default as SearchService } from './services/search.service';
+export { default as SearchController } from './controllers/search.controller';
+export { default as SearchRoutes } from './routes/search.routes';

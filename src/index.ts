@@ -1,6 +1,11 @@
 import util from 'util';
+import { createServer } from 'http';
 import { appConfig, logger, SafeMongooseConnection } from './config';
 import app from './app';
+import { initializeRealtimeNotifications } from '@/modules/system/services/realtime-notifications.service';
+import { initializeReminderSystem } from '@/modules/system/services/reminder.service';
+import { initializeCalendarSync } from '@/modules/calendar/services/sync.service';
+import { initializeWebSocketService } from '@/modules/editor/services/websocket.service';
 
 const PORT = appConfig.port || 4000;
 
@@ -34,11 +39,30 @@ const safeMongooseConnection = new SafeMongooseConnection({
 });
 
 const serve = () => {
-  const server = app.listen(PORT, () => {
+  const httpServer = createServer(app);
+
+  // Initialize real-time notifications
+  initializeRealtimeNotifications(httpServer);
+
+  // Initialize WebSocket service for rich editor collaboration
+  initializeWebSocketService(httpServer);
+
+  // Initialize reminder system
+  initializeReminderSystem();
+
+  // Initialize calendar sync system
+  initializeCalendarSync();
+
+  const server = httpServer.listen(PORT, () => {
     logger.info(`🚀 EXPRESS server started at http://localhost:${PORT}`);
     logger.info(`📚 API Documentation available at http://localhost:${PORT}/api`);
     logger.info(`🔍 Health check available at http://localhost:${PORT}/health`);
     logger.info(`🌟 Environment: ${appConfig.env}`);
+    logger.info('🔔 Advanced Notifications System initialized');
+    logger.info('📡 Real-time notifications enabled');
+    logger.info('⏰ Due task reminders active');
+    logger.info('📅 Calendar sync system initialized');
+    logger.info('🔗 External calendar integration ready');
   });
 
   server.on('error', (error: NodeJS.ErrnoException) => {

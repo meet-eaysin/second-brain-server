@@ -1,366 +1,197 @@
 import { Router } from 'express';
-import multer from 'multer';
-import { authenticateToken } from '../../../middlewares/auth';
-import { validateBody, validateQuery, validateParams } from '../../../middlewares/validation';
-import * as databaseController from '../controllers/database.controller';
-import * as validators from '../validators/database.validators';
+import { z } from 'zod';
+import { authenticateToken } from '@/middlewares/auth';
+import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
+import { requirePermission } from '@/middlewares/permission.middleware';
+import { resolveWorkspaceContext, ensureDefaultWorkspace, injectWorkspaceContext } from '@/modules/workspace/middleware/workspace.middleware';
+import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
+import {
+  createDatabase,
+  getDatabases,
+  getDatabaseById,
+  updateDatabase,
+  deleteDatabase,
+  getDatabaseStats,
+  duplicateDatabase,
+  exportDatabase,
+  importDatabase,
+  restoreDatabase,
+  archiveDatabase,
+  unarchiveDatabase,
+  bulkUpdateDatabases,
+  bulkDeleteDatabases,
+  getDatabaseTemplates,
+  createDatabaseTemplate,
+  updateDatabaseTemplate,
+  deleteDatabaseTemplate
+} from '../controllers/database.controllers';
+import {
+  createDatabaseSchema,
+  updateDatabaseSchema,
+  getDatabasesQuerySchema,
+  databaseIdParamSchema,
+  duplicateDatabaseSchema,
+  exportDatabaseSchema,
+  importDatabaseSchema,
+  getDatabaseStatsQuerySchema,
+  bulkUpdateDatabasesSchema,
+  bulkDeleteDatabasesSchema,
+  createDatabaseTemplateSchema,
+  updateDatabaseTemplateSchema
+} from '../validators/database.validators';
 
 const router = Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = [
-      'application/json',
-      'text/csv',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ];
-
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only JSON, CSV, and Excel files are allowed.'));
-    }
-  }
-});
+router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 router.post(
   '/',
-  authenticateToken,
-  validateBody(validators.createDatabaseSchema),
-  databaseController.createDatabase
+  validateBody(createDatabaseSchema),
+  injectWorkspaceContext,
+  createDatabase
 );
-
 router.get(
   '/',
-  authenticateToken,
-  validateQuery(validators.getDatabasesQuerySchema),
-  databaseController.getUserDatabases
+  validateQuery(getDatabasesQuerySchema),
+  getDatabases
 );
-
 router.get(
   '/:id',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.getDatabaseById
+  validateParams(databaseIdParamSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.READ, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  getDatabaseById
 );
-
 router.put(
   '/:id',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.updateDatabaseSchema),
-  databaseController.updateDatabase
+  validateParams(databaseIdParamSchema),
+  validateBody(updateDatabaseSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.EDIT, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  updateDatabase
 );
-
 router.delete(
   '/:id',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.deleteDatabase
+  validateParams(databaseIdParamSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.FULL_ACCESS, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  deleteDatabase
 );
-
-// Database freeze/unfreeze
-router.patch(
-  '/:id/freeze',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.databaseFreezeSchema),
-  databaseController.freezeDatabase
-);
-
-// Properties management
 router.get(
-  '/:id/properties',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.getProperties
+  '/:id/stats',
+  validateParams(databaseIdParamSchema),
+  validateQuery(getDatabaseStatsQuerySchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.READ, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  getDatabaseStats
 );
-
 router.post(
-  '/:id/properties',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.createPropertySchema),
-  databaseController.addProperty
+  '/:id/duplicate',
+  validateParams(databaseIdParamSchema),
+  validateBody(duplicateDatabaseSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.READ, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  duplicateDatabase
 );
-
-router.get(
-  '/:id/properties/:propertyId',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  databaseController.getPropertyById
-);
-
-router.put(
-  '/:id/properties/:propertyId',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.updatePropertySchema),
-  databaseController.updateProperty
-);
-
-router.delete(
-  '/:id/properties/:propertyId',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  databaseController.deleteProperty
-);
-
-router.put(
-  '/:id/properties/reorder',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.reorderPropertiesSchema),
-  databaseController.reorderProperties
-);
-
-// New property management routes
-router.patch(
-  '/:id/properties/:propertyId/name',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyNameUpdateSchema),
-  databaseController.updatePropertyName
-);
-
-router.patch(
-  '/:id/properties/:propertyId/type',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyTypeUpdateSchema),
-  databaseController.updatePropertyType
-);
-
-router.patch(
-  '/:id/properties/:propertyId/order',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyOrderUpdateSchema),
-  databaseController.updatePropertyOrder
-);
-
 router.post(
-  '/:id/properties/:propertyId/insert',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyInsertSchema),
-  databaseController.insertProperty
-);
-
-router.post(
-  '/:id/properties/:propertyId/duplicate',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyDuplicateSchema),
-  databaseController.duplicateProperty
-);
-
-router.patch(
-  '/:id/properties/:propertyId/freeze',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyFreezeSchema),
-  databaseController.updatePropertyFreeze
-);
-
-router.patch(
-  '/:id/properties/:propertyId/visibility',
-  authenticateToken,
-  validateParams(validators.propertyIdSchema),
-  validateBody(validators.propertyVisibilitySchema),
-  databaseController.updatePropertyVisibility
-);
-
-// Views management
-router.get(
-  '/:id/views',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.getViews
-);
-
-router.post(
-  '/:id/views',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.createViewSchema),
-  databaseController.addView
-);
-
-router.get(
-  '/:id/views/:viewId',
-  authenticateToken,
-  validateParams(validators.viewIdSchema),
-  databaseController.getViewById
-);
-
-router.put(
-  '/:id/views/:viewId',
-  authenticateToken,
-  validateParams(validators.viewIdSchema),
-  validateBody(validators.updateViewSchema),
-  databaseController.updateView
-);
-
-router.patch(
-  '/:id/views/:viewId',
-  authenticateToken,
-  validateParams(validators.viewIdSchema),
-  validateBody(validators.updateViewSchema),
-  databaseController.updateView
-);
-
-router.delete(
-  '/:id/views/:viewId',
-  authenticateToken,
-  validateParams(validators.viewIdSchema),
-  databaseController.deleteView
-);
-
-router.post(
-  '/:id/views/:viewId/duplicate',
-  authenticateToken,
-  validateParams(validators.viewIdSchema),
-  validateBody(validators.duplicateViewSchema),
-  databaseController.duplicateView
-);
-
-router.post(
-  '/:id/records',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.createRecordSchema),
-  databaseController.createRecord
-);
-
-router.get(
-  '/:id/records',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateQuery(validators.getRecordsQuerySchema),
-  databaseController.getRecords
-);
-
-router.get(
-  '/:id/records/:recordId',
-  authenticateToken,
-  validateParams(validators.recordIdSchema),
-  databaseController.getRecordById
-);
-
-router.put(
-  '/:id/records/:recordId',
-  authenticateToken,
-  validateParams(validators.recordIdSchema),
-  validateBody(validators.updateRecordSchema),
-  databaseController.updateRecord
-);
-
-router.delete(
-  '/:id/records/:recordId',
-  authenticateToken,
-  validateParams(validators.recordIdSchema),
-  databaseController.deleteRecord
-);
-
-// Bulk record operations
-router.post(
-  '/:id/records/bulk',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.bulkCreateRecordsSchema),
-  databaseController.bulkCreateRecords
-);
-
-router.put(
-  '/:id/records/bulk',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.bulkUpdateRecordsSchema),
-  databaseController.bulkUpdateRecords
-);
-
-router.delete(
-  '/:id/records/bulk',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.bulkDeleteRecordsSchema),
-  databaseController.bulkDeleteRecords
-);
-
-router.post(
-  '/:id/share',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.shareDatabaseSchema),
-  databaseController.shareDatabase
-);
-
-router.delete(
-  '/:id/share/:targetUserId',
-  authenticateToken,
-  validateParams(validators.removeAccessSchema),
-  databaseController.removeDatabaseAccess
-);
-
-// Database permissions
-router.get(
-  '/:id/permissions',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.getDatabasePermissions
-);
-
-router.put(
-  '/:id/permissions/:userId',
-  authenticateToken,
-  validateParams(validators.updatePermissionSchema),
-  validateBody(validators.updatePermissionLevelSchema),
-  databaseController.updateDatabasePermission
-);
-
-router.get(
   '/:id/export',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  validateQuery(validators.exportQuerySchema),
-  databaseController.exportDatabase
+  validateParams(databaseIdParamSchema),
+  validateBody(exportDatabaseSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.READ, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  exportDatabase
 );
-
+router.post('/import', validateBody(importDatabaseSchema), importDatabase);
 router.post(
-  '/:id/import',
-  authenticateToken,
-  upload.single('file'),
-  validateParams(validators.databaseIdSchema),
-  validateBody(validators.importSchema),
-  databaseController.importData
+  '/:id/restore',
+  validateParams(databaseIdParamSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.FULL_ACCESS, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  restoreDatabase
 );
-
-// Enhanced database management routes
-router.put(
-  '/:id/favorite',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.toggleDatabaseFavorite
-);
-
-router.put(
-  '/:id/category',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.moveDatabaseToCategory
-);
-
 router.post(
-  '/:id/access',
-  authenticateToken,
-  validateParams(validators.databaseIdSchema),
-  databaseController.trackDatabaseAccess
+  '/:id/archive',
+  validateParams(databaseIdParamSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.FULL_ACCESS, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  archiveDatabase
+);
+router.post(
+  '/:id/unarchive',
+  validateParams(databaseIdParamSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.FULL_ACCESS, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  unarchiveDatabase
+);
+router.post('/bulk/update', validateBody(bulkUpdateDatabasesSchema), bulkUpdateDatabases);
+router.post('/bulk/delete', validateBody(bulkDeleteDatabasesSchema), bulkDeleteDatabases);
+router.get(
+  '/:id/templates',
+  validateParams(databaseIdParamSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.READ, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  getDatabaseTemplates
+);
+router.post(
+  '/:id/templates',
+  validateParams(databaseIdParamSchema),
+  validateBody(createDatabaseTemplateSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.EDIT, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  createDatabaseTemplate
+);
+router.put(
+  '/:id/templates/:templateId',
+  validateParams(
+    z.object({
+      id: z.string().min(1, 'Database ID is required'),
+      templateId: z.string().min(1, 'Template ID is required')
+    })
+  ),
+  validateBody(updateDatabaseTemplateSchema),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.EDIT, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  updateDatabaseTemplate
+);
+router.delete(
+  '/:id/templates/:templateId',
+  validateParams(
+    z.object({
+      id: z.string().min(1, 'Database ID is required'),
+      templateId: z.string().min(1, 'Template ID is required')
+    })
+  ),
+  requirePermission(EShareScope.DATABASE, EPermissionLevel.FULL_ACCESS, {
+    resourceIdParam: 'id',
+    allowOwner: true
+  }),
+  deleteDatabaseTemplate
 );
 
 export default router;

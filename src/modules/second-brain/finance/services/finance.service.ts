@@ -1,655 +1,518 @@
+import { DatabaseModel } from '@/modules/database/models/database.model';
+import { RecordModel } from '@/modules/database/models/record.model';
+import { EDatabaseType } from '@/modules/core/types/database.types';
+import {
+  ITransaction,
+  IAccount,
+  IBudget,
+  IFinancialGoal,
+  IFinanceStats,
+  ICreateTransactionRequest,
+  IUpdateTransactionRequest,
+  ITransactionQueryParams,
+  ICreateAccountRequest,
+  IUpdateAccountRequest,
+  ICreateBudgetRequest,
+  IUpdateBudgetRequest,
+  ICreateFinancialGoalRequest,
+  IUpdateFinancialGoalRequest,
+  ETransactionType,
+  ETransactionCategory,
+  EAccountType,
+  EBudgetPeriod,
+  EFinancialGoalType
+} from '../types/finance.types';
+import {
+  createAppError,
+  createNotFoundError,
+  createValidationError,
+  createForbiddenError
+} from '@/utils/error.utils';
+import { generateId } from '@/utils/id-generator';
+import { permissionService } from '../../../permissions/services/permission.service';
+import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 
-import { TransactionType } from 'aws-sdk/clients/lakeformation';
-import { createAppError, createNotFoundError, createValidationError } from '../../../../utils';
-import { Types } from 'mongoose';
-import { TransactionStatus } from 'aws-sdk/clients/rdsdataservice';
-import Transaction from '../models/transaction.model';
+export class FinanceService {
 
-export interface CreateTransactionRequest {
-    description: string;
-    amount: number;
-    type: TransactionType;
-    category: string;
-    account?: string;
-    date: Date;
-    payee?: string;
-    reference?: string;
-    status?: TransactionStatus;
-    recurring?: boolean;
-    budget?: string;
-    tags?: string[];
-    notes?: string;
-}
+  // ===== TRANSACTION OPERATIONS =====
 
-export interface UpdateTransactionRequest extends Partial<CreateTransactionRequest> {}
+  async createTransaction(data: ICreateTransactionRequest, userId: string): Promise<ITransaction> {
+    try {
+      // Verify the database exists and is a finance database
+      const database = await DatabaseModel.findOne({
+        _id: data.databaseId,
+        isDeleted: { $ne: true }
+      }).exec();
 
-export interface TransactionFilters {
-    type?: string | string[];
-    category?: string | string[];
-    account?: string | string[];
-    status?: string | string[];
-    tags?: string | string[];
-    payee?: string;
-    amountMin?: number;
-    amountMax?: number;
-    dateFrom?: Date;
-    dateTo?: Date;
-    recurring?: boolean;
-    search?: string;
-}
+      if (!database) {
+        throw createNotFoundError('Database', data.databaseId);
+      }
 
-export interface TransactionOptions {
-    page?: number;
-    limit?: number;
-    sort?: string;
-    populate?: string[];
-}
+      if (database.type !== EDatabaseType.FINANCE) {
+        throw createValidationError('Database must be of type FINANCE');
+      }
 
-// Get transactions with filtering and pagination
-export async function getTransactions(userId: string, filters: TransactionFilters = {}, options: TransactionOptions = {}) {
-    const {
-        type,
-        category,
-        account,
-        status,
-        tags,
-        payee,
-        amountMin,
-        amountMax,
-        dateFrom,
-        dateTo,
-        recurring,
-        search
-    } = filters;
+      // Check permission to create transactions in this database
+      const hasPermission = await permissionService.hasPermission(
+        EShareScope.DATABASE,
+        data.databaseId,
+        userId,
+        EPermissionLevel.EDIT
+      );
 
-    const {
-        page = 1,
-        limit = 50,
-        sort = '-date',
-        populate = []
-    } = options;
+      if (!hasPermission) {
+        throw createForbiddenError('Insufficient permissions to create transactions in this database');
+      }
 
-    // Build filter query
-    const filter: any = {
+      // Create transaction record
+      const transactionRecord = new RecordModel({
+        _id: generateId(),
+        databaseId: data.databaseId,
+        properties: {
+          Type: data.type,
+          Category: data.category,
+          Amount: data.amount,
+          Currency: data.currency,
+          Description: data.description,
+          Date: data.date,
+          'From Account': data.fromAccountId,
+          'To Account': data.toAccountId,
+          Merchant: data.merchant || '',
+          Location: data.location || '',
+          Notes: data.notes || '',
+          Tags: data.tags || [],
+          'Is Recurring': data.isRecurring || false,
+          'Recurrence Pattern': data.recurrencePattern || '',
+          'Is Verified': false,
+          'Receipt URL': '',
+          Attachments: [],
+          'Budget ID': data.budgetId,
+          'Goal ID': data.goalId,
+          'Project ID': data.projectId
+        },
+        content: [],
         createdBy: userId,
-        archivedAt: { $exists: false }
-    };
+        updatedBy: userId,
+        order: await this.getNextOrder(data.databaseId)
+      });
 
-    if (type) {
-        filter.type = Array.isArray(type) ? { $in: type } : type;
-    }
+      const savedRecord = await transactionRecord.save();
 
-    if (category) {
-        filter.category = Array.isArray(category) ? { $in: category } : category;
-    }
+      // Update account balances if specified
+      if (data.fromAccountId || data.toAccountId) {
+        await this.updateAccountBalances(data, userId);
+      }
 
-    if (account) {
-        filter.account = Array.isArray(account) ? { $in: account } : account;
-    }
+      // Update budget spending if specified
+      if (data.budgetId && data.type === ETransactionType.EXPENSE) {
+        await this.updateBudgetSpending(data.budgetId, data.category, data.amount, userId);
+      }
 
-    if (status) {
-        filter.status = Array.isArray(status) ? { $in: status } : status;
-    }
+      // Update goal progress if specified
+      if (data.goalId && (data.type === ETransactionType.INCOME || data.type === ETransactionType.INVESTMENT)) {
+        await this.updateGoalProgress(data.goalId, data.amount, userId);
+      }
 
-    if (tags) {
-        filter.tags = Array.isArray(tags) ? { $in: tags } : { $in: [tags] };
-    }
-
-    if (payee) {
-        filter.payee = { $regex: payee, $options: 'i' };
-    }
-
-    if (amountMin !== undefined || amountMax !== undefined) {
-        filter.amount = {};
-        if (amountMin !== undefined) filter.amount.$gte = amountMin;
-        if (amountMax !== undefined) filter.amount.$lte = amountMax;
-    }
-
-    if (dateFrom || dateTo) {
-        filter.date = {};
-        if (dateFrom) filter.date.$gte = new Date(dateFrom);
-        if (dateTo) filter.date.$lte = new Date(dateTo);
-    }
-
-    if (typeof recurring === 'boolean') {
-        filter.recurring = recurring;
-    }
-
-    if (search) {
-        filter.$or = [
-            { description: { $regex: search, $options: 'i' } },
-            { payee: { $regex: search, $options: 'i' } },
-            { reference: { $regex: search, $options: 'i' } },
-            { notes: { $regex: search, $options: 'i' } }
-        ];
-    }
-
-    const skip = (page - 1) * limit;
-
-    const [transactions, total] = await Promise.all([
-        Transaction.find(filter)
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .populate(populate)
-            .lean(),
-        Transaction.countDocuments(filter)
-    ]);
-
-    return {
-        transactions,
-        pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit)
+      // Update database record count and activity
+      await DatabaseModel.findByIdAndUpdate(
+        data.databaseId,
+        {
+          $inc: { recordCount: 1 },
+          lastActivityAt: new Date()
         }
-    };
-}
+      );
 
-// Get single transaction by ID
-export async function getTransaction(userId: string, transactionId: string) {
-    if (!Types.ObjectId.isValid(transactionId)) {
-        throw createValidationError('Invalid transaction ID');
+      return this.formatTransactionResponse(savedRecord);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to create transaction: ${error.message}`, 500);
     }
+  }
 
-    const transaction = await Transaction.findOne({
-        _id: transactionId,
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    }).lean();
+  async getTransactions(params: ITransactionQueryParams, userId: string): Promise<{
+    transactions: ITransaction[];
+    total: number;
+    page: number;
+    limit: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }> {
+    try {
+      const query = this.buildTransactionQuery(params, userId);
+      const { page = 1, limit = 25, sortBy = 'date', sortOrder = 'desc' } = params;
 
-    if (!transaction) {
-        throw createNotFoundError('Transaction not found');
+      const skip = (page - 1) * limit;
+      const sortOptions: any = { [this.mapSortField(sortBy)]: sortOrder === 'desc' ? -1 : 1 };
+
+      const [transactions, total] = await Promise.all([
+        RecordModel.find(query)
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(limit)
+          .exec(),
+        RecordModel.countDocuments(query)
+      ]);
+
+      const formattedTransactions = transactions.map(transaction => this.formatTransactionResponse(transaction));
+
+      const hasNext = skip + limit < total;
+      const hasPrev = page > 1;
+
+      return {
+        transactions: formattedTransactions,
+        total,
+        page,
+        limit,
+        hasNext,
+        hasPrev
+      };
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get transactions: ${error.message}`, 500);
     }
+  }
 
-    return transaction;
-}
+  async getTransactionById(id: string, userId: string): Promise<ITransaction> {
+    try {
+      const transaction = await RecordModel.findOne({
+        _id: id,
+        isDeleted: { $ne: true }
+      }).exec();
 
-// Create new transaction
-export async function createTransaction(userId: string, transactionData: CreateTransactionRequest) {
-    const transaction = new Transaction({
-        ...transactionData,
-        createdBy: userId,
-        createdAt: new Date(),
+      if (!transaction) {
+        throw createNotFoundError('Transaction', id);
+      }
+
+      // Check permission to read this transaction
+      const hasPermission = await permissionService.hasPermission(
+        EShareScope.RECORD,
+        id,
+        userId,
+        EPermissionLevel.READ
+      );
+
+      if (!hasPermission) {
+        throw createForbiddenError('Insufficient permissions to view this transaction');
+      }
+
+      return this.formatTransactionResponse(transaction);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get transaction: ${error.message}`, 500);
+    }
+  }
+
+  async updateTransaction(id: string, data: IUpdateTransactionRequest, userId: string): Promise<ITransaction> {
+    try {
+      const transaction = await RecordModel.findOne({
+        _id: id,
+        isDeleted: { $ne: true }
+      }).exec();
+
+      if (!transaction) {
+        throw createNotFoundError('Transaction', id);
+      }
+
+      // Check permission to edit this transaction
+      const hasPermission = await permissionService.hasPermission(
+        EShareScope.RECORD,
+        id,
+        userId,
+        EPermissionLevel.EDIT
+      );
+
+      if (!hasPermission) {
+        throw createForbiddenError('Insufficient permissions to edit this transaction');
+      }
+
+      // Build update object
+      const updateData: any = {
+        updatedBy: userId,
         updatedAt: new Date()
-    });
+      };
 
-    await transaction.save();
-    return transaction.toObject();
-}
+      if (data.type !== undefined) {
+        updateData['properties.Type'] = data.type;
+      }
+      if (data.category !== undefined) {
+        updateData['properties.Category'] = data.category;
+      }
+      if (data.amount !== undefined) {
+        updateData['properties.Amount'] = data.amount;
+      }
+      if (data.currency !== undefined) {
+        updateData['properties.Currency'] = data.currency;
+      }
+      if (data.description !== undefined) {
+        updateData['properties.Description'] = data.description;
+      }
+      if (data.date !== undefined) {
+        updateData['properties.Date'] = data.date;
+      }
+      if (data.fromAccountId !== undefined) {
+        updateData['properties.From Account'] = data.fromAccountId;
+      }
+      if (data.toAccountId !== undefined) {
+        updateData['properties.To Account'] = data.toAccountId;
+      }
+      if (data.merchant !== undefined) {
+        updateData['properties.Merchant'] = data.merchant;
+      }
+      if (data.location !== undefined) {
+        updateData['properties.Location'] = data.location;
+      }
+      if (data.notes !== undefined) {
+        updateData['properties.Notes'] = data.notes;
+      }
+      if (data.tags !== undefined) {
+        updateData['properties.Tags'] = data.tags;
+      }
+      if (data.isRecurring !== undefined) {
+        updateData['properties.Is Recurring'] = data.isRecurring;
+      }
+      if (data.recurrencePattern !== undefined) {
+        updateData['properties.Recurrence Pattern'] = data.recurrencePattern;
+      }
+      if (data.isVerified !== undefined) {
+        updateData['properties.Is Verified'] = data.isVerified;
+        if (data.isVerified) {
+          updateData['properties.Verified At'] = new Date();
+        }
+      }
+      if (data.budgetId !== undefined) {
+        updateData['properties.Budget ID'] = data.budgetId;
+      }
+      if (data.goalId !== undefined) {
+        updateData['properties.Goal ID'] = data.goalId;
+      }
+      if (data.projectId !== undefined) {
+        updateData['properties.Project ID'] = data.projectId;
+      }
 
-// Update transaction
-export async function updateTransaction(userId: string, transactionId: string, updates: UpdateTransactionRequest) {
-    if (!Types.ObjectId.isValid(transactionId)) {
-        throw createValidationError('Invalid transaction ID');
-    }
-
-    const transaction = await Transaction.findOneAndUpdate(
-        {
-            _id: transactionId,
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            ...updates,
-            updatedAt: new Date()
-        },
+      const updatedTransaction = await RecordModel.findByIdAndUpdate(
+        id,
+        updateData,
         { new: true, runValidators: true }
-    ).lean();
+      ).exec();
 
-    if (!transaction) {
-        throw createNotFoundError('Transaction not found');
+      if (!updatedTransaction) {
+        throw createNotFoundError('Transaction', id);
+      }
+
+      // Update database activity
+      await DatabaseModel.findByIdAndUpdate(
+        updatedTransaction.databaseId,
+        { lastActivityAt: new Date() }
+      );
+
+      return this.formatTransactionResponse(updatedTransaction);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to update transaction: ${error.message}`, 500);
     }
+  }
 
-    return transaction;
-}
+  async deleteTransaction(id: string, userId: string, permanent: boolean = false): Promise<void> {
+    try {
+      const transaction = await RecordModel.findOne({
+        _id: id,
+        isDeleted: { $ne: true }
+      }).exec();
 
-// Delete transaction
-export async function deleteTransaction(userId: string, transactionId: string) {
-    if (!Types.ObjectId.isValid(transactionId)) {
-        throw createValidationError('Invalid transaction ID');
-    }
+      if (!transaction) {
+        throw createNotFoundError('Transaction', id);
+      }
 
-    const transaction = await Transaction.findOneAndUpdate(
+      // Check permission to delete this transaction
+      const hasPermission = await permissionService.hasPermission(
+        EShareScope.RECORD,
+        id,
+        userId,
+        EPermissionLevel.FULL_ACCESS
+      );
+
+      if (!hasPermission) {
+        throw createForbiddenError('Insufficient permissions to delete this transaction');
+      }
+
+      if (permanent) {
+        await RecordModel.findByIdAndDelete(id);
+      } else {
+        await RecordModel.findByIdAndUpdate(id, {
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy: userId
+        });
+      }
+
+      // Update database record count
+      await DatabaseModel.findByIdAndUpdate(
+        transaction.databaseId,
         {
-            _id: transactionId,
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            archivedAt: new Date(),
-            updatedAt: new Date()
-        },
-        { new: true }
-    );
-
-    if (!transaction) {
-        throw createNotFoundError('Transaction not found');
-    }
-
-    return { message: 'Transaction deleted successfully' };
-}
-
-// Get financial statistics
-export async function getFinancialStats(userId: string) {
-    const stats = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed'
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                totalTransactions: { $sum: 1 },
-                totalIncome: {
-                    $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] }
-                },
-                totalExpenses: {
-                    $sum: { $cond: [{ $eq: ['$type', 'expense'] }, '$amount', 0] }
-                },
-                netIncome: {
-                    $sum: {
-                        $cond: [
-                            { $eq: ['$type', 'income'] },
-                            '$amount',
-                            { $cond: [{ $eq: ['$type', 'expense'] }, { $multiply: ['$amount', -1] }, 0] }
-                        ]
-                    }
-                }
-            }
+          $inc: { recordCount: -1 },
+          lastActivityAt: new Date()
         }
-    ]);
+      );
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to delete transaction: ${error.message}`, 500);
+    }
+  }
 
-    const categoryBreakdown = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed'
-            }
-        },
-        {
-            $group: {
-                _id: { category: '$category', type: '$type' },
-                total: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
-        },
-        { $sort: { total: -1 } }
-    ]);
+  // ===== HELPER METHODS =====
 
+  private buildTransactionQuery(params: ITransactionQueryParams, userId: string): any {
+    const query: any = {
+      isDeleted: { $ne: true }
+    };
+
+    if (params.databaseId) {
+      query.databaseId = params.databaseId;
+    }
+
+    if (params.type && params.type.length > 0) {
+      query['properties.Type'] = { $in: params.type };
+    }
+
+    if (params.category && params.category.length > 0) {
+      query['properties.Category'] = { $in: params.category };
+    }
+
+    if (params.accountId) {
+      query.$or = [
+        { 'properties.From Account': params.accountId },
+        { 'properties.To Account': params.accountId }
+      ];
+    }
+
+    if (params.budgetId) {
+      query['properties.Budget ID'] = params.budgetId;
+    }
+
+    if (params.goalId) {
+      query['properties.Goal ID'] = params.goalId;
+    }
+
+    if (params.projectId) {
+      query['properties.Project ID'] = params.projectId;
+    }
+
+    if (params.minAmount !== undefined || params.maxAmount !== undefined) {
+      const amountQuery: any = {};
+      if (params.minAmount !== undefined) {
+        amountQuery.$gte = params.minAmount;
+      }
+      if (params.maxAmount !== undefined) {
+        amountQuery.$lte = params.maxAmount;
+      }
+      query['properties.Amount'] = amountQuery;
+    }
+
+    if (params.startDate || params.endDate) {
+      const dateQuery: any = {};
+      if (params.startDate) {
+        dateQuery.$gte = params.startDate;
+      }
+      if (params.endDate) {
+        dateQuery.$lte = params.endDate;
+      }
+      query['properties.Date'] = dateQuery;
+    }
+
+    if (params.isRecurring !== undefined) {
+      query['properties.Is Recurring'] = params.isRecurring;
+    }
+
+    if (params.isVerified !== undefined) {
+      query['properties.Is Verified'] = params.isVerified;
+    }
+
+    if (params.search) {
+      query.$or = [
+        { 'properties.Description': { $regex: params.search, $options: 'i' } },
+        { 'properties.Merchant': { $regex: params.search, $options: 'i' } },
+        { 'properties.Notes': { $regex: params.search, $options: 'i' } }
+      ];
+    }
+
+    if (params.tags && params.tags.length > 0) {
+      query['properties.Tags'] = { $in: params.tags };
+    }
+
+    return query;
+  }
+
+  private mapSortField(sortBy: string): string {
+    const fieldMap: Record<string, string> = {
+      'date': 'properties.Date',
+      'amount': 'properties.Amount',
+      'description': 'properties.Description',
+      'category': 'properties.Category'
+    };
+    return fieldMap[sortBy] || 'properties.Date';
+  }
+
+  private formatTransactionResponse(record: any): ITransaction {
     return {
-        overview: stats[0] || {
-            totalTransactions: 0,
-            totalIncome: 0,
-            totalExpenses: 0,
-            netIncome: 0
-        },
-        categoryBreakdown
+      id: record._id.toString(),
+      databaseId: record.databaseId,
+      type: record.properties.Type || ETransactionType.EXPENSE,
+      category: record.properties.Category || ETransactionCategory.OTHER_EXPENSE,
+      amount: record.properties.Amount || 0,
+      currency: record.properties.Currency || 'USD',
+      description: record.properties.Description || '',
+      date: record.properties.Date || record.createdAt,
+      fromAccountId: record.properties['From Account'],
+      toAccountId: record.properties['To Account'],
+      accountName: record.properties['Account Name'],
+      merchant: record.properties.Merchant,
+      location: record.properties.Location,
+      notes: record.properties.Notes,
+      tags: record.properties.Tags || [],
+      isRecurring: record.properties['Is Recurring'] || false,
+      recurrencePattern: record.properties['Recurrence Pattern'],
+      nextDueDate: record.properties['Next Due Date'],
+      isVerified: record.properties['Is Verified'] || false,
+      verifiedAt: record.properties['Verified At'],
+      receiptUrl: record.properties['Receipt URL'],
+      attachments: record.properties.Attachments || [],
+      budgetId: record.properties['Budget ID'],
+      goalId: record.properties['Goal ID'],
+      projectId: record.properties['Project ID'],
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      createdBy: record.createdBy,
+      updatedBy: record.updatedBy
     };
+  }
+
+  private async getNextOrder(databaseId: string): Promise<number> {
+    const lastRecord = await RecordModel.findOne(
+      { databaseId, isDeleted: { $ne: true } },
+      { order: 1 }
+    ).sort({ order: -1 }).exec();
+
+    return (lastRecord?.order || 0) + 1;
+  }
+
+  private async updateAccountBalances(data: ICreateTransactionRequest, userId: string): Promise<void> {
+    // Implementation for updating account balances
+    // This would involve finding the account records and updating their balances
+    // For now, this is a placeholder
+  }
+
+  private async updateBudgetSpending(budgetId: string, category: ETransactionCategory, amount: number, userId: string): Promise<void> {
+    // Implementation for updating budget spending
+    // This would involve finding the budget record and updating the category spending
+    // For now, this is a placeholder
+  }
+
+  private async updateGoalProgress(goalId: string, amount: number, userId: string): Promise<void> {
+    // Implementation for updating goal progress
+    // This would involve finding the goal record and updating the current amount
+    // For now, this is a placeholder
+  }
 }
 
-// Get financial analytics
-export async function getFinancialAnalytics(userId: string) {
-    const monthlyTrends = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed'
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    year: { $year: '$date' },
-                    month: { $month: '$date' },
-                    type: '$type'
-                },
-                total: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
-
-    return {
-        monthlyTrends,
-        currentMonth: new Date().getMonth() + 1,
-        currentYear: new Date().getFullYear()
-    };
-}
-
-// Get financial summary
-export async function getFinancialSummary(userId: string) {
-    const thisMonth = new Date();
-    thisMonth.setDate(1);
-    thisMonth.setHours(0, 0, 0, 0);
-
-    const summary = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed',
-                date: { $gte: thisMonth }
-            }
-        },
-        {
-            $group: {
-                _id: '$type',
-                total: { $sum: '$amount' },
-                count: { $sum: 1 }
-            }
-        }
-    ]);
-
-    const result = {
-        income: 0,
-        expenses: 0,
-        balance: 0,
-        transactionCount: 0
-    };
-
-    summary.forEach(item => {
-        if (item._id === 'income') {
-            result.income = item.total;
-        } else if (item._id === 'expense') {
-            result.expenses = item.total;
-        }
-        result.transactionCount += item.count;
-    });
-
-    result.balance = result.income - result.expenses;
-
-    return result;
-}
-
-// Update status
-export async function updateStatus(userId: string, transactionId: string, status: TransactionStatus) {
-    return await updateTransaction(userId, transactionId, { status });
-}
-
-// Duplicate transaction
-export async function duplicateTransaction(userId: string, transactionId: string) {
-    const originalTransaction = await getTransaction(userId, transactionId);
-    const { _id, createdAt, updatedAt, ...transactionData } = originalTransaction as any;
-    
-    return await createTransaction(userId, {
-        ...transactionData,
-        description: `${transactionData.description} (Copy)`,
-        date: new Date(),
-        status: 'pending'
-    });
-}
-
-// Bulk operations
-export async function bulkUpdateTransactions(userId: string, updates: { transactionIds: string[], updates: any }) {
-    const { transactionIds, updates: updateData } = updates;
-    
-    const result = await Transaction.updateMany(
-        {
-            _id: { $in: transactionIds },
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            ...updateData,
-            updatedAt: new Date()
-        }
-    );
-
-    return { modifiedCount: result.modifiedCount };
-}
-
-export async function bulkDeleteTransactions(userId: string, transactionIds: string[]) {
-    const result = await Transaction.updateMany(
-        {
-            _id: { $in: transactionIds },
-            createdBy: userId,
-            archivedAt: { $exists: false }
-        },
-        {
-            archivedAt: new Date(),
-            updatedAt: new Date()
-        }
-    );
-
-    return { deletedCount: result.modifiedCount };
-}
-
-// Import/Export operations
-export async function importTransactions(userId: string, transactionsData: any[]) {
-    const transactions = transactionsData.map(transactionData => ({
-        ...transactionData,
-        createdBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-    }));
-
-    const result = await Transaction.insertMany(transactions);
-    return { importedCount: result.length };
-}
-
-export async function exportTransactions(userId: string) {
-    const transactions = await Transaction.find({
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    }).lean();
-
-    return transactions;
-}
-
-// Category operations (placeholder)
-export async function getCategories(userId: string) {
-    const categories = await Transaction.distinct('category', {
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    });
-
-    return categories.map(category => ({ name: category, id: category }));
-}
-
-export async function createCategory(userId: string, categoryData: any) {
-    // TODO: Implement with separate Category model
-    throw createAppError('Category management not yet implemented', 501);
-}
-
-export async function updateCategory(userId: string, categoryId: string, updates: any) {
-    // TODO: Implement with separate Category model
-    throw createAppError('Category management not yet implemented', 501);
-}
-
-export async function deleteCategory(userId: string, categoryId: string) {
-    // TODO: Implement with separate Category model
-    throw createAppError('Category management not yet implemented', 501);
-}
-
-// Budget operations (placeholder)
-export async function getBudgets(userId: string) {
-    // TODO: Implement with separate Budget model
-    return [];
-}
-
-export async function createBudget(userId: string, budgetData: any) {
-    // TODO: Implement with separate Budget model
-    throw createAppError('Budget functionality not yet implemented', 501);
-}
-
-export async function updateBudget(userId: string, budgetId: string, updates: any) {
-    // TODO: Implement with separate Budget model
-    throw createAppError('Budget functionality not yet implemented', 501);
-}
-
-export async function deleteBudget(userId: string, budgetId: string) {
-    // TODO: Implement with separate Budget model
-    throw createAppError('Budget functionality not yet implemented', 501);
-}
-
-export async function getBudgetProgress(userId: string, budgetId: string) {
-    // TODO: Implement with separate Budget model
-    throw createAppError('Budget functionality not yet implemented', 501);
-}
-
-// Account operations (placeholder)
-export async function getAccounts(userId: string) {
-    const accounts = await Transaction.distinct('account', {
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    });
-
-    return accounts.map(account => ({ name: account, id: account, balance: 0 }));
-}
-
-export async function createAccount(userId: string, accountData: any) {
-    // TODO: Implement with separate Account model
-    throw createAppError('Account management not yet implemented', 501);
-}
-
-export async function updateAccount(userId: string, accountId: string, updates: any) {
-    // TODO: Implement with separate Account model
-    throw createAppError('Account management not yet implemented', 501);
-}
-
-export async function deleteAccount(userId: string, accountId: string) {
-    // TODO: Implement with separate Account model
-    throw createAppError('Account management not yet implemented', 501);
-}
-
-export async function getAccountBalance(userId: string, accountId: string) {
-    const balance = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                account: accountId,
-                status: 'completed',
-                archivedAt: { $exists: false }
-            }
-        },
-        {
-            $group: {
-                _id: null,
-                balance: {
-                    $sum: {
-                        $cond: [
-                            { $eq: ['$type', 'income'] },
-                            '$amount',
-                            { $multiply: ['$amount', -1] }
-                        ]
-                    }
-                }
-            }
-        }
-    ]);
-
-    return { balance: balance[0]?.balance || 0 };
-}
-
-// Financial goals (placeholder)
-export async function getFinancialGoals(userId: string) {
-    // TODO: Implement with separate FinancialGoal model
-    return [];
-}
-
-export async function createFinancialGoal(userId: string, goalData: any) {
-    // TODO: Implement with separate FinancialGoal model
-    throw createAppError('Financial goals not yet implemented', 501);
-}
-
-export async function updateFinancialGoal(userId: string, goalId: string, updates: any) {
-    // TODO: Implement with separate FinancialGoal model
-    throw createAppError('Financial goals not yet implemented', 501);
-}
-
-export async function deleteFinancialGoal(userId: string, goalId: string) {
-    // TODO: Implement with separate FinancialGoal model
-    throw createAppError('Financial goals not yet implemented', 501);
-}
-
-// Reports
-export async function getIncomeExpenseReport(userId: string) {
-    const report = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed'
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    year: { $year: '$date' },
-                    month: { $month: '$date' },
-                    type: '$type'
-                },
-                total: { $sum: '$amount' }
-            }
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
-
-    return report;
-}
-
-export async function getCategoryBreakdownReport(userId: string) {
-    const report = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed'
-            }
-        },
-        {
-            $group: {
-                _id: '$category',
-                total: { $sum: '$amount' },
-                count: { $sum: 1 },
-                averageAmount: { $avg: '$amount' }
-            }
-        },
-        { $sort: { total: -1 } }
-    ]);
-
-    return report;
-}
-
-export async function getMonthlySummaryReport(userId: string) {
-    const thisMonth = new Date();
-    thisMonth.setDate(1);
-    thisMonth.setHours(0, 0, 0, 0);
-
-    const nextMonth = new Date(thisMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    const report = await Transaction.aggregate([
-        {
-            $match: {
-                createdBy: new Types.ObjectId(userId),
-                archivedAt: { $exists: false },
-                status: 'completed',
-                date: { $gte: thisMonth, $lt: nextMonth }
-            }
-        },
-        {
-            $group: {
-                _id: '$category',
-                income: {
-                    $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] }
-                },
-                expenses: {
-                    $sum: { $cond: [{ $eq: ['$type', 'expense'] }, '$amount', 0] }
-                },
-                transactionCount: { $sum: 1 }
-            }
-        },
-        { $sort: { expenses: -1 } }
-    ]);
-
-    return report;
-}
+export const financeService = new FinanceService();
+export default financeService;

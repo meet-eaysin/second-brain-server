@@ -7,9 +7,11 @@ import {
   TRefreshTokenPayload,
   TGoogleTokenResponse
 } from '../types/auth.types';
-import { googleConfig } from '../../../config/google/google';
 import { jwtConfig } from '../../../config/jwt/jwt.config';
 import { TJwtPayload } from '../../users/types/user.types';
+import { createAppError } from '@/utils';
+import { Request } from 'express';
+import googleConfig from '@/config/google/google';
 
 export const generateGoogleLoginUrl = (): { url: string } => {
   // Create state payload for CSRF protection
@@ -164,4 +166,12 @@ export const verifyStateToken = (state: string) => {
     console.error('❌ State token verification failed:', error);
     throw new Error('Invalid or expired state token');
   }
+};
+
+export const getUserId = (req: Request): string => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    throw createAppError('User not authenticated', 401);
+  }
+  return userId;
 };

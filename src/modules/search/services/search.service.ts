@@ -1,343 +1,721 @@
-import { DatabaseModel } from '../../database/models/database.model';
-import { DatabaseRecordModel } from '../../database/models/database-record.model';
-import { FileModel } from '../../files/models/file.model';
-import { WorkspaceModel } from '../../workspace/models/workspace.model';
-import type {
-  ISearchResult,
+import { DatabaseModel } from '@/modules/database/models/database.model';
+import { RecordModel } from '@/modules/database/models/record.model';
+import { TemplateModel } from '@/modules/templates/models/template.model';
+import { SearchHistoryModel } from '../models/search-history.model';
+import { permissionService } from '../../permissions/services/permission.service';
+import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
+import {
+  ISearchOptions,
   ISearchResults,
-  IGlobalSearchOptions,
-  IDatabaseSearchOptions
-} from '../types';
+  ISearchResultItem,
+  ISearchSuggestion,
+  IRecentSearch,
+  ISearchAnalytics,
+  ESearchScope,
+  ESearchResultType,
+  ISearchFilters
+} from '../types/search.types';
+import { EDatabaseType } from '@/modules/core/types/database.types';
 
-// Global search across all content types
-export const globalSearch = async (
-  userId: string,
-  query: string,
-  options: IGlobalSearchOptions = {}
-): Promise<ISearchResults> => {
-  const { type, limit = 20, offset = 0 } = options;
-  
-  if (!query || query.trim().length < 2) {
+class SearchService {
+  /**
+   * Global search across all resources
+   */
+  async globalSearch(
+    query: string,
+    options: ISearchOptions = {},
+    userId: string
+  ): Promise<ISearchResults> {
+    const startTime = Date.now();
+
+    // Set defaults
+    const searchOptions: Required<ISearchOptions> = {
+      scope: options.scope || ESearchScope.ALL,
+      filters: options.filters || {},
+      fuzzy: options.fuzzy || false,
+      caseSensitive: options.caseSensitive || false,
+      includeContent: options.includeContent !== false,
+      includeHighlights: options.includeHighlights !== false,
+      sortBy: options.sortBy || 'relevance',
+      sortOrder: options.sortOrder || 'desc',
+      limit: Math.min(options.limit || 25, 100),
+      offset: options.offset || 0
+    };
+
+    // Build search regex
+    const searchRegex = new RegExp(
+      searchOptions.fuzzy ? this.buildFuzzyPattern(query) : this.escapeRegex(query),
+      searchOptions.caseSensitive ? 'g' : 'gi'
+    );
+
+    let allResults: ISearchResultItem[] = [];
+
+    // Search based on scope
+    switch (searchOptions.scope) {
+      case ESearchScope.ALL:
+        const [databases, records, blocks, templates] = await Promise.all([
+          this.searchDatabases(searchRegex, searchOptions, userId),
+          this.searchRecords(searchRegex, searchOptions, userId),
+          this.searchBlocks(searchRegex, searchOptions, userId),
+          this.searchTemplates(searchRegex, searchOptions, userId)
+        ]);
+        allResults = [...databases, ...records, ...blocks, ...templates];
+        break;
+
+      case ESearchScope.DATABASES:
+        allResults = await this.searchDatabases(searchRegex, searchOptions, userId);
+        break;
+
+      case ESearchScope.RECORDS:
+        allResults = await this.searchRecords(searchRegex, searchOptions, userId);
+        break;
+
+      case ESearchScope.BLOCKS:
+        allResults = await this.searchBlocks(searchRegex, searchOptions, userId);
+        break;
+
+      case ESearchScope.TEMPLATES:
+        allResults = await this.searchTemplates(searchRegex, searchOptions, userId);
+        break;
+    }
+
+    // Sort results
+    allResults = this.sortResults(allResults, searchOptions.sortBy, searchOptions.sortOrder);
+
+    // Calculate total before pagination
+    const total = allResults.length;
+
+    // Apply pagination
+    const paginatedResults = allResults.slice(
+      searchOptions.offset,
+      searchOptions.offset + searchOptions.limit
+    );
+
+    // Calculate facets
+    const facets = this.calculateFacets(allResults);
+
+    // Generate suggestions
+    const suggestions = await this.generateSuggestions(query, searchOptions.scope, userId);
+
+    // Save search to history
+    await this.saveSearchHistory(userId, query, searchOptions, total);
+
+    const executionTime = Date.now() - startTime;
+
     return {
-      results: [],
-      total: 0,
-      databases: [],
-      records: [],
-      files: [],
-      workspaces: []
+      query,
+      results: paginatedResults,
+      total,
+      scope: searchOptions.scope,
+      filters: searchOptions.filters,
+      facets,
+      suggestions: suggestions.slice(0, 5), // Limit suggestions
+      executionTime
     };
   }
 
-  const searchRegex = new RegExp(query.trim(), 'i');
-  const results: ISearchResult[] = [];
-
-  // Search databases if no specific type or type is 'database'
-  if (!type || type === 'database') {
-    const databases = await DatabaseModel.find({
-      $and: [
-        {
-          $or: [
-            { userId },
-            { isPublic: true },
-            { 'sharedWith.userId': userId }
-          ]
-        },
-        {
-          $or: [
-            { name: searchRegex },
-            { description: searchRegex },
-            { tags: { $in: [searchRegex] } }
-          ]
-        }
-      ]
-    }).limit(limit).lean();
-
-    const databaseResults: ISearchResult[] = databases.map(db => ({
-      id: db._id.toString(),
-      type: 'database' as const,
-      title: db.name,
-      description: db.description,
-      createdAt: db.createdAt,
-      updatedAt: db.updatedAt
-    }));
-
-    results.push(...databaseResults);
-  }
-
-  // Search records if no specific type or type is 'record'
-  if (!type || type === 'record') {
-    // First get accessible databases
-    const accessibleDatabases = await DatabaseModel.find({
+  /**
+   * Search databases
+   */
+  private async searchDatabases(
+    searchRegex: RegExp,
+    options: Required<ISearchOptions>,
+    userId: string
+  ): Promise<ISearchResultItem[]> {
+    const query: any = {
+      isDeleted: { $ne: true },
       $or: [
-        { userId },
-        { isPublic: true },
-        { 'sharedWith.userId': userId }
+        { name: searchRegex },
+        { description: searchRegex }
       ]
-    }).select('_id name').lean();
+    };
 
-    const databaseIds = accessibleDatabases.map(db => db._id);
-    const databaseMap = new Map(accessibleDatabases.map(db => [db._id.toString(), db.name]));
+    // Apply filters
+    this.applyFilters(query, options.filters);
 
-    // Search in record properties
-    const records = await DatabaseRecordModel.find({
-      databaseId: { $in: databaseIds },
-      $or: [
-        { 'properties.title': searchRegex },
-        { 'properties.name': searchRegex },
-        { 'properties.description': searchRegex },
-        { 'properties.content': searchRegex }
-      ]
-    }).limit(limit).lean();
+    const databases = await DatabaseModel.find(query)
+      .sort({ updatedAt: -1 })
+      .limit(1000) // Reasonable limit for performance
+      .exec();
 
-    const recordResults: ISearchResult[] = records.map(record => ({
-      id: record._id.toString(),
-      type: 'record' as const,
-      title: record.properties?.title || record.properties?.name || 'Untitled Record',
-      description: record.properties?.description,
-      content: record.properties?.content,
-      databaseId: record.databaseId.toString(),
-      databaseName: databaseMap.get(record.databaseId.toString()),
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt
-    }));
+    const results: ISearchResultItem[] = [];
 
-    results.push(...recordResults);
-  }
+    for (const db of databases) {
+      // Check permissions
+      const hasAccess = await permissionService.hasPermission(
+        EShareScope.DATABASE,
+        db.id,
+        userId,
+        EPermissionLevel.READ
+      );
 
-  // Search files if no specific type or type is 'file'
-  if (!type || type === 'file') {
-    const files = await FileModel.find({
-      $and: [
-        {
-          $or: [
-            { userId },
-            { isPublic: true }
-          ]
-        },
-        {
-          $or: [
-            { originalName: searchRegex },
-            { description: searchRegex },
-            { tags: { $in: [searchRegex] } }
-          ]
+      if (!hasAccess && db.createdBy !== userId && !db.isPublic) {
+        continue;
+      }
+
+      const score = this.calculateRelevanceScore(
+        [db.name, db.description || ''].join(' '),
+        searchRegex
+      );
+
+      results.push({
+        id: db.id,
+        type: ESearchResultType.DATABASE,
+        title: db.name,
+        description: db.description,
+        score,
+        highlights: options.includeHighlights ? this.generateHighlights(
+          { name: db.name, description: db.description },
+          searchRegex
+        ) : undefined,
+        metadata: {
+          databaseId: db.id,
+          databaseName: db.name,
+          databaseType: db.type,
+          workspaceId: db.workspaceId,
+          createdBy: db.createdBy,
+          createdAt: db.createdAt,
+          updatedAt: db.updatedAt,
+          tags: (db as any).tags,
+          isPublic: db.isPublic,
+          isArchived: db.isArchived,
+          path: `${db.workspaceId}/${db.name}`
         }
-      ]
-    }).limit(limit).lean();
+      });
+    }
 
-    const fileResults: ISearchResult[] = files.map(file => ({
-      id: file._id.toString(),
-      type: 'file' as const,
-      title: file.originalName,
-      description: file.description,
-      createdAt: file.createdAt,
-      updatedAt: file.updatedAt
-    }));
-
-    results.push(...fileResults);
+    return results;
   }
 
-  // Search workspaces if no specific type or type is 'workspace'
-  if (!type || type === 'workspace') {
-    const workspaces = await WorkspaceModel.find({
-      $and: [
-        {
-          $or: [
-            { ownerId: userId },
-            { 'members.userId': userId }
-          ]
-        },
-        {
-          $or: [
-            { name: searchRegex },
-            { description: searchRegex },
-            { tags: { $in: [searchRegex] } }
-          ]
+  /**
+   * Search records
+   */
+  private async searchRecords(
+    searchRegex: RegExp,
+    options: Required<ISearchOptions>,
+    userId: string
+  ): Promise<ISearchResultItem[]> {
+    const query: any = {
+      isDeleted: { $ne: true }
+    };
+
+    // Build search conditions for properties
+    const searchConditions: any[] = [];
+
+    // Search in common property fields
+    const commonFields = ['Title', 'Name', 'Description', 'Content', 'Note', 'Summary'];
+    commonFields.forEach(field => {
+      searchConditions.push({ [`properties.${field}`]: searchRegex });
+    });
+
+    // Search in content if enabled
+    if (options.includeContent) {
+      searchConditions.push({ 'content.content.text.content': searchRegex });
+    }
+
+    query.$or = searchConditions;
+
+    // Apply filters
+    this.applyFilters(query, options.filters);
+
+    const records = await RecordModel.find(query)
+      .populate('databaseId', 'name type workspaceId isPublic')
+      .sort({ updatedAt: -1 })
+      .limit(1000)
+      .exec();
+
+    const results: ISearchResultItem[] = [];
+
+    for (const record of records) {
+      // Check database permissions
+      const database = record.databaseId as any;
+      if (!database) continue;
+
+      const hasAccess = await permissionService.hasPermission(
+        EShareScope.DATABASE,
+        database.id,
+        userId,
+        EPermissionLevel.READ
+      );
+
+      if (!hasAccess && record.createdBy !== userId && !database.isPublic) {
+        continue;
+      }
+
+      const title = record.properties.Title || record.properties.Name || 'Untitled';
+      const description = record.properties.Description || record.properties.Summary || '';
+      const content = options.includeContent ? this.extractContentText(record.content || []) : '';
+
+      const score = this.calculateRelevanceScore(
+        [title, description, content].join(' '),
+        searchRegex
+      );
+
+      results.push({
+        id: record.id,
+        type: ESearchResultType.RECORD,
+        title: title as string,
+        description: description as string,
+        content: content.substring(0, 500), // Limit content preview
+        preview: this.generatePreview([title, description, content].join(' '), searchRegex),
+        score,
+        highlights: options.includeHighlights ? this.generateHighlights(
+          { title, description, content },
+          searchRegex
+        ) : undefined,
+        metadata: {
+          databaseId: database.id,
+          databaseName: database.name,
+          databaseType: database.type,
+          workspaceId: database.workspaceId,
+          createdBy: record.createdBy,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          tags: record.autoTags,
+          isPublic: database.isPublic,
+          isArchived: record.isArchived,
+          path: `${database.workspaceId}/${database.name}/${title}`
         }
-      ]
-    }).limit(limit).lean();
+      });
+    }
 
-    const workspaceResults: ISearchResult[] = workspaces.map(workspace => ({
-      id: workspace._id.toString(),
-      type: 'workspace' as const,
-      title: workspace.name,
-      description: workspace.description,
-      createdAt: workspace.createdAt,
-      updatedAt: workspace.updatedAt
-    }));
-
-    results.push(...workspaceResults);
+    return results;
   }
 
-  // Sort by relevance (title matches first, then by update date)
-  results.sort((a, b) => {
-    const aTitle = a.title.toLowerCase();
-    const bTitle = b.title.toLowerCase();
-    const queryLower = query.toLowerCase();
-
-    // Exact matches first
-    if (aTitle === queryLower && bTitle !== queryLower) return -1;
-    if (bTitle === queryLower && aTitle !== queryLower) return 1;
-
-    // Starts with query
-    if (aTitle.startsWith(queryLower) && !bTitle.startsWith(queryLower)) return -1;
-    if (bTitle.startsWith(queryLower) && !aTitle.startsWith(queryLower)) return 1;
-
-    // Most recent first
-    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-  });
-
-  // Apply pagination
-  const paginatedResults = results.slice(offset, offset + limit);
-
-  // Group results by type
-  const groupedResults = {
-    results: paginatedResults,
-    total: results.length,
-    databases: paginatedResults.filter(r => r.type === 'database'),
-    records: paginatedResults.filter(r => r.type === 'record'),
-    files: paginatedResults.filter(r => r.type === 'file'),
-    workspaces: paginatedResults.filter(r => r.type === 'workspace')
-  };
-
-  return groupedResults;
-};
-
-// Search only databases
-export const searchDatabases = async (
-  userId: string,
-  query: string,
-  options: { limit?: number; offset?: number } = {}
-): Promise<{ databases: ISearchResult[]; total: number }> => {
-  const result = await globalSearch(userId, query, { ...options, type: 'database' });
-  return {
-    databases: result.databases || [],
-    total: result.total
-  };
-};
-
-// Search only records
-export const searchRecords = async (
-  userId: string,
-  query: string,
-  options: { databaseId?: string; limit?: number; offset?: number } = {}
-): Promise<{ records: ISearchResult[]; total: number }> => {
-  const { databaseId, limit = 20, offset = 0 } = options;
-
-  if (!query || query.trim().length < 2) {
-    return { records: [], total: 0 };
-  }
-
-  const searchRegex = new RegExp(query.trim(), 'i');
-
-  // Build query
-  let dbQuery: any = {
-    $or: [
-      { 'properties.title': searchRegex },
-      { 'properties.name': searchRegex },
-      { 'properties.description': searchRegex },
-      { 'properties.content': searchRegex }
-    ]
-  };
-
-  if (databaseId) {
-    // Search in specific database
-    dbQuery.databaseId = databaseId;
-  } else {
-    // Search in accessible databases
-    const accessibleDatabases = await DatabaseModel.find({
+  /**
+   * Search blocks (content within records)
+   */
+  private async searchBlocks(
+    searchRegex: RegExp,
+    options: Required<ISearchOptions>,
+    userId: string
+  ): Promise<ISearchResultItem[]> {
+    // Search within record content blocks
+    const query: any = {
+      isDeleted: { $ne: true },
       $or: [
-        { userId },
-        { isPublic: true },
-        { 'sharedWith.userId': userId }
+        { 'content.content.text.content': searchRegex },
+        { 'content.content.plain_text': searchRegex }
       ]
-    }).select('_id').lean();
+    };
 
-    dbQuery.databaseId = { $in: accessibleDatabases.map(db => db._id) };
+    // Apply filters
+    this.applyFilters(query, options.filters);
+
+    const records = await RecordModel.find(query)
+      .populate('databaseId', 'name type workspaceId isPublic')
+      .limit(500)
+      .exec();
+
+    const results: ISearchResultItem[] = [];
+
+    for (const record of records) {
+      const database = record.databaseId as any;
+      if (!database) continue;
+
+      // Check permissions
+      const hasAccess = await permissionService.hasPermission(
+        EShareScope.DATABASE,
+        database.id,
+        userId,
+        EPermissionLevel.READ
+      );
+
+      if (!hasAccess && record.createdBy !== userId && !database.isPublic) {
+        continue;
+      }
+
+      // Search through content blocks
+      const matchingBlocks = (record.content || []).filter(block => {
+        const blockContent = this.extractContentText([block]);
+        return searchRegex.test(blockContent);
+      });
+
+      for (const block of matchingBlocks) {
+        const content = this.extractContentText([block]);
+        const title = record.properties.Title || record.properties.Name || 'Untitled';
+
+        const score = this.calculateRelevanceScore(content, searchRegex);
+
+        results.push({
+          id: `${record.id}-${block.id}`,
+          type: ESearchResultType.BLOCK,
+          title: `${title} - ${block.type}`,
+          description: content.substring(0, 200),
+          content: content.substring(0, 500),
+          preview: this.generatePreview(content, searchRegex),
+          score,
+          highlights: options.includeHighlights ? this.generateHighlights(
+            { content },
+            searchRegex
+          ) : undefined,
+          metadata: {
+            databaseId: database.id,
+            databaseName: database.name,
+            databaseType: database.type,
+            workspaceId: database.workspaceId,
+            createdBy: record.createdBy,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
+            isPublic: database.isPublic,
+            path: `${database.workspaceId}/${database.name}/${title}/${block.type}`
+          }
+        });
+      }
+    }
+
+    return results;
   }
 
-  const records = await DatabaseRecordModel.find(dbQuery)
-    .limit(limit)
-    .skip(offset)
-    .lean();
+  /**
+   * Search templates
+   */
+  private async searchTemplates(
+    searchRegex: RegExp,
+    options: Required<ISearchOptions>,
+    userId: string
+  ): Promise<ISearchResultItem[]> {
+    const query: any = {
+      isDeleted: { $ne: true },
+      $or: [
+        { name: searchRegex },
+        { description: searchRegex },
+        { 'content.name': searchRegex },
+        { 'content.description': searchRegex }
+      ]
+    };
 
-  const total = await DatabaseRecordModel.countDocuments(dbQuery);
+    // Apply filters
+    this.applyFilters(query, options.filters);
 
-  // Get database names for context
-  const databaseIds = [...new Set(records.map(r => r.databaseId.toString()))];
-  const databases = await DatabaseModel.find({
-    _id: { $in: databaseIds }
-  }).select('_id name').lean();
+    const templates = await TemplateModel.find(query)
+      .sort({ updatedAt: -1 })
+      .limit(200)
+      .exec();
 
-  const databaseMap = new Map(databases.map(db => [db._id.toString(), db.name]));
+    const results: ISearchResultItem[] = [];
 
-  const recordResults: ISearchResult[] = records.map(record => ({
-    id: record._id.toString(),
-    type: 'record' as const,
-    title: record.properties?.title || record.properties?.name || 'Untitled Record',
-    description: record.properties?.description,
-    content: record.properties?.content,
-    databaseId: record.databaseId.toString(),
-    databaseName: databaseMap.get(record.databaseId.toString()),
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt
-  }));
+    for (const template of templates) {
+      const templateAny = template as any;
 
-  return {
-    records: recordResults,
-    total
-  };
-};
+      // Check if template is public or user has access
+      if (!templateAny.isPublic && template.createdBy !== userId) {
+        continue;
+      }
 
-// Get search suggestions
-export const getSearchSuggestions = async (
-  userId: string,
-  query: string,
-  limit: number = 5
-): Promise<string[]> => {
-  if (!query || query.trim().length < 1) {
-    return [];
+      const score = this.calculateRelevanceScore(
+        [template.name, template.description || ''].join(' '),
+        searchRegex
+      );
+
+      results.push({
+        id: template.id,
+        type: ESearchResultType.TEMPLATE,
+        title: template.name,
+        description: template.description,
+        score,
+        highlights: options.includeHighlights ? this.generateHighlights(
+          { name: template.name, description: template.description },
+          searchRegex
+        ) : undefined,
+        metadata: {
+          workspaceId: templateAny.workspaceId || 'global',
+          createdBy: template.createdBy,
+          createdAt: template.createdAt,
+          updatedAt: template.updatedAt,
+          tags: template.tags,
+          isPublic: templateAny.isPublic,
+          path: `Templates/${template.name}`
+        }
+      });
+    }
+
+    return results;
   }
 
-  const searchRegex = new RegExp(`^${query.trim()}`, 'i');
-  const suggestions = new Set<string>();
+  /**
+   * Get search suggestions
+   */
+  async getSearchSuggestions(
+    query: string,
+    scope: ESearchScope = ESearchScope.ALL,
+    userId: string,
+    limit: number = 10
+  ): Promise<ISearchSuggestion[]> {
+    const suggestions: ISearchSuggestion[] = [];
 
-  // Get database name suggestions
-  const databases = await DatabaseModel.find({
-    $and: [
-      {
-        $or: [
-          { userId },
-          { isPublic: true },
-          { 'sharedWith.userId': userId }
-        ]
-      },
-      { name: searchRegex }
-    ]
-  }).select('name').limit(limit).lean();
-
-  databases.forEach(db => suggestions.add(db.name));
-
-  // Get tag suggestions
-  const taggedItems = await DatabaseModel.find({
-    $and: [
-      {
-        $or: [
-          { userId },
-          { isPublic: true },
-          { 'sharedWith.userId': userId }
-        ]
-      },
-      { tags: { $elemMatch: { $regex: searchRegex } } }
-    ]
-  }).select('tags').limit(limit).lean();
-
-  taggedItems.forEach(item => {
-    item.tags?.forEach(tag => {
-      if (tag.toLowerCase().startsWith(query.toLowerCase())) {
-        suggestions.add(tag);
+    // Get popular queries from history
+    const popularQueries = await SearchHistoryModel.findPopularQueries(limit);
+    popularQueries.forEach(item => {
+      if (item.query.toLowerCase().includes(query.toLowerCase())) {
+        suggestions.push({
+          text: item.query,
+          type: 'query',
+          count: item.count
+        });
       }
     });
-  });
 
-  return Array.from(suggestions).slice(0, limit);
-};
+    // Get database suggestions
+    const databases = await DatabaseModel.find({
+      name: new RegExp(query, 'i'),
+      isDeleted: { $ne: true }
+    }).limit(5);
+
+    databases.forEach(db => {
+      suggestions.push({
+        text: db.name,
+        type: 'database',
+        metadata: { databaseId: db.id, type: db.type }
+      });
+    });
+
+    return suggestions.slice(0, limit);
+  }
+
+  /**
+   * Get recent searches for user
+   */
+  async getRecentSearches(
+    userId: string,
+    limit: number = 10,
+    scope?: ESearchScope
+  ): Promise<IRecentSearch[]> {
+    const query: any = { userId };
+    if (scope) {
+      query.scope = scope;
+    }
+
+    return SearchHistoryModel.find(query)
+      .sort({ searchedAt: -1 })
+      .limit(limit)
+      .exec();
+  }
+
+  // Helper methods
+  private buildFuzzyPattern(query: string): string {
+    return query.split('').join('.*?');
+  }
+
+  private escapeRegex(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private applyFilters(query: any, filters: ISearchFilters): void {
+    if (filters.workspaceId) {
+      query.workspaceId = filters.workspaceId;
+    }
+    if (filters.databaseTypes?.length) {
+      query.type = { $in: filters.databaseTypes };
+    }
+    if (filters.databaseIds?.length) {
+      query.databaseId = { $in: filters.databaseIds };
+    }
+    if (filters.createdBy) {
+      query.createdBy = filters.createdBy;
+    }
+    if (filters.dateRange) {
+      query.createdAt = {
+        $gte: filters.dateRange.start,
+        $lte: filters.dateRange.end
+      };
+    }
+    if (filters.tags?.length) {
+      query.tags = { $in: filters.tags };
+    }
+    if (filters.isPublic !== undefined) {
+      query.isPublic = filters.isPublic;
+    }
+    if (filters.isArchived !== undefined) {
+      query.isArchived = filters.isArchived;
+    }
+    if (filters.isTemplate !== undefined) {
+      query.isTemplate = filters.isTemplate;
+    }
+  }
+
+  private calculateRelevanceScore(text: string, searchRegex: RegExp): number {
+    const matches = text.match(searchRegex);
+    if (!matches) return 0;
+
+    // Simple scoring based on match count and position
+    let score = matches.length * 10;
+
+    // Boost score if match is at the beginning
+    if (text.toLowerCase().startsWith(matches[0].toLowerCase())) {
+      score += 50;
+    }
+
+    return Math.min(score, 100);
+  }
+
+  private sortResults(
+    results: ISearchResultItem[],
+    sortBy: string,
+    sortOrder: string
+  ): ISearchResultItem[] {
+    return results.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'relevance':
+          comparison = b.score - a.score;
+          break;
+        case 'date':
+          comparison = new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime();
+          break;
+        case 'name':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'type':
+          comparison = a.type.localeCompare(b.type);
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }
+
+  private calculateFacets(results: ISearchResultItem[]) {
+    const facets = {
+      types: [] as Array<{ type: ESearchResultType; count: number }>,
+      databases: [] as Array<{ id: string; name: string; count: number }>,
+      workspaces: [] as Array<{ id: string; name: string; count: number }>,
+      tags: [] as Array<{ tag: string; count: number }>,
+      dateRanges: [] as Array<{ range: string; count: number }>
+    };
+
+    // Calculate type facets
+    const typeCounts = new Map<ESearchResultType, number>();
+    const databaseCounts = new Map<string, { name: string; count: number }>();
+    const workspaceCounts = new Map<string, number>();
+    const tagCounts = new Map<string, number>();
+
+    results.forEach(result => {
+      // Type facets
+      typeCounts.set(result.type, (typeCounts.get(result.type) || 0) + 1);
+
+      // Database facets
+      if (result.metadata.databaseId && result.metadata.databaseName) {
+        const existing = databaseCounts.get(result.metadata.databaseId);
+        databaseCounts.set(result.metadata.databaseId, {
+          name: result.metadata.databaseName,
+          count: (existing?.count || 0) + 1
+        });
+      }
+
+      // Workspace facets
+      workspaceCounts.set(
+        result.metadata.workspaceId,
+        (workspaceCounts.get(result.metadata.workspaceId) || 0) + 1
+      );
+
+      // Tag facets
+      result.metadata.tags?.forEach(tag => {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      });
+    });
+
+    // Convert to arrays
+    facets.types = Array.from(typeCounts.entries()).map(([type, count]) => ({ type, count }));
+    facets.databases = Array.from(databaseCounts.entries()).map(([id, data]) => ({
+      id,
+      name: data.name,
+      count: data.count
+    }));
+    facets.workspaces = Array.from(workspaceCounts.entries()).map(([id, count]) => ({
+      id,
+      name: id, // Would need to fetch workspace names
+      count
+    }));
+    facets.tags = Array.from(tagCounts.entries()).map(([tag, count]) => ({ tag, count }));
+
+    return facets;
+  }
+
+  private generateHighlights(
+    fields: Record<string, any>,
+    searchRegex: RegExp
+  ): Array<{ field: string; value: string; highlighted: string }> {
+    const highlights: Array<{ field: string; value: string; highlighted: string }> = [];
+
+    Object.entries(fields).forEach(([field, value]) => {
+      if (typeof value === 'string' && value.match(searchRegex)) {
+        highlights.push({
+          field,
+          value,
+          highlighted: value.replace(searchRegex, '<mark>$&</mark>')
+        });
+      }
+    });
+
+    return highlights;
+  }
+
+  private generatePreview(text: string, searchRegex: RegExp, maxLength: number = 200): string {
+    const match = text.match(searchRegex);
+    if (!match) return text.substring(0, maxLength);
+
+    const matchIndex = text.indexOf(match[0]);
+    const start = Math.max(0, matchIndex - 100);
+    const end = Math.min(text.length, matchIndex + match[0].length + 100);
+
+    let preview = text.substring(start, end);
+    if (start > 0) preview = '...' + preview;
+    if (end < text.length) preview = preview + '...';
+
+    return preview;
+  }
+
+  private extractContentText(content: any[]): string {
+    if (!content || !Array.isArray(content)) return '';
+
+    return content.map(block => {
+      if (block.content && Array.isArray(block.content)) {
+        return block.content.map((item: any) => item.text?.content || '').join(' ');
+      }
+      return '';
+    }).join(' ');
+  }
+
+  private async saveSearchHistory(
+    userId: string,
+    query: string,
+    options: Required<ISearchOptions>,
+    resultCount: number
+  ): Promise<void> {
+    try {
+      await SearchHistoryModel.create({
+        userId,
+        query,
+        scope: options.scope,
+        filters: options.filters,
+        resultCount,
+        searchedAt: new Date()
+      });
+    } catch (error) {
+      // Log error but don't fail the search
+      console.error('Failed to save search history:', error);
+    }
+  }
+
+  private async generateSuggestions(
+    query: string,
+    scope: ESearchScope,
+    userId: string
+  ): Promise<string[]> {
+    // Simple suggestion generation
+    const suggestions: string[] = [];
+
+    // Add query variations
+    if (query.length > 3) {
+      suggestions.push(query + 's'); // Plural
+      suggestions.push(query.slice(0, -1)); // Remove last character
+    }
+
+    return suggestions;
+  }
+}
+
+export const searchService = new SearchService();
+export default searchService;

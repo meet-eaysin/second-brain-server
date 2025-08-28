@@ -1,513 +1,395 @@
-import { Request, Response } from 'express';
-import { TJwtPayload } from '../../../users/types/user.types';
-import { catchAsync, createAppError, createValidationError } from '../../../../utils';
-import * as moodService from '../services/mood.service';
-import { Mood } from '../models/mood.model';
-import { Journal } from '../../journal/models/journal.model';
+import { Request, Response, NextFunction } from 'express';
+import { moodService } from '../services/mood.service';
+import { getUserId } from '@/modules/auth';
+import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
+import {
+  ICreateMoodEntryRequest,
+  IUpdateMoodEntryRequest,
+  IMoodQueryParams,
+  IMoodAnalyticsRequest,
+  EMoodScale,
+  EMoodCategory,
+  EMoodTrigger
+} from '../types/mood.types';
 
-interface AuthenticatedRequest extends Request {
-    user?: TJwtPayload & { userId: string };
-}
+// ===== MOOD ENTRY CONTROLLERS =====
 
-// Get all mood entries
-export const getMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const {
-        startDate,
-        endDate,
-        minMood,
-        maxMood,
-        page = 1,
-        limit = 50
-    } = req.query;
+export const createMoodEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const data: ICreateMoodEntryRequest = req.body;
+    const userId = getUserId(req);
 
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
+    const entry = await moodService.createMoodEntry(data, userId);
 
-    const filter: any = {
-        createdBy: userId
+    sendSuccessResponse(res, 'Mood entry created successfully', entry, 201);
+  }
+);
+
+export const getMoodEntries = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IMoodQueryParams = req.query as any;
+    const userId = getUserId(req);
+
+    const result = await moodService.getMoodEntries(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      'Mood entries retrieved successfully',
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+export const getMoodEntryById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const userId = getUserId(req);
+
+    const entry = await moodService.getMoodEntryById(id, userId);
+
+    sendSuccessResponse(res, 'Mood entry retrieved successfully', entry);
+  }
+);
+
+export const updateMoodEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const data: IUpdateMoodEntryRequest = req.body;
+    const userId = getUserId(req);
+
+    const entry = await moodService.updateMoodEntry(id, data, userId);
+
+    sendSuccessResponse(res, 'Mood entry updated successfully', entry);
+  }
+);
+
+export const deleteMoodEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { id } = req.params;
+    const { permanent } = req.query;
+    const userId = getUserId(req);
+
+    await moodService.deleteMoodEntry(id, userId, permanent === 'true');
+
+    sendSuccessResponse(res, 'Mood entry deleted successfully', null, 204);
+  }
+);
+
+// ===== MOOD ANALYTICS =====
+
+export const getMoodAnalytics = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IMoodAnalyticsRequest = req.query as any;
+    const userId = getUserId(req);
+
+    const analytics = await moodService.getMoodAnalytics(params, userId);
+
+    sendSuccessResponse(res, 'Mood analytics retrieved successfully', analytics);
+  }
+);
+
+export const getMoodsByScale = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { scale } = req.params;
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      minMood: parseInt(scale) as EMoodScale,
+      maxMood: parseInt(scale) as EMoodScale
     };
+    const userId = getUserId(req);
 
-    if (startDate || endDate) {
-        filter.date = {};
-        if (startDate) filter.date.$gte = new Date(startDate as string);
-        if (endDate) filter.date.$lte = new Date(endDate as string);
-    }
+    const result = await moodService.getMoodEntries(params, userId);
 
-    if (minMood) filter['mood.value'] = { $gte: Number(minMood) };
-    if (maxMood) {
-        filter['mood.value'] = { ...filter['mood.value'], $lte: Number(maxMood) };
-    }
+    sendPaginatedResponse(
+      res,
+      `Mood entries with scale ${scale} retrieved successfully`,
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
 
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const [moods, total] = await Promise.all([
-        Mood.find(filter)
-            .populate('linkedTasks', 'title status priority')
-            .populate('linkedJournal', 'title type')
-            .sort({ date: -1 })
-            .skip(skip)
-            .limit(Number(limit)),
-        Mood.countDocuments(filter)
-    ]);
-
-    res.status(200).json({
-        success: true,
-        data: {
-            moods,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total,
-                pages: Math.ceil(total / Number(limit))
-            }
-        }
-    });
-});
-
-// Get single mood entry
-export const getMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { id } = req.params;
-
-    const mood = await Mood.findOne({
-        _id: id,
-        createdBy: userId
-    })
-    .populate('linkedTasks', 'title status priority dueDate')
-    .populate('linkedJournal', 'title type content');
-
-    if (!mood) {
-        throw createAppError('Mood entry not found', 404);
-    }
-
-    res.status(200).json({
-        success: true,
-        data: mood
-    });
-});
-
-// Create mood entry
-export const createMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const moodData = {
-        ...req.body,
-        createdBy: userId,
-        date: req.body.date ? new Date(req.body.date) : new Date()
+export const getMoodsByCategory = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { category } = req.params;
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      categories: [category as EMoodCategory]
     };
+    const userId = getUserId(req);
 
-    // Normalize date to start of day for uniqueness
-    const entryDate = new Date(moodData.date);
-    entryDate.setHours(0, 0, 0, 0);
-    moodData.date = entryDate;
+    const result = await moodService.getMoodEntries(params, userId);
 
-    // Check if mood entry already exists for this date
-    const existingMood = await Mood.findOne({
-        createdBy: userId,
-        date: entryDate
-    });
+    sendPaginatedResponse(
+      res,
+      `Mood entries with category "${category}" retrieved successfully`,
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
 
-    if (existingMood) {
-        throw createAppError('Mood entry already exists for this date', 400);
-    }
+export const getMoodsByTrigger = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { trigger } = req.params;
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      triggers: [trigger as EMoodTrigger]
+    };
+    const userId = getUserId(req);
 
-    const mood = await Mood.create(moodData);
+    const result = await moodService.getMoodEntries(params, userId);
 
-    // Link to journal entry if it exists for the same date
-    const journalEntry = await Journal.findOne({
-        createdBy: userId,
-        date: entryDate,
-        type: 'daily'
-    });
+    sendPaginatedResponse(
+      res,
+      `Mood entries with trigger "${trigger}" retrieved successfully`,
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
 
-    if (journalEntry) {
-        mood.linkedJournal = journalEntry._id as import('mongoose').Types.ObjectId;
-        await mood.save();
-    }
+export const getPositiveMoods = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      minMood: EMoodScale.GOOD // 7 and above
+    };
+    const userId = getUserId(req);
 
-    const populatedMood = await Mood.findById(mood._id)
-        .populate('linkedTasks', 'title status')
-        .populate('linkedJournal', 'title type');
+    const result = await moodService.getMoodEntries(params, userId);
 
-    res.status(201).json({
-        success: true,
-        data: populatedMood
-    });
-});
+    sendPaginatedResponse(
+      res,
+      'Positive mood entries retrieved successfully',
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
 
-// Update mood entry
-export const updateMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { id } = req.params;
+export const getNegativeMoods = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      maxMood: EMoodScale.POOR // 4 and below
+    };
+    const userId = getUserId(req);
 
-    const mood = await Mood.findOneAndUpdate(
-        { _id: id, createdBy: userId },
-        req.body,
-        { new: true, runValidators: true }
-    ).populate('linkedTasks', 'title status')
-     .populate('linkedJournal', 'title type');
+    const result = await moodService.getMoodEntries(params, userId);
 
-    if (!mood) {
-        throw createAppError('Mood entry not found', 404);
-    }
+    sendPaginatedResponse(
+      res,
+      'Negative mood entries retrieved successfully',
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
 
-    res.status(200).json({
-        success: true,
-        data: mood
-    });
-});
-
-// Delete mood entry
-export const deleteMoodEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { id } = req.params;
-
-    const mood = await Mood.findOneAndDelete({
-        _id: id,
-        createdBy: userId
-    });
-
-    if (!mood) {
-        throw createAppError('Mood entry not found', 404);
-    }
-
-    res.status(204).json({
-        success: true,
-        data: null
-    });
-});
-
-// Get today's mood entry
-export const getTodayMood = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-
+export const getTodaysMood = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const mood = await Mood.findOne({
-        createdBy: userId,
-        date: { $gte: today, $lt: tomorrow }
-    }).populate('linkedTasks', 'title status priority')
-     .populate('linkedJournal', 'title type');
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      startDate: today,
+      endDate: tomorrow
+    };
+    const userId = getUserId(req);
 
-    res.status(200).json({
-        success: true,
-        data: mood
-    });
-});
+    const result = await moodService.getMoodEntries(params, userId);
 
-// Get mood analytics and insights (service-backed)
-export const getMoodAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getMoodAnalytics(userId);
-    res.status(200).json({ success: true, data });
-});
+    sendPaginatedResponse(
+      res,
+      "Today's mood entries retrieved successfully",
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
 
-// Get mood patterns
-export const getMoodPatterns = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
+export const getWeeklyMoods = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const moods = await Mood.find({
-        createdBy: userId
-    }).sort({ date: 1 });
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      startDate: weekAgo,
+      endDate: today
+    };
+    const userId = getUserId(req);
 
-    const patterns = {
-        byDayOfWeek: calculateDayOfWeekPatterns(moods),
-        byTimeOfMonth: calculateTimeOfMonthPatterns(moods),
-        seasonalPatterns: calculateSeasonalPatterns(moods),
-        activityCorrelations: calculateActivityCorrelations(moods)
+    const result = await moodService.getMoodEntries(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      'Weekly mood entries retrieved successfully',
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+export const getMonthlyMoods = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const today = new Date();
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+    const params: IMoodQueryParams = { 
+      ...req.query as any, 
+      startDate: monthAgo,
+      endDate: today
+    };
+    const userId = getUserId(req);
+
+    const result = await moodService.getMoodEntries(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      'Monthly mood entries retrieved successfully',
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+export const searchMoodEntries = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { q: search } = req.query;
+    const params: IMoodQueryParams = { ...req.query as any, search: search as string };
+    const userId = getUserId(req);
+
+    const result = await moodService.getMoodEntries(params, userId);
+
+    sendPaginatedResponse(
+      res,
+      'Mood entry search completed successfully',
+      result.entries,
+      {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: Math.ceil(result.total / result.limit),
+        hasNext: result.hasNext,
+        hasPrev: result.hasPrev
+      }
+    );
+  }
+);
+
+// ===== QUICK MOOD ACTIONS =====
+
+export const quickMoodEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { databaseId, mood, note } = req.body;
+    const userId = getUserId(req);
+
+    const data: ICreateMoodEntryRequest = {
+      databaseId,
+      overallMood: mood,
+      notes: note,
+      entryTime: new Date()
     };
 
-    res.status(200).json({
-        success: true,
-        data: patterns
-    });
-});
+    const entry = await moodService.createMoodEntry(data, userId);
 
-// Helper functions
-function calculateMoodTrend(moods: any[]) {
-    if (moods.length < 2) return 'stable';
+    sendSuccessResponse(res, 'Quick mood entry created successfully', entry, 201);
+  }
+);
 
-    const firstHalf = moods.slice(0, Math.floor(moods.length / 2));
-    const secondHalf = moods.slice(Math.floor(moods.length / 2));
+export const moodCheckIn = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { 
+      databaseId, 
+      overallMood, 
+      energyLevel, 
+      stressLevel, 
+      gratitude 
+    } = req.body;
+    const userId = getUserId(req);
 
-    const firstAvg = firstHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / secondHalf.length;
-
-    const difference = secondAvg - firstAvg;
-
-    if (difference > 0.5) return 'improving';
-    if (difference < -0.5) return 'declining';
-    return 'stable';
-}
-
-function calculateMoodDistribution(moods: any[]) {
-    const distribution = { low: 0, medium: 0, high: 0 };
-
-    moods.forEach(mood => {
-        if (mood.mood.value <= 3) distribution.low++;
-        else if (mood.mood.value <= 7) distribution.medium++;
-        else distribution.high++;
-    });
-
-    return distribution;
-}
-
-function calculateCorrelations(moods: any[]) {
-    // Simple correlation calculations
-    const correlations: any = {};
-
-    if (moods.some(m => m.stress)) {
-        const moodStressCorr = calculateSimpleCorrelation(
-            moods.filter(m => m.stress).map(m => m.mood.value),
-            moods.filter(m => m.stress).map(m => m.stress)
-        );
-        correlations.moodVsStress = Math.round(moodStressCorr * 100) / 100;
-    }
-
-    if (moods.some(m => m.productivity)) {
-        const moodProductivityCorr = calculateSimpleCorrelation(
-            moods.filter(m => m.productivity).map(m => m.mood.value),
-            moods.filter(m => m.productivity).map(m => m.productivity)
-        );
-        correlations.moodVsProductivity = Math.round(moodProductivityCorr * 100) / 100;
-    }
-
-    return correlations;
-}
-
-function calculateSimpleCorrelation(x: number[], y: number[]) {
-    if (x.length !== y.length || x.length === 0) return 0;
-
-    const n = x.length;
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
-    const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
-    const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
-
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-
-    return denominator === 0 ? 0 : numerator / denominator;
-}
-
-function generateInsights(moods: any[]) {
-    const insights = [];
-
-    const avgMood = moods.reduce((sum, mood) => sum + mood.mood.value, 0) / moods.length;
-
-    if (avgMood >= 8) {
-        insights.push("Your mood has been consistently high! Keep up the great work.");
-    } else if (avgMood <= 4) {
-        insights.push("Your mood has been lower recently. Consider what might be affecting it.");
-    }
-
-    const recentMoods = moods.slice(-7);
-    const recentAvg = recentMoods.reduce((sum, mood) => sum + mood.mood.value, 0) / recentMoods.length;
-
-    if (recentAvg > avgMood + 1) {
-        insights.push("Your mood has been improving lately!");
-    } else if (recentAvg < avgMood - 1) {
-        insights.push("Your mood has been declining recently. Consider self-care activities.");
-    }
-
-    return insights;
-}
-
-function calculateDayOfWeekPatterns(moods: any[]) {
-    const patterns: Record<string, number[]> = {
-        Sunday: [], Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: []
+    const data: ICreateMoodEntryRequest = {
+      databaseId,
+      overallMood,
+      energyLevel,
+      stressLevel,
+      gratitude: gratitude ? [gratitude] : [],
+      entryTime: new Date()
     };
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    moods.forEach(mood => {
-        const dayName = days[new Date(mood.date).getDay()];
-        patterns[dayName].push(mood.mood.value);
-    });
+    const entry = await moodService.createMoodEntry(data, userId);
 
-    const averages: Record<string, number> = {};
-    Object.keys(patterns).forEach(day => {
-        averages[day] = patterns[day].length > 0
-            ? Math.round(patterns[day].reduce((sum, val) => sum + val, 0) / patterns[day].length * 10) / 10
-            : 0;
-    });
-
-    return averages;
-}
-
-function calculateTimeOfMonthPatterns(moods: any[]) {
-    const early = moods.filter(m => new Date(m.date).getDate() <= 10);
-    const mid = moods.filter(m => {
-        const date = new Date(m.date).getDate();
-        return date > 10 && date <= 20;
-    });
-    const late = moods.filter(m => new Date(m.date).getDate() > 20);
-
-    return {
-        earlyMonth: early.length > 0 ? Math.round(early.reduce((sum, m) => sum + m.mood.value, 0) / early.length * 10) / 10 : 0,
-        midMonth: mid.length > 0 ? Math.round(mid.reduce((sum, m) => sum + m.mood.value, 0) / mid.length * 10) / 10 : 0,
-        lateMonth: late.length > 0 ? Math.round(late.reduce((sum, m) => sum + m.mood.value, 0) / late.length * 10) / 10 : 0
-    };
-}
-
-function calculateSeasonalPatterns(moods: any[]) {
-    const seasons: { spring: number[]; summer: number[]; fall: number[]; winter: number[] } = { spring: [], summer: [], fall: [], winter: [] };
-
-    moods.forEach(mood => {
-        const month = new Date(mood.date).getMonth();
-        if (month >= 2 && month <= 4) seasons.spring.push(mood.mood.value);
-        else if (month >= 5 && month <= 7) seasons.summer.push(mood.mood.value);
-        else if (month >= 8 && month <= 10) seasons.fall.push(mood.mood.value);
-        else seasons.winter.push(mood.mood.value);
-    });
-
-    const averages: Record<string, number> = {};
-    (Object.keys(seasons) as Array<keyof typeof seasons>).forEach(season => {
-        const values = seasons[season];
-        averages[season] = values.length > 0
-            ? Math.round(values.reduce((sum, val) => sum + val, 0) / values.length * 10) / 10
-            : 0;
-    });
-
-    return averages;
-}
-
-function calculateActivityCorrelations(moods: any[]) {
-    const activities: Record<string, number[]> = {};
-
-    moods.forEach(mood => {
-        mood.activities?.forEach((activity: string) => {
-            if (!activities[activity]) activities[activity] = [];
-            activities[activity].push(mood.mood.value);
-        });
-    });
-
-    const correlations: Record<string, number> = {};
-    Object.keys(activities).forEach(activity => {
-        const values = activities[activity];
-        correlations[activity] = values.length > 0
-            ? Math.round(values.reduce((sum, val) => sum + val, 0) / values.length * 10) / 10
-            : 0;
-    });
-
-    return correlations;
-}
-
-// ---- Additional Controllers wired to mood.service ----
-
-export const getMoodStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getMoodStats(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const getMoodTrends = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getMoodTrends(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const getCalendarView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getCalendarView(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const importMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const entries = Array.isArray(req.body?.entries) ? req.body.entries : [];
-    const data = await moodService.importMoodEntries(userId, entries);
-    res.status(200).json({ success: true, data });
-});
-
-export const exportMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.exportMoodEntries(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const bulkUpdateMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.bulkUpdateMoodEntries(userId, req.body);
-    res.status(200).json({ success: true, data });
-});
-
-export const bulkDeleteMoodEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const entryIds: string[] = req.body?.entryIds || [];
-    const data = await moodService.bulkDeleteMoodEntries(userId, entryIds);
-    res.status(200).json({ success: true, data });
-});
-
-export const duplicateEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const { id } = req.params;
-    const data = await moodService.duplicateEntry(userId, id);
-    res.status(201).json({ success: true, data });
-});
-
-export const getMoodInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getMoodInsights(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const getMoodCorrelations = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getMoodCorrelations(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const getDailySummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getDailySummary(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const getWeeklySummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getWeeklySummary(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const getMonthlySummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getMonthlySummary(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const createReminder = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.createReminder(userId, req.body);
-    res.status(201).json({ success: true, data });
-});
-
-export const getReminders = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const data = await moodService.getReminders(userId);
-    res.status(200).json({ success: true, data });
-});
-
-export const updateReminder = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const { reminderId } = req.params as { reminderId: string };
-    const data = await moodService.updateReminder(userId, reminderId, req.body);
-    res.status(200).json({ success: true, data });
-});
-
-export const deleteReminder = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId!;
-    const { reminderId } = req.params as { reminderId: string };
-    const data = await moodService.deleteReminder(userId, reminderId);
-    res.status(200).json({ success: true, data });
-});
-
+    sendSuccessResponse(res, 'Mood check-in completed successfully', entry, 201);
+  }
+);

@@ -327,3 +327,40 @@ export const logoutUser = async (userId: string): Promise<void> => {
 export const logoutAllDevices = async (userId: string): Promise<void> => {
   console.log('User logout all devices:', { userId, timestamp: new Date().toISOString() });
 };
+
+// AuthService class for consistency with other modules
+export class AuthService {
+  async authenticateUser(credentials: TLoginRequest): Promise<TAuthResponse> {
+    return authenticateUser(credentials);
+  }
+
+  async handleGoogleCallback(code: string): Promise<TAuthResponse> {
+    return handleGoogleCallback(code);
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    return refreshAccessToken(refreshToken);
+  }
+
+  async changePassword(userId: string, data: TChangePasswordRequest): Promise<void> {
+    return changePassword(userId, data);
+  }
+
+  async forgotPassword(data: TForgotPasswordRequest): Promise<void> {
+    return forgotPassword(data);
+  }
+
+  async resetPassword(data: TResetPasswordRequest): Promise<void> {
+    return resetPassword(data);
+  }
+
+  async logoutUser(userId: string): Promise<void> {
+    return logoutUser(userId);
+  }
+
+  async logoutAllDevices(userId: string): Promise<void> {
+    return logoutAllDevices(userId);
+  }
+}
+
+export const authService = new AuthService();

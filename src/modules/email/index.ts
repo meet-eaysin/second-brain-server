@@ -10,6 +10,8 @@ export {
 
 // Services
 export {
+  EmailService,
+  emailService,
   sendEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail

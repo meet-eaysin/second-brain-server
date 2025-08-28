@@ -15,10 +15,12 @@ export {
   googleLogin,
   googleCallback,
   googleLoginSuccess
-} from './controller/auth.controller';
+} from './controllers/auth.controller';
 
 // Services
 export {
+  AuthService,
+  authService,
   authenticateUser,
   handleGoogleCallback,
   refreshAccessToken,
@@ -48,7 +50,8 @@ export {
   validateEmail,
   validatePassword,
   generateGoogleLoginUrl,
-  verifyStateToken
+  verifyStateToken,
+  getUserId
 } from './utils/auth.utils';
 
 // Validators
@@ -61,4 +64,4 @@ export {
   refreshTokenSchema,
   registerSchema,
   resetPasswordSchema
-} from './validator/auth.validaations';
+} from './validators/auth.validaations';

@@ -1,207 +1,109 @@
 import { Router } from 'express';
-import { authenticateToken } from '../../../../middlewares/auth';
-import * as contentController from '../controllers/content.controller';
+import { authenticateToken } from '@/middlewares/auth';
+import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
+
+import {
+  createContent,
+  getContent,
+  getContentById,
+  updateContent,
+  deleteContent,
+  getContentByType,
+  getContentByStatus,
+  getContentByStage,
+  getContentBySeries,
+  getDraftContent,
+  getPublishedContent,
+  getScheduledContent,
+  getContentTemplates,
+  searchContent,
+  duplicateContent,
+  bulkUpdateContent,
+  bulkDeleteContent,
+  moveToNextStage,
+  assignContent,
+  getContentStats
+} from '../controllers/content.controller';
+import {
+  contentIdSchema,
+  createContentSchema,
+  updateContentSchema,
+  getContentQuerySchema,
+  duplicateContentSchema,
+  bulkUpdateContentSchema,
+  bulkDeleteContentSchema,
+  moveToNextStageSchema,
+  assignContentSchema,
+  searchContentSchema,
+  typeParamSchema,
+  statusParamSchema,
+  stageParamSchema,
+  seriesParamSchema
+} from '../validators/content.validators';
 
 const router = Router();
 
-// Get all content with filtering and pagination
+router.use(authenticateToken);
+
+router.post('/', validateBody(createContentSchema), createContent);
+router.get('/', validateQuery(getContentQuerySchema), getContent);
+router.get('/stats', getContentStats);
+router.get('/search', validateQuery(searchContentSchema), searchContent);
+router.get('/drafts', validateQuery(getContentQuerySchema), getDraftContent);
+router.get('/published', validateQuery(getContentQuerySchema), getPublishedContent);
+router.get('/scheduled', validateQuery(getContentQuerySchema), getScheduledContent);
+router.get('/templates', validateQuery(getContentQuerySchema), getContentTemplates);
 router.get(
-    '/',
-    authenticateToken,
-    contentController.getContent
+  '/type/:type',
+  validateParams(typeParamSchema),
+  validateQuery(getContentQuerySchema),
+  getContentByType
 );
-
-// Create new content
-router.post(
-    '/',
-    authenticateToken,
-    contentController.createContent
-);
-
-// Content analytics and reporting (MUST be before /:id routes)
 router.get(
-    '/stats',
-    authenticateToken,
-    contentController.getContentStats
+  '/status/:status',
+  validateParams(statusParamSchema),
+  validateQuery(getContentQuerySchema),
+  getContentByStatus
 );
-
 router.get(
-    '/analytics',
-    authenticateToken,
-    contentController.getContentAnalytics
+  '/stage/:stage',
+  validateParams(stageParamSchema),
+  validateQuery(getContentQuerySchema),
+  getContentByStage
 );
-
-// Content import/export (MUST be before /:id routes)
-router.post(
-    '/import',
-    authenticateToken,
-    contentController.importContent
-);
-
 router.get(
-    '/export',
-    authenticateToken,
-    contentController.exportContent
+  '/series/:series',
+  validateParams(seriesParamSchema),
+  validateQuery(getContentQuerySchema),
+  getContentBySeries
 );
-
-// Get content by ID
-router.get(
-    '/:id',
-    authenticateToken,
-    contentController.getContentItem
-);
-
-// Update content
+router.get('/:id', validateParams(contentIdSchema), getContentById);
 router.put(
-    '/:id',
-    authenticateToken,
-    contentController.updateContent
+  '/:id',
+  validateParams(contentIdSchema),
+  validateBody(updateContentSchema),
+  updateContent
 );
-
-// Update content (PATCH)
-router.patch(
-    '/:id',
-    authenticateToken,
-    contentController.updateContent
-);
-
-// Delete content
-router.delete(
-    '/:id',
-    authenticateToken,
-    contentController.deleteContent
-);
-
-// Bulk operations
-router.patch(
-    '/bulk',
-    authenticateToken,
-    contentController.bulkUpdateContent
-);
-
-router.delete(
-    '/bulk',
-    authenticateToken,
-    contentController.bulkDeleteContent
-);
-
-// Content-specific operations
-router.patch(
-    '/:id/status',
-    authenticateToken,
-    contentController.updateStatus
-);
-
-router.patch(
-    '/:id/favorite',
-    authenticateToken,
-    contentController.toggleFavorite
-);
-
-router.patch(
-    '/:id/archive',
-    authenticateToken,
-    contentController.archiveContent
-);
-
+router.delete('/:id', validateParams(contentIdSchema), deleteContent);
 router.post(
-    '/:id/duplicate',
-    authenticateToken,
-    contentController.duplicateContent
+  '/:id/duplicate',
+  validateParams(contentIdSchema),
+  validateBody(duplicateContentSchema),
+  duplicateContent
 );
-
-// Content tags
 router.post(
-    '/:id/tags',
-    authenticateToken,
-    contentController.addTags
+  '/:id/next-stage',
+  validateParams(contentIdSchema),
+  validateBody(moveToNextStageSchema),
+  moveToNextStage
 );
-
-router.delete(
-    '/:id/tags',
-    authenticateToken,
-    contentController.removeTags
-);
-
-// Content notes
 router.post(
-    '/:id/notes',
-    authenticateToken,
-    contentController.addNote
+  '/:id/assign',
+  validateParams(contentIdSchema),
+  validateBody(assignContentSchema),
+  assignContent
 );
-
-router.get(
-    '/:id/notes',
-    authenticateToken,
-    contentController.getNotes
-);
-
-router.patch(
-    '/:contentId/notes/:noteId',
-    authenticateToken,
-    contentController.updateNote
-);
-
-router.delete(
-    '/:contentId/notes/:noteId',
-    authenticateToken,
-    contentController.deleteNote
-);
-
-// Content sharing
-router.post(
-    '/:id/share',
-    authenticateToken,
-    contentController.shareContent
-);
-
-router.get(
-    '/:id/share',
-    authenticateToken,
-    contentController.getShareInfo
-);
-
-router.delete(
-    '/:id/share',
-    authenticateToken,
-    contentController.unshareContent
-);
-
-// Content collections
-router.post(
-    '/collections',
-    authenticateToken,
-    contentController.createCollection
-);
-
-router.get(
-    '/collections',
-    authenticateToken,
-    contentController.getCollections
-);
-
-router.patch(
-    '/collections/:collectionId',
-    authenticateToken,
-    contentController.updateCollection
-);
-
-router.delete(
-    '/collections/:collectionId',
-    authenticateToken,
-    contentController.deleteCollection
-);
-
-router.post(
-    '/collections/:collectionId/items',
-    authenticateToken,
-    contentController.addToCollection
-);
-
-router.delete(
-    '/collections/:collectionId/items/:itemId',
-    authenticateToken,
-    contentController.removeFromCollection
-);
+router.post('/bulk/update', validateBody(bulkUpdateContentSchema), bulkUpdateContent);
+router.post('/bulk/delete', validateBody(bulkDeleteContentSchema), bulkDeleteContent);
 
 export default router;

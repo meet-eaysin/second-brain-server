@@ -1,235 +1,281 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import {
-  EPropertyType,
-  ERelationType,
-  EViewType,
-  IDatabaseDocument
-} from '../types/database.types';
+import mongoose, { Schema, Model } from 'mongoose';
+import { IDatabase, EDatabaseType } from '@/modules/core/types/database.types';
+import { createBaseSchema, IBaseDocument, QueryHelpers } from '@/modules/core/models/base.model';
 
-const DatabasePropertySchema = new Schema({
-  id: { type: String, required: true },
-  name: { type: String, required: true },
-  type: {
-    type: String,
-    enum: [
-      ...Object.values(EPropertyType),
-      // Support legacy lowercase values for backward compatibility
-      'text', 'number', 'date', 'boolean', 'select', 'multi_select', 'file',
-      'email', 'phone', 'url', 'checkbox', 'relation', 'formula', 'rollup',
-      'created_time', 'last_edited_time', 'created_by', 'last_edited_by'
-    ],
-    required: true
-  },
-  description: String,
-  required: { type: Boolean, default: false },
+export type TDatabaseDocument = IDatabase &
+  IBaseDocument & {
+    // Instance methods from base schema
+    softDelete(deletedBy?: string): Promise<TDatabaseDocument>;
+    restore(): Promise<TDatabaseDocument>;
+    archive(archivedBy?: string): Promise<TDatabaseDocument>;
+    unarchive(): Promise<TDatabaseDocument>;
+  };
 
-  selectOptions: [
-    {
-      id: String,
-      name: String,
-      color: String
-    }
-  ],
-  relationConfig: {
-    relatedDatabaseId: String,
-    relationType: {
-      type: String,
-      enum: [
-        ...Object.values(ERelationType),
-        // Support legacy lowercase values for backward compatibility
-        'one_to_one', 'one_to_many', 'many_to_many'
-      ]
-    },
-    relatedPropertyId: String
-  },
-  formulaConfig: {
-    expression: String,
-    returnType: {
-      type: String,
-      enum: [
-        ...Object.values(EPropertyType),
-        // Support legacy lowercase values for backward compatibility
-        'text', 'number', 'date', 'boolean', 'select', 'multi_select', 'file',
-        'email', 'phone', 'url', 'checkbox', 'relation', 'formula', 'rollup',
-        'created_time', 'last_edited_time', 'created_by', 'last_edited_by'
-      ]
-    }
-  },
-  rollupConfig: {
-    relationPropertyId: String,
-    rollupPropertyId: String,
-    function: { type: String, enum: ['count', 'sum', 'average', 'min', 'max', 'unique'] }
-  },
-
-  isVisible: { type: Boolean, default: true },
-  order: { type: Number, default: 0 },
-
-  // New property management fields
-  frozen: { type: Boolean, default: false },
-  hidden: { type: Boolean, default: false },
-  orderIndex: { type: Number, default: 0 },
-  width: { type: Number, default: 150 }
-});
-
-const FilterSchema = new Schema({
-  propertyId: { type: String, required: true },
-  operator: { type: String, required: true },
-  value: Schema.Types.Mixed
-});
-
-const SortSchema = new Schema({
-  propertyId: { type: String, required: true },
-  direction: { type: String, enum: ['asc', 'desc'], required: true }
-});
-
-const DatabaseViewSchema = new Schema({
-  id: { type: String, required: true },
-  name: { type: String, required: true },
-  type: {
-    type: String,
-    enum: [
-      ...Object.values(EViewType),
-      // Support legacy lowercase values for backward compatibility
-      'table', 'board', 'timeline', 'calendar', 'gallery', 'list'
-    ],
-    required: true
-  },
-  isDefault: { type: Boolean, default: false },
-
-  filters: [FilterSchema],
-  sorts: [SortSchema],
-  groupBy: String,
-
-  visibleProperties: [String],
-  propertyWidths: { type: Map, of: Number },
-
-  boardSettings: {
-    groupByPropertyId: String,
-    showUngrouped: { type: Boolean, default: true }
-  },
-  timelineSettings: {
-    startDatePropertyId: String,
-    endDatePropertyId: String
-  },
-  calendarSettings: {
-    datePropertyId: String
-  }
-});
-
-const DatabaseSchema = new Schema<IDatabaseDocument>(
-  {
-    name: { type: String, required: true },
-    description: String,
-    icon: String,
-    cover: String,
-
-    userId: { type: String, required: true, index: true },
-    workspaceId: String,
-
-    properties: [DatabasePropertySchema],
-    views: [DatabaseViewSchema],
-
-    isPublic: { type: Boolean, default: false },
-    sharedWith: [
-      {
-        userId: String,
-        permission: { type: String, enum: ['read', 'write', 'admin'] }
-      }
-    ],
-
-    // New fields for enhanced organization
-    isFavorite: { type: Boolean, default: false },
-    categoryId: { type: String, index: true },
-    tags: [{ type: String, trim: true }],
-    lastAccessedAt: { type: Date, default: Date.now },
-    accessCount: { type: Number, default: 0 },
-
-    // Freeze functionality
-    frozen: { type: Boolean, default: false },
-    frozenAt: Date,
-    frozenBy: String,
-
-    createdBy: { type: String, required: true },
-    lastEditedBy: { type: String, required: true }
-  },
-  {
-    timestamps: true,
-    collection: 'databases',
-    toJSON: {
-      virtuals: true,
-      versionKey: false,
-      transform: (doc, ret) => {
-        ret.id = ret._id;
-        delete ret._id;
-        return ret;
-      }
-    }
-  }
-);
-
-DatabaseSchema.index({ userId: 1, createdAt: -1 });
-DatabaseSchema.index({ workspaceId: 1 });
-DatabaseSchema.index({ 'sharedWith.userId': 1 });
-DatabaseSchema.index({ userId: 1, isFavorite: 1 });
-DatabaseSchema.index({ userId: 1, categoryId: 1 });
-DatabaseSchema.index({ userId: 1, lastAccessedAt: -1 });
-DatabaseSchema.index({ tags: 1 });
-
-// Document-View Configuration for Databases
-export const DATABASE_FROZEN_PROPERTIES = {
-    // Core properties that cannot be removed or hidden
-    name: {
-        frozen: true,
-        removable: false,
-        required: true,
-        order: 0
-    },
-    description: {
-        frozen: false,
-        removable: false,
-        required: false,
-        order: 1
-    },
-    icon: {
-        frozen: false,
-        removable: false,
-        required: false,
-        order: 2
-    },
-    createdAt: {
-        frozen: false,
-        removable: false,
-        required: false,
-        order: 3
-    },
-    updatedAt: {
-        frozen: false,
-        removable: false,
-        required: false,
-        order: 4
-    }
+export type TDatabaseModel = Model<TDatabaseDocument, QueryHelpers> & {
+  findByWorkspace(workspaceId: string): Promise<TDatabaseDocument[]>;
+  findByType(type: EDatabaseType): Promise<TDatabaseDocument[]>;
+  findPublic(): Promise<TDatabaseDocument[]>;
+  findTemplates(): Promise<TDatabaseDocument[]>;
 };
 
-export const DATABASE_PROPERTY_TYPES = {
-    name: 'TEXT',
-    description: 'TEXTAREA',
-    icon: 'ICON',
-    cover: 'IMAGE',
-    userId: 'PERSON',
-    workspaceId: 'RELATION',
-    isPublic: 'CHECKBOX',
-    isFavorite: 'CHECKBOX',
-    categoryId: 'SELECT',
-    tags: 'MULTI_SELECT',
-    lastAccessedAt: 'DATE',
-    accessCount: 'NUMBER',
-    frozen: 'CHECKBOX',
-    frozenAt: 'DATE',
-    frozenBy: 'PERSON',
-    createdBy: 'PERSON',
-    lastEditedBy: 'PERSON',
-    createdAt: 'DATE',
-    updatedAt: 'DATE'
-} as const;
+const DatabaseIconSchema = new Schema(
+  {
+    type: {
+      type: String,
+      enum: ['emoji', 'icon', 'image'],
+      required: true
+    },
+    value: {
+      type: String,
+      required: true
+    }
+  },
+  { _id: false }
+);
 
-export const DatabaseModel = mongoose.model<IDatabaseDocument>('Database', DatabaseSchema);
+const DatabaseCoverSchema = new Schema(
+  {
+    type: {
+      type: String,
+      enum: ['color', 'gradient', 'image'],
+      required: true
+    },
+    value: {
+      type: String,
+      required: true
+    }
+  },
+  { _id: false }
+);
+
+const DatabaseTemplateSchema = new Schema(
+  {
+    id: {
+      type: String,
+      required: true
+    },
+    name: {
+      type: String,
+      required: true,
+      maxlength: 100
+    },
+    description: {
+      type: String,
+      maxlength: 500
+    },
+    defaultValues: {
+      type: Schema.Types.Mixed,
+      default: {}
+    },
+    isDefault: {
+      type: Boolean,
+      default: false
+    }
+  },
+  { _id: false }
+);
+
+const DatabaseSchema = createBaseSchema({
+  workspaceId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100,
+    index: true
+  },
+  type: {
+    type: String,
+    enum: Object.values(EDatabaseType),
+    required: true,
+    index: true
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: 1000
+  },
+  icon: DatabaseIconSchema,
+  cover: DatabaseCoverSchema,
+  isPublic: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  isTemplate: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  // Schema references (populated separately for performance)
+  properties: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'Property'
+    }
+  ],
+  views: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'View'
+    }
+  ],
+  templates: [DatabaseTemplateSchema],
+
+  // Metadata
+  recordCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    index: true
+  },
+  lastActivityAt: {
+    type: Date,
+    index: true
+  },
+
+  // Settings
+  allowComments: {
+    type: Boolean,
+    default: true
+  },
+  allowDuplicates: {
+    type: Boolean,
+    default: true
+  },
+  enableVersioning: {
+    type: Boolean,
+    default: false
+  },
+  enableAuditLog: {
+    type: Boolean,
+    default: true
+  },
+
+  // AI Features
+  enableAutoTagging: {
+    type: Boolean,
+    default: false
+  },
+  enableSmartSuggestions: {
+    type: Boolean,
+    default: false
+  },
+
+  // Integration settings
+  syncSettings: {
+    type: Schema.Types.Mixed,
+    default: {}
+  }
+});
+
+// Custom toJSON transform to handle ObjectId arrays
+DatabaseSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: function (_doc: any, ret: any) {
+    // Handle main _id
+    if (ret._id) {
+      ret.id = ret._id.toString();
+      delete ret._id;
+    }
+
+    // Handle ObjectId arrays - convert to strings
+    if (ret.properties && Array.isArray(ret.properties)) {
+      ret.properties = ret.properties.map((prop: any) =>
+        prop && typeof prop === 'object' && prop.toString ? prop.toString() : prop
+      );
+    }
+
+    if (ret.views && Array.isArray(ret.views)) {
+      ret.views = ret.views.map((view: any) =>
+        view && typeof view === 'object' && view.toString ? view.toString() : view
+      );
+    }
+
+    // Remove version key
+    if ('__v' in ret) {
+      delete ret.__v;
+    }
+
+    return ret;
+  }
+});
+
+// Indexes
+DatabaseSchema.index({ workspaceId: 1, type: 1 });
+DatabaseSchema.index({ workspaceId: 1, name: 1 });
+DatabaseSchema.index({ workspaceId: 1, isPublic: 1 });
+DatabaseSchema.index({ workspaceId: 1, isTemplate: 1 });
+DatabaseSchema.index({ workspaceId: 1, lastActivityAt: -1 });
+DatabaseSchema.index({ recordCount: -1 });
+DatabaseSchema.index({ searchText: 'text' });
+
+// Static methods
+DatabaseSchema.statics.findByWorkspace = function (workspaceId: string) {
+  return this.find({ workspaceId }).notDeleted().notArchived().exec();
+};
+
+DatabaseSchema.statics.findByType = function (type: EDatabaseType) {
+  return this.find({ type }).notDeleted().notArchived().exec();
+};
+
+DatabaseSchema.statics.findPublic = function () {
+  return this.find({ isPublic: true }).notDeleted().notArchived().exec();
+};
+
+DatabaseSchema.statics.findTemplates = function () {
+  return this.find({ isTemplate: true }).notDeleted().notArchived().exec();
+};
+
+// Instance methods
+DatabaseSchema.methods.incrementRecordCount = function () {
+  this.recordCount += 1;
+  this.lastActivityAt = new Date();
+  return this.save();
+};
+
+DatabaseSchema.methods.decrementRecordCount = function () {
+  if (this.recordCount > 0) {
+    this.recordCount -= 1;
+  }
+  this.lastActivityAt = new Date();
+  return this.save();
+};
+
+DatabaseSchema.methods.updateActivity = function () {
+  this.lastActivityAt = new Date();
+  return this.save();
+};
+
+// Pre-save middleware
+DatabaseSchema.pre('save', function (next) {
+  if (this.isNew) {
+    this.lastActivityAt = new Date();
+  }
+  next();
+});
+
+// Virtual for full database with populated fields
+DatabaseSchema.virtual('fullDatabase', {
+  ref: 'Database',
+  localField: '_id',
+  foreignField: '_id',
+  justOne: true,
+  options: {
+    populate: [
+      { path: 'properties', options: { sort: { order: 1 } } },
+      { path: 'views', options: { sort: { order: 1 } } }
+    ]
+  }
+});
+
+export const DatabaseModel = mongoose.model<TDatabaseDocument, TDatabaseModel>(
+  'Database',
+  DatabaseSchema
+);

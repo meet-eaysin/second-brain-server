@@ -1,42 +1,59 @@
+// Database/Table Management Module - Core CRUD operations for data-table first architecture
+
 // Routes
 export { default as databaseRoutes } from './routes/database.routes';
 
 // Controllers
 export {
   createDatabase,
-  getUserDatabases,
+  getDatabases,
+  getDatabaseById,
   updateDatabase,
   deleteDatabase,
-  createRecord,
-  getRecords,
-  updateRecord,
-  deleteRecord,
+  getDatabaseStats,
+  duplicateDatabase,
   exportDatabase,
-  importData,
-  toggleDatabaseFavorite,
-  moveDatabaseToCategory,
-  trackDatabaseAccess
-} from './controllers/database.controller';
+  importDatabase
+} from './controllers/database.controllers';
 
 // Services
-export * as databaseService from './services/database.service';
-export * as exportService from './services/export.service';
+export {
+  databaseService,
+  createDatabaseService,
+  getDatabaseService,
+  updateDatabaseService,
+  deleteDatabaseService,
+  getDatabaseStatsService,
+  duplicateDatabaseService
+} from './services/database.services';
 
-// Note: Models should not be exported from module index
-// Other modules should use services instead of direct model access
+// Models
+export { DatabaseModel } from './models/database.model';
+export { PropertyModel } from './models/property.model';
+export { ViewModel } from './models/view.model';
+export { RecordModel } from './models/record.model';
 
 // Types
 export type {
-  IDatabase,
-  TDatabaseCreateRequest,
-  TDatabaseUpdateRequest,
-  TDatabaseExportOptions,
-  TDatabaseImportOptions,
-  IDatabaseCategory,
-  TDatabaseCategoryCreateRequest,
-  TDatabaseCategoryUpdateRequest,
-  ISidebarData,
-  TDatabaseListResponse,
-  TGetDatabasesQuery
-} from './types/database.types';
+  IDatabaseResponse,
+  IDatabaseListResponse,
+  ICreateDatabaseRequest,
+  IUpdateDatabaseRequest,
+  IDatabaseQueryParams
+} from '@/modules/core/types/database.types';
 
+// Validators
+export {
+  createDatabaseSchema,
+  updateDatabaseSchema,
+  getDatabasesQuerySchema,
+  databaseIdSchema
+} from './validators/database.validators';
+
+// Utils
+export {
+  validateDatabaseAccess,
+  buildDatabaseQuery,
+  formatDatabaseResponse,
+  calculateDatabaseStats
+} from './utils/database.utils';

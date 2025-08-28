@@ -1,601 +1,315 @@
-import { Request, Response } from 'express';
-import { TJwtPayload } from '../../../users/types/user.types';
-import { catchAsync, createAppError } from '../../../../utils';
-import { Journal } from '../models/journal.model';
-import { Mood } from '../../mood/models/mood.model';
+import { Request, Response, NextFunction } from 'express';
+import { journalService } from '../services/journal.service';
+import { catchAsync, sendSuccessResponse } from '@/utils';
+import { getUserId } from '@/modules/auth';
 
-interface AuthenticatedRequest extends Request {
-    user?: TJwtPayload & { userId: string };
-}
+// Create journal entry
+export const createJournalEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const entryData = req.body;
 
-// Get all journal entries with filtering
-export const getJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const {
-        type,
-        tags,
-        startDate,
-        endDate,
-        search,
-        page = 1,
-        limit = 50
-    } = req.query;
+    const entry = await journalService.createJournalEntry(entryData, userId);
 
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    // Build filter query
-    const filter: any = {
-        createdBy: userId,
-        archivedAt: { $exists: false }
-    };
-
-    if (type) filter.type = type;
-    if (tags) filter.tags = { $in: Array.isArray(tags) ? tags : [tags] };
-
-    if (startDate || endDate) {
-        filter.date = {};
-        if (startDate) filter.date.$gte = new Date(startDate as string);
-        if (endDate) filter.date.$lte = new Date(endDate as string);
-    }
-
-    // Add text search if provided
-    if (search) {
-        filter.$text = { $search: search as string };
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const sortQuery: any = {};
-    if (search) {
-        sortQuery.score = { $meta: 'textScore' };
-    } else {
-        sortQuery.date = -1; // Most recent first
-    }
-
-    const [entries, total] = await Promise.all([
-        Journal.find(filter)
-            .populate('linkedTasks', 'title status priority')
-            .populate('linkedProjects', 'title status')
-            .sort(sortQuery)
-            .skip(skip)
-            .limit(Number(limit)),
-        Journal.countDocuments(filter)
-    ]);
-
-    res.status(200).json({
-        success: true,
-        data: {
-            entries,
-            pagination: {
-                page: Number(page),
-                limit: Number(limit),
-                total,
-                pages: Math.ceil(total / Number(limit))
-            }
-        }
-    });
-});
-
-// Get single journal entry
-export const getJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { id } = req.params;
-
-    const entry = await Journal.findOne({
-        _id: id,
-        createdBy: userId
-    })
-    .populate('linkedTasks', 'title status priority dueDate')
-    .populate('linkedProjects', 'title status completionPercentage');
-
-    if (!entry) {
-        throw createAppError('Journal entry not found', 404);
-    }
-
-    // Get mood entry for the same date if exists
-    const moodEntry = await Mood.findOne({
-        createdBy: userId,
-        date: {
-            $gte: new Date(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate()),
-            $lt: new Date(entry.date.getFullYear(), entry.date.getMonth(), entry.date.getDate() + 1)
-        }
-    });
-
-    res.status(200).json({
-        success: true,
-        data: {
-            entry,
-            moodEntry
-        }
-    });
-});
-
-// Create journal entry with mood integration
-export const createJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const entryData = {
-        ...req.body,
-        createdBy: userId,
-        date: req.body.date ? new Date(req.body.date) : new Date()
-    };
-
-    // Normalize date to start of day for uniqueness check
-    const entryDate = new Date(entryData.date);
-    entryDate.setHours(0, 0, 0, 0);
-    entryData.date = entryDate;
-
-    // Check if entry already exists for this date and type
-    const existingEntry = await Journal.findOne({
-        createdBy: userId,
-        date: entryDate,
-        type: entryData.type
-    });
-
-    if (existingEntry) {
-        throw createAppError(`${entryData.type} journal entry already exists for this date`, 400);
-    }
-
-    const entry = await Journal.create(entryData);
-
-    // Create or update mood entry if mood data is provided
-    if (entry.mood || entry.energy) {
-        const moodData: any = {
-            createdBy: userId,
-            date: entryDate
-        };
-
-        if (entry.mood) {
-            moodData.mood = entry.mood;
-        }
-        if (entry.energy) {
-            moodData.energy = entry.energy;
-        }
-
-        await Mood.findOneAndUpdate(
-            { createdBy: userId, date: entryDate },
-            moodData,
-            { upsert: true, new: true }
-        );
-    }
-
-    const populatedEntry = await Journal.findById(entry._id)
-        .populate('linkedTasks', 'title status')
-        .populate('linkedProjects', 'title status');
-
-    res.status(201).json({
-        success: true,
-        data: populatedEntry
-    });
-});
+    sendSuccessResponse(res, 'Journal entry created successfully', entry, 201);
+  }
+);
 
 // Update journal entry
-export const updateJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { id } = req.params;
+export const updateJournalEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { entryId } = req.params;
+    const userId = getUserId(req);
+    const updateData = req.body;
 
-    const entry = await Journal.findOneAndUpdate(
-        { _id: id, createdBy: userId },
-        req.body,
-        { new: true, runValidators: true }
-    ).populate('linkedTasks', 'title status')
-     .populate('linkedProjects', 'title status');
+    const entry = await journalService.updateJournalEntry(entryId, updateData, userId);
 
-    if (!entry) {
-        throw createAppError('Journal entry not found', 404);
+    sendSuccessResponse(res, 'Journal entry updated successfully', entry);
+  }
+);
+
+// Get journal entry by date
+export const getJournalEntryByDate = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { date } = req.params;
+    const userId = getUserId(req);
+
+    const entry = await journalService.getJournalEntryByDate(date, userId);
+
+    if (entry) {
+      sendSuccessResponse(res, 'Journal entry retrieved successfully', entry);
+    } else {
+      sendSuccessResponse(res, 'No journal entry found for this date', null);
+    }
+  }
+);
+
+// Get journal entries with pagination
+export const getJournalEntries = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const { startDate, endDate, limit, offset, tags, mood } = req.query;
+
+    const options = {
+      startDate: startDate as string,
+      endDate: endDate as string,
+      limit: limit ? parseInt(limit as string) : undefined,
+      offset: offset ? parseInt(offset as string) : undefined,
+      tags: tags ? (tags as string).split(',') : undefined,
+      mood: mood as string
+    };
+
+    const result = await journalService.getJournalEntries(userId, options);
+
+    sendSuccessResponse(res, 'Journal entries retrieved successfully', result);
+  }
+);
+
+// Get journal statistics
+export const getJournalStats = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+
+    const stats = await journalService.calculateJournalStats(userId);
+
+    sendSuccessResponse(res, 'Journal statistics calculated successfully', stats);
+  }
+);
+
+// Get mood trends
+export const getMoodTrends = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const { startDate, endDate } = req.query;
+
+    const trends = await journalService.getMoodTrends(
+      userId,
+      startDate as string,
+      endDate as string
+    );
+
+    sendSuccessResponse(res, 'Mood trends retrieved successfully', trends);
+  }
+);
+
+// Search journal entries
+export const searchJournalEntries = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const { q, limit, offset } = req.query;
+
+    if (!q) {
+      sendSuccessResponse(res, 'Search query is required', { entries: [], total: 0 });
+      return;
     }
 
-    // Update mood entry if mood data is provided
-    if (req.body.mood || req.body.energy) {
-        const entryDate = new Date(entry.date);
-        entryDate.setHours(0, 0, 0, 0);
+    const options = {
+      limit: limit ? parseInt(limit as string) : undefined,
+      offset: offset ? parseInt(offset as string) : undefined
+    };
 
-        const moodData: any = {};
-        if (req.body.mood) moodData.mood = req.body.mood;
-        if (req.body.energy) moodData.energy = req.body.energy;
+    const result = await journalService.searchJournalEntries(userId, q as string, options);
 
-        await Mood.findOneAndUpdate(
-            { createdBy: userId, date: entryDate },
-            moodData,
-            { upsert: true, new: true }
-        );
-    }
+    sendSuccessResponse(res, 'Journal search completed successfully', result);
+  }
+);
 
-    res.status(200).json({
-        success: true,
-        data: entry
-    });
-});
+// Get journal prompts
+export const getJournalPrompts = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const prompts = journalService.getJournalPrompts();
 
-// Delete journal entry
-export const deleteJournalEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { id } = req.params;
-
-    const entry = await Journal.findOneAndDelete({
-        _id: id,
-        createdBy: userId
-    });
-
-    if (!entry) {
-        throw createAppError('Journal entry not found', 404);
-    }
-
-    res.status(204).json({
-        success: true,
-        data: null
-    });
-});
+    sendSuccessResponse(res, 'Journal prompts retrieved successfully', prompts);
+  }
+);
 
 // Get today's journal entry
-export const getTodayEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { type = 'daily' } = req.query;
+export const getTodaysEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const today = new Date().toISOString().split('T')[0];
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const entry = await journalService.getJournalEntryByDate(today, userId);
 
-    const entry = await Journal.findOne({
-        createdBy: userId,
-        type,
-        date: { $gte: today, $lt: tomorrow }
-    }).populate('linkedTasks', 'title status priority')
-     .populate('linkedProjects', 'title status');
+    sendSuccessResponse(res, 'Today\'s journal entry retrieved successfully', entry);
+  }
+);
 
-    // Get today's mood entry
-    const moodEntry = await Mood.findOne({
-        createdBy: userId,
-        date: { $gte: today, $lt: tomorrow }
-    });
+// Create or update today's entry
+export const createOrUpdateTodaysEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const today = new Date().toISOString().split('T')[0];
+    const entryData = { ...req.body, date: today };
 
-    res.status(200).json({
-        success: true,
-        data: {
-            entry,
-            moodEntry
-        }
-    });
-});
+    // Check if entry exists for today
+    const existingEntry = await journalService.getJournalEntryByDate(today, userId);
 
-// Get journal templates
-export const getJournalTemplates = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const templates = {
-        daily: {
-            title: "Daily Reflection",
-            prompts: [
-                "What are three things I'm grateful for today?",
-                "What were my biggest wins today?",
-                "What challenges did I face and how did I handle them?",
-                "What did I learn today?",
-                "What are my top priorities for tomorrow?"
-            ],
-            sections: ['gratitude', 'wins', 'challenges', 'learnings', 'tomorrowFocus']
-        },
-        weekly: {
-            title: "Weekly Review",
-            prompts: [
-                "What were my major accomplishments this week?",
-                "What challenges did I encounter and how did I overcome them?",
-                "What insights or lessons did I gain?",
-                "What are my goals for next week?",
-                "How did I feel overall this week?"
-            ],
-            sections: ['accomplishments', 'challenges', 'insights', 'nextWeekGoals']
-        },
-        monthly: {
-            title: "Monthly Reflection",
-            prompts: [
-                "What were my biggest achievements this month?",
-                "What goals did I accomplish or make progress on?",
-                "What didn't go as planned and why?",
-                "What patterns do I notice in my behavior or thinking?",
-                "What do I want to focus on next month?"
-            ]
-        }
-    };
-
-    res.status(200).json({
-        success: true,
-        data: templates
-    });
-});
-
-// Create entry from template
-export const createFromTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { templateType, date, customizations = {} } = req.body;
-
-    if (!userId) {
-        throw createAppError('User not authenticated', 401);
-    }
-
-    const entryDate = new Date(date || new Date());
-    entryDate.setHours(0, 0, 0, 0);
-
-    // Check if entry already exists
-    const existingEntry = await Journal.findOne({
-        createdBy: userId,
-        date: entryDate,
-        type: templateType
-    });
-
+    let entry;
     if (existingEntry) {
-        throw createAppError(`${templateType} journal entry already exists for this date`, 400);
+      entry = await journalService.updateJournalEntry(existingEntry.id, entryData, userId);
+      sendSuccessResponse(res, 'Today\'s journal entry updated successfully', entry);
+    } else {
+      entry = await journalService.createJournalEntry(entryData, userId);
+      sendSuccessResponse(res, 'Today\'s journal entry created successfully', entry, 201);
+    }
+  }
+);
+
+// Get journal calendar data
+export const getJournalCalendar = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const { year, month } = req.query;
+
+    // Calculate date range for the month
+    const targetYear = year ? parseInt(year as string) : new Date().getFullYear();
+    const targetMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+
+    const startDate = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`;
+    const endDate = new Date(targetYear, targetMonth, 0).toISOString().split('T')[0];
+
+    const { entries } = await journalService.getJournalEntries(userId, {
+      startDate,
+      endDate
+    });
+
+    // Format for calendar
+    const calendarData = entries.map(entry => ({
+      date: entry.date,
+      hasEntry: true,
+      mood: entry.mood,
+      energyLevel: entry.energyLevel,
+      title: entry.title
+    }));
+
+    sendSuccessResponse(res, 'Journal calendar data retrieved successfully', calendarData);
+  }
+);
+
+// Get journal insights
+export const getJournalInsights = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const { period } = req.query; // 'week', 'month', 'year'
+
+    const stats = await journalService.calculateJournalStats(userId);
+    
+    // Calculate date range based on period
+    const now = new Date();
+    let startDate: string;
+    
+    switch (period) {
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        startDate = weekAgo.toISOString().split('T')[0];
+        break;
+      case 'month':
+        startDate = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-01`;
+        break;
+      case 'year':
+        startDate = `${now.getFullYear()}-01-01`;
+        break;
+      default:
+        startDate = `${now.getFullYear()}-01-01`;
     }
 
-    let entryData: any = {
-        date: entryDate,
-        type: templateType,
-        createdBy: userId,
-        ...customizations
-    };
+    const trends = await journalService.getMoodTrends(userId, startDate);
 
-    // Set template-specific data
-    switch (templateType) {
-        case 'daily':
-            entryData.title = `Daily Reflection - ${entryDate.toDateString()}`;
-            entryData.content = entryData.content || "Daily reflection entry";
-            entryData.gratitude = entryData.gratitude || [];
-            entryData.wins = entryData.wins || [];
-            entryData.challenges = entryData.challenges || [];
-            entryData.learnings = entryData.learnings || [];
-            entryData.tomorrowFocus = entryData.tomorrowFocus || [];
-            break;
-        case 'weekly':
-            entryData.title = `Weekly Review - Week of ${entryDate.toDateString()}`;
-            entryData.content = entryData.content || "Weekly review entry";
-            entryData.weeklyReflection = {
-                accomplishments: entryData.accomplishments || [],
-                challenges: entryData.challenges || [],
-                insights: entryData.insights || [],
-                nextWeekGoals: entryData.nextWeekGoals || []
-            };
-            break;
-        case 'monthly':
-            entryData.title = `Monthly Reflection - ${entryDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
-            entryData.content = entryData.content || "Monthly reflection entry";
-            break;
-    }
-
-    const entry = await Journal.create(entryData);
-
-    const populatedEntry = await Journal.findById(entry._id)
-        .populate('linkedTasks', 'title status')
-        .populate('linkedProjects', 'title status');
-
-    res.status(201).json({
-        success: true,
-        data: populatedEntry
-    });
-});
-
-// Get journal insights and analytics
-export const getJournalInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const { period = '30' } = req.query; // days
-
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - Number(period));
-
-    const entries = await Journal.find({
-        createdBy: userId,
-        date: { $gte: startDate },
-        archivedAt: { $exists: false }
-    });
-
-    const moods = await Mood.find({
-        createdBy: userId,
-        date: { $gte: startDate }
-    });
-
+    // Generate insights
     const insights = {
-        totalEntries: entries.length,
-        byType: entries.reduce((acc, entry) => {
-            acc[entry.type] = (acc[entry.type] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>),
-        averageMood: moods.length > 0
-            ? Math.round(moods.reduce((sum, mood) => sum + mood.mood.value, 0) / moods.length * 10) / 10
-            : null,
-        averageEnergy: moods.length > 0
-            ? Math.round(moods.reduce((sum, mood) => sum + mood.energy.value, 0) / moods.length * 10) / 10
-            : null,
-        streakDays: calculateJournalStreak(entries),
-        mostCommonTags: getMostCommonTags(entries),
-        moodTrend: calculateMoodTrend(moods)
+      period: period || 'year',
+      summary: {
+        totalEntries: stats.totalEntries,
+        currentStreak: stats.currentStreak,
+        averageMood: stats.averageMood,
+        averageEnergyLevel: stats.averageEnergyLevel
+      },
+      trends: {
+        moodTrend: analyzeMoodTrend(trends),
+        energyTrend: analyzeEnergyTrend(trends),
+        consistencyScore: calculateConsistencyScore(stats)
+      },
+      recommendations: generateRecommendations(stats, trends),
+      topTags: stats.topTags.slice(0, 5)
     };
 
-    res.status(200).json({
-        success: true,
-        data: insights
-    });
-});
+    sendSuccessResponse(res, 'Journal insights generated successfully', insights);
+  }
+);
 
-// Helper function to calculate journal streak
-function calculateJournalStreak(entries: any[]) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+// Helper functions for insights
+function analyzeMoodTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
+  if (trends.length < 2) return 'stable';
+  
+  const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
+  const secondHalf = trends.slice(Math.floor(trends.length / 2));
+  
+  const firstAvg = firstHalf.reduce((sum, t) => sum + t.moodScore, 0) / firstHalf.length;
+  const secondAvg = secondHalf.reduce((sum, t) => sum + t.moodScore, 0) / secondHalf.length;
+  
+  const diff = secondAvg - firstAvg;
+  
+  if (diff > 0.2) return 'improving';
+  if (diff < -0.2) return 'declining';
+  return 'stable';
+}
 
-    let streak = 0;
-    let currentDate = new Date(today);
+function analyzeEnergyTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
+  if (trends.length < 2) return 'stable';
+  
+  const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
+  const secondHalf = trends.slice(Math.floor(trends.length / 2));
+  
+  const firstAvg = firstHalf.reduce((sum, t) => sum + t.energyLevel, 0) / firstHalf.length;
+  const secondAvg = secondHalf.reduce((sum, t) => sum + t.energyLevel, 0) / secondHalf.length;
+  
+  const diff = secondAvg - firstAvg;
+  
+  if (diff > 0.5) return 'improving';
+  if (diff < -0.5) return 'declining';
+  return 'stable';
+}
 
-    while (true) {
-        const hasEntry = entries.some(entry => {
-            const entryDate = new Date(entry.date);
-            entryDate.setHours(0, 0, 0, 0);
-            return entryDate.getTime() === currentDate.getTime();
-        });
+function calculateConsistencyScore(stats: any): number {
+  if (stats.totalEntries === 0) return 0;
+  
+  // Calculate based on streak and total entries
+  const streakScore = Math.min(stats.currentStreak / 30, 1) * 50; // Max 50 points for 30-day streak
+  const frequencyScore = Math.min(stats.totalEntries / 365, 1) * 50; // Max 50 points for daily entries for a year
+  
+  return Math.round(streakScore + frequencyScore);
+}
 
-        if (hasEntry) {
-            streak++;
-            currentDate.setDate(currentDate.getDate() - 1);
-        } else {
-            break;
-        }
+function generateRecommendations(stats: any, trends: any[]): string[] {
+  const recommendations = [];
+  
+  if (stats.currentStreak === 0) {
+    recommendations.push('Start building a journaling habit by writing just one sentence each day');
+  } else if (stats.currentStreak < 7) {
+    recommendations.push('You\'re building momentum! Try to reach a 7-day streak');
+  }
+  
+  if (stats.averageMood < 3) {
+    recommendations.push('Consider exploring what might be affecting your mood and discuss with a professional if needed');
+  }
+  
+  if (stats.averageEnergyLevel < 5) {
+    recommendations.push('Low energy levels might indicate need for better sleep, nutrition, or exercise');
+  }
+  
+  if (trends.length > 0) {
+    const moodTrend = analyzeMoodTrend(trends);
+    if (moodTrend === 'declining') {
+      recommendations.push('Your mood trend shows some decline - consider what changes might help');
+    } else if (moodTrend === 'improving') {
+      recommendations.push('Great job! Your mood has been improving - keep up whatever you\'re doing');
     }
-
-    return streak;
+  }
+  
+  if (stats.totalEntries > 30) {
+    recommendations.push('You\'ve built a great journaling habit! Consider reviewing past entries for patterns');
+  }
+  
+  return recommendations;
 }
-
-// Helper function to get most common tags
-function getMostCommonTags(entries: any[]) {
-    const tagCounts: Record<string, number> = {};
-
-    entries.forEach(entry => {
-        entry.tags?.forEach((tag: string) => {
-            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-        });
-    });
-
-    return Object.entries(tagCounts)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5)
-        .map(([tag, count]) => ({ tag, count }));
-}
-
-// Helper function to calculate mood trend
-function calculateMoodTrend(moods: any[]) {
-    if (moods.length < 2) return 'stable';
-
-    const sortedMoods = moods.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const firstHalf = sortedMoods.slice(0, Math.floor(sortedMoods.length / 2));
-    const secondHalf = sortedMoods.slice(Math.floor(sortedMoods.length / 2));
-
-    const firstAvg = firstHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((sum, mood) => sum + mood.mood.value, 0) / secondHalf.length;
-
-    const difference = secondAvg - firstAvg;
-
-    if (difference > 0.5) return 'improving';
-    if (difference < -0.5) return 'declining';
-    return 'stable';
-}
-// Additional handlers delegating to service layer
-import * as journalService from '../services/journal.service';
-
-export const getJournalStats = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.getJournalStats(userId);
-  res.status(200).json({ success: true, data });
-});
-
-export const getJournalAnalytics = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.getJournalAnalytics(userId);
-  res.status(200).json({ success: true, data });
-});
-
-export const getCalendarView = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.getCalendarView(userId);
-  res.status(200).json({ success: true, data });
-});
-
-export const importJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.importJournalEntries(userId, req.body.entries || req.body || []);
-  res.status(200).json({ success: true, data });
-});
-
-export const exportJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.exportJournalEntries(userId);
-  res.status(200).json({ success: true, data });
-});
-
-export const bulkUpdateJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.bulkUpdateJournalEntries(userId, req.body);
-  res.status(200).json({ success: true, data });
-});
-
-export const bulkDeleteJournalEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.bulkDeleteJournalEntries(userId, req.body.entryIds || []);
-  res.status(200).json({ success: true, data });
-});
-
-export const updateMood = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const { id } = req.params;
-  const data = await journalService.updateMood(userId, id, req.body.mood);
-  res.status(200).json({ success: true, data });
-});
-
-export const toggleFavorite = catchAsync(async (_req: AuthenticatedRequest, res: Response) => {
-  res.status(501).json({ success: false, error: 'Favorites are not supported' });
-});
-
-export const archiveEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const { id } = req.params;
-  const data = await journalService.archiveEntry(userId, id);
-  res.status(200).json({ success: true, data });
-});
-
-export const duplicateEntry = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const { id } = req.params;
-  const data = await journalService.duplicateEntry(userId, id);
-  res.status(201).json({ success: true, data });
-});
-
-export const getTemplates = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.getTemplates(userId);
-  res.status(200).json({ success: true, data });
-});
-
-export const createTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.createTemplate(userId, req.body);
-  res.status(501).json({ success: false, error: data });
-});
-
-export const updateTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const { templateId } = req.params as any;
-  const data = await journalService.updateTemplate(userId, templateId, req.body);
-  res.status(501).json({ success: false, error: data });
-});
-
-export const deleteTemplate = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const { templateId } = req.params as any;
-  const data = await journalService.deleteTemplate(userId, templateId);
-  res.status(501).json({ success: false, error: data });
-});
-
-export const getPrompts = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.getPrompts(userId);
-  res.status(200).json({ success: true, data });
-});
-
-export const createPrompt = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.createPrompt(userId, req.body);
-  res.status(501).json({ success: false, error: data });
-});
-
-export const searchEntries = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const q = (req.query.q as string) || (req.query.query as string) || '';
-  const data = await journalService.searchEntries(userId, q);
-  res.status(200).json({ success: true, data });
-});
-
-export const getInsights = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.userId!;
-  const data = await journalService.getInsights(userId);
-  res.status(200).json({ success: true, data });
-});
-

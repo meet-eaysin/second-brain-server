@@ -22,7 +22,7 @@ import {
   googleCallback,
   googleLoginSuccess,
   testGoogleConfig
-} from '../controller/auth.controller';
+} from '../controllers/auth.controller';
 import {
   registerSchema,
   loginSchema,
@@ -32,7 +32,7 @@ import {
   resetPasswordSchema,
   googleCallbackQuerySchema,
   googleCallbackSchema
-} from '../validator/auth.validaations';
+} from '../validators/auth.validaations';
 
 const router = Router();
 

@@ -1,367 +1,530 @@
-import { FILTER_OPERATORS, EPropertyType } from '../types/database.types';
+import { RecordModel, ViewModel } from '../index';
+import { IDatabase, IDatabaseQueryParams, IDatabaseStats, EDatabaseType } from '@/modules/core/types/database.types';
+import { DatabaseModel } from '../models/database.model';
+import { PropertyModel } from '../models/property.model';
+import { permissionService } from '../../permissions/services/permission.service';
+import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
+import { workspaceService } from '@/modules/workspace/services/workspace.service';
 
-// Type-safe filter operator validation
-export const validateFilterOperator = (propertyType: EPropertyType, operator: string): boolean => {
-  const validOperators = FILTER_OPERATORS[propertyType as keyof typeof FILTER_OPERATORS];
-  if (!validOperators) {
-    return false;
-  }
-  return (validOperators as readonly string[]).includes(operator);
-};
-
-export const generatePropertyId = (): string => {
-  return `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-export const generateViewId = (): string => {
-  return `view_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-export const sanitizePropertyName = (name: string): string => {
-  return name.trim().replace(/\s+/g, ' ');
-};
-
-export const validatePropertyName = (
-  name: string,
-  existingNames: string[] = []
-): { isValid: boolean; error?: string } => {
-  const sanitized = sanitizePropertyName(name);
-
-  if (!sanitized) {
-    return { isValid: false, error: 'Property name cannot be empty' };
-  }
-
-  if (sanitized.length > 100) {
-    return { isValid: false, error: 'Property name cannot exceed 100 characters' };
-  }
-
-  if (existingNames.some(existing => existing.toLowerCase() === sanitized.toLowerCase())) {
-    return { isValid: false, error: 'Property name already exists' };
-  }
-
-  return { isValid: true };
-};
-
-export const validateViewName = (
-  name: string,
-  existingNames: string[] = []
-): { isValid: boolean; error?: string } => {
-  const sanitized = name.trim();
-
-  if (!sanitized) {
-    return { isValid: false, error: 'View name cannot be empty' };
-  }
-
-  if (sanitized.length > 100) {
-    return { isValid: false, error: 'View name cannot exceed 100 characters' };
-  }
-
-  if (existingNames.some(existing => existing.toLowerCase() === sanitized.toLowerCase())) {
-    return { isValid: false, error: 'View name already exists' };
-  }
-
-  return { isValid: true };
-};
-
-// Type definitions for better type safety
-interface DatabaseRecord {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy?: string;
-  lastEditedBy?: string;
-  properties: Record<string, unknown>;
-}
-
-interface DatabaseProperty {
-  id: string;
-  name: string;
-  type: EPropertyType;
-  selectOptions?: Array<{ id: string; name: string; color?: string }>;
-}
-
-interface FormattedRecord {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy?: string;
-  lastEditedBy?: string;
-  properties: Record<
-    string,
-    {
-      value: unknown;
-      displayValue: string;
-    }
-  >;
-}
-
-export const formatRecordForDisplay = (
-  record: DatabaseRecord,
-  properties: DatabaseProperty[]
-): FormattedRecord => {
-  const formatted: FormattedRecord = {
-    id: record.id,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-    createdBy: record.createdBy,
-    lastEditedBy: record.lastEditedBy,
-    properties: {}
+// Build database query based on parameters
+export const buildDatabaseQuery = (params: IDatabaseQueryParams, userId: string): any => {
+  const query: any = {
+    isDeleted: { $ne: true }
   };
 
-  properties.forEach(property => {
-    const value = record.properties[property.id];
-    formatted.properties[property.id] = {
-      value,
-      displayValue: formatPropertyValue(value, property)
-    };
-  });
+  // Workspace filter
+  if (params.workspaceId) {
+    query.workspaceId = params.workspaceId;
+  }
+
+  // Type filter
+  if (params.type) {
+    query.type = params.type;
+  }
+
+  // Public filter
+  if (params.isPublic !== undefined) {
+    query.isPublic = params.isPublic;
+  }
+
+  // Template filter
+  if (params.isTemplate !== undefined) {
+    query.isTemplate = params.isTemplate;
+  }
+
+  // Archived filter
+  if (params.isArchived !== undefined) {
+    query.isArchived = params.isArchived;
+  }
+
+  // Search filter
+  if (params.search) {
+    query.$or = [
+      { name: { $regex: params.search, $options: 'i' } },
+      { description: { $regex: params.search, $options: 'i' } },
+      { searchText: { $regex: params.search, $options: 'i' } }
+    ];
+  }
+
+  // Permission-based filtering
+  // Show databases the user has access to through various means
+  query.$or = query.$or || [];
+  query.$or.push(
+    { createdBy: userId }, // User owns the database
+    { isPublic: true }      // Database is public
+    // Note: Additional permission checks are done at the service level
+    // for explicit permissions and workspace membership
+  );
+
+  return query;
+};
+
+// Build workspace-aware database query
+export const buildWorkspaceAwareDatabaseQuery = async (
+  params: IDatabaseQueryParams,
+  userId: string
+): Promise<any> => {
+  const query: any = {
+    isDeleted: { $ne: true }
+  };
+
+  // Handle workspace filtering with fallback to user's workspaces
+  if (params.workspaceId) {
+    // Verify user has access to the specified workspace
+    const hasAccess = await workspaceService.hasWorkspaceAccess(params.workspaceId, userId);
+    if (!hasAccess) {
+      // Return empty query that will match nothing
+      return { _id: null };
+    }
+    query.workspaceId = params.workspaceId;
+  } else {
+    // If no workspace specified, get user's accessible workspaces
+    try {
+      const userWorkspaces = await workspaceService.getUserWorkspaces(userId);
+      const workspaceIds = userWorkspaces.map(ws => ws.id);
+
+      if (workspaceIds.length > 0) {
+        query.workspaceId = { $in: workspaceIds };
+      } else {
+        // User has no workspaces, create default workspace
+        const defaultWorkspace = await workspaceService.getOrCreateDefaultWorkspace(userId);
+        query.workspaceId = defaultWorkspace.id;
+      }
+    } catch (error) {
+      // Fallback to user-owned databases if workspace service fails
+      query.createdBy = userId;
+    }
+  }
+
+  // Apply other filters
+  if (params.type) {
+    query.type = params.type;
+  }
+
+  if (params.isPublic !== undefined) {
+    query.isPublic = params.isPublic;
+  }
+
+  if (params.isTemplate !== undefined) {
+    query.isTemplate = params.isTemplate;
+  }
+
+  if (params.isArchived !== undefined) {
+    query.isArchived = params.isArchived;
+  }
+
+  // Search filter
+  if (params.search) {
+    query.$or = [
+      { name: { $regex: params.search, $options: 'i' } },
+      { description: { $regex: params.search, $options: 'i' } },
+      { searchText: { $regex: params.search, $options: 'i' } }
+    ];
+  }
+
+  // Add permission-based access (in addition to workspace access)
+  if (!query.$or) {
+    query.$or = [];
+  }
+  query.$or.push(
+    { createdBy: userId }, // User owns the database
+    { isPublic: true }      // Database is public
+  );
+
+  return query;
+};
+
+// Filter databases based on user permissions
+export const filterDatabasesByPermissions = async (
+  databases: any[],
+  userId: string,
+  requiredLevel: EPermissionLevel = EPermissionLevel.READ
+): Promise<any[]> => {
+  const filteredDatabases = [];
+
+  for (const database of databases) {
+    try {
+      // Check if user has permission to access this database
+      const hasPermission = await permissionService.hasPermission(
+        EShareScope.DATABASE,
+        database.id,
+        userId,
+        requiredLevel
+      );
+
+      // Allow access if user has explicit permission, owns the database, or it's public
+      if (hasPermission || database.createdBy === userId || database.isPublic) {
+        filteredDatabases.push(database);
+      }
+    } catch (error) {
+      // If permission check fails, exclude the database
+      console.error(`Permission check failed for database ${database.id}:`, error);
+    }
+  }
+
+  return filteredDatabases;
+};
+
+// Format database response
+export const formatDatabaseResponse = (database: any): IDatabase => {
+  const formatted = database.toJSON ? database.toJSON() : database;
+
+  // The database model's toJSON transform handles ObjectId to string conversion
+  // If properties/views are populated objects, extract their IDs
+  if (formatted.properties && formatted.properties.length > 0 && typeof formatted.properties[0] === 'object') {
+    formatted.properties = formatted.properties.map((prop: any) => prop && (prop.id || prop._id)).filter(Boolean);
+  }
+
+  if (formatted.views && formatted.views.length > 0 && typeof formatted.views[0] === 'object') {
+    formatted.views = formatted.views.map((view: any) => view && (view.id || view._id)).filter(Boolean);
+  }
 
   return formatted;
 };
 
-export const formatPropertyValue = (value: unknown, property: DatabaseProperty): string => {
-  if (value === null || value === undefined || value === '') {
-    return '';
+// Calculate database statistics
+export const calculateDatabaseStats = async (databaseId: string): Promise<IDatabaseStats> => {
+  const [
+    database,
+    propertyCount,
+    viewCount,
+    recordCount,
+    recentRecords,
+    topContributors
+  ] = await Promise.all([
+    DatabaseModel.findById(databaseId).exec(),
+    PropertyModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+    ViewModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+    RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+    getRecentRecordStats(databaseId),
+    getTopContributors(databaseId)
+  ]);
+
+  if (!database) {
+    throw new Error('Database not found');
   }
 
-  switch (property.type) {
-    case EPropertyType.DATE:
-    case EPropertyType.CREATED_TIME:
-    case EPropertyType.LAST_EDITED_TIME:
-      return new Date(String(value)).toLocaleDateString();
-
-    case EPropertyType.BOOLEAN:
-    case EPropertyType.CHECKBOX:
-      return value ? 'Yes' : 'No';
-
-    case EPropertyType.SELECT:
-      const option = property.selectOptions?.find(opt => opt.id === value);
-      return option?.name || String(value);
-
-    case EPropertyType.MULTI_SELECT:
-      if (Array.isArray(value)) {
-        return value
-          .map(v => {
-            const option = property.selectOptions?.find(opt => opt.id === v);
-            return option?.name || String(v);
-          })
-          .join(', ');
-      }
-      return String(value);
-
-    case EPropertyType.FILE:
-      if (Array.isArray(value)) {
-        return `${value.length} file(s)`;
-      }
-      return String(value);
-
-    case EPropertyType.RELATION:
-      if (Array.isArray(value)) {
-        return `${value.length} relation(s)`;
-      }
-      return String(value);
-
-    case EPropertyType.NUMBER:
-      return typeof value === 'number' ? value.toLocaleString() : String(value);
-
-    case EPropertyType.EMAIL:
-    case EPropertyType.PHONE:
-    case EPropertyType.URL:
-    case EPropertyType.TEXT:
-    case EPropertyType.FORMULA:
-    case EPropertyType.ROLLUP:
-    case EPropertyType.CREATED_BY:
-    case EPropertyType.LAST_EDITED_BY:
-      return String(value);
-
-    default:
-      return String(value);
-  }
+  return {
+    databaseId,
+    recordCount,
+    propertyCount,
+    viewCount,
+    templateCount: database.templates?.length || 0,
+    lastActivityAt: database.lastActivityAt,
+    createdThisWeek: recentRecords.createdThisWeek,
+    updatedThisWeek: recentRecords.updatedThisWeek,
+    topContributors
+  };
 };
 
-// Type definitions for aggregation pipeline
-interface DatabaseFilter {
-  propertyId: string;
-  operator: string;
-  value: unknown;
-}
+// Get recent record statistics
+const getRecentRecordStats = async (databaseId: string): Promise<{
+  createdThisWeek: number;
+  updatedThisWeek: number;
+}> => {
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-interface DatabaseSort {
-  propertyId: string;
-  direction: 'asc' | 'desc';
-}
+  const [createdThisWeek, updatedThisWeek] = await Promise.all([
+    RecordModel.countDocuments({
+      databaseId,
+      isDeleted: { $ne: true },
+      createdAt: { $gte: oneWeekAgo }
+    }),
+    RecordModel.countDocuments({
+      databaseId,
+      isDeleted: { $ne: true },
+      updatedAt: { $gte: oneWeekAgo }
+    })
+  ]);
 
-interface MongoAggregationStage {
-  [key: string]: unknown;
-}
+  return { createdThisWeek, updatedThisWeek };
+};
 
-export const buildAggregationPipeline = (
-  filters: DatabaseFilter[],
-  sorts: DatabaseSort[],
-  groupBy?: string
-): MongoAggregationStage[] => {
-  const pipeline: MongoAggregationStage[] = [];
-
-  // Match stage for filters
-  if (filters.length > 0) {
-    const matchConditions = filters.map(filter => {
-      return buildMongoFilter(filter);
-    });
-
-    pipeline.push({
+// Get top contributors
+const getTopContributors = async (databaseId: string): Promise<Array<{
+  userId: string;
+  recordCount: number;
+}>> => {
+  const contributors = await RecordModel.aggregate([
+    {
       $match: {
-        $and: matchConditions
+        databaseId,
+        isDeleted: { $ne: true }
       }
-    });
-  }
-
-  // Group stage if groupBy is specified
-  if (groupBy) {
-    pipeline.push({
+    },
+    {
       $group: {
-        _id: `$properties.${groupBy}`,
-        records: { $push: '$$ROOT' },
-        count: { $sum: 1 }
+        _id: '$createdBy',
+        recordCount: { $sum: 1 }
       }
-    });
-  }
+    },
+    {
+      $sort: { recordCount: -1 }
+    },
+    {
+      $limit: 5
+    },
+    {
+      $project: {
+        userId: '$_id',
+        recordCount: 1,
+        _id: 0
+      }
+    }
+  ]);
 
-  // Sort stage
-  if (sorts.length > 0) {
-    const sortObj: Record<string, 1 | -1> = {};
-    sorts.forEach(sort => {
-      sortObj[`properties.${sort.propertyId}`] = sort.direction === 'asc' ? 1 : -1;
-    });
-    pipeline.push({ $sort: sortObj });
-  } else {
-    pipeline.push({ $sort: { createdAt: -1 } });
-  }
-
-  return pipeline;
+  return contributors;
 };
 
-const buildMongoFilter = (filter: DatabaseFilter): Record<string, unknown> => {
-  const { propertyId, operator, value } = filter;
-  const fieldPath = `properties.${propertyId}`;
+// Validate database access
+export const validateDatabaseAccess = async (
+  databaseId: string,
+  userId: string,
+  action: 'read' | 'write' | 'delete' | 'admin'
+): Promise<boolean> => {
+  const database = await DatabaseModel.findOne({
+    _id: databaseId,
+    isDeleted: { $ne: true }
+  }).exec();
 
-  switch (operator) {
-    case 'equals':
-      return { [fieldPath]: value };
-    case 'not_equals':
-      return { [fieldPath]: { $ne: value } };
-    case 'contains':
-      return { [fieldPath]: { $regex: String(value), $options: 'i' } };
-    case 'does_not_contain':
-      return { [fieldPath]: { $not: { $regex: String(value), $options: 'i' } } };
-    case 'starts_with':
-      return { [fieldPath]: { $regex: `^${String(value)}`, $options: 'i' } };
-    case 'ends_with':
-      return { [fieldPath]: { $regex: `${String(value)}$`, $options: 'i' } };
-    case 'is_empty':
-      return {
-        $or: [
-          { [fieldPath]: { $exists: false } },
-          { [fieldPath]: null },
-          { [fieldPath]: '' },
-          { [fieldPath]: [] }
-        ]
-      };
-    case 'is_not_empty':
-      return {
-        $and: [
-          { [fieldPath]: { $exists: true } },
-          { [fieldPath]: { $ne: null } },
-          { [fieldPath]: { $ne: '' } }
-        ]
-      };
-    case 'greater_than':
-      return { [fieldPath]: { $gt: value } };
-    case 'less_than':
-      return { [fieldPath]: { $lt: value } };
-    case 'greater_than_or_equal':
-      return { [fieldPath]: { $gte: value } };
-    case 'less_than_or_equal':
-      return { [fieldPath]: { $lte: value } };
-    case 'before':
-      return { [fieldPath]: { $lt: new Date(String(value)) } };
-    case 'after':
-      return { [fieldPath]: { $gt: new Date(String(value)) } };
-    case 'on_or_before':
-      return { [fieldPath]: { $lte: new Date(String(value)) } };
-    case 'on_or_after':
-      return { [fieldPath]: { $gte: new Date(String(value)) } };
-    case 'past_week':
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return { [fieldPath]: { $gte: weekAgo, $lte: new Date() } };
-    case 'past_month':
-      const monthAgo = new Date();
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      return { [fieldPath]: { $gte: monthAgo, $lte: new Date() } };
-    case 'past_year':
-      const yearAgo = new Date();
-      yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-      return { [fieldPath]: { $gte: yearAgo, $lte: new Date() } };
-    case 'next_week':
-      const weekFromNow = new Date();
-      weekFromNow.setDate(weekFromNow.getDate() + 7);
-      return { [fieldPath]: { $gte: new Date(), $lte: weekFromNow } };
-    case 'next_month':
-      const monthFromNow = new Date();
-      monthFromNow.setMonth(monthFromNow.getMonth() + 1);
-      return { [fieldPath]: { $gte: new Date(), $lte: monthFromNow } };
-    case 'next_year':
-      const yearFromNow = new Date();
-      yearFromNow.setFullYear(yearFromNow.getFullYear() + 1);
-      return { [fieldPath]: { $gte: new Date(), $lte: yearFromNow } };
-    case 'contains_all':
-      return { [fieldPath]: { $all: Array.isArray(value) ? value : [value] } };
-    default:
-      return {};
+  if (!database) {
+    return false;
+  }
+
+  // Owner has full access
+  if (database.createdBy === userId) {
+    return true;
+  }
+
+  // Public databases allow read access
+  if (action === 'read' && database.isPublic) {
+    return true;
+  }
+
+  // Check workspace membership
+  if (database.workspaceId) {
+    try {
+      const hasAccess = await workspaceService.hasWorkspaceAccess(database.workspaceId, userId);
+      if (hasAccess) {
+        // Check workspace role permissions
+        const canManage = await workspaceService.canManageWorkspace(database.workspaceId, userId);
+
+        switch (action) {
+          case 'read':
+            return true; // All workspace members can read
+          case 'write':
+            return canManage || database.createdBy === userId;
+          case 'delete':
+          case 'admin':
+            return canManage;
+          default:
+            return false;
+        }
+      }
+    } catch (error) {
+      console.error('Workspace access check failed:', error);
+    }
+  }
+
+  // Check explicit permissions using permission service
+  try {
+    const { permissionService } = await import('@/modules/permissions/services/permission.service');
+    const permissionLevelMap = {
+      'read': 'READ' as const,
+      'write': 'EDIT' as const,
+      'delete': 'FULL_ACCESS' as const,
+      'admin': 'FULL_ACCESS' as const
+    };
+
+    return await permissionService.hasPermission(
+      'DATABASE' as any,
+      databaseId,
+      userId,
+      permissionLevelMap[action] as any
+    );
+  } catch (error) {
+    console.error('Permission check failed:', error);
+    return false;
   }
 };
 
-// Type definitions for rollup calculations
-interface RollupConfig {
-  rollupPropertyId: string;
-  function: 'count' | 'sum' | 'average' | 'min' | 'max' | 'unique';
-}
+// Get database type display name
+export const getDatabaseTypeDisplayName = (type: EDatabaseType): string => {
+  const displayNames: Record<EDatabaseType, string> = {
+    [EDatabaseType.DASHBOARD]: 'Dashboard',
+    [EDatabaseType.FINANCE]: 'Finance',
+    [EDatabaseType.GOALS]: 'Goals',
+    [EDatabaseType.JOURNAL]: 'Journal',
+    [EDatabaseType.MOOD_TRACKER]: 'Mood Tracker',
+    [EDatabaseType.NOTES]: 'Notes',
+    [EDatabaseType.TASKS]: 'Tasks',
+    [EDatabaseType.HABITS]: 'Habits',
+    [EDatabaseType.PEOPLE]: 'People',
+    [EDatabaseType.RESOURCES]: 'Resources',
+    [EDatabaseType.PARA_PROJECTS]: 'PARA Projects',
+    [EDatabaseType.PARA_AREAS]: 'PARA Areas',
+    [EDatabaseType.PARA_RESOURCES]: 'PARA Resources',
+    [EDatabaseType.PARA_ARCHIVE]: 'PARA Archive',
+    [EDatabaseType.PROJECTS]: 'Projects',
+    [EDatabaseType.QUICK_TASKS]: 'Quick Tasks',
+    [EDatabaseType.QUICK_NOTES]: 'Quick Notes',
+    [EDatabaseType.CONTENT]: 'Content',
+    [EDatabaseType.ACTIVITY]: 'Activity',
+    [EDatabaseType.ANALYSIS]: 'Analysis',
+    [EDatabaseType.NOTIFICATIONS]: 'Notifications',
+    [EDatabaseType.CUSTOM]: 'Custom'
+  };
 
-interface RollupRecord {
-  properties: Record<string, unknown>;
-}
+  return displayNames[type] || type;
+};
 
-export const calculateRollupValue = (
-  records: RollupRecord[],
-  rollupConfig: RollupConfig
-): number | null => {
-  if (!records || records.length === 0) {
-    return null;
-  }
+// Get database type icon
+export const getDatabaseTypeIcon = (type: EDatabaseType): string => {
+  const icons: Record<EDatabaseType, string> = {
+    [EDatabaseType.DASHBOARD]: '📊',
+    [EDatabaseType.FINANCE]: '💰',
+    [EDatabaseType.GOALS]: '🎯',
+    [EDatabaseType.JOURNAL]: '📔',
+    [EDatabaseType.MOOD_TRACKER]: '😊',
+    [EDatabaseType.NOTES]: '📝',
+    [EDatabaseType.TASKS]: '✅',
+    [EDatabaseType.HABITS]: '🔄',
+    [EDatabaseType.PEOPLE]: '👥',
+    [EDatabaseType.RESOURCES]: '📚',
+    [EDatabaseType.PARA_PROJECTS]: '🚀',
+    [EDatabaseType.PARA_AREAS]: '🏠',
+    [EDatabaseType.PARA_RESOURCES]: '📖',
+    [EDatabaseType.PARA_ARCHIVE]: '📦',
+    [EDatabaseType.PROJECTS]: '📋',
+    [EDatabaseType.QUICK_TASKS]: '⚡',
+    [EDatabaseType.QUICK_NOTES]: '💭',
+    [EDatabaseType.CONTENT]: '📄',
+    [EDatabaseType.ACTIVITY]: '📈',
+    [EDatabaseType.ANALYSIS]: '📊',
+    [EDatabaseType.NOTIFICATIONS]: '🔔',
+    [EDatabaseType.CUSTOM]: '🔧'
+  };
 
-  const values = records
-    .map(record => record.properties[rollupConfig.rollupPropertyId])
-    .filter(value => value !== null && value !== undefined && value !== '');
+  return icons[type] || '📄';
+};
 
-  if (values.length === 0) {
-    return null;
-  }
+// Check if database type is system type
+export const isSystemDatabaseType = (type: EDatabaseType): boolean => {
+  return type !== EDatabaseType.CUSTOM;
+};
 
-  switch (rollupConfig.function) {
-    case 'count':
-      return values.length;
-    case 'sum':
-      return values.reduce((sum: number, val) => sum + (Number(val) || 0), 0);
-    case 'average':
-      const sum: number = values.reduce((sum: number, val) => sum + (Number(val) || 0), 0);
-      return sum / values.length;
-    case 'min':
-      return Math.min(...values.map(v => Number(v) || 0));
-    case 'max':
-      return Math.max(...values.map(v => Number(v) || 0));
-    case 'unique':
-      return [...new Set(values)].length;
-    default:
-      return null;
-  }
+// Get default database configuration for type
+export const getDefaultDatabaseConfig = (type: EDatabaseType): Partial<IDatabase> => {
+  const baseConfig = {
+    allowComments: true,
+    allowDuplicates: true,
+    enableVersioning: false,
+    enableAuditLog: true,
+    enableAutoTagging: false,
+    enableSmartSuggestions: false
+  };
+
+  const typeSpecificConfig: Record<EDatabaseType, Partial<IDatabase>> = {
+    [EDatabaseType.DASHBOARD]: {
+      ...baseConfig,
+      enableAutoTagging: true,
+      enableSmartSuggestions: true
+    },
+    [EDatabaseType.FINANCE]: {
+      ...baseConfig,
+      enableVersioning: true,
+      allowDuplicates: false
+    },
+    [EDatabaseType.GOALS]: {
+      ...baseConfig,
+      enableAutoTagging: true
+    },
+    [EDatabaseType.JOURNAL]: {
+      ...baseConfig,
+      enableVersioning: true
+    },
+    [EDatabaseType.MOOD_TRACKER]: {
+      ...baseConfig,
+      allowDuplicates: false
+    },
+    [EDatabaseType.NOTES]: {
+      ...baseConfig,
+      enableAutoTagging: true,
+      enableSmartSuggestions: true
+    },
+    [EDatabaseType.TASKS]: {
+      ...baseConfig,
+      enableAutoTagging: true
+    },
+    [EDatabaseType.HABITS]: {
+      ...baseConfig,
+      allowDuplicates: false
+    },
+    [EDatabaseType.PEOPLE]: {
+      ...baseConfig,
+      allowDuplicates: false
+    },
+    [EDatabaseType.RESOURCES]: {
+      ...baseConfig,
+      enableAutoTagging: true,
+      enableSmartSuggestions: true
+    },
+    [EDatabaseType.PARA_PROJECTS]: {
+      ...baseConfig,
+      enableAutoTagging: true
+    },
+    [EDatabaseType.PARA_AREAS]: {
+      ...baseConfig,
+      enableAutoTagging: true
+    },
+    [EDatabaseType.PARA_RESOURCES]: {
+      ...baseConfig,
+      enableAutoTagging: true,
+      enableSmartSuggestions: true
+    },
+    [EDatabaseType.PARA_ARCHIVE]: {
+      ...baseConfig,
+      allowComments: false
+    },
+    [EDatabaseType.PROJECTS]: {
+      ...baseConfig,
+      enableAutoTagging: true
+    },
+    [EDatabaseType.QUICK_TASKS]: {
+      ...baseConfig,
+      allowComments: false,
+      enableVersioning: false
+    },
+    [EDatabaseType.QUICK_NOTES]: {
+      ...baseConfig,
+      allowComments: false,
+      enableVersioning: false
+    },
+    [EDatabaseType.CONTENT]: {
+      ...baseConfig,
+      enableAutoTagging: true,
+      enableSmartSuggestions: true
+    },
+    [EDatabaseType.ACTIVITY]: {
+      ...baseConfig,
+      allowComments: false,
+      allowDuplicates: false,
+      enableVersioning: false
+    },
+    [EDatabaseType.ANALYSIS]: {
+      ...baseConfig,
+      allowComments: false,
+      enableVersioning: false
+    },
+    [EDatabaseType.NOTIFICATIONS]: {
+      ...baseConfig,
+      allowComments: false,
+      allowDuplicates: false,
+      enableVersioning: false
+    },
+    [EDatabaseType.CUSTOM]: baseConfig
+  };
+
+  return typeSpecificConfig[type] || baseConfig;
 };

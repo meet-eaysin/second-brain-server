@@ -1,26 +1,35 @@
 import type { IEmailOptions } from '../types';
 
-export const sendEmail = async (options: IEmailOptions): Promise<boolean> => {
-  try {
-    console.log('📧 Sending email:', {
-      to: options.to,
-      subject: options.subject,
-      content: options.text || options.html
-    });
+// ===================================
+// EMAIL SERVICE
+// ===================================
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+export class EmailService {
+  // ===================================
+  // CORE EMAIL METHODS
+  // ===================================
 
-    return true;
-  } catch (error) {
-    console.error('❌ Failed to send email:', JSON.stringify(error, null, 2));
-    return false;
+  async sendEmail(options: IEmailOptions): Promise<boolean> {
+    try {
+      console.log('📧 Sending email:', {
+        to: options.to,
+        subject: options.subject,
+        content: options.text || options.html
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send email:', JSON.stringify(error, null, 2));
+      return false;
+    }
   }
-};
 
-export const sendPasswordResetEmail = async (
-  email: string,
-  resetToken: string
-): Promise<boolean> => {
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string
+  ): Promise<boolean> {
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
 
   const emailOptions: IEmailOptions = {
@@ -49,13 +58,13 @@ export const sendPasswordResetEmail = async (
     `
   };
 
-  return await sendEmail(emailOptions);
-};
+  return await this.sendEmail(emailOptions);
+  }
 
-export const sendWelcomeEmail = async (
-  email: string,
-  name: string
-): Promise<boolean> => {
+  async sendWelcomeEmail(
+    email: string,
+    name: string
+  ): Promise<boolean> {
   const emailOptions: IEmailOptions = {
     to: email,
     subject: 'Welcome to Second Brain!',
@@ -93,8 +102,17 @@ export const sendWelcomeEmail = async (
     `
   };
 
-  return await sendEmail(emailOptions);
-};
+    return await this.sendEmail(emailOptions);
+  }
+}
+
+// Export singleton instance
+export const emailService = new EmailService();
+
+// Export legacy functions for backward compatibility
+export const sendEmail = (options: IEmailOptions) => emailService.sendEmail(options);
+export const sendPasswordResetEmail = (email: string, resetToken: string) => emailService.sendPasswordResetEmail(email, resetToken);
+export const sendWelcomeEmail = (email: string, name: string) => emailService.sendWelcomeEmail(email, name);
 
 export const sendPasswordResetConfirmation = async (email: string): Promise<boolean> => {
   const emailOptions: IEmailOptions = {
@@ -109,12 +127,12 @@ export const sendPasswordResetConfirmation = async (email: string): Promise<bool
     `,
     text: `
       Password Reset Successful
-      
+
       Your password has been successfully reset.
-      
+
       If you didn't make this change, please contact our support team immediately.
     `
   };
 
-  return await sendEmail(emailOptions);
+  return await emailService.sendEmail(emailOptions);
 };

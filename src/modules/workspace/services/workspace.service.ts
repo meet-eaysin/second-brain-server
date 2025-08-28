@@ -1,621 +1,353 @@
-import { WorkspaceModel, IWorkspace, IWorkspaceDocument } from '../models/workspace.model';
-import { DatabaseModel } from '../../database/models/database.model';
 import {
-  TWorkspaceCreateRequest,
-  TWorkspaceUpdateRequest,
-  TWorkspaceInviteRequest,
-  TWorkspaceMemberUpdateRequest,
-  TGetWorkspacesQuery,
-  TGetWorkspaceMembersQuery,
-  TWorkspaceListResponse,
-  TWorkspaceMembersListResponse,
-  TWorkspaceStatsResponse,
-  TWorkspacePermissions,
-  TWorkspaceRole,
-  TWorkspaceMemberResponse
+  IWorkspace,
+  ICreateWorkspaceRequest,
+  IUpdateWorkspaceRequest,
+  EWorkspaceType,
+  EWorkspaceMemberRole,
+  IWorkspaceMember,
+  IAddWorkspaceMemberRequest,
+  IUpdateWorkspaceMemberRequest,
+  IWorkspaceStats
 } from '../types/workspace.types';
-import { getUserById } from '../../users/services/users.services';
-import {
-  createNotFoundError,
-  createForbiddenError,
-  createValidationError,
-  createConflictError
-} from '../../../utils/error.utils';
+import { WorkspaceModel } from '../models/workspace.model';
+import { WorkspaceMemberModel } from '../models/workspace-member.model';
+import { createAppError, createNotFoundError, createForbiddenError, createConflictError } from '@/utils/error.utils';
 
-// Transform workspace document to interface
-export const toWorkspaceInterface = (workspace: IWorkspaceDocument): IWorkspace => {
-  return {
-    id: String(workspace._id),
-    name: workspace.name,
-    description: workspace.description,
-    icon: workspace.icon,
-    cover: workspace.cover,
-    ownerId: workspace.ownerId,
-    members: workspace.members,
-    isPublic: workspace.isPublic,
-    allowMemberInvites: workspace.allowMemberInvites,
-    defaultDatabasePermission: workspace.defaultDatabasePermission,
-    color: workspace.color,
-    tags: workspace.tags,
-    databaseCount: workspace.databaseCount,
-    memberCount: workspace.memberCount,
-    lastActivityAt: workspace.lastActivityAt,
-    createdAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-    createdBy: workspace.createdBy,
-    lastEditedBy: workspace.lastEditedBy
-  };
-};
+export class WorkspaceService {
+  // Create new workspace
+  async createWorkspace(
+    data: ICreateWorkspaceRequest,
+    ownerId: string
+  ): Promise<IWorkspace> {
+    try {
+      // Check if user has reached workspace limit
+      const existingWorkspaces = await WorkspaceModel.findByOwner(ownerId);
+      const userPlan = 'free'; // TODO: Get from user subscription
+      const maxWorkspaces = userPlan === 'free' ? 3 : userPlan === 'pro' ? 10 : 100;
 
-
-// Create a new workspace
-export const createWorkspace = async (
-  userId: string,
-  data: TWorkspaceCreateRequest
-): Promise<IWorkspace> => {
-  // Check if workspace name is already taken by this user
-  const existingWorkspace = await WorkspaceModel.findOne({
-    ownerId: userId,
-    name: data.name
-  });
-
-  if (existingWorkspace) {
-    throw createConflictError('Workspace name already exists');
-  }
-
-  const workspace = await WorkspaceModel.create({
-    ...data,
-    ownerId: userId,
-    members: [{
-      userId,
-      role: 'owner' as TWorkspaceRole,
-      joinedAt: new Date(),
-      invitedBy: userId
-    }],
-    createdBy: userId,
-    lastEditedBy: userId,
-    lastActivityAt: new Date()
-  });
-
-  return toWorkspaceInterface(workspace);
-};
-
-// Get workspace by ID with permission check
-export const getWorkspaceById = async (
-  workspaceId: string,
-  userId: string
-): Promise<IWorkspace> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  // Check if user has access
-  if (!workspace.isPublic && !workspace.isMember(userId)) {
-    throw createForbiddenError('You do not have access to this workspace');
-  }
-
-  // Update database count
-  const databaseCount = await DatabaseModel.countDocuments({ workspaceId });
-  workspace.databaseCount = databaseCount;
-  await workspace.save();
-
-  return toWorkspaceInterface(workspace);
-};
-
-// Get user's workspaces with filtering and pagination
-export const getUserWorkspaces = async (
-  userId: string,
-  queryParams: TGetWorkspacesQuery = {}
-): Promise<TWorkspaceListResponse> => {
-  const {
-    search,
-    role,
-    isPublic,
-    tags,
-    sortBy = 'updatedAt',
-    sortOrder = 'desc',
-    page = 1,
-    limit = 20
-  } = queryParams;
-
-  // Build query
-  const query: any = {
-    $or: [
-      { ownerId: userId },
-      { 'members.userId': userId },
-      { isPublic: true }
-    ]
-  };
-
-  // Apply filters
-  if (search) {
-    query.$text = { $search: search };
-  }
-
-  if (role) {
-    query['members'] = {
-      $elemMatch: {
-        userId,
-        role
+      if (existingWorkspaces.length >= maxWorkspaces) {
+        throw createAppError(`Maximum ${maxWorkspaces} workspaces allowed for ${userPlan} plan`, 400);
       }
-    };
-  }
 
-  if (isPublic !== undefined) {
-    query.isPublic = isPublic;
-  }
-
-  if (tags && tags.length > 0) {
-    query.tags = { $in: tags };
-  }
-
-  // Calculate pagination
-  const skip = (page - 1) * limit;
-  const sortOptions: any = {};
-  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-  // Execute query
-  const [workspaces, total] = await Promise.all([
-    WorkspaceModel.find(query)
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit),
-    WorkspaceModel.countDocuments(query)
-  ]);
-
-  // Update database counts for each workspace
-  const workspacesWithCounts = await Promise.all(
-    workspaces.map(async (workspace) => {
-      const databaseCount = await DatabaseModel.countDocuments({
-        workspaceId: String(workspace._id)
+      // Create workspace
+      const workspace = new WorkspaceModel({
+        name: data.name,
+        description: data.description,
+        type: data.type || EWorkspaceType.PERSONAL,
+        icon: data.icon || { type: 'emoji', value: '🏠' },
+        cover: data.cover || { type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        config: {
+          enableAI: true,
+          enableComments: true,
+          enableVersioning: false,
+          enablePublicSharing: true,
+          enableGuestAccess: false,
+          maxDatabases: 100,
+          maxMembers: data.type === EWorkspaceType.PERSONAL ? 1 : 10,
+          storageLimit: 1073741824, // 1GB
+          requireTwoFactor: false,
+          ...data.config
+        },
+        isPublic: data.isPublic || false,
+        ownerId,
+        createdBy: ownerId,
+        updatedBy: ownerId
       });
-      workspace.databaseCount = databaseCount;
-      return toWorkspaceInterface(workspace);
-    })
-  );
 
-  const totalPages = Math.ceil(total / limit);
+      await workspace.save();
 
-  return {
-    workspaces: workspacesWithCounts,
-    total,
-    totalPages,
-    currentPage: page,
-    hasNextPage: page < totalPages,
-    hasPrevPage: page > 1
-  };
-};
+      // Add owner as workspace member
+      const ownerMember = new WorkspaceMemberModel({
+        workspaceId: workspace.id.toString(),
+        userId: ownerId,
+        role: EWorkspaceMemberRole.OWNER,
+        joinedAt: new Date(),
+        lastActiveAt: new Date(),
+        isActive: true,
+        createdBy: ownerId,
+        updatedBy: ownerId
+      });
 
-// Update workspace
-export const updateWorkspace = async (
-  workspaceId: string,
-  userId: string,
-  data: TWorkspaceUpdateRequest
-): Promise<IWorkspace> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
+      await ownerMember.save();
 
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
+      return workspace.toJSON() as IWorkspace;
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to create workspace: ${error.message}`, 500);
+    }
   }
 
-  // Check permissions
-  if (!workspace.canUserEdit(userId)) {
-    throw createForbiddenError('You do not have permission to edit this workspace');
+  // Get workspace by ID
+  async getWorkspaceById(workspaceId: string, userId: string): Promise<IWorkspace> {
+    try {
+      const workspace = await WorkspaceModel.findOne({
+        _id: workspaceId,
+        isDeleted: false
+      });
+
+      if (!workspace) {
+        throw createNotFoundError('Workspace not found');
+      }
+
+      // Check if user has access to workspace
+      const hasAccess = await this.hasWorkspaceAccess(workspaceId, userId);
+      if (!hasAccess && !workspace.isPublic) {
+        throw createForbiddenError('Access denied to workspace');
+      }
+
+      return workspace.toJSON() as IWorkspace;
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get workspace: ${error.message}`, 500);
+    }
   }
 
-  // Check for name conflicts if name is being changed
-  if (data.name && data.name !== workspace.name) {
-    const existingWorkspace = await WorkspaceModel.findOne({
-      ownerId: workspace.ownerId,
-      name: data.name,
-      _id: { $ne: workspaceId }
-    });
+  // Get user's workspaces
+  async getUserWorkspaces(userId: string): Promise<IWorkspace[]> {
+    try {
+      // Get workspaces where user is owner
+      const ownedWorkspaces = await WorkspaceModel.findByOwner(userId);
 
-    if (existingWorkspace) {
-      throw createConflictError('Workspace name already exists');
+      // Get workspaces where user is member
+      const memberWorkspaces = await this.getMemberWorkspaces(userId);
+
+      // Combine and deduplicate
+      const allWorkspaces = [...ownedWorkspaces, ...memberWorkspaces];
+      const uniqueWorkspaces = allWorkspaces.filter((workspace, index, self) =>
+        index === self.findIndex(w => w._id.toString() === workspace._id.toString())
+      );
+
+      return uniqueWorkspaces.map(w => w.toJSON() as IWorkspace);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get user workspaces: ${error.message}`, 500);
+    }
+  }
+
+  // Get workspaces where user is member
+  private async getMemberWorkspaces(userId: string): Promise<any[]> {
+    try {
+      const memberships = await WorkspaceMemberModel.findByUser(userId);
+      const workspaceIds = memberships.map(m => m.workspaceId);
+
+      if (workspaceIds.length === 0) return [];
+
+      return WorkspaceModel.find({
+        _id: { $in: workspaceIds },
+        isDeleted: false
+      }).sort({ lastActivityAt: -1 });
+    } catch (error: any) {
+      throw createAppError(`Failed to get member workspaces: ${error.message}`, 500);
     }
   }
 
   // Update workspace
-  Object.assign(workspace, data);
-  workspace.lastEditedBy = userId;
-  workspace.lastActivityAt = new Date();
+  async updateWorkspace(
+    workspaceId: string,
+    data: IUpdateWorkspaceRequest,
+    userId: string
+  ): Promise<IWorkspace> {
+    try {
+      const workspace = await WorkspaceModel.findOne({
+        _id: workspaceId,
+        isDeleted: false
+      });
 
-  await workspace.save();
-
-  return toWorkspaceInterface(workspace);
-};
-
-// Delete workspace
-export const deleteWorkspace = async (
-  workspaceId: string,
-  userId: string
-): Promise<void> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  // Only owner can delete workspace
-  if (!workspace.isOwner(userId)) {
-    throw createForbiddenError('Only the workspace owner can delete the workspace');
-  }
-
-  // Check if workspace has databases
-  const databaseCount = await DatabaseModel.countDocuments({ workspaceId });
-  if (databaseCount > 0) {
-    throw createValidationError(
-      'Cannot delete workspace with existing databases. Please delete all databases first.'
-    );
-  }
-
-  await WorkspaceModel.findByIdAndDelete(workspaceId);
-};
-
-// Add member to workspace
-export const addWorkspaceMember = async (
-  workspaceId: string,
-  userId: string,
-  inviteData: TWorkspaceInviteRequest
-): Promise<IWorkspace> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  // Check permissions
-  if (!workspace.canUserAdmin(userId) && !workspace.allowMemberInvites) {
-    throw createForbiddenError('You do not have permission to invite members');
-  }
-
-  // Get target user
-  let targetUserId: string;
-  if (inviteData.userId) {
-    targetUserId = inviteData.userId;
-  } else if (inviteData.email) {
-    // In a real implementation, you'd look up user by email
-    // For now, we'll assume the email maps to a userId
-    throw createValidationError('Email-based invitations not yet implemented');
-  } else {
-    throw createValidationError('Either userId or email must be provided');
-  }
-
-  // Check if user is already a member
-  if (workspace.isMember(targetUserId)) {
-    throw createConflictError('User is already a member of this workspace');
-  }
-
-  // Verify target user exists
-  const targetUser = await getUserById(targetUserId);
-  if (!targetUser) {
-    throw createNotFoundError('Target user not found');
-  }
-
-  // Add member
-  workspace.members.push({
-    userId: targetUserId,
-    role: inviteData.role,
-    joinedAt: new Date(),
-    invitedBy: userId
-  });
-
-  workspace.lastActivityAt = new Date();
-  await workspace.save();
-
-  return toWorkspaceInterface(workspace);
-};
-
-// Remove member from workspace
-export const removeWorkspaceMember = async (
-  workspaceId: string,
-  userId: string,
-  targetUserId: string
-): Promise<IWorkspace> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  // Check if target user is a member
-  if (!workspace.isMember(targetUserId)) {
-    throw createNotFoundError('User is not a member of this workspace');
-  }
-
-  // Check permissions (admin can remove anyone except owner, users can remove themselves)
-  const canRemove = workspace.canUserAdmin(userId) || userId === targetUserId;
-  if (!canRemove) {
-    throw createForbiddenError('You do not have permission to remove this member');
-  }
-
-  // Cannot remove the owner
-  if (workspace.isOwner(targetUserId)) {
-    throw createForbiddenError('Cannot remove the workspace owner');
-  }
-
-  // Remove member
-  workspace.members = workspace.members.filter(
-    member => member.userId !== targetUserId
-  );
-
-  workspace.lastActivityAt = new Date();
-  await workspace.save();
-
-  return toWorkspaceInterface(workspace);
-};
-
-// Update member role
-export const updateMemberRole = async (
-  workspaceId: string,
-  userId: string,
-  targetUserId: string,
-  updateData: TWorkspaceMemberUpdateRequest
-): Promise<IWorkspace> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  // Check permissions (only admin can change roles)
-  if (!workspace.canUserAdmin(userId)) {
-    throw createForbiddenError('You do not have permission to change member roles');
-  }
-
-  // Cannot change owner role
-  if (workspace.isOwner(targetUserId)) {
-    throw createForbiddenError('Cannot change the owner role');
-  }
-
-  // Find and update member
-  const member = workspace.members.find(m => m.userId === targetUserId);
-  if (!member) {
-    throw createNotFoundError('User is not a member of this workspace');
-  }
-
-  member.role = updateData.role;
-  workspace.lastActivityAt = new Date();
-  await workspace.save();
-
-  return toWorkspaceInterface(workspace);
-};
-
-// Get workspace members with user details
-export const getWorkspaceMembers = async (
-  workspaceId: string,
-  userId: string,
-  queryParams: TGetWorkspaceMembersQuery = {}
-): Promise<TWorkspaceMembersListResponse> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  // Check if user has access
-  if (!workspace.isMember(userId) && !workspace.isPublic) {
-    throw createForbiddenError('You do not have access to this workspace');
-  }
-
-  const {
-    role,
-    search,
-    sortBy = 'joinedAt',
-    sortOrder = 'desc',
-    page = 1,
-    limit = 20
-  } = queryParams;
-
-  let members = [...workspace.members];
-
-  // Apply filters
-  if (role) {
-    members = members.filter(member => member.role === role);
-  }
-
-  // Get user details for each member
-  const membersWithDetails = await Promise.all(
-    members.map(async (member): Promise<TWorkspaceMemberResponse> => {
-      const user = await getUserById(member.userId);
-      return {
-        userId: member.userId,
-        role: member.role,
-        joinedAt: member.joinedAt,
-        invitedBy: member.invitedBy,
-        user: user ? {
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          profilePicture: user.profilePicture
-        } : undefined
-      };
-    })
-  );
-
-  // Apply search filter
-  let filteredMembers = membersWithDetails;
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filteredMembers = membersWithDetails.filter(member =>
-      member.user?.username?.toLowerCase().includes(searchLower) ||
-      member.user?.email?.toLowerCase().includes(searchLower) ||
-      member.user?.firstName?.toLowerCase().includes(searchLower) ||
-      member.user?.lastName?.toLowerCase().includes(searchLower)
-    );
-  }
-
-  // Apply sorting
-  filteredMembers.sort((a, b) => {
-    let aValue: any, bValue: any;
-
-    if (sortBy === 'joinedAt') {
-      aValue = a.joinedAt;
-      bValue = b.joinedAt;
-    } else if (sortBy === 'role') {
-      const roleOrder = { owner: 0, admin: 1, editor: 2, viewer: 3 };
-      aValue = roleOrder[a.role];
-      bValue = roleOrder[b.role];
-    }
-
-    if (sortOrder === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
-
-  // Apply pagination
-  const total = filteredMembers.length;
-  const totalPages = Math.ceil(total / limit);
-  const skip = (page - 1) * limit;
-  const paginatedMembers = filteredMembers.slice(skip, skip + limit);
-
-  return {
-    members: paginatedMembers,
-    total,
-    totalPages,
-    currentPage: page,
-    hasNextPage: page < totalPages,
-    hasPrevPage: page > 1
-  };
-};
-
-// Get workspace permissions for a user
-export const getWorkspacePermissions = async (
-  workspaceId: string,
-  userId: string
-): Promise<TWorkspacePermissions> => {
-  const workspace = await WorkspaceModel.findById(workspaceId);
-
-  if (!workspace) {
-    throw createNotFoundError('Workspace not found');
-  }
-
-  const role = workspace.getUserRole(userId);
-  const isOwner = workspace.isOwner(userId);
-  const isAdmin = workspace.canUserAdmin(userId);
-  const canEdit = workspace.canUserEdit(userId);
-  const isMember = workspace.isMember(userId);
-
-  return {
-    canView: isMember || workspace.isPublic,
-    canEdit: canEdit,
-    canAdmin: isAdmin,
-    canDelete: isOwner,
-    canInviteMembers: isAdmin || workspace.allowMemberInvites,
-    canManageMembers: isAdmin,
-    canCreateDatabases: isMember,
-    role: role as TWorkspaceRole
-  };
-};
-
-// Get workspace statistics
-export const getWorkspaceStats = async (userId: string): Promise<TWorkspaceStatsResponse> => {
-  const [ownedWorkspaces, memberWorkspaces, publicWorkspaces] = await Promise.all([
-    WorkspaceModel.countDocuments({ ownerId: userId }),
-    WorkspaceModel.countDocuments({ 'members.userId': userId, ownerId: { $ne: userId } }),
-    WorkspaceModel.countDocuments({ isPublic: true })
-  ]);
-
-  const totalWorkspaces = ownedWorkspaces + memberWorkspaces;
-
-  // Get total databases in user's workspaces
-  const userWorkspaces = await WorkspaceModel.find({
-    $or: [
-      { ownerId: userId },
-      { 'members.userId': userId }
-    ]
-  }).select('_id');
-
-  const workspaceIds = userWorkspaces.map(w => String(w._id));
-  const totalDatabases = await DatabaseModel.countDocuments({
-    workspaceId: { $in: workspaceIds }
-  });
-
-  // Get total members across user's owned workspaces
-  const ownedWorkspaceDetails = await WorkspaceModel.find({ ownerId: userId });
-  const totalMembers = ownedWorkspaceDetails.reduce((sum, workspace) =>
-    sum + (workspace.memberCount ?? 0), 0
-  );
-
-  return {
-    totalWorkspaces,
-    ownedWorkspaces,
-    memberWorkspaces,
-    publicWorkspaces,
-    totalDatabases,
-    totalMembers,
-    recentActivity: [] // Will be implemented with proper activity tracking
-  };
-};
-
-// Activity tracking functions
-export const getWorkspaceActivity = async (
-  workspaceId: string,
-  userId: string,
-  options: {
-    limit?: number;
-    offset?: number;
-    type?: string;
-  } = {}
-): Promise<{ activities: any[]; total: number }> => {
-  // Check workspace access
-  await getWorkspaceById(workspaceId, userId);
-
-  const { limit = 20, offset = 0, type } = options;
-
-  // This is a simplified implementation
-  const activities = await getWorkspaceRecentActivity(workspaceId, limit, type);
-
-  return {
-    activities,
-    total: activities.length
-  };
-};
-
-async function getWorkspaceRecentActivity(
-  workspaceId: string,
-  limit: number = 10,
-  type?: string
-): Promise<any[]> {
-  const activities: any[] = [];
-
-  try {
-    // Get recent databases created in this workspace
-    const recentDatabases = await DatabaseModel.find({ workspaceId })
-      .sort({ createdAt: -1 })
-      .limit(limit);
-
-    recentDatabases.forEach(db => {
-      if (!type || type === 'database_created') {
-        const dbJson = db.toJSON();
-        activities.push({
-          id: dbJson.id,
-          type: 'database_created',
-          title: `Database "${dbJson.name}" created`,
-          userId: dbJson.userId,
-          createdAt: dbJson.createdAt,
-          data: {
-            databaseId: dbJson.id,
-            databaseName: dbJson.name
-          }
-        });
+      if (!workspace) {
+        throw createNotFoundError('Workspace not found');
       }
-    });
 
-    // Sort by date and limit
-    return activities
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, limit);
+      // Check if user can update workspace
+      const canUpdate = await this.canManageWorkspace(workspaceId, userId);
+      if (!canUpdate) {
+        throw createForbiddenError('Insufficient permissions to update workspace');
+      }
 
-  } catch (error) {
-    console.error('Error getting workspace activity:', error);
-    return [];
+      // Update workspace
+      Object.assign(workspace, {
+        ...data,
+        updatedBy: userId,
+        lastActivityAt: new Date()
+      });
+
+      await workspace.save();
+      return workspace.toJSON() as IWorkspace;
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to update workspace: ${error.message}`, 500);
+    }
   }
-};
+
+  // Delete workspace
+  async deleteWorkspace(workspaceId: string, userId: string): Promise<void> {
+    try {
+      const workspace = await WorkspaceModel.findOne({
+        _id: workspaceId,
+        isDeleted: false
+      });
+
+      if (!workspace) {
+        throw createNotFoundError('Workspace not found');
+      }
+
+      // Only owner can delete workspace
+      if (workspace.ownerId !== userId) {
+        throw createForbiddenError('Only workspace owner can delete workspace');
+      }
+
+      // Soft delete workspace
+      workspace.isDeleted = true;
+      workspace.deletedAt = new Date();
+      workspace.deletedBy = userId;
+      await workspace.save();
+
+      // Deactivate all members
+      await WorkspaceMemberModel.updateMany(
+        { workspaceId },
+        {
+          isActive: false,
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedBy: userId
+        }
+      );
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to delete workspace: ${error.message}`, 500);
+    }
+  }
+
+  // Create default workspace for new users
+  async createDefaultWorkspace(userId: string, userInfo?: { firstName?: string; lastName?: string }): Promise<IWorkspace> {
+    try {
+      // Check if user already has a default workspace
+      const existingWorkspaces = await WorkspaceModel.findByOwner(userId);
+      const defaultWorkspace = existingWorkspaces.find(ws => ws.type === EWorkspaceType.PERSONAL);
+      
+      if (defaultWorkspace) {
+        return defaultWorkspace.toJSON() as IWorkspace;
+      }
+
+      // Create default workspace name
+      const userName = userInfo?.firstName 
+        ? `${userInfo.firstName}${userInfo.lastName ? ` ${userInfo.lastName}` : ''}`
+        : 'My';
+      
+      const defaultWorkspaceData: ICreateWorkspaceRequest = {
+        name: `${userName} Workspace`,
+        description: 'Your personal workspace for managing tasks, notes, and projects',
+        type: EWorkspaceType.PERSONAL,
+        icon: { type: 'emoji', value: '🏠' },
+        cover: { type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        config: {
+          enableAI: true,
+          enableComments: true,
+          enableVersioning: false,
+          enablePublicSharing: true,
+          enableGuestAccess: false,
+          maxDatabases: 100,
+          maxMembers: 1,
+          storageLimit: 1073741824, // 1GB
+          requireTwoFactor: false
+        },
+        isPublic: false
+      };
+
+      return await this.createWorkspace(defaultWorkspaceData, userId);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to create default workspace: ${error.message}`, 500);
+    }
+  }
+
+  // Get or create default workspace for user
+  async getOrCreateDefaultWorkspace(userId: string, userInfo?: { firstName?: string; lastName?: string }): Promise<IWorkspace> {
+    try {
+      const existingWorkspaces = await WorkspaceModel.findByOwner(userId);
+      const defaultWorkspace = existingWorkspaces.find(ws => ws.type === EWorkspaceType.PERSONAL);
+      
+      if (defaultWorkspace) {
+        return defaultWorkspace.toJSON() as IWorkspace;
+      }
+
+      return await this.createDefaultWorkspace(userId, userInfo);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get or create default workspace: ${error.message}`, 500);
+    }
+  }
+
+  // Get user's primary workspace (first personal workspace or first workspace)
+  async getUserPrimaryWorkspace(userId: string): Promise<IWorkspace | null> {
+    try {
+      const workspaces = await WorkspaceModel.findByOwner(userId);
+      
+      if (workspaces.length === 0) {
+        return null;
+      }
+
+      // Prefer personal workspace
+      const personalWorkspace = workspaces.find(ws => ws.type === EWorkspaceType.PERSONAL);
+      if (personalWorkspace) {
+        return personalWorkspace.toJSON() as IWorkspace;
+      }
+
+      // Return first workspace if no personal workspace
+      return workspaces[0].toJSON() as IWorkspace;
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get user primary workspace: ${error.message}`, 500);
+    }
+  }
+
+  // Check if user has workspace access
+  async hasWorkspaceAccess(workspaceId: string, userId: string): Promise<boolean> {
+    try {
+      const workspace = await WorkspaceModel.findById(workspaceId);
+      if (!workspace || workspace.isDeleted) return false;
+
+      // Owner always has access
+      if (workspace.ownerId === userId) return true;
+
+      // Check if user is member
+      const member = await WorkspaceMemberModel.findMember(workspaceId, userId);
+      return !!member;
+    } catch (error: any) {
+      return false;
+    }
+  }
+
+  // Check if user can manage workspace
+  async canManageWorkspace(workspaceId: string, userId: string): Promise<boolean> {
+    try {
+      const workspace = await WorkspaceModel.findById(workspaceId);
+      if (!workspace || workspace.isDeleted) return false;
+
+      // Owner can always manage
+      if (workspace.ownerId === userId) return true;
+
+      // Check if user is admin
+      return WorkspaceMemberModel.hasRole(workspaceId, userId, EWorkspaceMemberRole.ADMIN);
+    } catch (error: any) {
+      return false;
+    }
+  }
+
+  // Check if user can manage members
+  async canManageMembers(workspaceId: string, userId: string): Promise<boolean> {
+    try {
+      const workspace = await WorkspaceModel.findById(workspaceId);
+      if (!workspace || workspace.isDeleted) return false;
+
+      // Owner can always manage
+      if (workspace.ownerId === userId) return true;
+
+      // Check permission
+      return WorkspaceMemberModel.hasPermission(workspaceId, userId, 'canManageMembers');
+    } catch (error: any) {
+      return false;
+    }
+  }
+}
+
+export const workspaceService = new WorkspaceService();
