@@ -21,7 +21,7 @@ export const createTemplate = catchAsync(
 export const getTemplate = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { templateId } = req.params;
-    const userId = req.user?.userId || null; // Optional user ID for public access
+    const userId = getUserId(req);
 
     const template = await templatesService.getTemplate(templateId, userId);
 

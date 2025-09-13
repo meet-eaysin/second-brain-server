@@ -12,7 +12,6 @@ import { WorkspaceMemberModel } from '@/modules/workspace/models/workspace-membe
 import { createForbiddenError } from '../../../utils/error.utils';
 
 export class PermissionService {
-  // Check if user has permission for a resource
   async hasPermission(
     resourceType: EShareScope,
     resourceId: string,
@@ -20,25 +19,22 @@ export class PermissionService {
     requiredLevel: EPermissionLevel
   ): Promise<boolean> {
     try {
-      // 0. Check if user is the owner of the resource (database creator has full access)
       if (resourceType === EShareScope.DATABASE) {
         const { DatabaseModel } = await import('@/modules/database/models/database.model');
         const database = await DatabaseModel.findById(resourceId);
         if (database && database.createdBy === userId) {
-          return true; // Database creator has full access
+          return true; 
         }
       }
 
-      // Check record ownership
       if (resourceType === EShareScope.RECORD) {
         const { RecordModel } = await import('@/modules/database/models/record.model');
         const record = await RecordModel.findById(resourceId);
         if (record && record.createdBy === userId) {
-          return true; // Record creator has full access
+          return true; 
         }
       }
 
-      // Check template ownership
       if (resourceType === EShareScope.TEMPLATE) {
         const { TemplateModel } = await import('@/modules/templates/models/template.model');
         const template = await TemplateModel.findById(resourceId);
