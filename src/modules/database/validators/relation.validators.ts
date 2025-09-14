@@ -15,7 +15,7 @@ export const createRelationSchema = z.object({
 export const createConnectionSchema = z.object({
   sourceRecordId: z.string().min(1, 'Source record ID is required'),
   targetRecordId: z.string().min(1, 'Target record ID is required'),
-  properties: z.record(z.any()).optional()
+  properties: z.record(z.string(), z.any()).optional()
 });
 
 export const removeConnectionSchema = z.object({
@@ -27,22 +27,44 @@ export const rollupConfigSchema = z.object({
   relationPropertyId: z.string().min(1, 'Relation property ID is required'),
   rollupPropertyId: z.string().min(1, 'Rollup property ID is required'),
   rollupFunction: z.enum([
-    'count', 'count_values', 'count_unique', 'count_empty', 'count_not_empty',
-    'percent_empty', 'percent_not_empty', 'sum', 'average', 'median',
-    'min', 'max', 'range', 'earliest', 'latest', 'date_range',
-    'checked', 'unchecked', 'percent_checked', 'show_original'
+    'count',
+    'count_values',
+    'count_unique',
+    'count_empty',
+    'count_not_empty',
+    'percent_empty',
+    'percent_not_empty',
+    'sum',
+    'average',
+    'median',
+    'min',
+    'max',
+    'range',
+    'earliest',
+    'latest',
+    'date_range',
+    'checked',
+    'unchecked',
+    'percent_checked',
+    'show_original'
   ]),
-  filters: z.array(z.object({
-    property: z.string(),
-    condition: z.string(),
-    value: z.any()
-  })).optional(),
+  filters: z
+    .array(
+      z.object({
+        property: z.string(),
+        condition: z.string(),
+        value: z.any()
+      })
+    )
+    .optional(),
   dateFormat: z.string().optional(),
-  numberFormat: z.object({
-    precision: z.number().optional(),
-    currency: z.string().optional(),
-    percentage: z.boolean().optional()
-  }).optional()
+  numberFormat: z
+    .object({
+      precision: z.number().optional(),
+      currency: z.string().optional(),
+      percentage: z.boolean().optional()
+    })
+    .optional()
 });
 
 export const databaseIdSchema = z.object({

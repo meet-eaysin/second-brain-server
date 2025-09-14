@@ -150,7 +150,14 @@ export interface ITimeTrackingResponse {
 export interface ITaskActivity {
   id: string;
   taskId: string;
-  type: 'created' | 'updated' | 'completed' | 'assigned' | 'commented' | 'status_changed' | 'priority_changed';
+  type:
+    | 'created'
+    | 'updated'
+    | 'completed'
+    | 'assigned'
+    | 'commented'
+    | 'status_changed'
+    | 'priority_changed';
   description: string;
   userId: string;
   userName: string;
@@ -233,17 +240,29 @@ export const TaskCommentSchema = z.object({
 export const TaskActivitySchema = z.object({
   id: z.string(),
   taskId: z.string(),
-  type: z.enum(['created', 'updated', 'completed', 'assigned', 'commented', 'status_changed', 'priority_changed']),
+  type: z.enum([
+    'created',
+    'updated',
+    'completed',
+    'assigned',
+    'commented',
+    'status_changed',
+    'priority_changed'
+  ]),
   description: z.string(),
   userId: z.string(),
   userName: z.string(),
   timestamp: z.date(),
-  changes: z.array(z.object({
-    field: z.string(),
-    oldValue: z.any(),
-    newValue: z.any()
-  })).optional(),
-  metadata: z.record(z.any()).optional()
+  changes: z
+    .array(
+      z.object({
+        field: z.string(),
+        oldValue: z.any(),
+        newValue: z.any()
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 export const TaskSchema = z.object({
@@ -251,8 +270,8 @@ export const TaskSchema = z.object({
   databaseId: z.string(),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
-  status: z.nativeEnum(EStatus),
-  priority: z.nativeEnum(EPriority),
+  status: z.enum(EStatus),
+  priority: z.enum(EPriority),
   dueDate: z.date().optional(),
   startDate: z.date().optional(),
   estimatedHours: z.number().min(0).optional(),
@@ -274,7 +293,7 @@ export const TaskSchema = z.object({
   timeEntries: z.array(TaskTimeEntrySchema).default([]),
   totalTimeSpent: z.number().min(0).default(0),
   labels: z.array(z.string()).default([]),
-  customFields: z.record(z.any()).default({}),
+  customFields: z.record(z.string(), z.any()).default({}),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string(),

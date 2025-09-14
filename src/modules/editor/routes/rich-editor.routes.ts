@@ -53,49 +53,61 @@ const formattingSchema = z.object({
     color: z.string().optional(),
     backgroundColor: z.string().optional(),
     fontSize: z.enum(['small', 'normal', 'large']).optional(),
-    link: z.object({
-      url: z.string().url(),
-      title: z.string().optional()
-    }).optional()
+    link: z
+      .object({
+        url: z.string().url(),
+        title: z.string().optional()
+      })
+      .optional()
   })
 });
 
 const insertTextSchema = z.object({
   position: z.number().min(0),
   text: z.string(),
-  formatting: z.object({
-    bold: z.boolean().optional(),
-    italic: z.boolean().optional(),
-    underline: z.boolean().optional(),
-    strikethrough: z.boolean().optional(),
-    code: z.boolean().optional(),
-    color: z.string().optional(),
-    backgroundColor: z.string().optional(),
-    fontSize: z.enum(['small', 'normal', 'large']).optional(),
-    link: z.object({
-      url: z.string().url(),
-      title: z.string().optional()
-    }).optional()
-  }).optional()
+  formatting: z
+    .object({
+      bold: z.boolean().optional(),
+      italic: z.boolean().optional(),
+      underline: z.boolean().optional(),
+      strikethrough: z.boolean().optional(),
+      code: z.boolean().optional(),
+      color: z.string().optional(),
+      backgroundColor: z.string().optional(),
+      fontSize: z.enum(['small', 'normal', 'large']).optional(),
+      link: z
+        .object({
+          url: z.string().url(),
+          title: z.string().optional()
+        })
+        .optional()
+    })
+    .optional()
 });
 
 const insertSpecialContentSchema = z.object({
   position: z.number().min(0),
   options: z.object({
-    mention: z.object({
-      type: z.enum(['user', 'page', 'database', 'date']),
-      id: z.string(),
-      displayText: z.string()
-    }).optional(),
-    equation: z.object({
-      expression: z.string(),
-      latex: z.string().optional()
-    }).optional(),
-    embed: z.object({
-      type: z.enum(['image', 'video', 'file', 'link']),
-      url: z.string().url(),
-      caption: z.string().optional()
-    }).optional()
+    mention: z
+      .object({
+        type: z.enum(['user', 'page', 'database', 'date']),
+        id: z.string(),
+        displayText: z.string()
+      })
+      .optional(),
+    equation: z
+      .object({
+        expression: z.string(),
+        latex: z.string().optional()
+      })
+      .optional(),
+    embed: z
+      .object({
+        type: z.enum(['image', 'video', 'file', 'link']),
+        url: z.string().url(),
+        caption: z.string().optional()
+      })
+      .optional()
   })
 });
 
@@ -130,16 +142,18 @@ const convertFormatSchema = z.object({
 });
 
 const resolveConflictsSchema = z.object({
-  conflicts: z.array(z.object({
-    type: z.enum(['insert', 'delete', 'format', 'replace']),
-    position: z.number(),
-    length: z.number().optional(),
-    content: z.string().optional(),
-    formatting: z.object({}).optional(),
-    blockId: z.string().optional(),
-    timestamp: z.number(),
-    userId: z.string()
-  })),
+  conflicts: z.array(
+    z.object({
+      type: z.enum(['insert', 'delete', 'format', 'replace']),
+      position: z.number(),
+      length: z.number().optional(),
+      content: z.string().optional(),
+      formatting: z.object({}).optional(),
+      blockId: z.string().optional(),
+      timestamp: z.number(),
+      userId: z.string()
+    })
+  ),
   resolution: z.enum(['accept', 'reject', 'merge'])
 });
 
@@ -252,11 +266,7 @@ router.post(
 );
 
 // Text analysis routes
-router.get(
-  '/records/:recordId/statistics',
-  validateParams(recordIdSchema),
-  getTextStatistics
-);
+router.get('/records/:recordId/statistics', validateParams(recordIdSchema), getTextStatistics);
 
 router.get(
   '/records/:recordId/autocomplete',
@@ -265,17 +275,9 @@ router.get(
   getAutoComplete
 );
 
-router.get(
-  '/records/:recordId/spellcheck',
-  validateParams(recordIdSchema),
-  performSpellCheck
-);
+router.get('/records/:recordId/spellcheck', validateParams(recordIdSchema), performSpellCheck);
 
-router.get(
-  '/records/:recordId/analyze',
-  validateParams(recordIdSchema),
-  analyzeText
-);
+router.get('/records/:recordId/analyze', validateParams(recordIdSchema), analyzeText);
 
 router.get(
   '/records/:recordId/summary',
@@ -292,11 +294,7 @@ router.get(
 );
 
 // Text processing routes
-router.post(
-  '/records/:recordId/auto-format',
-  validateParams(recordIdSchema),
-  autoFormatText
-);
+router.post('/records/:recordId/auto-format', validateParams(recordIdSchema), autoFormatText);
 
 router.post(
   '/records/:recordId/convert-format',

@@ -7,23 +7,23 @@ export enum EPropertyType {
   NUMBER = 'number',
   DATE = 'date',
   CHECKBOX = 'checkbox',
-  
+
   // Selection types
   SELECT = 'select',
   MULTI_SELECT = 'multi_select',
   STATUS = 'status',
   PRIORITY = 'priority',
-  
+
   // Rich types
   RICH_TEXT = 'rich_text',
   URL = 'url',
   EMAIL = 'email',
   PHONE = 'phone',
-  
+
   // Relation types
   PEOPLE = 'people',
   RELATION = 'relation',
-  
+
   // Advanced types
   FORMULA = 'formula',
   ROLLUP = 'rollup',
@@ -31,10 +31,10 @@ export enum EPropertyType {
   CREATED_BY = 'created_by',
   LAST_EDITED_TIME = 'last_edited_time',
   LAST_EDITED_BY = 'last_edited_by',
-  
+
   // File types
   FILES = 'files',
-  
+
   // Special types
   UNIQUE_ID = 'unique_id',
   AUTO_NUMBER = 'auto_number'
@@ -97,7 +97,16 @@ export interface IFormulaConfig {
 export interface IRollupConfig {
   relationPropertyId: string;
   rollupPropertyId: string;
-  function: 'count' | 'sum' | 'average' | 'min' | 'max' | 'median' | 'range' | 'earliest' | 'latest';
+  function:
+    | 'count'
+    | 'sum'
+    | 'average'
+    | 'min'
+    | 'max'
+    | 'median'
+    | 'range'
+    | 'earliest'
+    | 'latest';
 }
 
 export interface IFilesConfig {
@@ -233,7 +242,7 @@ export const RelationConfigSchema = z.object({
 
 export const FormulaConfigSchema = z.object({
   expression: z.string().min(1, 'Formula expression is required'),
-  returnType: z.nativeEnum(EPropertyType),
+  returnType: z.enum(EPropertyType),
   dependencies: z.array(z.string()).default([])
 });
 
@@ -254,22 +263,44 @@ export const RollupConfigSchema = z.object({
   relationPropertyId: z.string().min(1, 'Relation property ID is required'),
   rollupPropertyId: z.string().min(1, 'Rollup property ID is required'),
   rollupFunction: z.enum([
-    'count', 'count_values', 'count_unique', 'count_empty', 'count_not_empty',
-    'percent_empty', 'percent_not_empty', 'sum', 'average', 'median',
-    'min', 'max', 'range', 'earliest', 'latest', 'date_range',
-    'checked', 'unchecked', 'percent_checked', 'show_original'
+    'count',
+    'count_values',
+    'count_unique',
+    'count_empty',
+    'count_not_empty',
+    'percent_empty',
+    'percent_not_empty',
+    'sum',
+    'average',
+    'median',
+    'min',
+    'max',
+    'range',
+    'earliest',
+    'latest',
+    'date_range',
+    'checked',
+    'unchecked',
+    'percent_checked',
+    'show_original'
   ]),
-  filters: z.array(z.object({
-    property: z.string(),
-    condition: z.string(),
-    value: z.any()
-  })).optional(),
+  filters: z
+    .array(
+      z.object({
+        property: z.string(),
+        condition: z.string(),
+        value: z.any()
+      })
+    )
+    .optional(),
   dateFormat: z.string().optional(),
-  numberFormat: z.object({
-    precision: z.number().optional(),
-    currency: z.string().optional(),
-    percentage: z.boolean().optional()
-  }).optional()
+  numberFormat: z
+    .object({
+      precision: z.number().optional(),
+      currency: z.string().optional(),
+      percentage: z.boolean().optional()
+    })
+    .optional()
 });
 
 // Dynamic config validation based on property type
@@ -284,22 +315,20 @@ export const PropertyConfigSchema = z.union([
   RollupConfigSchema,
   FilesConfigSchema,
   AutoNumberConfigSchema,
-  z.record(z.unknown()) // Fallback for other configs
+  z.record(z.string(), z.unknown()) // Fallback for other configs
 ]);
 
 export const CreatePropertySchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Property name is required')
     .max(100, 'Property name cannot exceed 100 characters')
     .trim()
     .refine(name => !['id', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'].includes(name), {
       message: 'Property name cannot be a reserved system field'
     }),
-  type: z.nativeEnum(EPropertyType),
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .trim()
-    .optional(),
+  type: z.enum(EPropertyType),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
   isRequired: z.boolean().default(false),
   isVisible: z.boolean().default(true),
   isFrozen: z.boolean().default(false),
@@ -308,16 +337,14 @@ export const CreatePropertySchema = z.object({
 });
 
 export const UpdatePropertySchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Property name is required')
     .max(100, 'Property name cannot exceed 100 characters')
     .trim()
     .optional(),
-  type: z.nativeEnum(EPropertyType).optional(),
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .trim()
-    .optional(),
+  type: z.enum(EPropertyType).optional(),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
   isRequired: z.boolean().optional(),
   isVisible: z.boolean().optional(),
   isFrozen: z.boolean().optional(),
@@ -326,10 +353,14 @@ export const UpdatePropertySchema = z.object({
 });
 
 export const ReorderPropertiesSchema = z.object({
-  propertyOrders: z.array(z.object({
-    propertyId: z.string().min(1, 'Property ID is required'),
-    order: z.number().min(0, 'Order must be non-negative')
-  })).min(1, 'At least one property order is required')
+  propertyOrders: z
+    .array(
+      z.object({
+        propertyId: z.string().min(1, 'Property ID is required'),
+        order: z.number().min(0, 'Order must be non-negative')
+      })
+    )
+    .min(1, 'At least one property order is required')
 });
 
 export const PropertyIdSchema = z.object({
@@ -385,7 +416,8 @@ export interface IPropertyTemplate {
 
 // Additional schemas for new endpoints
 export const DuplicatePropertySchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Property name is required')
     .max(100, 'Property name cannot exceed 100 characters')
     .trim()
@@ -393,21 +425,19 @@ export const DuplicatePropertySchema = z.object({
 });
 
 export const ChangePropertyTypeSchema = z.object({
-  type: z.nativeEnum(EPropertyType),
+  type: z.enum(EPropertyType),
   config: PropertyConfigSchema.optional()
 });
 
 export const InsertPropertyAfterSchema = z.object({
   afterPropertyId: z.string().optional(),
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Property name is required')
     .max(100, 'Property name cannot exceed 100 characters')
     .trim(),
-  type: z.nativeEnum(EPropertyType),
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .trim()
-    .optional(),
+  type: z.enum(EPropertyType),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
   config: PropertyConfigSchema.optional()
 });
 

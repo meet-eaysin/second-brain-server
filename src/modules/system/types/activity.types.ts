@@ -6,36 +6,36 @@ export enum EActivityType {
   DATABASE_CREATED = 'database_created',
   DATABASE_UPDATED = 'database_updated',
   DATABASE_DELETED = 'database_deleted',
-  
+
   // Record operations
   RECORD_CREATED = 'record_created',
   RECORD_UPDATED = 'record_updated',
   RECORD_DELETED = 'record_deleted',
   RECORD_RESTORED = 'record_restored',
-  
+
   // Task operations
   TASK_CREATED = 'task_created',
   TASK_UPDATED = 'task_updated',
   TASK_COMPLETED = 'task_completed',
   TASK_ASSIGNED = 'task_assigned',
   TASK_COMMENTED = 'task_commented',
-  
+
   // Note operations
   NOTE_CREATED = 'note_created',
   NOTE_UPDATED = 'note_updated',
   NOTE_PUBLISHED = 'note_published',
   NOTE_SHARED = 'note_shared',
-  
+
   // Project operations
   PROJECT_CREATED = 'project_created',
   PROJECT_UPDATED = 'project_updated',
   PROJECT_COMPLETED = 'project_completed',
-  
+
   // Goal operations
   GOAL_CREATED = 'goal_created',
   GOAL_UPDATED = 'goal_updated',
   GOAL_ACHIEVED = 'goal_achieved',
-  
+
   // Collaboration
   USER_MENTIONED = 'user_mentioned',
   COMMENT_ADDED = 'comment_added',
@@ -50,12 +50,12 @@ export enum EActivityType {
   USER_LOGOUT = 'user_logout',
   SETTINGS_UPDATED = 'settings_updated',
   WORKSPACE_SETTINGS_UPDATED = 'workspace_settings_updated',
-  
+
   // Content operations
   BLOCK_CREATED = 'block_created',
   BLOCK_UPDATED = 'block_updated',
   BLOCK_DELETED = 'block_deleted',
-  
+
   // View operations
   VIEW_CREATED = 'view_created',
   VIEW_UPDATED = 'view_updated',
@@ -257,8 +257,8 @@ export interface IActivityAnalytics {
 }
 
 // Validation schemas
-export const ActivityTypeSchema = z.nativeEnum(EActivityType);
-export const ActivityContextSchema = z.nativeEnum(EActivityContext);
+export const ActivityTypeSchema = z.enum(EActivityType);
+export const ActivityContextSchema = z.enum(EActivityContext);
 
 export const ActivityChangeSchema = z.object({
   field: z.string(),
@@ -278,7 +278,7 @@ export const CreateActivityRequestSchema = z.object({
   entityId: z.string().min(1),
   entityType: z.string().min(1),
   entityName: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   changes: z.array(ActivityChangeSchema).optional(),
   ipAddress: z.string().optional(),
   userAgent: z.string().optional()
@@ -292,10 +292,12 @@ export const ActivityQueryOptionsSchema = z.object({
   context: ActivityContextSchema.optional(),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
-  dateRange: z.object({
-    start: z.date(),
-    end: z.date()
-  }).optional(),
+  dateRange: z
+    .object({
+      start: z.date(),
+      end: z.date()
+    })
+    .optional(),
   limit: z.number().min(1).max(100).optional(),
   offset: z.number().min(0).optional(),
   sortBy: z.enum(['timestamp', 'type', 'userId']).optional(),

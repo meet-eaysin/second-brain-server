@@ -3,49 +3,37 @@ import {
   ICreateWorkspaceRequest,
   IUpdateWorkspaceRequest,
   EWorkspaceType,
-  EWorkspaceMemberRole,
-  IWorkspaceMember,
-  IAddWorkspaceMemberRequest,
-  IUpdateWorkspaceMemberRequest,
-  IWorkspaceStats
+  EWorkspaceMemberRole
 } from '../types/workspace.types';
 import { WorkspaceModel } from '../models/workspace.model';
 import { WorkspaceMemberModel } from '../models/workspace-member.model';
-import { createAppError, createNotFoundError, createForbiddenError, createConflictError } from '@/utils/error.utils';
+import { createAppError, createNotFoundError, createForbiddenError } from '@/utils/error.utils';
 
 export class WorkspaceService {
-  // Create new workspace
-  async createWorkspace(
-    data: ICreateWorkspaceRequest,
-    ownerId: string
-  ): Promise<IWorkspace> {
+  async createWorkspace(data: ICreateWorkspaceRequest, ownerId: string): Promise<IWorkspace> {
     try {
-      // Check if user has reached workspace limit
       const existingWorkspaces = await WorkspaceModel.findByOwner(ownerId);
       const userPlan = 'free'; // TODO: Get from user subscription
       const maxWorkspaces = userPlan === 'free' ? 3 : userPlan === 'pro' ? 10 : 100;
 
       if (existingWorkspaces.length >= maxWorkspaces) {
-        throw createAppError(`Maximum ${maxWorkspaces} workspaces allowed for ${userPlan} plan`, 400);
+        throw createAppError(
+          `Maximum ${maxWorkspaces} workspaces allowed for ${userPlan} plan`,
+          400
+        );
       }
 
-      // Create workspace
       const workspace = new WorkspaceModel({
         name: data.name,
         description: data.description,
         type: data.type || EWorkspaceType.PERSONAL,
         icon: data.icon || { type: 'emoji', value: '🏠' },
-        cover: data.cover || { type: 'gradient', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        cover: data.cover || {
+          type: 'gradient',
+          value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        },
         config: {
-          enableAI: true,
-          enableComments: true,
-          enableVersioning: false,
-          enablePublicSharing: true,
-          enableGuestAccess: false,
-          maxDatabases: 100,
           maxMembers: data.type === EWorkspaceType.PERSONAL ? 1 : 10,
-          storageLimit: 1073741824, // 1GB
-          requireTwoFactor: false,
           ...data.config
         },
         isPublic: data.isPublic || false,
@@ -56,7 +44,6 @@ export class WorkspaceService {
 
       await workspace.save();
 
-      // Add owner as workspace member
       const ownerMember = new WorkspaceMemberModel({
         workspaceId: workspace.id.toString(),
         userId: ownerId,
@@ -113,8 +100,9 @@ export class WorkspaceService {
 
       // Combine and deduplicate
       const allWorkspaces = [...ownedWorkspaces, ...memberWorkspaces];
-      const uniqueWorkspaces = allWorkspaces.filter((workspace, index, self) =>
-        index === self.findIndex(w => w._id.toString() === workspace._id.toString())
+      const uniqueWorkspaces = allWorkspaces.filter(
+        (workspace, index, self) =>
+          index === self.findIndex(w => w._id.toString() === workspace._id.toString())
       );
 
       return uniqueWorkspaces.map(w => w.toJSON() as IWorkspace);
@@ -218,21 +206,24 @@ export class WorkspaceService {
   }
 
   // Create default workspace for new users
-  async createDefaultWorkspace(userId: string, userInfo?: { firstName?: string; lastName?: string }): Promise<IWorkspace> {
+  async createDefaultWorkspace(
+    userId: string,
+    userInfo?: { firstName?: string; lastName?: string }
+  ): Promise<IWorkspace> {
     try {
       // Check if user already has a default workspace
       const existingWorkspaces = await WorkspaceModel.findByOwner(userId);
       const defaultWorkspace = existingWorkspaces.find(ws => ws.type === EWorkspaceType.PERSONAL);
-      
+
       if (defaultWorkspace) {
         return defaultWorkspace.toJSON() as IWorkspace;
       }
 
       // Create default workspace name
-      const userName = userInfo?.firstName 
+      const userName = userInfo?.firstName
         ? `${userInfo.firstName}${userInfo.lastName ? ` ${userInfo.lastName}` : ''}`
         : 'My';
-      
+
       const defaultWorkspaceData: ICreateWorkspaceRequest = {
         name: `${userName} Workspace`,
         description: 'Your personal workspace for managing tasks, notes, and projects',
@@ -261,11 +252,14 @@ export class WorkspaceService {
   }
 
   // Get or create default workspace for user
-  async getOrCreateDefaultWorkspace(userId: string, userInfo?: { firstName?: string; lastName?: string }): Promise<IWorkspace> {
+  async getOrCreateDefaultWorkspace(
+    userId: string,
+    userInfo?: { firstName?: string; lastName?: string }
+  ): Promise<IWorkspace> {
     try {
       const existingWorkspaces = await WorkspaceModel.findByOwner(userId);
       const defaultWorkspace = existingWorkspaces.find(ws => ws.type === EWorkspaceType.PERSONAL);
-      
+
       if (defaultWorkspace) {
         return defaultWorkspace.toJSON() as IWorkspace;
       }
@@ -281,7 +275,7 @@ export class WorkspaceService {
   async getUserPrimaryWorkspace(userId: string): Promise<IWorkspace | null> {
     try {
       const workspaces = await WorkspaceModel.findByOwner(userId);
-      
+
       if (workspaces.length === 0) {
         return null;
       }

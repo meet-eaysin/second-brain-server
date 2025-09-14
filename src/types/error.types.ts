@@ -67,7 +67,7 @@ export const ErrorResponseSchema = z.object({
     statusCode: z.number(),
     status: z.string(),
     stack: z.string().optional(),
-    details: z.record(z.unknown()).optional()
+    details: z.record(z.string(), z.unknown()).optional()
   })
 });
 

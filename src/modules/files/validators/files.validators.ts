@@ -25,13 +25,14 @@ const getFilesQuerySchema = z.object({
   mimeType: z.string().optional(),
   sortBy: z.enum(['name', 'size', 'createdAt', 'updatedAt']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
-  page: z.string().transform(val => parseInt(val)).optional(),
-  limit: z.string().transform(val => parseInt(val)).optional()
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .optional(),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .optional()
 });
 
-export {
-  fileIdSchema,
-  uploadFileSchema,
-  bulkUploadSchema,
-  getFilesQuerySchema
-};
+export { fileIdSchema, uploadFileSchema, bulkUploadSchema, getFilesQuerySchema };

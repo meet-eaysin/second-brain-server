@@ -202,25 +202,33 @@ export interface INoteStats {
 // Validation schemas
 export const RichTextElementSchema = z.object({
   type: z.enum(['text', 'mention', 'equation']),
-  text: z.object({
-    content: z.string(),
-    link: z.object({ url: z.string().url() }).optional()
-  }).optional(),
-  mention: z.object({
-    type: z.enum(['user', 'page', 'database', 'date', 'note']),
-    user: z.object({ id: z.string(), name: z.string() }).optional(),
-    page: z.object({ id: z.string(), title: z.string() }).optional(),
-    database: z.object({ id: z.string(), name: z.string() }).optional(),
-    note: z.object({ id: z.string(), title: z.string() }).optional(),
-    date: z.object({
-      start: z.string(),
-      end: z.string().optional()
-    }).optional()
-  }).optional(),
-  equation: z.object({
-    expression: z.string(),
-    rendered: z.string().optional()
-  }).optional(),
+  text: z
+    .object({
+      content: z.string(),
+      link: z.object({ url: z.string().url() }).optional()
+    })
+    .optional(),
+  mention: z
+    .object({
+      type: z.enum(['user', 'page', 'database', 'date', 'note']),
+      user: z.object({ id: z.string(), name: z.string() }).optional(),
+      page: z.object({ id: z.string(), title: z.string() }).optional(),
+      database: z.object({ id: z.string(), name: z.string() }).optional(),
+      note: z.object({ id: z.string(), title: z.string() }).optional(),
+      date: z
+        .object({
+          start: z.string(),
+          end: z.string().optional()
+        })
+        .optional()
+    })
+    .optional(),
+  equation: z
+    .object({
+      expression: z.string(),
+      rendered: z.string().optional()
+    })
+    .optional(),
   annotations: z.object({
     bold: z.boolean(),
     italic: z.boolean(),
@@ -235,26 +243,28 @@ export const RichTextElementSchema = z.object({
   href: z.string().url().optional()
 });
 
-export const NoteContentBlockSchema: z.ZodType<INoteContentBlock> = z.lazy(() => z.object({
-  id: z.string(),
-  type: z.nativeEnum(EContentBlockType),
-  content: z.array(RichTextElementSchema),
-  children: z.array(NoteContentBlockSchema).optional(),
-  checked: z.boolean().optional(),
-  language: z.string().optional(),
-  caption: z.array(RichTextElementSchema).optional(),
-  url: z.string().url().optional(),
-  collapsed: z.boolean().optional(),
-  color: z.string().optional(),
-  icon: z.string().optional(),
-  level: z.number().min(1).max(6).optional(),
-  createdAt: z.date(),
-  createdBy: z.string(),
-  lastEditedAt: z.date(),
-  lastEditedBy: z.string(),
-  comments: z.array(z.any()).optional(), // Simplified for now
-  aiSuggestions: z.array(z.string()).optional()
-}));
+export const NoteContentBlockSchema: z.ZodType<INoteContentBlock> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    type: z.enum(EContentBlockType),
+    content: z.array(RichTextElementSchema),
+    children: z.array(NoteContentBlockSchema).optional(),
+    checked: z.boolean().optional(),
+    language: z.string().optional(),
+    caption: z.array(RichTextElementSchema).optional(),
+    url: z.string().url().optional(),
+    collapsed: z.boolean().optional(),
+    color: z.string().optional(),
+    icon: z.string().optional(),
+    level: z.number().min(1).max(6).optional(),
+    createdAt: z.date(),
+    createdBy: z.string(),
+    lastEditedAt: z.date(),
+    lastEditedBy: z.string(),
+    comments: z.array(z.any()).optional(), // Simplified for now
+    aiSuggestions: z.array(z.string()).optional()
+  })
+);
 
 export const NoteSchema = z.object({
   id: z.string(),

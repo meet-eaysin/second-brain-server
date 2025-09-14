@@ -3,12 +3,9 @@ import {
   ICreateDatabaseRequest,
   IUpdateDatabaseRequest,
   IDatabaseQueryParams,
-  IDatabaseStats
+  IDatabaseStats,
+  IDatabaseTemplate
 } from '@/modules/core/types/database.types';
-import { DatabaseModel } from '../models/database.model';
-import { PropertyModel } from '../models/property.model';
-import { ViewModel } from '../models/view.model';
-import { RecordModel } from '../models/record.model';
 import {
   createAppError,
   createNotFoundError,
@@ -24,8 +21,8 @@ import {
 } from '../utils/database.utils';
 import { createDefaultProperties, createDefaultViews } from '../utils/database-setup.utils';
 import { generateId } from '@/utils/id-generator';
-import { IDatabaseTemplate } from '@/modules/core/types/database.types';
 import { workspaceService } from '@/modules/workspace/services/workspace.service';
+import { DatabaseModel, PropertyModel, RecordModel, ViewModel } from '@/modules/database';
 
 const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Promise<IDatabase> => {
   try {
@@ -36,11 +33,11 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
       workspaceId = defaultWorkspace.id;
     }
 
+    console.log('workspaceId', workspaceId);
+    console.log('UserId', userId);
     // Verify user has access to the workspace
     const hasAccess = await workspaceService.hasWorkspaceAccess(workspaceId, userId);
-    if (!hasAccess) {
-      throw createForbiddenError('Access denied to this workspace');
-    }
+    if (!hasAccess) throw createForbiddenError('Access denied to this workspace');
 
     const existingDatabase = await DatabaseModel.findOne({
       workspaceId,
@@ -553,12 +550,10 @@ const bulkUpdateDatabases = async (
           await database.save();
           results.updated++;
         } catch (error: any) {
-          console.error(`Failed to update database ${database.id}:`, error.message);
           results.failed.push(database.id);
         }
       }
 
-      // Handle databases that weren't found
       const foundDatabaseIds = databases.map(db => db.id);
       const notFoundIds = batch.filter(id => !foundDatabaseIds.includes(id));
       results.failed.push(...notFoundIds);
@@ -621,7 +616,6 @@ const bulkDeleteDatabases = async (
 
           results.deleted++;
         } catch (error: any) {
-          console.error(`Failed to delete database ${database.id}:`, error.message);
           results.failed.push(database.id);
         }
       }
@@ -910,23 +904,19 @@ const createDatabaseTemplate = async (
       isDeleted: { $ne: true }
     });
 
-    if (!database) {
-      throw createNotFoundError('Database not found');
-    }
-
-    // Check if user has access to the database
-    if (database.createdBy !== userId && !database.isPublic) {
+    if (!database) throw createNotFoundError('Database not found');
+    if (database.createdBy !== userId && !database.isPublic)
       throw createForbiddenError('Access denied to this database');
-    }
 
     // Check if template name already exists in this database
     const existingTemplate = database.templates?.find(
       template => template.name.toLowerCase() === templateData.name.toLowerCase()
     );
 
-    if (existingTemplate) {
-      throw createConflictError(`Template with name "${templateData.name}" already exists in this database`);
-    }
+    if (existingTemplate)
+      throw createConflictError(
+        `Template with name "${templateData.name}" already exists in this database`
+      );
 
     // If this is set as default, unset other default templates
     if (templateData.isDefault) {
@@ -939,18 +929,15 @@ const createDatabaseTemplate = async (
     const newTemplate: IDatabaseTemplate = {
       id: generateId(),
       name: templateData.name.trim(),
-      description: templateData.description?.trim(),
+      description: templateData.description?.trim() || '',
       defaultValues: templateData.defaultValues || {},
       isDefault: templateData.isDefault || false
     };
 
-    // Add template to database
-    if (!database.templates) {
-      database.templates = [];
-    }
+    if (!database.templates) database.templates = [];
+
     database.templates.push(newTemplate);
 
-    // Update database metadata
     database.updatedBy = userId;
     database.updatedAt = new Date();
     database.lastActivityAt = new Date();
@@ -992,9 +979,7 @@ const updateDatabaseTemplate = async (
     }
 
     // Find the template to update
-    const templateIndex = database.templates?.findIndex(
-      template => template.id === templateId
-    );
+    const templateIndex = database.templates?.findIndex(template => template.id === templateId);
 
     if (templateIndex === undefined || templateIndex === -1) {
       throw createNotFoundError('Template not found in this database');
@@ -1003,7 +988,10 @@ const updateDatabaseTemplate = async (
     const existingTemplate = database.templates![templateIndex];
 
     // Check if new name conflicts with other templates (if name is being changed)
-    if (templateData.name && templateData.name.toLowerCase() !== existingTemplate.name.toLowerCase()) {
+    if (
+      templateData.name &&
+      templateData.name.toLowerCase() !== existingTemplate.name.toLowerCase()
+    ) {
       const nameConflict = database.templates?.find(
         (template, index) =>
           index !== templateIndex &&
@@ -1011,7 +999,9 @@ const updateDatabaseTemplate = async (
       );
 
       if (nameConflict) {
-        throw createConflictError(`Template with name "${templateData.name}" already exists in this database`);
+        throw createConflictError(
+          `Template with name "${templateData.name}" already exists in this database`
+        );
       }
     }
 
@@ -1028,7 +1018,10 @@ const updateDatabaseTemplate = async (
     const updatedTemplate: IDatabaseTemplate = {
       ...existingTemplate,
       name: templateData.name?.trim() ?? existingTemplate.name,
-      description: templateData.description?.trim() ?? existingTemplate.description,
+      description:
+        templateData.description !== undefined
+          ? templateData.description?.trim() || ''
+          : existingTemplate.description,
       defaultValues: templateData.defaultValues ?? existingTemplate.defaultValues,
       isDefault: templateData.isDefault ?? existingTemplate.isDefault
     };
@@ -1072,9 +1065,7 @@ const deleteDatabaseTemplate = async (
     }
 
     // Find the template to delete
-    const templateIndex = database.templates?.findIndex(
-      template => template.id === templateId
-    );
+    const templateIndex = database.templates?.findIndex(template => template.id === templateId);
 
     if (templateIndex === undefined || templateIndex === -1) {
       throw createNotFoundError('Template not found in this database');

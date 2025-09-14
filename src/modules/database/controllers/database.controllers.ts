@@ -1,14 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
-import { createAppError } from '@/utils/error.utils';
-import { databaseService } from '../services/database.services';
+import { databaseService } from '@/modules/database/services/database.services';
 import {
   ICreateDatabaseRequest,
   IUpdateDatabaseRequest,
   IDatabaseQueryParams
 } from '@/modules/core/types/database.types';
 import { getUserId } from '@/auth/index';
-import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
 export const createDatabase = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -206,12 +204,7 @@ export const createDatabaseTemplate = catchAsync(
 
     const template = await databaseService.createDatabaseTemplate(id, templateData, userId);
 
-    sendSuccessResponse(
-      res,
-      'Database template created successfully',
-      template,
-      201
-    );
+    sendSuccessResponse(res, 'Database template created successfully', template, 201);
   }
 );
 
@@ -221,7 +214,12 @@ export const updateDatabaseTemplate = catchAsync(
     const templateData = req.body;
     const userId = getUserId(req);
 
-    const template = await databaseService.updateDatabaseTemplate(id, templateId, templateData, userId);
+    const template = await databaseService.updateDatabaseTemplate(
+      id,
+      templateId,
+      templateData,
+      userId
+    );
 
     sendSuccessResponse(res, 'Database template updated successfully', template);
   }

@@ -3,7 +3,7 @@ export * from '@/modules/core/types';
 
 export * from '../database';
 
-export { modulesRoutes } from './modules';
+export { modulesRoutes } from '../modules';
 export { systemRoutes } from '../system';
 export { dashboardRoutes } from '../dashboard';
 export { tasksRoutes } from './tasks';

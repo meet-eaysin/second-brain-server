@@ -78,7 +78,7 @@ export enum EWorkflowStage {
 export interface IContentPiece {
   id: string;
   databaseId: string;
-  
+
   // Basic information
   title: string;
   subtitle?: string;
@@ -86,20 +86,20 @@ export interface IContentPiece {
   type: EContentType;
   status: EContentStatus;
   priority: EContentPriority;
-  
+
   // Content data
   content: string;
   excerpt?: string;
   wordCount: number;
   readingTime: number; // in minutes
-  
+
   // SEO and metadata
   seoTitle?: string;
   metaDescription?: string;
   keywords: string[];
   slug?: string;
   canonicalUrl?: string;
-  
+
   // Publishing information
   publishingPlatforms: Array<{
     platform: EPublishingPlatform;
@@ -115,30 +115,30 @@ export interface IContentPiece {
       clicks?: number;
     };
   }>;
-  
+
   // Scheduling
   scheduledDate?: Date;
   publishedDate?: Date;
   lastPublishedDate?: Date;
-  
+
   // Workflow and collaboration
   currentStage: EWorkflowStage;
   assignedTo?: string;
   reviewers: string[];
   approvers: string[];
-  
+
   // Content organization
   categories: string[];
   tags: string[];
   series?: string;
   seriesOrder?: number;
-  
+
   // Relationships
   relatedContentIds: string[];
   sourceNoteIds: string[];
   sourceResourceIds: string[];
   inspirationIds: string[];
-  
+
   // Media and assets
   featuredImage?: {
     url: string;
@@ -159,7 +159,7 @@ export interface IContentPiece {
     type: string;
     size: number;
   }>;
-  
+
   // Analytics and performance
   analytics: {
     totalViews: number;
@@ -172,7 +172,7 @@ export interface IContentPiece {
     bounceRate: number;
     averageTimeOnPage: number;
   };
-  
+
   // Version control
   versions: Array<{
     id: string;
@@ -184,26 +184,26 @@ export interface IContentPiece {
     isActive: boolean;
   }>;
   currentVersion: string;
-  
+
   // Templates and automation
   templateId?: string;
   isTemplate: boolean;
   autoPublish: boolean;
   autoPromote: boolean;
-  
+
   // Collaboration notes
   editorNotes?: string;
   reviewNotes?: string;
   approvalNotes?: string;
-  
+
   // Settings
   isPublic: boolean;
   allowComments: boolean;
   requireApproval: boolean;
-  
+
   // Custom fields
   customFields: Record<string, any>;
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -216,12 +216,12 @@ export interface IContentCalendar {
   id: string;
   name: string;
   description?: string;
-  
+
   // Calendar settings
   startDate: Date;
   endDate: Date;
   timezone: string;
-  
+
   // Content planning
   contentPieceIds: string[];
   themes: Array<{
@@ -231,7 +231,7 @@ export interface IContentCalendar {
     startDate: Date;
     endDate: Date;
   }>;
-  
+
   // Publishing schedule
   publishingSchedule: Array<{
     platform: EPublishingPlatform;
@@ -240,12 +240,12 @@ export interface IContentCalendar {
     days?: number[]; // 0-6 for weekly
     dates?: number[]; // 1-31 for monthly
   }>;
-  
+
   // Team and permissions
   ownerId: string;
   collaborators: string[];
   isPublic: boolean;
-  
+
   // Metadata
   createdAt: Date;
   updatedAt: Date;
@@ -259,7 +259,7 @@ export interface IContentTemplate {
   name: string;
   description?: string;
   type: EContentType;
-  
+
   // Template structure
   structure: {
     sections: Array<{
@@ -277,7 +277,7 @@ export interface IContentTemplate {
       required: boolean;
     }>;
   };
-  
+
   // Template content
   content: string;
   seoTemplate?: {
@@ -285,16 +285,16 @@ export interface IContentTemplate {
     metaDescriptionTemplate: string;
     keywordSuggestions: string[];
   };
-  
+
   // Usage statistics
   usageCount: number;
   lastUsed?: Date;
-  
+
   // Settings
   isPublic: boolean;
   category: string;
   tags: string[];
-  
+
   // Metadata
   createdAt: Date;
   updatedAt: Date;
@@ -308,7 +308,7 @@ export interface IContentAnalytics {
   startDate: Date;
   endDate: Date;
   totalPieces: number;
-  
+
   // Performance metrics
   totalViews: number;
   totalEngagements: number;
@@ -320,19 +320,19 @@ export interface IContentAnalytics {
     engagements: number;
     engagementRate: number;
   }>;
-  
+
   // Content breakdown
   byType: Record<EContentType, number>;
   byStatus: Record<EContentStatus, number>;
   byPlatform: Record<EPublishingPlatform, number>;
-  
+
   // Publishing patterns
   publishingFrequency: {
     daily: number;
     weekly: number;
     monthly: number;
   };
-  
+
   // Workflow efficiency
   averageTimeToPublish: number; // in days
   bottlenecks: Array<{
@@ -340,7 +340,7 @@ export interface IContentAnalytics {
     averageTime: number;
     count: number;
   }>;
-  
+
   // SEO performance
   seoMetrics: {
     averageWordCount: number;
@@ -348,7 +348,7 @@ export interface IContentAnalytics {
     keywordOptimization: number; // percentage
     metaCompleteness: number; // percentage
   };
-  
+
   // Trends and insights
   trends: Array<{
     metric: string;
@@ -356,7 +356,7 @@ export interface IContentAnalytics {
     change: number; // percentage
     period: string;
   }>;
-  
+
   recommendations: string[];
 }
 
@@ -474,9 +474,9 @@ export const ContentPieceSchema = z.object({
   title: z.string().min(1).max(500),
   subtitle: z.string().max(200).optional(),
   description: z.string().max(2000).optional(),
-  type: z.nativeEnum(EContentType),
-  status: z.nativeEnum(EContentStatus),
-  priority: z.nativeEnum(EContentPriority),
+  type: z.enum(EContentType),
+  status: z.enum(EContentStatus),
+  priority: z.enum(EContentPriority),
   content: z.string(),
   excerpt: z.string().max(500).optional(),
   wordCount: z.number().min(0),
@@ -486,24 +486,30 @@ export const ContentPieceSchema = z.object({
   keywords: z.array(z.string()).default([]),
   slug: z.string().max(200).optional(),
   canonicalUrl: z.string().url().optional(),
-  publishingPlatforms: z.array(z.object({
-    platform: z.nativeEnum(EPublishingPlatform),
-    platformId: z.string().optional(),
-    url: z.string().url().optional(),
-    publishedAt: z.date().optional(),
-    status: z.enum(['pending', 'published', 'failed']),
-    metrics: z.object({
-      views: z.number().min(0).optional(),
-      likes: z.number().min(0).optional(),
-      shares: z.number().min(0).optional(),
-      comments: z.number().min(0).optional(),
-      clicks: z.number().min(0).optional()
-    }).optional()
-  })).default([]),
+  publishingPlatforms: z
+    .array(
+      z.object({
+        platform: z.enum(EPublishingPlatform),
+        platformId: z.string().optional(),
+        url: z.string().url().optional(),
+        publishedAt: z.date().optional(),
+        status: z.enum(['pending', 'published', 'failed']),
+        metrics: z
+          .object({
+            views: z.number().min(0).optional(),
+            likes: z.number().min(0).optional(),
+            shares: z.number().min(0).optional(),
+            comments: z.number().min(0).optional(),
+            clicks: z.number().min(0).optional()
+          })
+          .optional()
+      })
+    )
+    .default([]),
   scheduledDate: z.date().optional(),
   publishedDate: z.date().optional(),
   lastPublishedDate: z.date().optional(),
-  currentStage: z.nativeEnum(EWorkflowStage),
+  currentStage: z.enum(EWorkflowStage),
   assignedTo: z.string().optional(),
   reviewers: z.array(z.string()).default([]),
   approvers: z.array(z.string()).default([]),
@@ -515,25 +521,35 @@ export const ContentPieceSchema = z.object({
   sourceNoteIds: z.array(z.string()).default([]),
   sourceResourceIds: z.array(z.string()).default([]),
   inspirationIds: z.array(z.string()).default([]),
-  featuredImage: z.object({
-    url: z.string().url(),
-    alt: z.string(),
-    caption: z.string().optional()
-  }).optional(),
-  images: z.array(z.object({
-    id: z.string(),
-    url: z.string().url(),
-    alt: z.string(),
-    caption: z.string().optional(),
-    position: z.number().optional()
-  })).default([]),
-  attachments: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    url: z.string().url(),
-    type: z.string(),
-    size: z.number().min(0)
-  })).default([]),
+  featuredImage: z
+    .object({
+      url: z.string().url(),
+      alt: z.string(),
+      caption: z.string().optional()
+    })
+    .optional(),
+  images: z
+    .array(
+      z.object({
+        id: z.string(),
+        url: z.string().url(),
+        alt: z.string(),
+        caption: z.string().optional(),
+        position: z.number().optional()
+      })
+    )
+    .default([]),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        url: z.string().url(),
+        type: z.string(),
+        size: z.number().min(0)
+      })
+    )
+    .default([]),
   analytics: z.object({
     totalViews: z.number().min(0).default(0),
     totalLikes: z.number().min(0).default(0),
@@ -545,15 +561,19 @@ export const ContentPieceSchema = z.object({
     bounceRate: z.number().min(0).max(100).default(0),
     averageTimeOnPage: z.number().min(0).default(0)
   }),
-  versions: z.array(z.object({
-    id: z.string(),
-    version: z.string(),
-    content: z.string(),
-    createdAt: z.date(),
-    createdBy: z.string(),
-    changelog: z.string().optional(),
-    isActive: z.boolean()
-  })).default([]),
+  versions: z
+    .array(
+      z.object({
+        id: z.string(),
+        version: z.string(),
+        content: z.string(),
+        createdAt: z.date(),
+        createdBy: z.string(),
+        changelog: z.string().optional(),
+        isActive: z.boolean()
+      })
+    )
+    .default([]),
   currentVersion: z.string(),
   templateId: z.string().optional(),
   isTemplate: z.boolean().default(false),
@@ -565,7 +585,7 @@ export const ContentPieceSchema = z.object({
   isPublic: z.boolean().default(false),
   allowComments: z.boolean().default(true),
   requireApproval: z.boolean().default(false),
-  customFields: z.record(z.any()).default({}),
+  customFields: z.record(z.string(), z.any()).default({}),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string(),
@@ -577,16 +597,20 @@ export const CreateContentRequestSchema = z.object({
   title: z.string().min(1, 'Title is required').max(500, 'Title too long'),
   subtitle: z.string().max(200, 'Subtitle too long').optional(),
   description: z.string().max(2000, 'Description too long').optional(),
-  type: z.nativeEnum(EContentType),
-  priority: z.nativeEnum(EContentPriority).default(EContentPriority.MEDIUM),
+  type: z.enum(EContentType),
+  priority: z.enum(EContentPriority).default(EContentPriority.MEDIUM),
   content: z.string().default(''),
   excerpt: z.string().max(500, 'Excerpt too long').optional(),
   seoTitle: z.string().max(60, 'SEO title too long').optional(),
   metaDescription: z.string().max(160, 'Meta description too long').optional(),
   keywords: z.array(z.string().max(50)).default([]),
   slug: z.string().max(200, 'Slug too long').optional(),
-  scheduledDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  currentStage: z.nativeEnum(EWorkflowStage).default(EWorkflowStage.IDEATION),
+  scheduledDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  currentStage: z.enum(EWorkflowStage).default(EWorkflowStage.IDEATION),
   assignedTo: z.string().optional(),
   reviewers: z.array(z.string()).default([]),
   approvers: z.array(z.string()).default([]),
@@ -597,11 +621,13 @@ export const CreateContentRequestSchema = z.object({
   relatedContentIds: z.array(z.string()).default([]),
   sourceNoteIds: z.array(z.string()).default([]),
   sourceResourceIds: z.array(z.string()).default([]),
-  featuredImage: z.object({
-    url: z.string().url(),
-    alt: z.string(),
-    caption: z.string().optional()
-  }).optional(),
+  featuredImage: z
+    .object({
+      url: z.string().url(),
+      alt: z.string(),
+      caption: z.string().optional()
+    })
+    .optional(),
   templateId: z.string().optional(),
   isTemplate: z.boolean().default(false),
   autoPublish: z.boolean().default(false),
@@ -609,7 +635,9 @@ export const CreateContentRequestSchema = z.object({
   isPublic: z.boolean().default(false),
   allowComments: z.boolean().default(true),
   requireApproval: z.boolean().default(false),
-  customFields: z.record(z.any()).default({})
+  customFields: z.record(z.string(), z.any()).default({})
 });
 
-export const UpdateContentRequestSchema = CreateContentRequestSchema.omit({ databaseId: true }).partial();
+export const UpdateContentRequestSchema = CreateContentRequestSchema.omit({
+  databaseId: true
+}).partial();

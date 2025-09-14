@@ -30,21 +30,29 @@ const router = Router();
 // Validation schemas
 const formulaExpressionSchema = z.object({
   expression: z.string().min(1).max(5000),
-  availableProperties: z.array(z.object({
-    name: z.string(),
-    type: z.string()
-  })).optional(),
+  availableProperties: z
+    .array(
+      z.object({
+        name: z.string(),
+        type: z.string()
+      })
+    )
+    .optional(),
   expectedReturnType: z.string().optional(),
   maxComplexity: z.number().positive().optional()
 });
 
 const testFormulaSchema = z.object({
   expression: z.string().min(1).max(5000),
-  sampleData: z.record(z.any()).optional(),
-  availableProperties: z.array(z.object({
-    name: z.string(),
-    type: z.string()
-  })).optional()
+  sampleData: z.record(z.string(), z.any()).optional(),
+  availableProperties: z
+    .array(
+      z.object({
+        name: z.string(),
+        type: z.string()
+      })
+    )
+    .optional()
 });
 
 const executeFormulaSchema = z.object({
@@ -52,18 +60,20 @@ const executeFormulaSchema = z.object({
   context: z.object({
     recordId: z.string(),
     databaseId: z.string(),
-    properties: z.record(z.any()),
-    relatedRecords: z.record(z.array(z.any())).optional(),
-    variables: z.record(z.any()).optional()
+    properties: z.record(z.string(), z.any()),
+    relatedRecords: z.record(z.string(), z.array(z.any())).optional(),
+    variables: z.record(z.string(), z.any()).optional()
   }),
-  config: z.object({
-    cacheEnabled: z.boolean().optional(),
-    cacheTTL: z.number().positive().optional(),
-    errorHandling: z.enum(['throw', 'return_null', 'return_default']).optional(),
-    defaultValue: z.any().optional(),
-    precision: z.number().min(0).max(10).optional(),
-    format: z.string().optional()
-  }).optional()
+  config: z
+    .object({
+      cacheEnabled: z.boolean().optional(),
+      cacheTTL: z.number().positive().optional(),
+      errorHandling: z.enum(['throw', 'return_null', 'return_default']).optional(),
+      defaultValue: z.any().optional(),
+      precision: z.number().min(0).max(10).optional(),
+      format: z.string().optional()
+    })
+    .optional()
 });
 
 const createFormulaPropertySchema = z.object({
@@ -102,10 +112,14 @@ const recalculateFormulasSchema = z.object({
 const formulaSuggestionsSchema = z.object({
   context: z.string().optional(),
   intent: z.string().optional(),
-  availableProperties: z.array(z.object({
-    name: z.string(),
-    type: z.string()
-  })).optional()
+  availableProperties: z
+    .array(
+      z.object({
+        name: z.string(),
+        type: z.string()
+      })
+    )
+    .optional()
 });
 
 const formatResultSchema = z.object({
@@ -120,23 +134,11 @@ router.get('/formulas/functions', getAvailableFunctions);
 router.use(authenticateToken);
 
 // Formula validation and testing
-router.post(
-  '/formulas/validate',
-  validateBody(formulaExpressionSchema),
-  validateFormula
-);
+router.post('/formulas/validate', validateBody(formulaExpressionSchema), validateFormula);
 
-router.post(
-  '/formulas/test',
-  validateBody(testFormulaSchema),
-  testFormula
-);
+router.post('/formulas/test', validateBody(testFormulaSchema), testFormula);
 
-router.post(
-  '/formulas/execute',
-  validateBody(executeFormulaSchema),
-  executeFormula
-);
+router.post('/formulas/execute', validateBody(executeFormulaSchema), executeFormula);
 
 router.post(
   '/formulas/analyze',
@@ -178,10 +180,12 @@ router.get(
 
 router.get(
   '/formulas/databases/:databaseId/properties/:propertyName',
-  validateParams(z.object({ 
-    databaseId: z.string().min(1),
-    propertyName: z.string().min(1)
-  })),
+  validateParams(
+    z.object({
+      databaseId: z.string().min(1),
+      propertyName: z.string().min(1)
+    })
+  ),
   getFormulaProperty
 );
 
@@ -209,10 +213,12 @@ router.get('/formulas/cache/stats', getCacheStats);
 
 router.delete(
   '/formulas/cache',
-  validateQuery(z.object({
-    recordId: z.string().optional(),
-    propertyName: z.string().optional()
-  })),
+  validateQuery(
+    z.object({
+      recordId: z.string().optional(),
+      propertyName: z.string().optional()
+    })
+  ),
   clearFormulaCache
 );
 
@@ -227,26 +233,20 @@ router.post(
 );
 
 // AI-powered features
-router.post(
-  '/formulas/suggestions',
-  validateBody(formulaSuggestionsSchema),
-  getFormulaSuggestions
-);
+router.post('/formulas/suggestions', validateBody(formulaSuggestionsSchema), getFormulaSuggestions);
 
 // Utility functions
-router.post(
-  '/formulas/format',
-  validateBody(formatResultSchema),
-  formatFormulaResult
-);
+router.post('/formulas/format', validateBody(formatResultSchema), formatFormulaResult);
 
 // Function search and discovery
 router.get(
   '/formulas/functions/search',
-  validateQuery(z.object({
-    category: z.string().optional(),
-    search: z.string().optional()
-  })),
+  validateQuery(
+    z.object({
+      category: z.string().optional(),
+      search: z.string().optional()
+    })
+  ),
   getAvailableFunctions
 );
 

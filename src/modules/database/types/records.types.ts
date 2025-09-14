@@ -96,32 +96,33 @@ export interface IBulkOperationResponse {
 
 // Validation schemas
 export const CreateRecordSchema = z.object({
-  properties: z.record(z.any()).refine(
-    (props) => Object.keys(props).length > 0,
-    { message: 'At least one property must be provided' }
-  ),
+  properties: z.record(z.string(), z.any()).refine(props => Object.keys(props).length > 0, {
+    message: 'At least one property must be provided'
+  }),
   content: z.array(z.any()).optional(),
   order: z.number().min(0).optional()
 });
 
-export const UpdateRecordSchema = z.object({
-  properties: z.record(z.any()).optional(),
-  content: z.array(z.any()).optional(),
-  order: z.number().min(0).optional()
-}).refine(
-  (data) => data.properties || data.content || data.order !== undefined,
-  { message: 'At least one field must be provided for update' }
-);
+export const UpdateRecordSchema = z
+  .object({
+    properties: z.record(z.string(), z.any()).optional(),
+    content: z.array(z.any()).optional(),
+    order: z.number().min(0).optional()
+  })
+  .refine(data => data.properties || data.content || data.order !== undefined, {
+    message: 'At least one field must be provided for update'
+  });
 
 export const BulkUpdateRecordsSchema = z.object({
   recordIds: z.array(z.string().min(1)).min(1, 'At least one record ID is required'),
-  updates: z.object({
-    properties: z.record(z.any()).optional(),
-    content: z.array(z.any()).optional()
-  }).refine(
-    (updates) => updates.properties || updates.content,
-    { message: 'At least one update field must be provided' }
-  )
+  updates: z
+    .object({
+      properties: z.record(z.string(), z.any()).optional(),
+      content: z.array(z.any()).optional()
+    })
+    .refine(updates => updates.properties || updates.content, {
+      message: 'At least one update field must be provided'
+    })
 });
 
 export const BulkDeleteRecordsSchema = z.object({
@@ -130,15 +131,19 @@ export const BulkDeleteRecordsSchema = z.object({
 });
 
 export const ReorderRecordsSchema = z.object({
-  recordOrders: z.array(z.object({
-    recordId: z.string().min(1, 'Record ID is required'),
-    order: z.number().min(0, 'Order must be non-negative')
-  })).min(1, 'At least one record order is required')
+  recordOrders: z
+    .array(
+      z.object({
+        recordId: z.string().min(1, 'Record ID is required'),
+        order: z.number().min(0, 'Order must be non-negative')
+      })
+    )
+    .min(1, 'At least one record order is required')
 });
 
 export const DuplicateRecordSchema = z.object({
   includeContent: z.boolean().default(true),
-  newProperties: z.record(z.any()).optional()
+  newProperties: z.record(z.string(), z.any()).optional()
 });
 
 export const RecordIdSchema = z.object({
@@ -286,10 +291,13 @@ export interface IRecordSearchResponse {
   total: number;
   query: string;
   suggestions?: string[];
-  facets?: Record<string, Array<{
-    value: string;
-    count: number;
-  }>>;
+  facets?: Record<
+    string,
+    Array<{
+      value: string;
+      count: number;
+    }>
+  >;
 }
 
 // Record validation

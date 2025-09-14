@@ -289,10 +289,10 @@ export interface IFormulaOptimizationResult {
 }
 
 // Validation schemas
-export const FormulaDataTypeSchema = z.nativeEnum(EFormulaDataType);
-export const FormulaCategorySchema = z.nativeEnum(EFormulaCategory);
-export const FormulaOperatorSchema = z.nativeEnum(EFormulaOperator);
-export const TokenTypeSchema = z.nativeEnum(ETokenType);
+export const FormulaDataTypeSchema = z.enum(EFormulaDataType);
+export const FormulaCategorySchema = z.enum(EFormulaCategory);
+export const FormulaOperatorSchema = z.enum(EFormulaOperator);
+export const TokenTypeSchema = z.enum(ETokenType);
 
 export const FunctionParameterSchema = z.object({
   name: z.string().min(1),
@@ -300,13 +300,15 @@ export const FunctionParameterSchema = z.object({
   description: z.string(),
   isOptional: z.boolean().default(false),
   defaultValue: z.any().optional(),
-  validation: z.object({
-    min: z.number().optional(),
-    max: z.number().optional(),
-    pattern: z.string().optional(),
-    allowedValues: z.array(z.any()).optional(),
-    customValidator: z.string().optional()
-  }).optional()
+  validation: z
+    .object({
+      min: z.number().optional(),
+      max: z.number().optional(),
+      pattern: z.string().optional(),
+      allowedValues: z.array(z.any()).optional(),
+      customValidator: z.string().optional()
+    })
+    .optional()
 });
 
 export const FormulaFunctionSchema = z.object({
@@ -316,12 +318,14 @@ export const FormulaFunctionSchema = z.object({
   syntax: z.string(),
   parameters: z.array(FunctionParameterSchema),
   returnType: FormulaDataTypeSchema,
-  examples: z.array(z.object({
-    expression: z.string(),
-    description: z.string(),
-    result: z.any(),
-    context: z.any().optional()
-  })),
+  examples: z.array(
+    z.object({
+      expression: z.string(),
+      description: z.string(),
+      result: z.any(),
+      context: z.any().optional()
+    })
+  ),
   isAsync: z.boolean().default(false),
   isDeprecated: z.boolean().default(false),
   aliases: z.array(z.string()).default([])
@@ -330,20 +334,22 @@ export const FormulaFunctionSchema = z.object({
 export const FormulaContextSchema = z.object({
   recordId: z.string(),
   databaseId: z.string(),
-  properties: z.record(z.any()),
-  relatedRecords: z.record(z.array(z.any())).optional(),
-  currentUser: z.object({
-    id: z.string(),
-    name: z.string(),
-    email: z.string()
-  }).optional(),
+  properties: z.record(z.string(), z.any()),
+  relatedRecords: z.record(z.string(), z.array(z.any())).optional(),
+  currentUser: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string()
+    })
+    .optional(),
   currentDate: z.date().optional(),
-  variables: z.record(z.any()).optional()
+  variables: z.record(z.string(), z.any()).optional()
 });
 
 export const FormulaPropertyConfigSchema = z.object({
   expression: z.string().min(1),
-  returnType: z.nativeEnum(EPropertyType),
+  returnType: z.enum(EPropertyType),
   dependencies: z.array(z.string()).default([]),
   isAsync: z.boolean().default(false),
   cacheEnabled: z.boolean().default(true),
@@ -357,20 +363,24 @@ export const FormulaPropertyConfigSchema = z.object({
 
 export const FormulaValidationResultSchema = z.object({
   isValid: z.boolean(),
-  errors: z.array(z.object({
-    type: z.enum(['syntax', 'semantic', 'runtime', 'circular_dependency', 'type_mismatch']),
-    message: z.string(),
-    position: z.number().optional(),
-    length: z.number().optional(),
-    suggestions: z.array(z.string()).optional()
-  })),
-  warnings: z.array(z.object({
-    type: z.enum(['performance', 'deprecated', 'type_coercion', 'precision_loss']),
-    message: z.string(),
-    position: z.number().optional(),
-    length: z.number().optional(),
-    suggestions: z.array(z.string()).optional()
-  })),
+  errors: z.array(
+    z.object({
+      type: z.enum(['syntax', 'semantic', 'runtime', 'circular_dependency', 'type_mismatch']),
+      message: z.string(),
+      position: z.number().optional(),
+      length: z.number().optional(),
+      suggestions: z.array(z.string()).optional()
+    })
+  ),
+  warnings: z.array(
+    z.object({
+      type: z.enum(['performance', 'deprecated', 'type_coercion', 'precision_loss']),
+      message: z.string(),
+      position: z.number().optional(),
+      length: z.number().optional(),
+      suggestions: z.array(z.string()).optional()
+    })
+  ),
   dependencies: z.array(z.string()),
   returnType: FormulaDataTypeSchema,
   estimatedComplexity: z.number().min(0)

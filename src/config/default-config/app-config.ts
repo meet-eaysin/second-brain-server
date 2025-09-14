@@ -26,13 +26,14 @@ const envVars = envSchema.safeParse(process.env);
 
 if (!envVars.success) {
   throw new Error(
-    `Config validation error: ${envVars.error.errors.map(e => e.message).join(', ')}`
+    `Config validation error: ${envVars.error.issues.map(e => e.message).join(', ')}`
   );
 }
 
 export const appConfig = {
   APPLICATION_NAME: 'Second Brain Server',
-  APPLICATION_DESCRIPTION: 'Comprehensive personal intelligence platform for knowledge management, creativity, learning, and personal growth',
+  APPLICATION_DESCRIPTION:
+    'Comprehensive personal intelligence platform for knowledge management, creativity, learning, and personal growth',
   VERSION: '1.0.0',
 
   env: envVars.data.NODE_ENV,

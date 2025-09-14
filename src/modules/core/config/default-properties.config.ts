@@ -436,7 +436,7 @@ export function createDefaultPropertiesForDatabase(
   const defaultProps = getDefaultProperties(databaseType);
   const now = new Date();
 
-  return defaultProps.map((defaultProp) => ({
+  return defaultProps.map(defaultProp => ({
     id: generateId(),
     databaseId,
     name: defaultProp.name,

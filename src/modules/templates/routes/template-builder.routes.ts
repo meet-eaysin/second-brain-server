@@ -14,7 +14,7 @@ import {
   previewTemplate,
   getTemplateCreationAnalytics
 } from '../controllers/template-builder.controller';
-import { 
+import {
   TemplateCategorySchema,
   TemplateTypeSchema,
   TemplateAccessSchema
@@ -73,9 +73,21 @@ const generateFromPromptSchema = z.object({
   prompt: z.string().min(10).max(1000),
   templateType: TemplateTypeSchema,
   moduleType: z.enum([
-    'dashboard', 'tasks', 'notes', 'projects', 'goals', 'people', 'finance',
-    'habits', 'journal', 'mood_tracker', 'resources', 'para_projects',
-    'para_areas', 'para_resources', 'para_archive'
+    'dashboard',
+    'tasks',
+    'notes',
+    'projects',
+    'goals',
+    'people',
+    'finance',
+    'habits',
+    'journal',
+    'mood_tracker',
+    'resources',
+    'para_projects',
+    'para_areas',
+    'para_resources',
+    'para_archive'
   ])
 });
 
@@ -136,11 +148,7 @@ router.post(
   validateTemplateData
 );
 
-router.post(
-  '/template-builder/preview',
-  validateBody(previewTemplateSchema),
-  previewTemplate
-);
+router.post('/template-builder/preview', validateBody(previewTemplateSchema), previewTemplate);
 
 // Template builder utilities
 router.get(
@@ -155,9 +163,6 @@ router.get(
   getTemplateWizardSteps
 );
 
-router.get(
-  '/template-builder/analytics',
-  getTemplateCreationAnalytics
-);
+router.get('/template-builder/analytics', getTemplateCreationAnalytics);
 
 export default router;

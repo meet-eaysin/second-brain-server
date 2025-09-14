@@ -57,7 +57,7 @@ export enum EFinanceCategory {
   BUSINESS = 'business',
   INVESTMENT_RETURN = 'investment_return',
   OTHER_INCOME = 'other_income',
-  
+
   // Expense categories
   FOOD = 'food',
   TRANSPORTATION = 'transportation',
@@ -111,13 +111,13 @@ export interface ISearchable {
 }
 
 // Validation schemas
-export const StatusSchema = z.nativeEnum(EStatus);
-export const PrioritySchema = z.nativeEnum(EPriority);
-export const FrequencySchema = z.nativeEnum(EFrequency);
-export const ContentTypeSchema = z.nativeEnum(EContentType);
-export const MoodScaleSchema = z.nativeEnum(EMoodScale);
-export const FinanceTypeSchema = z.nativeEnum(EFinanceType);
-export const FinanceCategorySchema = z.nativeEnum(EFinanceCategory);
+export const StatusSchema = z.enum(EStatus);
+export const PrioritySchema = z.enum(EPriority);
+export const FrequencySchema = z.enum(EFrequency);
+export const ContentTypeSchema = z.enum(EContentType);
+export const MoodScaleSchema = z.enum(EMoodScale);
+export const FinanceTypeSchema = z.enum(EFinanceType);
+export const FinanceCategorySchema = z.enum(EFinanceCategory);
 
 export const BaseEntitySchema = z.object({
   id: z.string(),

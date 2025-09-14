@@ -41,16 +41,9 @@ const safeMongooseConnection = new SafeMongooseConnection({
 const serve = () => {
   const httpServer = createServer(app);
 
-  // Initialize real-time notifications
   initializeRealtimeNotifications(httpServer);
-
-  // Initialize WebSocket service for rich editor collaboration
   initializeWebSocketService(httpServer);
-
-  // Initialize reminder system
   initializeReminderSystem();
-
-  // Initialize calendar sync system
   initializeCalendarSync();
 
   const server = httpServer.listen(PORT, () => {

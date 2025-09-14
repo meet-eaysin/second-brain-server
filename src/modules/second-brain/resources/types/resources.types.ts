@@ -90,7 +90,7 @@ export interface IResourceVersion {
 export interface IResource {
   id: string;
   databaseId: string;
-  
+
   // Basic information
   title: string;
   description?: string;
@@ -98,19 +98,19 @@ export interface IResource {
   category: EResourceCategory;
   status: EResourceStatus;
   accessLevel: EResourceAccessLevel;
-  
+
   // Content
   url?: string;
   filePath?: string;
   content?: string; // for text-based resources
-  
+
   // Metadata
   metadata: IResourceMetadata;
-  
+
   // Organization
   tags: string[];
   keywords: string[];
-  
+
   // Relations
   relatedProjectIds: string[];
   relatedGoalIds: string[];
@@ -119,44 +119,44 @@ export interface IResource {
   relatedPeopleIds: string[];
   parentResourceId?: string;
   childResourceIds: string[];
-  
+
   // Collections and folders
   collectionIds: string[];
   folderPath?: string;
-  
+
   // Versioning
   versions: IResourceVersion[];
   currentVersion: string;
-  
+
   // Usage tracking
   viewCount: number;
   downloadCount: number;
   lastAccessedAt?: Date;
   lastAccessedBy?: string;
-  
+
   // Ratings and reviews
   rating?: number; // 1-5 stars
   reviewCount: number;
   personalRating?: number;
   personalNotes?: string;
-  
+
   // Sharing and collaboration
   isShared: boolean;
   sharedWith: string[]; // user IDs
   collaborators: string[]; // user IDs with edit access
-  
+
   // Settings
   isFavorite: boolean;
   isBookmarked: boolean;
   isArchived: boolean;
-  
+
   // Notifications
   notifyOnUpdate: boolean;
   notifyOnComment: boolean;
-  
+
   // Custom fields
   customFields: Record<string, any>;
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -186,46 +186,46 @@ export interface IResourceStats {
   byCategory: Record<EResourceCategory, number>;
   byStatus: Record<EResourceStatus, number>;
   byAccessLevel: Record<EResourceAccessLevel, number>;
-  
+
   // Usage stats
   totalViews: number;
   totalDownloads: number;
   averageRating: number;
   totalStorage: number; // in bytes
-  
+
   // Popular resources
   mostViewed: Array<{
     resourceId: string;
     title: string;
     viewCount: number;
   }>;
-  
+
   mostDownloaded: Array<{
     resourceId: string;
     title: string;
     downloadCount: number;
   }>;
-  
+
   highestRated: Array<{
     resourceId: string;
     title: string;
     rating: number;
     reviewCount: number;
   }>;
-  
+
   // Recent activity
   recentlyAdded: Array<{
     resourceId: string;
     title: string;
     createdAt: Date;
   }>;
-  
+
   recentlyAccessed: Array<{
     resourceId: string;
     title: string;
     lastAccessedAt: Date;
   }>;
-  
+
   // Collections
   totalCollections: number;
   averageCollectionSize: number;
@@ -392,10 +392,10 @@ export const ResourceSchema = z.object({
   databaseId: z.string(),
   title: z.string().min(1).max(500),
   description: z.string().max(2000).optional(),
-  type: z.nativeEnum(EResourceType),
-  category: z.nativeEnum(EResourceCategory),
-  status: z.nativeEnum(EResourceStatus),
-  accessLevel: z.nativeEnum(EResourceAccessLevel),
+  type: z.enum(EResourceType),
+  category: z.enum(EResourceCategory),
+  status: z.enum(EResourceStatus),
+  accessLevel: z.enum(EResourceAccessLevel),
   url: z.string().url().optional(),
   filePath: z.string().optional(),
   content: z.string().optional(),
@@ -429,7 +429,7 @@ export const ResourceSchema = z.object({
   isArchived: z.boolean().default(false),
   notifyOnUpdate: z.boolean().default(false),
   notifyOnComment: z.boolean().default(false),
-  customFields: z.record(z.any()).default({}),
+  customFields: z.record(z.string(), z.any()).default({}),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string(),
@@ -440,9 +440,9 @@ export const CreateResourceRequestSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
   title: z.string().min(1, 'Title is required').max(500, 'Title too long'),
   description: z.string().max(2000, 'Description too long').optional(),
-  type: z.nativeEnum(EResourceType),
-  category: z.nativeEnum(EResourceCategory),
-  accessLevel: z.nativeEnum(EResourceAccessLevel).default(EResourceAccessLevel.PRIVATE),
+  type: z.enum(EResourceType),
+  category: z.enum(EResourceCategory),
+  accessLevel: z.enum(EResourceAccessLevel).default(EResourceAccessLevel.PRIVATE),
   url: z.string().url('Invalid URL format').optional(),
   filePath: z.string().optional(),
   content: z.string().optional(),
@@ -466,7 +466,9 @@ export const CreateResourceRequestSchema = z.object({
   isBookmarked: z.boolean().default(false),
   notifyOnUpdate: z.boolean().default(false),
   notifyOnComment: z.boolean().default(false),
-  customFields: z.record(z.any()).default({})
+  customFields: z.record(z.string(), z.any()).default({})
 });
 
-export const UpdateResourceRequestSchema = CreateResourceRequestSchema.omit({ databaseId: true }).partial();
+export const UpdateResourceRequestSchema = CreateResourceRequestSchema.omit({
+  databaseId: true
+}).partial();

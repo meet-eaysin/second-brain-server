@@ -329,9 +329,9 @@ export interface IChartData {
 }
 
 // Validation schemas
-export const AnalyticsPeriodSchema = z.nativeEnum(EAnalyticsPeriod);
-export const AnalyticsMetricSchema = z.nativeEnum(EAnalyticsMetric);
-export const ChartTypeSchema = z.nativeEnum(EChartType);
+export const AnalyticsPeriodSchema = z.enum(EAnalyticsPeriod);
+export const AnalyticsMetricSchema = z.enum(EAnalyticsMetric);
+export const ChartTypeSchema = z.enum(EChartType);
 
 export const AnalyticsQueryOptionsSchema = z.object({
   workspaceId: z.string().min(1),
@@ -343,5 +343,5 @@ export const AnalyticsQueryOptionsSchema = z.object({
   entityId: z.string().optional(),
   groupBy: z.string().optional(),
   metrics: z.array(AnalyticsMetricSchema).optional(),
-  filters: z.record(z.unknown()).optional()
+  filters: z.record(z.string(), z.unknown()).optional()
 });

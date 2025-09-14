@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IBaseEntity, TId, TDatabaseId, TPropertyId } from './common.types';
+import { IBaseEntity, TDatabaseId, TPropertyId } from './common.types';
 
 // View Types - All supported Notion-like view types
 export enum EViewType {
@@ -29,13 +29,13 @@ export enum EFilterOperator {
   ENDS_WITH = 'ends_with',
   IS_EMPTY = 'is_empty',
   IS_NOT_EMPTY = 'is_not_empty',
-  
+
   // Number operators
   GREATER_THAN = 'greater_than',
   GREATER_THAN_OR_EQUAL = 'greater_than_or_equal',
   LESS_THAN = 'less_than',
   LESS_THAN_OR_EQUAL = 'less_than_or_equal',
-  
+
   // Date operators
   BEFORE = 'before',
   AFTER = 'after',
@@ -50,17 +50,17 @@ export enum EFilterOperator {
   IS_THIS_MONTH = 'is_this_month',
   IS_LAST_MONTH = 'is_last_month',
   IS_NEXT_MONTH = 'is_next_month',
-  
+
   // Select operators
   IS = 'is',
   IS_NOT = 'is_not',
   IS_ANY_OF = 'is_any_of',
   IS_NONE_OF = 'is_none_of',
-  
+
   // Checkbox operators
   IS_CHECKED = 'is_checked',
   IS_UNCHECKED = 'is_unchecked',
-  
+
   // Relation operators
   CONTAINS_RELATION = 'contains_relation',
   NOT_CONTAINS_RELATION = 'not_contains_relation'
@@ -122,7 +122,7 @@ export interface ITimelineConfig {
 export interface IViewConfig {
   // Common configurations
   pageSize?: number;
-  
+
   // Type-specific configurations
   columns?: IColumnConfig[];
   group?: IGroupConfig;
@@ -146,8 +146,8 @@ export interface IView extends IBaseEntity {
 }
 
 // Validation schemas
-export const ViewTypeSchema = z.nativeEnum(EViewType);
-export const FilterOperatorSchema = z.nativeEnum(EFilterOperator);
+export const ViewTypeSchema = z.enum(EViewType);
+export const FilterOperatorSchema = z.enum(EFilterOperator);
 
 export const SortConfigSchema = z.object({
   propertyId: z.string(),
@@ -160,10 +160,12 @@ export const FilterConditionSchema = z.object({
   value: z.any().optional()
 });
 
-export const FilterGroupSchema: z.ZodType<IFilterGroup> = z.lazy(() => z.object({
-  operator: z.enum(['and', 'or']),
-  conditions: z.array(z.union([FilterConditionSchema, FilterGroupSchema]))
-}));
+export const FilterGroupSchema: z.ZodType<IFilterGroup> = z.lazy(() =>
+  z.object({
+    operator: z.enum(['and', 'or']),
+    conditions: z.array(z.union([FilterConditionSchema, FilterGroupSchema]))
+  })
+);
 
 export const GroupConfigSchema = z.object({
   propertyId: z.string(),

@@ -59,32 +59,55 @@ export const textAnnotationsSchema = z.object({
 // Rich text content schema
 export const richTextContentSchema = z.object({
   type: z.enum(['text', 'mention', 'equation']),
-  text: z.object({
-    content: z.string(),
-    link: z.object({
-      url: z.string().url()
-    }).optional()
-  }).optional(),
-  mention: z.object({
-    type: z.enum(['user', 'page', 'database', 'date']),
-    user: z.object({
-      id: z.string()
-    }).optional(),
-    page: z.object({
-      id: z.string()
-    }).optional(),
-    database: z.object({
-      id: z.string()
-    }).optional(),
-    date: z.object({
-      start: z.string(),
-      end: z.string().optional()
-    }).optional()
-  }).optional(),
-  equation: z.object({
-    expression: z.string()
-  }).optional(),
-  annotations: textAnnotationsSchema.default({}),
+  text: z
+    .object({
+      content: z.string(),
+      link: z
+        .object({
+          url: z.string().url()
+        })
+        .optional()
+    })
+    .optional(),
+  mention: z
+    .object({
+      type: z.enum(['user', 'page', 'database', 'date']),
+      user: z
+        .object({
+          id: z.string()
+        })
+        .optional(),
+      page: z
+        .object({
+          id: z.string()
+        })
+        .optional(),
+      database: z
+        .object({
+          id: z.string()
+        })
+        .optional(),
+      date: z
+        .object({
+          start: z.string(),
+          end: z.string().optional()
+        })
+        .optional()
+    })
+    .optional(),
+  equation: z
+    .object({
+      expression: z.string()
+    })
+    .optional(),
+  annotations: textAnnotationsSchema.default({
+    bold: false,
+    italic: false,
+    strikethrough: false,
+    underline: false,
+    code: false,
+    color: 'default'
+  }),
   plain_text: z.string(),
   href: z.string().url().optional()
 });
@@ -92,13 +115,17 @@ export const richTextContentSchema = z.object({
 // File object schema
 export const fileObjectSchema = z.object({
   type: z.enum(['file', 'external']),
-  file: z.object({
-    url: z.string().url(),
-    expiry_time: z.string().optional()
-  }).optional(),
-  external: z.object({
-    url: z.string().url()
-  }).optional(),
+  file: z
+    .object({
+      url: z.string().url(),
+      expiry_time: z.string().optional()
+    })
+    .optional(),
+  external: z
+    .object({
+      url: z.string().url()
+    })
+    .optional(),
   name: z.string().optional(),
   caption: z.array(richTextContentSchema).default([])
 });
@@ -147,17 +174,23 @@ export const quoteBlockSchema = z.object({
 export const calloutBlockSchema = z.object({
   callout: z.object({
     rich_text: z.array(richTextContentSchema),
-    icon: z.object({
-      type: z.enum(['emoji', 'external', 'file']),
-      emoji: z.string().optional(),
-      external: z.object({
-        url: z.string().url()
-      }).optional(),
-      file: z.object({
-        url: z.string().url(),
-        expiry_time: z.string().optional()
-      }).optional()
-    }).optional(),
+    icon: z
+      .object({
+        type: z.enum(['emoji', 'external', 'file']),
+        emoji: z.string().optional(),
+        external: z
+          .object({
+            url: z.string().url()
+          })
+          .optional(),
+        file: z
+          .object({
+            url: z.string().url(),
+            expiry_time: z.string().optional()
+          })
+          .optional()
+      })
+      .optional(),
     color: z.string().default('default')
   })
 });
@@ -242,11 +275,7 @@ export const moveBlockSchema = z.object({
 export const bulkOperationSchema = z.object({
   operation: z.enum(['create', 'update', 'delete', 'move']),
   blockId: z.string().optional(),
-  data: z.union([
-    createBlockSchema,
-    updateBlockSchema,
-    moveBlockSchema
-  ]).optional()
+  data: z.union([createBlockSchema, updateBlockSchema, moveBlockSchema]).optional()
 });
 
 export const bulkOperationsSchema = z.object({
@@ -266,8 +295,12 @@ export const blockQuerySchema = z.object({
 
 // Bulk update schema
 export const bulkUpdateSchema = z.object({
-  updates: z.array(z.object({
-    blockId: z.string().min(1, 'Block ID is required'),
-    data: updateBlockSchema
-  })).min(1, 'At least one update is required')
+  updates: z
+    .array(
+      z.object({
+        blockId: z.string().min(1, 'Block ID is required'),
+        data: updateBlockSchema
+      })
+    )
+    .min(1, 'At least one update is required')
 });

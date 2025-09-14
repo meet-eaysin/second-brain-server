@@ -18,7 +18,6 @@ import {
   PARA_ARCHIVE_MODULE
 } from '../config/modules.config';
 import { DatabaseModel } from '@/modules/database/models/database.model';
-import { RecordModel } from '@/modules/database/models/record.model';
 import { ObjectId } from 'mongodb';
 
 /**
@@ -207,7 +206,10 @@ const getWorkspaceModulesStatus = async (workspaceId: string): Promise<IWorkspac
 /**
  * Get module health status
  */
-const getModuleHealth = (recordCount: number, lastActivity?: Date): 'healthy' | 'warning' | 'error' => {
+const getModuleHealth = (
+  recordCount: number,
+  lastActivity?: Date
+): 'healthy' | 'warning' | 'error' => {
   // Module is healthy if it has records and recent activity
   if (recordCount > 0) {
     if (!lastActivity) return 'warning';
@@ -225,10 +227,7 @@ const getModuleHealth = (recordCount: number, lastActivity?: Date): 'healthy' | 
 /**
  * Get module issues
  */
-const getModuleIssues = (
-  recordCount: number,
-  lastActivity?: Date
-): string[] => {
+const getModuleIssues = (recordCount: number, lastActivity?: Date): string[] => {
   const issues: string[] = [];
 
   if (recordCount === 0) {

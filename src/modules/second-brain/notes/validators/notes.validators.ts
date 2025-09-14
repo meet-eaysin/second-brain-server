@@ -17,57 +17,69 @@ export const templateIdSchema = z.object({
 // Rich text element schema
 const richTextElementSchema = z.object({
   type: z.enum(['text', 'mention', 'equation']),
-  text: z.object({
-    content: z.string(),
-    link: z.object({ url: z.string().url() }).optional()
-  }).optional(),
-  mention: z.object({
-    type: z.enum(['user', 'page', 'database', 'date', 'note']),
-    user: z.object({ id: z.string(), name: z.string() }).optional(),
-    page: z.object({ id: z.string(), title: z.string() }).optional(),
-    database: z.object({ id: z.string(), name: z.string() }).optional(),
-    note: z.object({ id: z.string(), title: z.string() }).optional(),
-    date: z.object({ 
-      start: z.string(), 
-      end: z.string().optional() 
-    }).optional()
-  }).optional(),
-  equation: z.object({
-    expression: z.string(),
-    rendered: z.string().optional()
-  }).optional(),
-  annotations: z.object({
-    bold: z.boolean().default(false),
-    italic: z.boolean().default(false),
-    strikethrough: z.boolean().default(false),
-    underline: z.boolean().default(false),
-    code: z.boolean().default(false),
-    color: z.string().default('default')
-  }).optional(),
+  text: z
+    .object({
+      content: z.string(),
+      link: z.object({ url: z.string().url() }).optional()
+    })
+    .optional(),
+  mention: z
+    .object({
+      type: z.enum(['user', 'page', 'database', 'date', 'note']),
+      user: z.object({ id: z.string(), name: z.string() }).optional(),
+      page: z.object({ id: z.string(), title: z.string() }).optional(),
+      database: z.object({ id: z.string(), name: z.string() }).optional(),
+      note: z.object({ id: z.string(), title: z.string() }).optional(),
+      date: z
+        .object({
+          start: z.string(),
+          end: z.string().optional()
+        })
+        .optional()
+    })
+    .optional(),
+  equation: z
+    .object({
+      expression: z.string(),
+      rendered: z.string().optional()
+    })
+    .optional(),
+  annotations: z
+    .object({
+      bold: z.boolean().default(false),
+      italic: z.boolean().default(false),
+      strikethrough: z.boolean().default(false),
+      underline: z.boolean().default(false),
+      code: z.boolean().default(false),
+      color: z.string().default('default')
+    })
+    .optional(),
   plain_text: z.string().optional()
 });
 
 // Content block schema
-const noteContentBlockSchema: z.ZodType<any> = z.lazy(() => z.object({
-  id: z.string(),
-  type: z.nativeEnum(EContentBlockType),
-  content: z.array(richTextElementSchema),
-  children: z.array(noteContentBlockSchema).optional(),
-  checked: z.boolean().optional(),
-  language: z.string().optional(),
-  caption: z.array(richTextElementSchema).optional(),
-  url: z.string().url().optional(),
-  collapsed: z.boolean().optional(),
-  color: z.string().optional(),
-  icon: z.string().optional(),
-  level: z.number().min(1).max(6).optional(),
-  createdAt: z.date(),
-  createdBy: z.string(),
-  lastEditedAt: z.date(),
-  lastEditedBy: z.string(),
-  comments: z.array(z.any()).optional(),
-  aiSuggestions: z.array(z.string()).optional()
-}));
+const noteContentBlockSchema: z.ZodType<any> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    type: z.enum(EContentBlockType),
+    content: z.array(richTextElementSchema),
+    children: z.array(noteContentBlockSchema).optional(),
+    checked: z.boolean().optional(),
+    language: z.string().optional(),
+    caption: z.array(richTextElementSchema).optional(),
+    url: z.string().url().optional(),
+    collapsed: z.boolean().optional(),
+    color: z.string().optional(),
+    icon: z.string().optional(),
+    level: z.number().min(1).max(6).optional(),
+    createdAt: z.date(),
+    createdBy: z.string(),
+    lastEditedAt: z.date(),
+    lastEditedBy: z.string(),
+    comments: z.array(z.any()).optional(),
+    aiSuggestions: z.array(z.string()).optional()
+  })
+);
 
 // Note CRUD schemas
 export const createNoteSchema = z.object({
@@ -78,7 +90,7 @@ export const createNoteSchema = z.object({
   content: z.array(noteContentBlockSchema).optional(),
   isPublished: z.boolean().default(false),
   allowComments: z.boolean().default(true),
-  customFields: z.record(z.any()).optional()
+  customFields: z.record(z.string(), z.any()).optional()
 });
 
 export const updateNoteSchema = z.object({
@@ -97,19 +109,44 @@ export const updateNoteContentSchema = z.object({
 export const getNoteQuerySchema = z.object({
   databaseId: z.string().optional(),
   search: z.string().optional(),
-  tags: z.array(z.string()).or(z.string().transform(val => val.split(','))).optional(),
-  isPublished: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  isBookmarked: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
+  tags: z
+    .array(z.string())
+    .or(z.string().transform(val => val.split(',')))
+    .optional(),
+  isPublished: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  isBookmarked: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
   createdBy: z.string().optional(),
-  dateRange: z.object({
-    start: z.string().datetime(),
-    end: z.string().datetime()
-  }).optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10))),
-  sortBy: z.enum(['title', 'createdAt', 'updatedAt', 'viewCount', 'wordCount', 'readingTime']).default('updatedAt'),
+  dateRange: z
+    .object({
+      start: z.string().datetime(),
+      end: z.string().datetime()
+    })
+    .optional(),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  sortBy: z
+    .enum(['title', 'createdAt', 'updatedAt', 'viewCount', 'wordCount', 'readingTime'])
+    .default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
-  includeStats: z.boolean().default(false).or(z.string().transform(val => val === 'true'))
+  includeStats: z
+    .boolean()
+    .default(false)
+    .or(z.string().transform(val => val === 'true'))
 });
 
 export const duplicateNoteSchema = z.object({
@@ -157,11 +194,26 @@ export const duplicateNoteTemplateSchema = z.object({
 
 export const getNoteTemplatesQuerySchema = z.object({
   search: z.string().optional(),
-  tags: z.array(z.string()).or(z.string().transform(val => val.split(','))).optional(),
-  isPublic: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
+  tags: z
+    .array(z.string())
+    .or(z.string().transform(val => val.split(',')))
+    .optional(),
+  isPublic: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
   createdBy: z.string().optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10))),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10))),
   sortBy: z.enum(['name', 'createdAt', 'updatedAt', 'usageCount']).default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc')
 });
@@ -183,7 +235,7 @@ export const addReactionSchema = z.object({
 
 export const shareNoteSchema = z.object({
   userIds: z.array(z.string().min(1)).min(1, 'At least one user ID is required'),
-  role: z.nativeEnum(ECollaboratorRole).default(ECollaboratorRole.VIEWER),
+  role: z.enum(ECollaboratorRole).default(ECollaboratorRole.VIEWER),
   message: z.string().max(500, 'Message too long').optional()
 });
 
@@ -195,10 +247,25 @@ export const unshareNoteSchema = z.object({
 export const searchNotesSchema = z.object({
   q: z.string().min(1, 'Search query is required').max(500, 'Query too long'),
   databaseId: z.string().optional(),
-  tags: z.array(z.string()).or(z.string().transform(val => val.split(','))).optional(),
-  isPublished: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10)))
+  tags: z
+    .array(z.string())
+    .or(z.string().transform(val => val.split(',')))
+    .optional(),
+  isPublished: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10)))
 });
 
 export const tagParamSchema = z.object({
@@ -216,7 +283,7 @@ export const notesValidators = {
   duplicateNoteSchema,
   bulkUpdateNotesSchema,
   bulkDeleteNotesSchema,
-  
+
   // Templates
   templateIdSchema,
   createNoteTemplateSchema,
@@ -224,7 +291,7 @@ export const notesValidators = {
   applyNoteTemplateSchema,
   duplicateNoteTemplateSchema,
   getNoteTemplatesQuerySchema,
-  
+
   // Collaboration
   commentIdSchema,
   addCommentSchema,
@@ -232,7 +299,7 @@ export const notesValidators = {
   addReactionSchema,
   shareNoteSchema,
   unshareNoteSchema,
-  
+
   // Search
   searchNotesSchema,
   tagParamSchema

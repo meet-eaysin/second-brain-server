@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { crossModuleRelationsService } from '../services/cross-module-relations.service';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { catchAsync, sendSuccessResponse } from '@/utils';
-import { getUserId } from '@/modules/auth';
+import { getUserId } from '@/auth/index';
 
 // Initialize cross-module relations for user
 export const initializeCrossModuleRelations = catchAsync(

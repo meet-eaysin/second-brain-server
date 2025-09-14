@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IBaseEntity, TId, TUserId, TDatabaseId, TWorkspaceId } from './common.types';
+import { IBaseEntity, TId, TUserId, TWorkspaceId } from './common.types';
 
 // Permission Types - Access control for databases and records
 export enum EPermissionLevel {
@@ -41,16 +41,16 @@ export interface IPermissionConditions {
 export interface IPermission extends IBaseEntity {
   resourceType: EShareScope;
   resourceId: TId; // databaseId, recordId, or viewId
-  
+
   // Permission target
   type: EPermissionType;
   userId?: TUserId; // for user permissions
   workspaceId?: TWorkspaceId; // for workspace permissions
   linkId?: string; // for link sharing
-  
+
   // Permission level
   level: EPermissionLevel;
-  
+
   // Specific capabilities
   canRead: boolean;
   canComment: boolean;
@@ -62,11 +62,11 @@ export interface IPermission extends IBaseEntity {
   canCreateRecords: boolean;
   canEditSchema: boolean; // properties, views
   canManagePermissions: boolean;
-  
+
   // Restrictions
   allowedViews?: TId[]; // Restrict to specific views
   allowedProperties?: TId[]; // Restrict to specific properties
-  
+
   // Metadata
   grantedBy: TUserId;
   grantedAt?: Date;
@@ -88,24 +88,24 @@ export interface IPermission extends IBaseEntity {
 export interface IPermissionConfig {
   resourceType: EShareScope;
   resourceId: TId;
-  
+
   // Default permissions
   defaultLevel: EPermissionLevel;
   allowPublicAccess: boolean;
   allowLinkSharing: boolean;
-  
+
   // Inheritance
   inheritFromParent: boolean; // inherit from database if this is a record
-  
+
   // Restrictions
   requireAuthentication: boolean;
   allowedDomains?: string[]; // Email domain restrictions
-  
+
   // Collaboration settings
   allowComments: boolean;
   allowMentions: boolean;
   enableNotifications: boolean;
-  
+
   // Export/Import restrictions
   allowExport: boolean;
   allowImport: boolean;
@@ -117,26 +117,26 @@ export interface IShareLink extends IBaseEntity {
   resourceType: EShareScope;
   resourceId: TId;
   linkId: string; // Public identifier for the link
-  
+
   // Access configuration
   level: EPermissionLevel;
   password?: string;
   expiresAt?: Date;
   maxViews?: number;
-  
+
   // Restrictions
   allowedViews?: TId[];
   allowedProperties?: TId[];
-  
+
   // Analytics
   viewCount: number;
   lastAccessedAt?: Date;
-  
+
   // Settings
   isActive: boolean;
   allowDownload: boolean;
   showComments: boolean;
-  
+
   // Metadata
   createdBy: TUserId;
   description?: string;
@@ -166,20 +166,24 @@ export interface IPermissionCheck {
 }
 
 // Validation schemas
-export const PermissionLevelSchema = z.nativeEnum(EPermissionLevel);
-export const PermissionTypeSchema = z.nativeEnum(EPermissionType);
-export const ShareScopeSchema = z.nativeEnum(EShareScope);
+export const PermissionLevelSchema = z.enum(EPermissionLevel);
+export const PermissionTypeSchema = z.enum(EPermissionType);
+export const ShareScopeSchema = z.enum(EShareScope);
 
-export const PermissionConditionsSchema = z.object({
-  ipWhitelist: z.array(z.string()).optional(),
-  timeRestrictions: z.object({
-    startTime: z.string(),
-    endTime: z.string(),
-    timezone: z.string(),
-    daysOfWeek: z.array(z.number().min(0).max(6))
-  }).optional(),
-  deviceRestrictions: z.array(z.string()).optional()
-}).optional();
+export const PermissionConditionsSchema = z
+  .object({
+    ipWhitelist: z.array(z.string()).optional(),
+    timeRestrictions: z
+      .object({
+        startTime: z.string(),
+        endTime: z.string(),
+        timezone: z.string(),
+        daysOfWeek: z.array(z.number().min(0).max(6))
+      })
+      .optional(),
+    deviceRestrictions: z.array(z.string()).optional()
+  })
+  .optional();
 
 export const PermissionSchema = z.object({
   id: z.string(),
@@ -288,7 +292,7 @@ export interface IGrantPermissionRequest {
   userId?: TUserId;
   workspaceId?: TWorkspaceId;
   level: EPermissionLevel;
-  
+
   // Custom capabilities (optional, will use defaults based on level)
   capabilities?: {
     canRead?: boolean;
@@ -302,7 +306,7 @@ export interface IGrantPermissionRequest {
     canEditSchema?: boolean;
     canManagePermissions?: boolean;
   };
-  
+
   // Restrictions
   allowedViews?: TId[];
   allowedProperties?: TId[];
@@ -357,13 +361,8 @@ export interface IUpdateShareLinkRequest {
 }
 
 export interface IPermissionResponse extends IPermission {}
-
 export interface IPermissionConfigResponse extends IPermissionConfig {}
-
 export interface IShareLinkResponse extends IShareLink {}
-
 export interface IPermissionCheckResponse extends IPermissionCheck {}
-
 export type TPermissionListResponse = IPermissionResponse[];
-
 export type TShareLinkListResponse = IShareLinkResponse[];

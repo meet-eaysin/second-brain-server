@@ -120,43 +120,6 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-app.get('/api', (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: 'API is running!',
-    version: 'v1',
-    endpoints: {
-      health: '/health',
-      api: '/api/v1',
-      docs: '/api/v1/docs',
-      entities: '/api/v1/entities',
-      tables: '/api/v1/tables'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/version', (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    version: process.env.npm_package_version || '1.0.0',
-    name: 'Second Brain Server API',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/status', (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    status: 'operational',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
 app.use('/api/v1', routes);
 
 app.use(notFound);

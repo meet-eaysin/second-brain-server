@@ -144,12 +144,12 @@ export const recordIdSchema = z.object({
   recordId: z.string().min(1, 'Record ID is required')
 });
 
-export const moduleCategorySchema = z.nativeEnum(EModuleCategory);
+export const moduleCategorySchema = z.enum(EModuleCategory);
 
 export const modulePropertySchema = z.object({
   name: z.string().min(1).max(100),
-  type: z.nativeEnum(EPropertyType),
-  config: z.record(z.unknown()),
+  type: z.enum(EPropertyType),
+  config: z.record(z.string(), z.unknown()),
   isSystem: z.boolean(),
   isFrozen: z.boolean(),
   isVisible: z.boolean(),
@@ -203,7 +203,7 @@ export const moduleViewSettingsSchema = z.object({
 
 export const moduleViewSchema = z.object({
   name: z.string().min(1).max(100),
-  type: z.nativeEnum(EViewType),
+  type: z.enum(EViewType),
   description: z.string().max(500),
   isDefault: z.boolean(),
   order: z.number().min(0),
@@ -212,7 +212,7 @@ export const moduleViewSchema = z.object({
 
 export const moduleRelationSchema = z.object({
   sourceProperty: z.string(),
-  targetModule: z.nativeEnum(EDatabaseType),
+  targetModule: z.enum(EDatabaseType),
   targetProperty: z.string(),
   type: z.enum(['one_to_one', 'one_to_many', 'many_to_one', 'many_to_many']),
   isRequired: z.boolean(),
@@ -222,19 +222,19 @@ export const moduleRelationSchema = z.object({
 export const moduleTemplateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500),
-  defaultValues: z.record(z.unknown()),
+  defaultValues: z.record(z.string(), z.unknown()),
   isDefault: z.boolean()
 });
 
 export const moduleConfigSchema = z.object({
-  id: z.nativeEnum(EDatabaseType),
+  id: z.enum(EDatabaseType),
   name: z.string().min(1).max(100),
   description: z.string().max(500),
   icon: z.string(),
   color: z.string(),
   category: moduleCategorySchema,
   isCore: z.boolean(),
-  dependencies: z.array(z.nativeEnum(EDatabaseType)),
+  dependencies: z.array(z.enum(EDatabaseType)),
   defaultProperties: z.array(modulePropertySchema),
   defaultViews: z.array(moduleViewSchema),
   defaultRelations: z.array(moduleRelationSchema),
@@ -244,6 +244,6 @@ export const moduleConfigSchema = z.object({
 export const moduleInitRequestSchema = z.object({
   workspaceId: z.string().min(1),
   userId: z.string().min(1),
-  modules: z.array(z.nativeEnum(EDatabaseType)).min(1),
+  modules: z.array(z.enum(EDatabaseType)).min(1),
   createSampleData: z.boolean().default(false)
 });

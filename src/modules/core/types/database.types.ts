@@ -3,9 +3,7 @@ import { IBaseEntity, TId, TUserId, TWorkspaceId } from './common.types';
 import { IProperty } from './property.types';
 import { IView } from './view.types';
 
-// Database/Table Types - Core data structure
 export enum EDatabaseType {
-  // Core second brain modules
   DASHBOARD = 'dashboard',
   FINANCE = 'finance',
   GOALS = 'goals',
@@ -27,21 +25,19 @@ export enum EDatabaseType {
   ACTIVITY = 'activity',
   ANALYSIS = 'analysis',
   NOTIFICATIONS = 'notifications',
-  
+
   // Custom user-created databases
   CUSTOM = 'custom'
 }
 
-// Database icon configuration
 export interface IDatabaseIcon {
   type: 'emoji' | 'icon' | 'image';
-  value: string; // emoji character, icon name, or image URL
+  value: string;
 }
 
-// Database cover configuration
 export interface IDatabaseCover {
   type: 'color' | 'gradient' | 'image';
-  value: string; // color hex, gradient name, or image URL
+  value: string;
 }
 
 // Database template for creating new records
@@ -49,7 +45,7 @@ export interface IDatabaseTemplate {
   id: string;
   name: string;
   description?: string;
-  defaultValues: Record<string, any>; // propertyId -> default value
+  defaultValues: Record<string, any>;
   isDefault?: boolean;
 }
 
@@ -64,26 +60,26 @@ export interface IDatabase extends IBaseEntity {
   isPublic: boolean;
   isTemplate: boolean;
   isArchived: boolean;
-  
+
   // Schema
   properties: IProperty[];
   views: IView[];
   templates: IDatabaseTemplate[];
-  
+
   // Metadata
   recordCount: number;
   lastActivityAt?: Date;
-  
+
   // Settings
   allowComments: boolean;
   allowDuplicates: boolean;
   enableVersioning: boolean;
   enableAuditLog: boolean;
-  
+
   // AI Features
   enableAutoTagging: boolean;
   enableSmartSuggestions: boolean;
-  
+
   // Integration settings
   syncSettings?: Record<string, any>;
 }
@@ -105,7 +101,7 @@ export interface IDatabaseStats {
 }
 
 // Validation schemas
-export const DatabaseTypeSchema = z.nativeEnum(EDatabaseType);
+export const DatabaseTypeSchema = z.enum(EDatabaseType);
 
 export const DatabaseIconSchema = z.object({
   type: z.enum(['emoji', 'icon', 'image']),
@@ -121,7 +117,7 @@ export const DatabaseTemplateSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  defaultValues: z.record(z.any()),
+  defaultValues: z.record(z.string(), z.any()),
   isDefault: z.boolean().default(false)
 });
 
@@ -144,7 +140,7 @@ export const DatabaseSchema = z.object({
   enableAuditLog: z.boolean().default(true),
   enableAutoTagging: z.boolean().default(false),
   enableSmartSuggestions: z.boolean().default(false),
-  syncSettings: z.record(z.any()).optional(),
+  syncSettings: z.record(z.string(), z.any()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string(),
@@ -160,10 +156,12 @@ export const DatabaseStatsSchema = z.object({
   lastActivityAt: z.date().optional(),
   createdThisWeek: z.number().min(0),
   updatedThisWeek: z.number().min(0),
-  topContributors: z.array(z.object({
-    userId: z.string(),
-    recordCount: z.number().min(0)
-  }))
+  topContributors: z.array(
+    z.object({
+      userId: z.string(),
+      recordCount: z.number().min(0)
+    })
+  )
 });
 
 // Request/Response types
@@ -176,7 +174,7 @@ export interface ICreateDatabaseRequest {
   cover?: IDatabaseCover;
   isPublic?: boolean;
   isTemplate?: boolean;
-  
+
   // Initial configuration
   allowComments?: boolean;
   allowDuplicates?: boolean;
@@ -184,7 +182,7 @@ export interface ICreateDatabaseRequest {
   enableAuditLog?: boolean;
   enableAutoTagging?: boolean;
   enableSmartSuggestions?: boolean;
-  
+
   // Template to copy from
   templateId?: TId;
 }

@@ -3,7 +3,7 @@ import { TemplateModel, TTemplateDocument } from '../models/template.model';
 import { TemplateUsageModel } from '../models/template-usage.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
-import { crossModuleRelationsService } from '../../second-brain/modules/services/cross-module-relations.service';
+import { crossModuleRelationsService } from '@/modules/modules/services/cross-module-relations.service';
 import {
   IBaseTemplate,
   IRowTemplate,
@@ -22,7 +22,7 @@ import { EDatabaseType } from '@/modules/core/types/database.types';
 import { createAppError } from '@/utils';
 import { createNotFoundError } from '@/utils/response.utils';
 import { WorkspaceModel } from '@/modules/workspace/models/workspace.model';
-import { moduleInitializationService } from '../../second-brain/modules/services/module-initialization.service';
+import { moduleInitializationService } from '@/modules/modules/services/module-initialization.service';
 
 export class TemplatesService {
   // Helper function to safely convert to boolean

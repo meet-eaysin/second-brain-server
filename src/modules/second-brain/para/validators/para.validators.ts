@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { 
-  EParaCategory, 
-  EParaStatus, 
-  EParaPriority, 
-  EParaReviewFrequency 
+import {
+  EParaCategory,
+  EParaStatus,
+  EParaPriority,
+  EParaReviewFrequency
 } from '../types/para.types';
 
 // Base schemas
@@ -12,108 +12,132 @@ export const paraItemIdSchema = z.object({
 });
 
 export const categoryParamSchema = z.object({
-  category: z.nativeEnum(EParaCategory)
+  category: z.enum(EParaCategory)
 });
 
 export const statusParamSchema = z.object({
-  status: z.nativeEnum(EParaStatus)
+  status: z.enum(EParaStatus)
 });
 
 export const priorityParamSchema = z.object({
-  priority: z.nativeEnum(EParaPriority)
+  priority: z.enum(EParaPriority)
 });
 
 // PARA item CRUD schemas
 export const createParaItemSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
-  category: z.nativeEnum(EParaCategory),
+  category: z.enum(EParaCategory),
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   description: z.string().max(2000, 'Description too long').optional(),
-  priority: z.nativeEnum(EParaPriority).default(EParaPriority.MEDIUM),
+  priority: z.enum(EParaPriority).default(EParaPriority.MEDIUM),
   linkedProjectIds: z.array(z.string()).default([]),
   linkedResourceIds: z.array(z.string()).default([]),
   linkedTaskIds: z.array(z.string()).default([]),
   linkedNoteIds: z.array(z.string()).default([]),
   linkedGoalIds: z.array(z.string()).default([]),
   linkedPeopleIds: z.array(z.string()).default([]),
-  reviewFrequency: z.nativeEnum(EParaReviewFrequency).default(EParaReviewFrequency.MONTHLY),
+  reviewFrequency: z.enum(EParaReviewFrequency).default(EParaReviewFrequency.MONTHLY),
   tags: z.array(z.string().max(50, 'Tag too long')).default([]),
   parentAreaId: z.string().optional(),
-  customFields: z.record(z.any()).default({}),
-  
+  customFields: z.record(z.string(), z.any()).default({}),
+
   // Area-specific fields
-  areaType: z.enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other']).optional(),
+  areaType: z
+    .enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other'])
+    .optional(),
   maintenanceLevel: z.enum(['low', 'medium', 'high']).optional(),
   standardsOfExcellence: z.array(z.string().max(200, 'Standard too long')).default([]),
   isResponsibilityArea: z.boolean().default(true),
   stakeholders: z.array(z.string()).default([]),
-  
+
   // Archive-specific fields
-  originalCategory: z.nativeEnum(EParaCategory).optional(),
-  archiveReason: z.enum(['completed', 'no_longer_relevant', 'superseded', 'failed', 'other']).optional(),
+  originalCategory: z.enum(EParaCategory).optional(),
+  archiveReason: z
+    .enum(['completed', 'no_longer_relevant', 'superseded', 'failed', 'other'])
+    .optional(),
   archiveNotes: z.string().max(1000, 'Archive notes too long').optional(),
   retentionPolicy: z.enum(['permanent', 'temporary']).default('permanent'),
-  deleteAfterDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  
+  deleteAfterDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+
   isTemplate: z.boolean().default(false),
   isPublic: z.boolean().default(false),
-  notificationSettings: z.object({
-    reviewReminders: z.boolean().default(true),
-    statusUpdates: z.boolean().default(true),
-    completionAlerts: z.boolean().default(true)
-  }).default({
-    reviewReminders: true,
-    statusUpdates: true,
-    completionAlerts: true
-  })
+  notificationSettings: z
+    .object({
+      reviewReminders: z.boolean().default(true),
+      statusUpdates: z.boolean().default(true),
+      completionAlerts: z.boolean().default(true)
+    })
+    .default({
+      reviewReminders: true,
+      statusUpdates: true,
+      completionAlerts: true
+    })
 });
 
 export const updateParaItemSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
   description: z.string().max(2000, 'Description too long').optional(),
-  status: z.nativeEnum(EParaStatus).optional(),
-  priority: z.nativeEnum(EParaPriority).optional(),
+  status: z.enum(EParaStatus).optional(),
+  priority: z.enum(EParaPriority).optional(),
   linkedProjectIds: z.array(z.string()).optional(),
   linkedResourceIds: z.array(z.string()).optional(),
   linkedTaskIds: z.array(z.string()).optional(),
   linkedNoteIds: z.array(z.string()).optional(),
   linkedGoalIds: z.array(z.string()).optional(),
   linkedPeopleIds: z.array(z.string()).optional(),
-  reviewFrequency: z.nativeEnum(EParaReviewFrequency).optional(),
+  reviewFrequency: z.enum(EParaReviewFrequency).optional(),
   tags: z.array(z.string().max(50, 'Tag too long')).optional(),
   parentAreaId: z.string().optional(),
-  completionPercentage: z.number().min(0).max(100, 'Completion percentage must be between 0 and 100').optional(),
-  customFields: z.record(z.any()).optional(),
-  
+  completionPercentage: z
+    .number()
+    .min(0)
+    .max(100, 'Completion percentage must be between 0 and 100')
+    .optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
+
   // Area-specific updates
-  areaType: z.enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other']).optional(),
+  areaType: z
+    .enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other'])
+    .optional(),
   maintenanceLevel: z.enum(['low', 'medium', 'high']).optional(),
   standardsOfExcellence: z.array(z.string().max(200, 'Standard too long')).optional(),
   currentChallenges: z.array(z.string().max(200, 'Challenge too long')).optional(),
   isResponsibilityArea: z.boolean().optional(),
   stakeholders: z.array(z.string()).optional(),
-  
+
   isTemplate: z.boolean().optional(),
   isPublic: z.boolean().optional(),
-  notificationSettings: z.object({
-    reviewReminders: z.boolean().optional(),
-    statusUpdates: z.boolean().optional(),
-    completionAlerts: z.boolean().optional()
-  }).optional()
+  notificationSettings: z
+    .object({
+      reviewReminders: z.boolean().optional(),
+      statusUpdates: z.boolean().optional(),
+      completionAlerts: z.boolean().optional()
+    })
+    .optional()
 });
 
 export const getParaItemsQuerySchema = z.object({
   databaseId: z.string().optional(),
-  category: z.array(z.nativeEnum(EParaCategory)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as EParaCategory))
-  ).optional(),
-  status: z.array(z.nativeEnum(EParaStatus)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as EParaStatus))
-  ).optional(),
-  priority: z.array(z.nativeEnum(EParaPriority)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as EParaPriority))
-  ).optional(),
-  tags: z.array(z.string()).or(z.string().transform(val => val.split(','))).optional(),
+  category: z
+    .array(z.enum(EParaCategory))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EParaCategory)))
+    .optional(),
+  status: z
+    .array(z.enum(EParaStatus))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EParaStatus)))
+    .optional(),
+  priority: z
+    .array(z.enum(EParaPriority))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EParaPriority)))
+    .optional(),
+  tags: z
+    .array(z.string())
+    .or(z.string().transform(val => val.split(',')))
+    .optional(),
   search: z.string().max(500, 'Search query too long').optional(),
   parentAreaId: z.string().optional(),
   linkedProjectId: z.string().optional(),
@@ -122,16 +146,51 @@ export const getParaItemsQuerySchema = z.object({
   linkedNoteId: z.string().optional(),
   linkedGoalId: z.string().optional(),
   linkedPersonId: z.string().optional(),
-  reviewOverdue: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  maintenanceOverdue: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  isTemplate: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  isPublic: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  createdAfter: z.string().datetime().transform(val => new Date(val)).optional(),
-  createdBefore: z.string().datetime().transform(val => new Date(val)).optional(),
-  lastReviewedBefore: z.string().datetime().transform(val => new Date(val)).optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10))),
-  sortBy: z.enum(['title', 'createdAt', 'updatedAt', 'priority', 'nextReviewDate']).default('updatedAt'),
+  reviewOverdue: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  maintenanceOverdue: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  isTemplate: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  isPublic: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  createdAfter: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  createdBefore: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  lastReviewedBefore: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  sortBy: z
+    .enum(['title', 'createdAt', 'updatedAt', 'priority', 'nextReviewDate'])
+    .default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc')
 });
 
@@ -141,42 +200,59 @@ export const moveToArchiveSchema = z.object({
   archiveReason: z.enum(['completed', 'no_longer_relevant', 'superseded', 'failed', 'other']),
   archiveNotes: z.string().max(1000, 'Archive notes too long').optional(),
   retentionPolicy: z.enum(['permanent', 'temporary']).default('permanent'),
-  deleteAfterDate: z.string().datetime().transform(val => new Date(val)).optional()
+  deleteAfterDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional()
 });
 
 export const restoreFromArchiveSchema = z.object({
   itemIds: z.array(z.string().min(1)).min(1, 'At least one item ID is required'),
-  targetCategory: z.nativeEnum(EParaCategory).refine(
-    val => val !== EParaCategory.ARCHIVE,
-    'Cannot restore to archive category'
-  ),
+  targetCategory: z
+    .enum(EParaCategory)
+    .refine(val => val !== EParaCategory.ARCHIVE, 'Cannot restore to archive category'),
   restoreNotes: z.string().max(1000, 'Restore notes too long').optional()
 });
 
 // Categorization schemas
-export const categorizeExistingItemSchema = z.object({
-  itemType: z.enum(['project', 'resource', 'task', 'note', 'goal']),
-  itemId: z.string().min(1, 'Item ID is required'),
-  targetCategory: z.nativeEnum(EParaCategory),
-  paraItemId: z.string().optional(),
-  createNew: z.boolean().default(false),
-  newParaItem: createParaItemSchema.optional()
-}).refine(
-  data => data.paraItemId || data.createNew,
-  'Either paraItemId or createNew must be specified'
-);
+export const categorizeExistingItemSchema = z
+  .object({
+    itemType: z.enum(['project', 'resource', 'task', 'note', 'goal']),
+    itemId: z.string().min(1, 'Item ID is required'),
+    targetCategory: z.enum(EParaCategory),
+    paraItemId: z.string().optional(),
+    createNew: z.boolean().default(false),
+    newParaItem: createParaItemSchema.optional()
+  })
+  .refine(
+    data => data.paraItemId || data.createNew,
+    'Either paraItemId or createNew must be specified'
+  );
 
 // Area-specific schemas
 export const createAreaSchema = createParaItemSchema.extend({
   category: z.literal(EParaCategory.AREAS),
-  areaType: z.enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other']),
+  areaType: z.enum([
+    'personal',
+    'professional',
+    'health',
+    'finance',
+    'learning',
+    'relationships',
+    'other'
+  ]),
   maintenanceLevel: z.enum(['low', 'medium', 'high']).default('medium'),
-  standardsOfExcellence: z.array(z.string().max(200, 'Standard too long')).min(1, 'At least one standard required'),
+  standardsOfExcellence: z
+    .array(z.string().max(200, 'Standard too long'))
+    .min(1, 'At least one standard required'),
   isResponsibilityArea: z.boolean().default(true)
 });
 
 export const updateAreaSchema = updateParaItemSchema.extend({
-  areaType: z.enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other']).optional(),
+  areaType: z
+    .enum(['personal', 'professional', 'health', 'finance', 'learning', 'relationships', 'other'])
+    .optional(),
   maintenanceLevel: z.enum(['low', 'medium', 'high']).optional(),
   standardsOfExcellence: z.array(z.string().max(200, 'Standard too long')).optional(),
   currentChallenges: z.array(z.string().max(200, 'Challenge too long')).optional(),
@@ -186,16 +262,28 @@ export const updateAreaSchema = updateParaItemSchema.extend({
 
 export const addMaintenanceActionSchema = z.object({
   action: z.string().min(1, 'Action is required').max(200, 'Action too long'),
-  frequency: z.nativeEnum(EParaReviewFrequency),
-  nextDue: z.string().datetime().transform(val => new Date(val)).optional()
+  frequency: z.enum(EParaReviewFrequency),
+  nextDue: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional()
 });
 
 export const updateMaintenanceActionSchema = z.object({
   actionId: z.string().min(1, 'Action ID is required'),
   action: z.string().min(1, 'Action is required').max(200, 'Action too long').optional(),
-  frequency: z.nativeEnum(EParaReviewFrequency).optional(),
-  lastCompleted: z.string().datetime().transform(val => new Date(val)).optional(),
-  nextDue: z.string().datetime().transform(val => new Date(val)).optional()
+  frequency: z.enum(EParaReviewFrequency).optional(),
+  lastCompleted: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  nextDue: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional()
 });
 
 // Review schemas
@@ -204,7 +292,10 @@ export const markReviewedSchema = z.object({
 });
 
 export const scheduleReviewSchema = z.object({
-  reviewDate: z.string().datetime().transform(val => new Date(val)),
+  reviewDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val)),
   reviewNotes: z.string().max(500, 'Review notes too long').optional()
 });
 
@@ -212,19 +303,37 @@ export const scheduleReviewSchema = z.object({
 export const searchParaItemsSchema = z.object({
   q: z.string().min(1, 'Search query is required').max(500, 'Query too long'),
   databaseId: z.string().optional(),
-  category: z.array(z.nativeEnum(EParaCategory)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as EParaCategory))
-  ).optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10)))
+  category: z
+    .array(z.enum(EParaCategory))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EParaCategory)))
+    .optional(),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10)))
 });
 
 // Statistics schemas
 export const paraStatsQuerySchema = z.object({
   databaseId: z.string().optional(),
   period: z.enum(['week', 'month', 'quarter', 'year']).default('month'),
-  startDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  endDate: z.string().datetime().transform(val => new Date(val)).optional()
+  startDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  endDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional()
 });
 
 // Bulk operations schemas
@@ -258,31 +367,31 @@ export const paraValidators = {
   getParaItemsQuerySchema,
   bulkUpdateParaItemsSchema,
   bulkDeleteParaItemsSchema,
-  
+
   // Archive operations
   moveToArchiveSchema,
   restoreFromArchiveSchema,
-  
+
   // Categorization
   categorizeExistingItemSchema,
-  
+
   // Area-specific
   createAreaSchema,
   updateAreaSchema,
   addMaintenanceActionSchema,
   updateMaintenanceActionSchema,
-  
+
   // Reviews
   markReviewedSchema,
   scheduleReviewSchema,
-  
+
   // Search and analytics
   searchParaItemsSchema,
   paraStatsQuerySchema,
   categoryParamSchema,
   statusParamSchema,
   priorityParamSchema,
-  
+
   // Integration
   linkToExistingItemSchema,
   unlinkFromExistingItemSchema

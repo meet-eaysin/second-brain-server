@@ -12,35 +12,35 @@ export enum EPropertyType {
   URL = 'url',
   EMAIL = 'email',
   PHONE = 'phone',
-  CURRENCY='currency',
-  PERCENT='percent',
-  
+  CURRENCY = 'currency',
+  PERCENT = 'percent',
+
   // Selection types
   SELECT = 'select',
   MULTI_SELECT = 'multi_select',
   STATUS = 'status',
   PRIORITY = 'priority',
-  
+
   // Advanced types
   FILE = 'file',
   RELATION = 'relation',
   ROLLUP = 'rollup',
   FORMULA = 'formula',
-  
+
   // Special types
   CREATED_TIME = 'created_time',
   LAST_EDITED_TIME = 'last_edited_time',
   CREATED_BY = 'created_by',
   LAST_EDITED_BY = 'last_edited_by',
-  
+
   // Custom types for second brain
   MOOD_SCALE = 'mood_scale',
   FREQUENCY = 'frequency',
   CONTENT_TYPE = 'content_type',
   FINANCE_TYPE = 'finance_type',
   FINANCE_CATEGORY = 'finance_category',
-  FILES = "FILES",
-  LOOKUP = "LOOKUP"
+  FILES = 'FILES',
+  LOOKUP = 'LOOKUP'
 }
 
 // Property option for select/multi-select properties
@@ -143,7 +143,7 @@ export interface IFileValue {
 }
 
 // Validation schemas
-export const PropertyTypeSchema = z.nativeEnum(EPropertyType);
+export const PropertyTypeSchema = z.enum(EPropertyType);
 
 export const PropertyOptionSchema = z.object({
   id: z.string(),
@@ -161,7 +161,9 @@ export const PropertyConfigSchema = z.object({
   relationDatabaseId: z.string().optional(),
   relationPropertyId: z.string().optional(),
   rollupPropertyId: z.string().optional(),
-  rollupFunction: z.enum(['count', 'sum', 'average', 'min', 'max', 'latest', 'earliest']).optional(),
+  rollupFunction: z
+    .enum(['count', 'sum', 'average', 'min', 'max', 'latest', 'earliest'])
+    .optional(),
   formula: z.string().optional(),
   allowMultiple: z.boolean().optional(),
   allowedTypes: z.array(z.string()).optional(),

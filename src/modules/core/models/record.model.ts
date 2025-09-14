@@ -9,33 +9,36 @@ export interface IRecord extends Document {
   updatedAt: Date;
 }
 
-const RecordSchema = new Schema<IRecord>({
-  data: {
-    type: Schema.Types.Mixed,
-    default: {}
+const RecordSchema = new Schema<IRecord>(
+  {
+    data: {
+      type: Schema.Types.Mixed,
+      default: {}
+    },
+    databaseId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    userId: {
+      type: String,
+      required: true,
+      index: true
+    }
   },
-  databaseId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  userId: {
-    type: String,
-    required: true,
-    index: true
-  }
-}, {
-  timestamps: true,
-  toJSON: {
-    transform: function(_doc, ret: Record<string, unknown>) {
-      const { _id, __v, ...cleanRet } = ret;
-      return {
-        ...cleanRet,
-        id: _id?.toString() || ''
-      };
+  {
+    timestamps: true,
+    toJSON: {
+      transform: function (_doc, ret: Record<string, unknown>) {
+        const { _id, __v, ...cleanRet } = ret;
+        return {
+          ...cleanRet,
+          id: _id?.toString() || ''
+        };
+      }
     }
   }
-});
+);
 
 RecordSchema.index({ databaseId: 1, userId: 1 });
 

@@ -33,15 +33,12 @@ import {
   testCalendarConnectionController,
   getCalendarConnectionStatsController
 } from '../controllers/connection.controller';
-import { 
-  CalendarSchema, 
-  EventSchema, 
+import {
+  CalendarSchema,
+  EventSchema,
   CalendarConnectionSchema,
-  ECalendarType,
-  EEventType,
   EEventStatus,
-  EEventVisibility,
-  ECalendarProvider
+  EEventVisibility
 } from '../types/calendar.types';
 import { authenticateToken, validateRequest } from '@/middlewares';
 
@@ -56,10 +53,13 @@ const createCalendarSchema = CalendarSchema;
 const updateCalendarSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i)
+    .optional(),
   isVisible: z.boolean().optional(),
   timeZone: z.string().optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 const createEventSchema = EventSchema;
@@ -71,19 +71,27 @@ const updateEventSchema = z.object({
   startTime: z.date().optional(),
   endTime: z.date().optional(),
   isAllDay: z.boolean().optional(),
-  status: z.nativeEnum(EEventStatus).optional(),
-  visibility: z.nativeEnum(EEventVisibility).optional(),
-  attendees: z.array(z.object({
-    email: z.string().email(),
-    name: z.string().optional(),
-    status: z.enum(['accepted', 'declined', 'tentative', 'needs_action']).optional(),
-    role: z.enum(['required', 'optional', 'resource']).optional()
-  })).optional(),
-  reminders: z.array(z.object({
-    method: z.enum(['email', 'popup', 'sms', 'push']),
-    minutes: z.number().min(0)
-  })).optional(),
-  metadata: z.record(z.unknown()).optional()
+  status: z.enum(EEventStatus).optional(),
+  visibility: z.enum(EEventVisibility).optional(),
+  attendees: z
+    .array(
+      z.object({
+        email: z.string().email(),
+        name: z.string().optional(),
+        status: z.enum(['accepted', 'declined', 'tentative', 'needs_action']).optional(),
+        role: z.enum(['required', 'optional', 'resource']).optional()
+      })
+    )
+    .optional(),
+  reminders: z
+    .array(
+      z.object({
+        method: z.enum(['email', 'popup', 'sms', 'push']),
+        minutes: z.number().min(0)
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 const connectCalendarSchema = CalendarConnectionSchema;
@@ -91,20 +99,20 @@ const connectCalendarSchema = CalendarConnectionSchema;
 const updateConnectionSchema = z.object({
   syncEnabled: z.boolean().optional(),
   syncFrequency: z.number().min(5).max(1440).optional(),
-  syncSettings: z.object({
-    importEvents: z.boolean().optional(),
-    exportEvents: z.boolean().optional(),
-    bidirectionalSync: z.boolean().optional(),
-    syncPastDays: z.number().min(0).max(365).optional(),
-    syncFutureDays: z.number().min(0).max(365).optional(),
-    conflictResolution: z.enum(['local', 'remote', 'manual']).optional()
-  }).optional()
+  syncSettings: z
+    .object({
+      importEvents: z.boolean().optional(),
+      exportEvents: z.boolean().optional(),
+      bidirectionalSync: z.boolean().optional(),
+      syncPastDays: z.number().min(0).max(365).optional(),
+      syncFutureDays: z.number().min(0).max(365).optional(),
+      conflictResolution: z.enum(['local', 'remote', 'manual']).optional()
+    })
+    .optional()
 });
 
-// Helper function for validation
 const validateBody = (schema: z.ZodSchema) => validateRequest({ body: schema });
 const validateParams = (schema: z.ZodSchema) => validateRequest({ params: schema });
-const validateQuery = (schema: z.ZodSchema) => validateRequest({ query: schema });
 
 // Parameter validation schemas
 const calendarIdSchema = z.object({
@@ -125,22 +133,11 @@ const entityParamsSchema = z.object({
 });
 
 // Calendar CRUD routes
-router.post(
-  '/',
-  validateBody(createCalendarSchema),
-  createCalendarController
-);
+router.post('/', validateBody(createCalendarSchema), createCalendarController);
 
-router.get(
-  '/',
-  getCalendarsController
-);
+router.get('/', getCalendarsController);
 
-router.get(
-  '/:calendarId',
-  validateParams(calendarIdSchema),
-  getCalendarByIdController
-);
+router.get('/:calendarId', validateParams(calendarIdSchema), getCalendarByIdController);
 
 router.put(
   '/:calendarId',
@@ -149,38 +146,18 @@ router.put(
   updateCalendarController
 );
 
-router.delete(
-  '/:calendarId',
-  validateParams(calendarIdSchema),
-  deleteCalendarController
-);
+router.delete('/:calendarId', validateParams(calendarIdSchema), deleteCalendarController);
 
 // Event CRUD routes
-router.post(
-  '/events',
-  validateBody(createEventSchema),
-  createEventController
-);
+router.post('/events', validateBody(createEventSchema), createEventController);
 
-router.get(
-  '/events',
-  getEventsController
-);
+router.get('/events', getEventsController);
 
-router.get(
-  '/events/upcoming',
-  getUpcomingEventsController
-);
+router.get('/events/upcoming', getUpcomingEventsController);
 
-router.get(
-  '/events/today',
-  getTodayEventsController
-);
+router.get('/events/today', getTodayEventsController);
 
-router.get(
-  '/events/search',
-  searchEventsController
-);
+router.get('/events/search', searchEventsController);
 
 router.get(
   '/events/entity/:entityType/:entityId',
@@ -188,11 +165,7 @@ router.get(
   getEventsByEntityController
 );
 
-router.get(
-  '/events/:eventId',
-  validateParams(eventIdSchema),
-  getEventByIdController
-);
+router.get('/events/:eventId', validateParams(eventIdSchema), getEventByIdController);
 
 router.put(
   '/events/:eventId',
@@ -201,54 +174,25 @@ router.put(
   updateEventController
 );
 
-router.delete(
-  '/events/:eventId',
-  validateParams(eventIdSchema),
-  deleteEventController
-);
+router.delete('/events/:eventId', validateParams(eventIdSchema), deleteEventController);
 
 // Calendar view and utility routes
-router.get(
-  '/view/calendar',
-  getCalendarViewController
-);
+router.get('/view/calendar', getCalendarViewController);
 
-router.get(
-  '/view/busy-times',
-  getCalendarBusyTimesController
-);
+router.get('/view/busy-times', getCalendarBusyTimesController);
 
-router.get(
-  '/stats',
-  getCalendarStatsController
-);
+router.get('/stats', getCalendarStatsController);
 
-router.post(
-  '/sync/time-related',
-  syncTimeRelatedModulesController
-);
+router.post('/sync/time-related', syncTimeRelatedModulesController);
 
 // External calendar connection routes
-router.get(
-  '/connections/providers',
-  getCalendarProvidersController
-);
+router.get('/connections/providers', getCalendarProvidersController);
 
-router.post(
-  '/connections',
-  validateBody(connectCalendarSchema),
-  connectCalendarController
-);
+router.post('/connections', validateBody(connectCalendarSchema), connectCalendarController);
 
-router.get(
-  '/connections',
-  getCalendarConnectionsController
-);
+router.get('/connections', getCalendarConnectionsController);
 
-router.get(
-  '/connections/stats',
-  getCalendarConnectionStatsController
-);
+router.get('/connections/stats', getCalendarConnectionStatsController);
 
 router.get(
   '/connections/:connectionId',

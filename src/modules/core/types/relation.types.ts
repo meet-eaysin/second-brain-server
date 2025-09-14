@@ -16,15 +16,15 @@ export interface IRelationConfig {
   sourcePropertyId: TPropertyId;
   targetDatabaseId: TDatabaseId;
   targetPropertyId?: TPropertyId; // Auto-created if not specified
-  
+
   // Cascade options
   onSourceDelete?: 'cascade' | 'set_null' | 'restrict';
   onTargetDelete?: 'cascade' | 'set_null' | 'restrict';
-  
+
   // Display options
   displayProperty?: TPropertyId; // Which property to show as display text
   allowDuplicates?: boolean;
-  
+
   // Validation
   required?: boolean;
   maxConnections?: number;
@@ -44,11 +44,11 @@ export interface IRelationConnection {
   relationId: TId;
   sourceRecordId: TRecordId;
   targetRecordId: TRecordId;
-  
+
   // Metadata
   createdAt: Date;
   createdBy: string;
-  
+
   // Optional connection properties (for many-to-many with attributes)
   properties?: Record<string, any>;
 }
@@ -57,8 +57,18 @@ export interface IRelationConnection {
 export interface IRollupConfig {
   relationPropertyId: TPropertyId;
   targetPropertyId: TPropertyId;
-  function: 'count' | 'sum' | 'average' | 'min' | 'max' | 'latest' | 'earliest' | 'unique' | 'empty' | 'not_empty';
-  
+  function:
+    | 'count'
+    | 'sum'
+    | 'average'
+    | 'min'
+    | 'max'
+    | 'latest'
+    | 'earliest'
+    | 'unique'
+    | 'empty'
+    | 'not_empty';
+
   // Filters to apply before aggregation
   filters?: any[];
 }
@@ -71,7 +81,7 @@ export interface IRollupResult {
 }
 
 // Validation schemas
-export const RelationTypeSchema = z.nativeEnum(ERelationType);
+export const RelationTypeSchema = z.enum(ERelationType);
 
 export const RelationConfigSchema = z.object({
   type: RelationTypeSchema,
@@ -106,13 +116,24 @@ export const RelationConnectionSchema = z.object({
   targetRecordId: z.string(),
   createdAt: z.date(),
   createdBy: z.string(),
-  properties: z.record(z.any()).optional()
+  properties: z.record(z.string(), z.any()).optional()
 });
 
 export const RollupConfigSchema = z.object({
   relationPropertyId: z.string(),
   targetPropertyId: z.string(),
-  function: z.enum(['count', 'sum', 'average', 'min', 'max', 'latest', 'earliest', 'unique', 'empty', 'not_empty']),
+  function: z.enum([
+    'count',
+    'sum',
+    'average',
+    'min',
+    'max',
+    'latest',
+    'earliest',
+    'unique',
+    'empty',
+    'not_empty'
+  ]),
   filters: z.array(z.any()).optional()
 });
 
@@ -144,13 +165,9 @@ export interface ICreateRelationConnectionRequest {
 }
 
 export interface IRelationResponse extends IRelation {}
-
 export interface IRelationConnectionResponse extends IRelationConnection {}
-
 export interface IRollupResultResponse extends IRollupResult {}
-
 export type TRelationListResponse = IRelationResponse[];
-
 export type TRelationConnectionListResponse = IRelationConnectionResponse[];
 
 // Query parameters

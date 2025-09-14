@@ -131,17 +131,19 @@ export interface ISearchAnalytics {
 }
 
 // Validation schemas
-export const SearchScopeSchema = z.nativeEnum(ESearchScope);
+export const SearchScopeSchema = z.enum(ESearchScope);
 
 export const SearchFiltersSchema = z.object({
   workspaceId: z.string().optional(),
-  databaseTypes: z.array(z.nativeEnum(EDatabaseType)).optional(),
+  databaseTypes: z.array(z.enum(EDatabaseType)).optional(),
   databaseIds: z.array(z.string()).optional(),
   createdBy: z.string().optional(),
-  dateRange: z.object({
-    start: z.coerce.date(),
-    end: z.coerce.date()
-  }).optional(),
+  dateRange: z
+    .object({
+      start: z.coerce.date(),
+      end: z.coerce.date()
+    })
+    .optional(),
   tags: z.array(z.string()).optional(),
   isPublic: z.boolean().optional(),
   isArchived: z.boolean().optional(),
@@ -165,12 +167,21 @@ export const GlobalSearchQuerySchema = z.object({
   q: z.string().min(1, 'Search query is required').max(500, 'Query too long'),
   scope: SearchScopeSchema.optional(),
   workspaceId: z.string().optional(),
-  databaseTypes: z.string().optional().transform(val => val?.split(',')),
-  databaseIds: z.string().optional().transform(val => val?.split(',')),
+  databaseTypes: z
+    .string()
+    .optional()
+    .transform(val => val?.split(',')),
+  databaseIds: z
+    .string()
+    .optional()
+    .transform(val => val?.split(',')),
   createdBy: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
-  tags: z.string().optional().transform(val => val?.split(',')),
+  tags: z
+    .string()
+    .optional()
+    .transform(val => val?.split(',')),
   isPublic: z.coerce.boolean().optional(),
   isArchived: z.coerce.boolean().optional(),
   isTemplate: z.coerce.boolean().optional(),

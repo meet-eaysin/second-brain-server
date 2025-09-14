@@ -71,31 +71,31 @@ export interface IGoal {
   status: EGoalStatus;
   priority: EGoalPriority;
   timeFrame: EGoalTimeFrame;
-  
+
   // Dates
   startDate?: Date;
   targetDate?: Date;
   completedAt?: Date;
-  
+
   // Progress tracking
   progressPercentage: number;
   milestones: IGoalMilestone[];
   keyResults: IGoalKeyResult[];
-  
+
   // Relations
   parentGoalId?: string;
   subGoalIds: string[];
   relatedTaskIds: string[];
   relatedProjectIds: string[];
   relatedHabitIds: string[];
-  
+
   // Metadata
   tags: string[];
   notes?: string;
   isArchived: boolean;
   archivedAt?: Date;
   archivedBy?: string;
-  
+
   // Tracking
   lastReviewedAt?: Date;
   nextReviewDate?: Date;
@@ -251,10 +251,10 @@ export const GoalSchema = z.object({
   databaseId: z.string(),
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
-  category: z.nativeEnum(EGoalCategory),
-  status: z.nativeEnum(EGoalStatus),
-  priority: z.nativeEnum(EGoalPriority),
-  timeFrame: z.nativeEnum(EGoalTimeFrame),
+  category: z.enum(EGoalCategory),
+  status: z.enum(EGoalStatus),
+  priority: z.enum(EGoalPriority),
+  timeFrame: z.enum(EGoalTimeFrame),
   startDate: z.date().optional(),
   targetDate: z.date().optional(),
   completedAt: z.date().optional(),
@@ -284,36 +284,44 @@ export const CreateGoalRequestSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   description: z.string().max(2000, 'Description too long').optional(),
-  category: z.nativeEnum(EGoalCategory),
-  priority: z.nativeEnum(EGoalPriority).default(EGoalPriority.MEDIUM),
-  timeFrame: z.nativeEnum(EGoalTimeFrame),
+  category: z.enum(EGoalCategory),
+  priority: z.enum(EGoalPriority).default(EGoalPriority.MEDIUM),
+  timeFrame: z.enum(EGoalTimeFrame),
   startDate: z.date().optional(),
   targetDate: z.date().optional(),
   tags: z.array(z.string()).default([]),
   notes: z.string().max(5000, 'Notes too long').optional(),
   parentGoalId: z.string().optional(),
-  milestones: z.array(z.object({
-    title: z.string().min(1).max(200),
-    description: z.string().max(1000).optional(),
-    targetDate: z.date().optional(),
-    order: z.number().min(0)
-  })).default([]),
-  keyResults: z.array(z.object({
-    title: z.string().min(1).max(200),
-    description: z.string().max(1000).optional(),
-    targetValue: z.number().min(0),
-    unit: z.string().min(1).max(50)
-  })).default([]),
+  milestones: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(1000).optional(),
+        targetDate: z.date().optional(),
+        order: z.number().min(0)
+      })
+    )
+    .default([]),
+  keyResults: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(1000).optional(),
+        targetValue: z.number().min(0),
+        unit: z.string().min(1).max(50)
+      })
+    )
+    .default([]),
   reviewFrequency: z.enum(['weekly', 'monthly', 'quarterly']).optional()
 });
 
 export const UpdateGoalRequestSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
   description: z.string().max(2000, 'Description too long').optional(),
-  category: z.nativeEnum(EGoalCategory).optional(),
-  status: z.nativeEnum(EGoalStatus).optional(),
-  priority: z.nativeEnum(EGoalPriority).optional(),
-  timeFrame: z.nativeEnum(EGoalTimeFrame).optional(),
+  category: z.enum(EGoalCategory).optional(),
+  status: z.enum(EGoalStatus).optional(),
+  priority: z.enum(EGoalPriority).optional(),
+  timeFrame: z.enum(EGoalTimeFrame).optional(),
   startDate: z.date().optional(),
   targetDate: z.date().optional(),
   tags: z.array(z.string()).optional(),
@@ -326,12 +334,20 @@ export const UpdateGoalRequestSchema = z.object({
 export const GoalProgressUpdateSchema = z.object({
   progressPercentage: z.number().min(0).max(100),
   notes: z.string().max(1000).optional(),
-  milestoneUpdates: z.array(z.object({
-    milestoneId: z.string(),
-    isCompleted: z.boolean()
-  })).optional(),
-  keyResultUpdates: z.array(z.object({
-    keyResultId: z.string(),
-    currentValue: z.number().min(0)
-  })).optional()
+  milestoneUpdates: z
+    .array(
+      z.object({
+        milestoneId: z.string(),
+        isCompleted: z.boolean()
+      })
+    )
+    .optional(),
+  keyResultUpdates: z
+    .array(
+      z.object({
+        keyResultId: z.string(),
+        currentValue: z.number().min(0)
+      })
+    )
+    .optional()
 });

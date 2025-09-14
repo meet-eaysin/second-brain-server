@@ -12,8 +12,6 @@ import {
   IRecentSearchesResponse
 } from '../types/search.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
-import { AuthenticatedRequest } from '@/middlewares/auth';
-import { getUserById } from '@/users/index';
 import { getUserId } from '@/auth/index';
 
 class SearchController {
@@ -33,7 +31,7 @@ class SearchController {
       // Validate query parameters
       const validation = GlobalSearchQuerySchema.safeParse(req.query);
       if (!validation.success) {
-        sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.errors);
+        sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.issues);
         return;
       }
 
@@ -96,7 +94,12 @@ class SearchController {
       });
     } catch (error) {
       console.error('Global search error:', error);
-      sendErrorResponse(res, 'Search failed', 500, error instanceof Error ? error.message : 'Unknown error');
+      sendErrorResponse(
+        res,
+        'Search failed',
+        500,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -112,16 +115,14 @@ class SearchController {
         return;
       }
 
-      // Validate query parameters
       const validation = GlobalSearchQuerySchema.safeParse(req.query);
       if (!validation.success) {
-        sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.errors);
+        sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.issues);
         return;
       }
 
       const { q: query, ...params } = validation.data;
 
-      // Build search options with database scope
       const options: ISearchOptions = {
         scope: ESearchScope.DATABASES,
         filters: {
@@ -129,8 +130,10 @@ class SearchController {
           databaseTypes: params.databaseTypes as EDatabaseType[] | undefined,
           databaseIds: params.databaseIds,
           createdBy: params.createdBy,
-          dateRange: params.startDate && params.endDate ?
-            { start: params.startDate, end: params.endDate } : undefined,
+          dateRange:
+            params.startDate && params.endDate
+              ? { start: params.startDate, end: params.endDate }
+              : undefined,
           tags: params.tags,
           isPublic: params.isPublic,
           isArchived: params.isArchived,
@@ -157,7 +160,12 @@ class SearchController {
       });
     } catch (error) {
       console.error('Database search error:', error);
-      sendErrorResponse(res, 'Database search failed', 500, error instanceof Error ? error.message : 'Unknown error');
+      sendErrorResponse(
+        res,
+        'Database search failed',
+        500,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -167,7 +175,7 @@ class SearchController {
    */
   async searchRecords(req: Request, res: Response): Promise<void> {
     try {
-            const userId = getUserId(req);
+      const userId = getUserId(req);
 
       if (!userId) {
         sendErrorResponse(res, 'Authentication required', 401);
@@ -177,7 +185,7 @@ class SearchController {
       // Validate query parameters
       const validation = GlobalSearchQuerySchema.safeParse(req.query);
       if (!validation.success) {
-        sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.errors);
+        sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.issues);
         return;
       }
 
@@ -191,8 +199,10 @@ class SearchController {
           databaseTypes: params.databaseTypes as EDatabaseType[] | undefined,
           databaseIds: params.databaseIds,
           createdBy: params.createdBy,
-          dateRange: params.startDate && params.endDate ?
-            { start: params.startDate, end: params.endDate } : undefined,
+          dateRange:
+            params.startDate && params.endDate
+              ? { start: params.startDate, end: params.endDate }
+              : undefined,
           tags: params.tags,
           isPublic: params.isPublic,
           isArchived: params.isArchived,
@@ -219,7 +229,12 @@ class SearchController {
       });
     } catch (error) {
       console.error('Record search error:', error);
-      sendErrorResponse(res, 'Record search failed', 500, error instanceof Error ? error.message : 'Unknown error');
+      sendErrorResponse(
+        res,
+        'Record search failed',
+        500,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -229,7 +244,7 @@ class SearchController {
    */
   async getSearchSuggestions(req: Request, res: Response): Promise<void> {
     try {
-            const userId = getUserId(req);
+      const userId = getUserId(req);
 
       if (!userId) {
         sendErrorResponse(res, 'Authentication required', 401);
@@ -239,7 +254,7 @@ class SearchController {
       // Validate query parameters
       const validation = SearchSuggestionsQuerySchema.safeParse(req.query);
       if (!validation.success) {
-        sendErrorResponse(res, 'Invalid suggestion parameters', 400, validation.error.errors);
+        sendErrorResponse(res, 'Invalid suggestion parameters', 400, validation.error.issues);
         return;
       }
 
@@ -261,7 +276,12 @@ class SearchController {
       sendSuccessResponse(res, 'Search suggestions retrieved successfully', response);
     } catch (error) {
       console.error('Search suggestions error:', error);
-      sendErrorResponse(res, 'Failed to get search suggestions', 500, error instanceof Error ? error.message : 'Unknown error');
+      sendErrorResponse(
+        res,
+        'Failed to get search suggestions',
+        500,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -281,7 +301,7 @@ class SearchController {
       // Validate query parameters
       const validation = RecentSearchesQuerySchema.safeParse(req.query);
       if (!validation.success) {
-        sendErrorResponse(res, 'Invalid recent searches parameters', 400, validation.error.errors);
+        sendErrorResponse(res, 'Invalid recent searches parameters', 400, validation.error.issues);
         return;
       }
 
@@ -298,7 +318,12 @@ class SearchController {
       sendSuccessResponse(res, 'Recent searches retrieved successfully', response);
     } catch (error) {
       console.error('Recent searches error:', error);
-      sendErrorResponse(res, 'Failed to get recent searches', 500, error instanceof Error ? error.message : 'Unknown error');
+      sendErrorResponse(
+        res,
+        'Failed to get recent searches',
+        500,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 }

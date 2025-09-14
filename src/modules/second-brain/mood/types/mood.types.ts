@@ -69,7 +69,7 @@ export enum EMoodFrequency {
 export interface IMoodEntry {
   id: string;
   databaseId: string;
-  
+
   // Core mood data
   overallMood: EMoodScale;
   categories: Array<{
@@ -77,36 +77,36 @@ export interface IMoodEntry {
     intensity: EMoodScale;
     notes?: string;
   }>;
-  
+
   // Context and triggers
   triggers: EMoodTrigger[];
   customTriggers: string[];
   location?: string;
   weather?: string;
-  
+
   // Detailed tracking
   energyLevel: EMoodScale;
   stressLevel: EMoodScale;
   anxietyLevel: EMoodScale;
   focusLevel: EMoodScale;
   socialLevel: EMoodScale; // How social/isolated feeling
-  
+
   // Physical factors
   sleepQuality?: EMoodScale;
   sleepHours?: number;
   exerciseMinutes?: number;
   exerciseType?: string;
-  
+
   // Activities and events
   activities: string[];
   significantEvents: string[];
-  
+
   // Reflection
   notes?: string;
   gratitude?: string[];
   improvements?: string;
   tomorrowGoals?: string[];
-  
+
   // Relationships
   socialInteractions: Array<{
     person?: string;
@@ -115,7 +115,7 @@ export interface IMoodEntry {
     duration?: number; // minutes
     notes?: string;
   }>;
-  
+
   // Media consumption
   mediaConsumed: Array<{
     type: 'book' | 'movie' | 'tv' | 'podcast' | 'music' | 'news' | 'social_media' | 'other';
@@ -123,22 +123,22 @@ export interface IMoodEntry {
     duration?: number; // minutes
     impact: EMoodScale; // how it affected mood
   }>;
-  
+
   // Habits and routines
   habitsCompleted: string[];
   routineAdherence: EMoodScale;
-  
+
   // Predictions and goals
   predictedMood?: EMoodScale; // What mood was expected
   moodGoal?: EMoodScale; // Target mood for the day
-  
+
   // Metadata
   entryTime: Date;
   timezone: string;
   isPrivate: boolean;
   tags: string[];
   customFields: Record<string, any>;
-  
+
   // AI insights (generated)
   aiInsights?: {
     patterns: string[];
@@ -146,7 +146,7 @@ export interface IMoodEntry {
     correlations: string[];
     riskFactors: string[];
   };
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -158,29 +158,29 @@ export interface IMoodEntry {
 export interface IMoodPattern {
   id: string;
   userId: string;
-  
+
   // Pattern identification
   patternType: 'daily' | 'weekly' | 'monthly' | 'seasonal' | 'trigger_based' | 'correlation';
   title: string;
   description: string;
   confidence: number; // 0-1 confidence score
-  
+
   // Pattern data
   triggers: EMoodTrigger[];
   timeOfDay?: string;
   dayOfWeek?: number;
   monthOfYear?: number;
-  
+
   // Correlations
   correlatedFactors: Array<{
     factor: string;
     correlation: number; // -1 to 1
     significance: number; // 0-1
   }>;
-  
+
   // Recommendations
   recommendations: string[];
-  
+
   // Metadata
   detectedAt: Date;
   lastSeen: Date;
@@ -194,45 +194,45 @@ export interface IMoodAnalytics {
   startDate: Date;
   endDate: Date;
   totalEntries: number;
-  
+
   // Overall statistics
   averageMood: number;
   moodTrend: 'improving' | 'declining' | 'stable';
   moodVariability: number; // standard deviation
-  
+
   // Category breakdowns
   categoryAverages: Record<EMoodCategory, number>;
   triggerFrequency: Record<EMoodTrigger, number>;
-  
+
   // Patterns and insights
   bestDays: Array<{
     date: Date;
     mood: number;
     factors: string[];
   }>;
-  
+
   worstDays: Array<{
     date: Date;
     mood: number;
     factors: string[];
   }>;
-  
+
   // Correlations
   sleepCorrelation: number;
   exerciseCorrelation: number;
   socialCorrelation: number;
   weatherCorrelation: number;
-  
+
   // Time-based patterns
   hourlyPatterns: Record<number, number>; // 0-23 hours
   dailyPatterns: Record<number, number>; // 0-6 days of week
   monthlyPatterns: Record<number, number>; // 1-12 months
-  
+
   // Predictions
   nextWeekPrediction: number;
   riskFactors: string[];
   recommendations: string[];
-  
+
   // Goals and progress
   moodGoalAchievement: number; // percentage
   improvementAreas: string[];
@@ -369,15 +369,15 @@ export interface IMoodAnalyticsRequest {
 
 // Zod schemas for validation
 export const MoodCategorySchema = z.object({
-  category: z.nativeEnum(EMoodCategory),
-  intensity: z.nativeEnum(EMoodScale),
+  category: z.enum(EMoodCategory),
+  intensity: z.enum(EMoodScale),
   notes: z.string().max(500).optional()
 });
 
 export const SocialInteractionSchema = z.object({
   person: z.string().max(100).optional(),
   type: z.enum(['family', 'friend', 'colleague', 'stranger', 'romantic', 'other']),
-  quality: z.nativeEnum(EMoodScale),
+  quality: z.enum(EMoodScale),
   duration: z.number().min(0).max(1440).optional(), // max 24 hours
   notes: z.string().max(300).optional()
 });
@@ -386,23 +386,23 @@ export const MediaConsumedSchema = z.object({
   type: z.enum(['book', 'movie', 'tv', 'podcast', 'music', 'news', 'social_media', 'other']),
   title: z.string().max(200).optional(),
   duration: z.number().min(0).max(1440).optional(), // max 24 hours
-  impact: z.nativeEnum(EMoodScale)
+  impact: z.enum(EMoodScale)
 });
 
 export const CreateMoodEntryRequestSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
-  overallMood: z.nativeEnum(EMoodScale),
+  overallMood: z.enum(EMoodScale),
   categories: z.array(MoodCategorySchema).default([]),
-  triggers: z.array(z.nativeEnum(EMoodTrigger)).default([]),
+  triggers: z.array(z.enum(EMoodTrigger)).default([]),
   customTriggers: z.array(z.string().max(100)).default([]),
   location: z.string().max(200).optional(),
   weather: z.string().max(100).optional(),
-  energyLevel: z.nativeEnum(EMoodScale).optional(),
-  stressLevel: z.nativeEnum(EMoodScale).optional(),
-  anxietyLevel: z.nativeEnum(EMoodScale).optional(),
-  focusLevel: z.nativeEnum(EMoodScale).optional(),
-  socialLevel: z.nativeEnum(EMoodScale).optional(),
-  sleepQuality: z.nativeEnum(EMoodScale).optional(),
+  energyLevel: z.enum(EMoodScale).optional(),
+  stressLevel: z.enum(EMoodScale).optional(),
+  anxietyLevel: z.enum(EMoodScale).optional(),
+  focusLevel: z.enum(EMoodScale).optional(),
+  socialLevel: z.enum(EMoodScale).optional(),
+  sleepQuality: z.enum(EMoodScale).optional(),
   sleepHours: z.number().min(0).max(24).optional(),
   exerciseMinutes: z.number().min(0).max(1440).optional(),
   exerciseType: z.string().max(100).optional(),
@@ -415,14 +415,20 @@ export const CreateMoodEntryRequestSchema = z.object({
   socialInteractions: z.array(SocialInteractionSchema).default([]),
   mediaConsumed: z.array(MediaConsumedSchema).default([]),
   habitsCompleted: z.array(z.string().max(100)).default([]),
-  routineAdherence: z.nativeEnum(EMoodScale).optional(),
-  predictedMood: z.nativeEnum(EMoodScale).optional(),
-  moodGoal: z.nativeEnum(EMoodScale).optional(),
-  entryTime: z.string().datetime().transform(val => new Date(val)).optional(),
+  routineAdherence: z.enum(EMoodScale).optional(),
+  predictedMood: z.enum(EMoodScale).optional(),
+  moodGoal: z.enum(EMoodScale).optional(),
+  entryTime: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   timezone: z.string().max(50).default('UTC'),
   isPrivate: z.boolean().default(false),
   tags: z.array(z.string().max(50)).default([]),
-  customFields: z.record(z.any()).default({})
+  customFields: z.record(z.string(), z.any()).default({})
 });
 
-export const UpdateMoodEntryRequestSchema = CreateMoodEntryRequestSchema.omit({ databaseId: true }).partial();
+export const UpdateMoodEntryRequestSchema = CreateMoodEntryRequestSchema.omit({
+  databaseId: true
+}).partial();

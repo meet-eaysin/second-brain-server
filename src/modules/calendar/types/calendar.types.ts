@@ -369,43 +369,47 @@ export const CalendarSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   color: z.string().regex(/^#[0-9A-F]{6}$/i),
-  type: z.nativeEnum(ECalendarType),
+  type: z.enum(ECalendarType),
   timeZone: z.string(),
   isDefault: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
-export const EventSchema = z.object({
-  calendarId: z.string(),
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  location: z.string().max(200).optional(),
-  startTime: z.date(),
-  endTime: z.date(),
-  isAllDay: z.boolean().optional(),
-  timeZone: z.string().optional(),
-  type: z.nativeEnum(EEventType).optional(),
-  status: z.nativeEnum(EEventStatus).optional(),
-  visibility: z.nativeEnum(EEventVisibility).optional(),
-  relatedEntityType: z.string().optional(),
-  relatedEntityId: z.string().optional(),
-  metadata: z.record(z.unknown()).optional()
-}).refine(data => data.endTime > data.startTime, {
-  message: 'End time must be after start time'
-});
+export const EventSchema = z
+  .object({
+    calendarId: z.string(),
+    title: z.string().min(1).max(200),
+    description: z.string().max(2000).optional(),
+    location: z.string().max(200).optional(),
+    startTime: z.date(),
+    endTime: z.date(),
+    isAllDay: z.boolean().optional(),
+    timeZone: z.string().optional(),
+    type: z.enum(EEventType).optional(),
+    status: z.enum(EEventStatus).optional(),
+    visibility: z.enum(EEventVisibility).optional(),
+    relatedEntityType: z.string().optional(),
+    relatedEntityId: z.string().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional()
+  })
+  .refine(data => data.endTime > data.startTime, {
+    message: 'End time must be after start time'
+  });
 
 export const CalendarConnectionSchema = z.object({
-  provider: z.nativeEnum(ECalendarProvider),
+  provider: z.enum(ECalendarProvider),
   authCode: z.string().optional(),
   accessToken: z.string().optional(),
   refreshToken: z.string().optional(),
   accountEmail: z.string().email(),
-  syncSettings: z.object({
-    importEvents: z.boolean().optional(),
-    exportEvents: z.boolean().optional(),
-    bidirectionalSync: z.boolean().optional(),
-    syncPastDays: z.number().min(0).max(365).optional(),
-    syncFutureDays: z.number().min(0).max(365).optional(),
-    conflictResolution: z.enum(['local', 'remote', 'manual']).optional()
-  }).optional()
+  syncSettings: z
+    .object({
+      importEvents: z.boolean().optional(),
+      exportEvents: z.boolean().optional(),
+      bidirectionalSync: z.boolean().optional(),
+      syncPastDays: z.number().min(0).max(365).optional(),
+      syncFutureDays: z.number().min(0).max(365).optional(),
+      conflictResolution: z.enum(['local', 'remote', 'manual']).optional()
+    })
+    .optional()
 });

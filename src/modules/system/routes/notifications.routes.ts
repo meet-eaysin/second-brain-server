@@ -60,55 +60,41 @@ const dueTaskNotificationSchema = z.object({
   workspaceId: z.string().min(1)
 });
 
-const deviceTokenSchema = z.object({
-  type: z.enum(['fcm', 'webpush']),
-  token: z.string().optional(),
-  endpoint: z.string().url().optional(),
-  keys: z.object({
-    p256dh: z.string(),
-    auth: z.string()
-  }).optional()
-}).refine(data => {
-  if (data.type === 'fcm') return !!data.token;
-  if (data.type === 'webpush') return !!(data.endpoint && data.keys);
-  return false;
-}, {
-  message: "FCM requires token, WebPush requires endpoint and keys"
-});
+const deviceTokenSchema = z
+  .object({
+    type: z.enum(['fcm', 'webpush']),
+    token: z.string().optional(),
+    endpoint: z.string().url().optional(),
+    keys: z
+      .object({
+        p256dh: z.string(),
+        auth: z.string()
+      })
+      .optional()
+  })
+  .refine(
+    data => {
+      if (data.type === 'fcm') return !!data.token;
+      if (data.type === 'webpush') return !!(data.endpoint && data.keys);
+      return false;
+    },
+    {
+      message: 'FCM requires token, WebPush requires endpoint and keys'
+    }
+  );
 
 // Core notification CRUD operations
-router.post(
-  '/',
-  validateBody(CreateNotificationRequestSchema),
-  createNotificationController
-);
+router.post('/', validateBody(CreateNotificationRequestSchema), createNotificationController);
 
-router.get(
-  '/',
-  validateQuery(NotificationQueryOptionsSchema),
-  getNotificationsController
-);
+router.get('/', validateQuery(NotificationQueryOptionsSchema), getNotificationsController);
 
-router.get(
-  '/stats',
-  getNotificationStatsController
-);
+router.get('/stats', getNotificationStatsController);
 
-router.get(
-  '/unread-count',
-  getUnreadNotificationCountController
-);
+router.get('/unread-count', getUnreadNotificationCountController);
 
-router.get(
-  '/recent',
-  getRecentNotificationsController
-);
+router.get('/recent', getRecentNotificationsController);
 
-router.get(
-  '/:id',
-  validateParams(notificationIdSchema),
-  getNotificationByIdController
-);
+router.get('/:id', validateParams(notificationIdSchema), getNotificationByIdController);
 
 router.put(
   '/:id',
@@ -117,17 +103,9 @@ router.put(
   updateNotificationController
 );
 
-router.patch(
-  '/:id/read',
-  validateParams(notificationIdSchema),
-  markNotificationAsReadController
-);
+router.patch('/:id/read', validateParams(notificationIdSchema), markNotificationAsReadController);
 
-router.delete(
-  '/:id',
-  validateParams(notificationIdSchema),
-  deleteNotificationController
-);
+router.delete('/:id', validateParams(notificationIdSchema), deleteNotificationController);
 
 // Bulk operations
 router.patch(
@@ -136,16 +114,9 @@ router.patch(
   bulkMarkNotificationsAsReadController
 );
 
-router.delete(
-  '/bulk',
-  validateBody(bulkNotificationIdsSchema),
-  bulkDeleteNotificationsController
-);
+router.delete('/bulk', validateBody(bulkNotificationIdsSchema), bulkDeleteNotificationsController);
 
-router.patch(
-  '/all/read',
-  markAllNotificationsAsReadController
-);
+router.patch('/all/read', markAllNotificationsAsReadController);
 
 // Specialized notification creation
 router.post(
@@ -161,11 +132,7 @@ router.post(
 );
 
 // Device token management for push notifications
-router.post(
-  '/devices/register',
-  validateBody(deviceTokenSchema),
-  registerDeviceTokenController
-);
+router.post('/devices/register', validateBody(deviceTokenSchema), registerDeviceTokenController);
 
 router.post(
   '/devices/unregister',
@@ -173,9 +140,6 @@ router.post(
   unregisterDeviceTokenController
 );
 
-router.get(
-  '/devices',
-  getUserDeviceTokensController
-);
+router.get('/devices', getUserDeviceTokensController);
 
 export default router;

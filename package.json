@@ -20,6 +20,7 @@
     "docker:dev": "docker-compose up --build",
     "docker:prod": "docker-compose -f docker-compose.prod.yml up --build",
     "docker:down": "docker-compose down",
+    "vercel-build": "yarn clean && node --max-old-space-size=4096 ./node_modules/.bin/tsc -p tsconfig.build.json && node --max-old-space-size=4096 ./node_modules/.bin/tsc-alias -p tsconfig.build.json && node scripts/copy-assets.js",
     "vercel:dev": "vercel dev",
     "vercel:deploy": "vercel --prod"
   },
@@ -76,7 +77,7 @@
     "web-push": "^3.6.7",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.25.71"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

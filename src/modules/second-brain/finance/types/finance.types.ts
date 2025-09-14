@@ -18,7 +18,7 @@ export enum ETransactionCategory {
   INVESTMENT_INCOME = 'investment_income',
   RENTAL = 'rental',
   OTHER_INCOME = 'other_income',
-  
+
   // Expense categories
   FOOD = 'food',
   TRANSPORTATION = 'transportation',
@@ -77,36 +77,36 @@ export interface ITransaction {
   currency: string;
   description: string;
   date: Date;
-  
+
   // Account information
   fromAccountId?: string;
   toAccountId?: string;
   accountName?: string;
-  
+
   // Additional details
   merchant?: string;
   location?: string;
   notes?: string;
   tags: string[];
-  
+
   // Recurring transaction
   isRecurring: boolean;
   recurrencePattern?: string;
   nextDueDate?: Date;
-  
+
   // Verification
   isVerified: boolean;
   verifiedAt?: Date;
-  
+
   // Attachments
   receiptUrl?: string;
   attachments: string[];
-  
+
   // Relations
   budgetId?: string;
   goalId?: string;
   projectId?: string;
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -122,19 +122,19 @@ export interface IAccount {
   type: EAccountType;
   balance: number;
   currency: string;
-  
+
   // Account details
   accountNumber?: string;
   bankName?: string;
   description?: string;
-  
+
   // Settings
   isActive: boolean;
   includeInNetWorth: boolean;
-  
+
   // Tracking
   lastSyncedAt?: Date;
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -150,19 +150,19 @@ export interface IBudget {
   period: EBudgetPeriod;
   startDate: Date;
   endDate: Date;
-  
+
   // Budget categories
   categories: IBudgetCategory[];
-  
+
   // Totals
   totalBudgeted: number;
   totalSpent: number;
   totalRemaining: number;
-  
+
   // Settings
   isActive: boolean;
   currency: string;
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -189,23 +189,23 @@ export interface IFinancialGoal {
   targetAmount: number;
   currentAmount: number;
   currency: string;
-  
+
   // Timeline
   targetDate?: Date;
   startDate: Date;
-  
+
   // Progress
   progressPercentage: number;
   monthlyContribution?: number;
-  
+
   // Settings
   isActive: boolean;
   priority: 'low' | 'medium' | 'high';
-  
+
   // Description
   description?: string;
   notes?: string;
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -220,29 +220,29 @@ export interface IFinanceStats {
   totalExpenses: number;
   netIncome: number;
   netWorth: number;
-  
+
   // Accounts
   totalAssets: number;
   totalLiabilities: number;
   accountsCount: number;
-  
+
   // Transactions
   transactionsCount: number;
   averageTransactionAmount: number;
-  
+
   // Categories
   topExpenseCategories: Array<{
     category: ETransactionCategory;
     amount: number;
     percentage: number;
   }>;
-  
+
   topIncomeCategories: Array<{
     category: ETransactionCategory;
     amount: number;
     percentage: number;
   }>;
-  
+
   // Trends
   monthlyTrend: Array<{
     month: string;
@@ -250,12 +250,12 @@ export interface IFinanceStats {
     expenses: number;
     netIncome: number;
   }>;
-  
+
   // Goals
   activeGoalsCount: number;
   completedGoalsCount: number;
   totalGoalProgress: number;
-  
+
   // Budgets
   activeBudgetsCount: number;
   budgetUtilization: number;
@@ -407,8 +407,8 @@ export interface IUpdateFinancialGoalRequest {
 export const TransactionSchema = z.object({
   id: z.string(),
   databaseId: z.string(),
-  type: z.nativeEnum(ETransactionType),
-  category: z.nativeEnum(ETransactionCategory),
+  type: z.enum(ETransactionType),
+  category: z.enum(ETransactionCategory),
   amount: z.number(),
   currency: z.string().length(3),
   description: z.string().min(1).max(500),
@@ -438,12 +438,15 @@ export const TransactionSchema = z.object({
 
 export const CreateTransactionRequestSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
-  type: z.nativeEnum(ETransactionType),
-  category: z.nativeEnum(ETransactionCategory),
+  type: z.enum(ETransactionType),
+  category: z.enum(ETransactionCategory),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
   currency: z.string().length(3, 'Currency must be 3 characters'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
-  date: z.string().datetime().transform(val => new Date(val)),
+  date: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val)),
   fromAccountId: z.string().optional(),
   toAccountId: z.string().optional(),
   merchant: z.string().max(200, 'Merchant name too long').optional(),
@@ -458,12 +461,20 @@ export const CreateTransactionRequestSchema = z.object({
 });
 
 export const UpdateTransactionRequestSchema = z.object({
-  type: z.nativeEnum(ETransactionType).optional(),
-  category: z.nativeEnum(ETransactionCategory).optional(),
+  type: z.enum(ETransactionType).optional(),
+  category: z.enum(ETransactionCategory).optional(),
   amount: z.number().min(0.01, 'Amount must be greater than 0').optional(),
   currency: z.string().length(3, 'Currency must be 3 characters').optional(),
-  description: z.string().min(1, 'Description is required').max(500, 'Description too long').optional(),
-  date: z.string().datetime().transform(val => new Date(val)).optional(),
+  description: z
+    .string()
+    .min(1, 'Description is required')
+    .max(500, 'Description too long')
+    .optional(),
+  date: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   fromAccountId: z.string().optional(),
   toAccountId: z.string().optional(),
   merchant: z.string().max(200, 'Merchant name too long').optional(),

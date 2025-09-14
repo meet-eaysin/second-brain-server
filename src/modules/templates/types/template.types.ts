@@ -165,7 +165,15 @@ export interface IConditionalLogic {
 
 export interface ICondition {
   property: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'is_empty' | 'is_not_empty';
+  operator:
+    | 'equals'
+    | 'not_equals'
+    | 'contains'
+    | 'not_contains'
+    | 'greater_than'
+    | 'less_than'
+    | 'is_empty'
+    | 'is_not_empty';
   value: any;
 }
 
@@ -296,9 +304,9 @@ export interface ITemplateValidationResult {
 }
 
 // Validation schemas
-export const TemplateCategorySchema = z.nativeEnum(ETemplateCategory);
-export const TemplateTypeSchema = z.nativeEnum(ETemplateType);
-export const TemplateAccessSchema = z.nativeEnum(ETemplateAccess);
+export const TemplateCategorySchema = z.enum(ETemplateCategory);
+export const TemplateTypeSchema = z.enum(ETemplateType);
+export const TemplateAccessSchema = z.enum(ETemplateAccess);
 
 export const BaseTemplateSchema = z.object({
   id: z.string(),
@@ -323,8 +331,8 @@ export const BaseTemplateSchema = z.object({
 
 export const RowTemplateSchema = BaseTemplateSchema.extend({
   type: z.literal(ETemplateType.ROW),
-  moduleType: z.nativeEnum(EDatabaseType),
-  defaultValues: z.record(z.any()),
+  moduleType: z.enum(EDatabaseType),
+  defaultValues: z.record(z.string(), z.any()),
   requiredProperties: z.array(z.string()).optional(),
   conditionalLogic: z.array(z.any()).optional(),
   autoFillRules: z.array(z.any()).optional()
@@ -332,18 +340,18 @@ export const RowTemplateSchema = BaseTemplateSchema.extend({
 
 export const DatabaseTemplateSchema = BaseTemplateSchema.extend({
   type: z.literal(ETemplateType.DATABASE),
-  moduleType: z.nativeEnum(EDatabaseType),
+  moduleType: z.enum(EDatabaseType),
   properties: z.array(z.any()),
   views: z.array(z.any()),
   relations: z.array(z.any()),
   rowTemplates: z.array(RowTemplateSchema),
-  sampleData: z.array(z.record(z.any())).optional(),
+  sampleData: z.array(z.record(z.string(), z.any())).optional(),
   settings: z.any()
 });
 
 export const WorkspaceTemplateSchema = BaseTemplateSchema.extend({
   type: z.literal(ETemplateType.WORKSPACE),
-  modules: z.array(z.nativeEnum(EDatabaseType)),
+  modules: z.array(z.enum(EDatabaseType)),
   databases: z.array(DatabaseTemplateSchema),
   crossModuleRelations: z.array(z.any()),
   workspaceSettings: z.any(),
@@ -354,7 +362,7 @@ export const TemplateSearchQuerySchema = z.object({
   query: z.string().optional(),
   category: TemplateCategorySchema.optional(),
   type: TemplateTypeSchema.optional(),
-  moduleType: z.nativeEnum(EDatabaseType).optional(),
+  moduleType: z.enum(EDatabaseType).optional(),
   tags: z.array(z.string()).optional(),
   access: TemplateAccessSchema.optional(),
   isOfficial: z.boolean().optional(),

@@ -235,7 +235,6 @@ export class DashboardService {
 
     const now = new Date();
 
-    // Tasks statistics
     if (databaseMap[EDatabaseType.TASKS]) {
       const tasksDb = databaseMap[EDatabaseType.TASKS];
       const [totalTasks, completedTasks, overdueTasks] = await Promise.all([
@@ -359,17 +358,15 @@ export class DashboardService {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    // Get recent records from all databases
     const recentRecords = await RecordModel.find({
       databaseId: { $in: Object.values(databaseMap).filter(id => id !== null) },
       isDeleted: { $ne: true },
       createdAt: { $gte: oneWeekAgo }
     })
       .sort({ createdAt: -1 })
-      .limit(limit * 2) // Get more to filter and format
+      .limit(limit * 2)
       .exec();
 
-    // Convert records to activity items
     recentRecords.forEach(record => {
       const database = Object.entries(databaseMap).find(([type, id]) => id === record.databaseId);
       if (!database) return;

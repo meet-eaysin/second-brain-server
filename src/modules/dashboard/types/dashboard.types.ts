@@ -32,7 +32,14 @@ export interface IQuickStats {
 // Activity feed item
 export interface IActivityFeedItem {
   id: string;
-  type: 'task_created' | 'task_completed' | 'note_created' | 'goal_updated' | 'habit_completed' | 'journal_entry' | 'finance_added';
+  type:
+    | 'task_created'
+    | 'task_completed'
+    | 'note_created'
+    | 'goal_updated'
+    | 'habit_completed'
+    | 'journal_entry'
+    | 'finance_added';
   title: string;
   description: string;
   entityId: string;
@@ -161,7 +168,15 @@ export const QuickStatsSchema = z.object({
 
 export const ActivityFeedItemSchema = z.object({
   id: z.string(),
-  type: z.enum(['task_created', 'task_completed', 'note_created', 'goal_updated', 'habit_completed', 'journal_entry', 'finance_added']),
+  type: z.enum([
+    'task_created',
+    'task_completed',
+    'note_created',
+    'goal_updated',
+    'habit_completed',
+    'journal_entry',
+    'finance_added'
+  ]),
   title: z.string(),
   description: z.string(),
   entityId: z.string(),
@@ -169,15 +184,15 @@ export const ActivityFeedItemSchema = z.object({
   userId: z.string(),
   userName: z.string().optional(),
   timestamp: z.date(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 export const UpcomingTaskSchema = z.object({
   id: z.string(),
   name: z.string(),
   dueDate: z.date(),
-  priority: z.nativeEnum(EPriority),
-  status: z.nativeEnum(EStatus),
+  priority: z.enum(EPriority),
+  status: z.enum(EStatus),
   projectName: z.string().optional(),
   projectId: z.string().optional(),
   isOverdue: z.boolean(),
@@ -196,7 +211,7 @@ export const RecentNoteSchema = z.object({
 export const GoalProgressSchema = z.object({
   id: z.string(),
   name: z.string(),
-  status: z.nativeEnum(EStatus),
+  status: z.enum(EStatus),
   deadline: z.date().optional(),
   progressPercentage: z.number().min(0).max(100),
   relatedTasksCount: z.number().min(0),
@@ -223,19 +238,23 @@ export const FinanceSummarySchema = z.object({
   lastMonthNet: z.number(),
   incomeChange: z.number(),
   expenseChange: z.number(),
-  topExpenseCategories: z.array(z.object({
-    category: z.string(),
-    amount: z.number(),
-    percentage: z.number().min(0).max(100)
-  })),
-  recentTransactions: z.array(z.object({
-    id: z.string(),
-    date: z.date(),
-    amount: z.number(),
-    type: z.nativeEnum(EFinanceType),
-    category: z.string(),
-    note: z.string().optional()
-  }))
+  topExpenseCategories: z.array(
+    z.object({
+      category: z.string(),
+      amount: z.number(),
+      percentage: z.number().min(0).max(100)
+    })
+  ),
+  recentTransactions: z.array(
+    z.object({
+      id: z.string(),
+      date: z.date(),
+      amount: z.number(),
+      type: z.enum(EFinanceType),
+      category: z.string(),
+      note: z.string().optional()
+    })
+  )
 });
 
 export const WorkspaceStatsSchema = z.object({

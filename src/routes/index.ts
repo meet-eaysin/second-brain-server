@@ -2,7 +2,21 @@ import express from 'express';
 import { auth, users } from '../modules';
 import { emailRoutes } from '../modules/email';
 import databaseRoutes from '@/modules/database/routes';
-import { dashboardRoutes, modulesRoutes, systemRoutes, tasksRoutes, notesRoutes, goalsRoutes, financeRoutes, peopleRoutes, projectsRoutes, resourcesRoutes, paraRoutes, moodRoutes, contentRoutes } from '../modules/second-brain';
+import {
+  dashboardRoutes,
+  modulesRoutes,
+  systemRoutes,
+  tasksRoutes,
+  notesRoutes,
+  goalsRoutes,
+  financeRoutes,
+  peopleRoutes,
+  projectsRoutes,
+  resourcesRoutes,
+  paraRoutes,
+  moodRoutes,
+  contentRoutes
+} from '../modules/second-brain';
 import calendarRoutes from '@/modules/calendar/routes/calendar.routes';
 import searchRoutes from '@/modules/search/routes/search.routes';
 import workspaceRoutes from '@/modules/workspace/routes/workspace.routes';
@@ -15,13 +29,10 @@ const router = express.Router();
 router.use('/docs', swaggerRoute);
 router.use('/auth', auth.authRoutes);
 router.use('/users', users.usersRoutes);
-
 router.use('/email', emailRoutes);
 
-// Workspace management
 router.use('/workspaces', workspaceRoutes);
 
-// Permission management
 router.use('/', permissionRoutes);
 
 router.use('/modules', modulesRoutes);

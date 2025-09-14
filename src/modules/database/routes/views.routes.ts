@@ -17,7 +17,7 @@ import {
   updateViewFilters,
   updateViewSorts
 } from '../controllers/views.controllers';
-import { databaseIdSchema } from '../validators/database.validators';
+import { databaseIdSchema } from '@/modules/database/validators/database.validators';
 import {
   viewIdParamSchema,
   createViewSchema,

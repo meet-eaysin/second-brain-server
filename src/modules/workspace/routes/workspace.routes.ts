@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { validateBody, validateParams } from '@/middlewares/validation';
 import { authenticateToken } from '@/middlewares/auth';
-import { z } from 'zod';
 import {
   createWorkspace,
   getWorkspaceById,
@@ -15,78 +14,27 @@ import {
 } from '../controllers/workspace.controllers';
 import {
   CreateWorkspaceSchema,
-  UpdateWorkspaceSchema
-} from '../types/workspace.types';
+  UpdateWorkspaceSchema,
+  workspaceIdParamSchema
+} from '@/modules/workspace/validators/workspace.validators';
 
 const router = Router();
 
-// Validation schemas
-const workspaceIdSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required')
-});
-
-// Apply authentication to all routes
 router.use(authenticateToken);
 
-// Create workspace
-router.post(
-  '/',
-  validateBody(CreateWorkspaceSchema),
-  createWorkspace
-);
-
-// Get user's workspaces
-router.get(
-  '/',
-  getUserWorkspaces
-);
-
-// Get user's primary workspace
-router.get(
-  '/primary',
-  getPrimaryWorkspace
-);
-
-// Get or create default workspace
-router.post(
-  '/default',
-  getOrCreateDefaultWorkspace
-);
-
-// Get workspace by ID
-router.get(
-  '/:workspaceId',
-  validateParams(workspaceIdSchema),
-  getWorkspaceById
-);
-
-// Update workspace
+router.post('/', validateBody(CreateWorkspaceSchema), createWorkspace);
+router.get('/', getUserWorkspaces);
+router.get('/primary', getPrimaryWorkspace);
+router.post('/default', getOrCreateDefaultWorkspace);
+router.get('/:workspaceId', validateParams(workspaceIdParamSchema), getWorkspaceById);
 router.put(
   '/:workspaceId',
-  validateParams(workspaceIdSchema),
+  validateParams(workspaceIdParamSchema),
   validateBody(UpdateWorkspaceSchema),
   updateWorkspace
 );
-
-// Delete workspace
-router.delete(
-  '/:workspaceId',
-  validateParams(workspaceIdSchema),
-  deleteWorkspace
-);
-
-// Get workspace statistics
-router.get(
-  '/:workspaceId/stats',
-  validateParams(workspaceIdSchema),
-  getWorkspaceStats
-);
-
-// Check workspace access
-router.get(
-  '/:workspaceId/access',
-  validateParams(workspaceIdSchema),
-  checkWorkspaceAccess
-);
+router.delete('/:workspaceId', validateParams(workspaceIdParamSchema), deleteWorkspace);
+router.get('/:workspaceId/stats', validateParams(workspaceIdParamSchema), getWorkspaceStats);
+router.get('/:workspaceId/access', validateParams(workspaceIdParamSchema), checkWorkspaceAccess);
 
 export default router;

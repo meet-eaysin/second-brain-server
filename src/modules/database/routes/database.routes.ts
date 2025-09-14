@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
 import { requirePermission } from '@/middlewares/permission.middleware';
-import { resolveWorkspaceContext, ensureDefaultWorkspace, injectWorkspaceContext } from '@/modules/workspace/middleware/workspace.middleware';
+import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace,
+  injectWorkspaceContext
+} from '@/modules/workspace/middleware/workspace.middleware';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import {
   createDatabase,
@@ -46,17 +50,8 @@ router.use(authenticateToken);
 router.use(resolveWorkspaceContext({ allowFromBody: true }));
 router.use(ensureDefaultWorkspace);
 
-router.post(
-  '/',
-  validateBody(createDatabaseSchema),
-  injectWorkspaceContext,
-  createDatabase
-);
-router.get(
-  '/',
-  validateQuery(getDatabasesQuerySchema),
-  getDatabases
-);
+router.post('/', validateBody(createDatabaseSchema), injectWorkspaceContext, createDatabase);
+router.get('/', validateQuery(getDatabasesQuerySchema), getDatabases);
 router.get(
   '/:id',
   validateParams(databaseIdParamSchema),

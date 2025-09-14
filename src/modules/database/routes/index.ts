@@ -8,18 +8,18 @@ import relationRoutes from './relation.routes';
 import richEditorRoutes from '@/modules/editor/routes/rich-editor.routes';
 import habitsRoutes from '../../second-brain/habits/routes/habits.routes';
 import journalRoutes from '../../second-brain/journal/routes/journal.routes';
-import crossModuleRelationsRoutes from '../../second-brain/modules/routes/cross-module-relations.routes';
-import relationAnalyticsRoutes from '../../second-brain/modules/routes/relation-analytics.routes';
+import crossModuleRelationsRoutes from '@/modules/modules/routes/cross-module-relations.routes';
+import relationAnalyticsRoutes from '@/modules/modules/routes/relation-analytics.routes';
 
 import formulasRoutes from '@/modules/formulas/routes/formulas.routes';
 
 const router = Router();
 
-router.use('/databases', databaseRoutes);
-router.use('/databases', viewsRoutes);
-router.use('/databases', propertiesRoutes);
-router.use('/databases', recordsRoutes);
-router.use('/databases', blocksRoutes);
+router.use('/', databaseRoutes);
+router.use('/', viewsRoutes);
+router.use('/', propertiesRoutes);
+router.use('/', recordsRoutes);
+router.use('/', blocksRoutes);
 router.use('/', relationRoutes);
 router.use('/editor', richEditorRoutes);
 router.use('/', habitsRoutes);

@@ -98,7 +98,7 @@ export interface IProjectTimeTracking {
 export interface IProject {
   id: string;
   databaseId: string;
-  
+
   // Basic information
   name: string;
   description?: string;
@@ -106,27 +106,27 @@ export interface IProject {
   status: EProjectStatus;
   priority: EProjectPriority;
   phase: EProjectPhase;
-  
+
   // Dates and timeline
   startDate?: Date;
   endDate?: Date;
   actualStartDate?: Date;
   actualEndDate?: Date;
-  
+
   // Progress tracking
   progressPercentage: number;
   milestones: IProjectMilestone[];
   deliverables: IProjectDeliverable[];
-  
+
   // Team and ownership
   ownerId: string;
   teamMemberIds: string[];
   stakeholderIds: string[];
-  
+
   // Budget and resources
   budget?: IProjectBudget;
   timeTracking?: IProjectTimeTracking;
-  
+
   // Relations
   relatedTaskIds: string[];
   relatedGoalIds: string[];
@@ -134,7 +134,7 @@ export interface IProject {
   relatedResourceIds: string[];
   parentProjectId?: string;
   subProjectIds: string[];
-  
+
   // Project details
   objectives: string[];
   risks: Array<{
@@ -145,23 +145,23 @@ export interface IProject {
     mitigation?: string;
     status: 'open' | 'mitigated' | 'closed';
   }>;
-  
+
   // Metadata
   tags: string[];
   customFields: Record<string, any>;
-  
+
   // Settings
   isArchived: boolean;
   isTemplate: boolean;
   isPublic: boolean;
-  
+
   // Notifications
   notificationSettings: {
     milestoneReminders: boolean;
     deadlineAlerts: boolean;
     statusUpdates: boolean;
   };
-  
+
   // Base properties
   createdAt: Date;
   updatedAt: Date;
@@ -176,38 +176,38 @@ export interface IProjectStats {
   byCategory: Record<EProjectCategory, number>;
   byPriority: Record<EProjectPriority, number>;
   byPhase: Record<EProjectPhase, number>;
-  
+
   // Progress stats
   averageProgress: number;
   completedProjects: number;
   overdueProjects: number;
   projectsStartingThisWeek: number;
   projectsEndingThisWeek: number;
-  
+
   // Time and budget stats
   totalBudget: number;
   totalSpent: number;
   totalEstimatedHours: number;
   totalActualHours: number;
-  
+
   // Team stats
   totalTeamMembers: number;
   averageTeamSize: number;
-  
+
   // Recent activity
   recentlyCompleted: Array<{
     projectId: string;
     name: string;
     completedAt: Date;
   }>;
-  
+
   upcomingDeadlines: Array<{
     projectId: string;
     name: string;
     deadline: Date;
     type: 'project' | 'milestone' | 'deliverable';
   }>;
-  
+
   // Performance metrics
   onTimeCompletionRate: number;
   budgetComplianceRate: number;
@@ -381,10 +381,10 @@ export const ProjectSchema = z.object({
   databaseId: z.string(),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
-  category: z.nativeEnum(EProjectCategory),
-  status: z.nativeEnum(EProjectStatus),
-  priority: z.nativeEnum(EProjectPriority),
-  phase: z.nativeEnum(EProjectPhase),
+  category: z.enum(EProjectCategory),
+  status: z.enum(EProjectStatus),
+  priority: z.enum(EProjectPriority),
+  phase: z.enum(EProjectPhase),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
   actualStartDate: z.date().optional(),
@@ -395,30 +395,42 @@ export const ProjectSchema = z.object({
   ownerId: z.string(),
   teamMemberIds: z.array(z.string()).default([]),
   stakeholderIds: z.array(z.string()).default([]),
-  budget: z.object({
-    totalBudget: z.number().min(0),
-    spentAmount: z.number().min(0).default(0),
-    remainingAmount: z.number().min(0),
-    currency: z.string().length(3),
-    categories: z.array(z.object({
-      name: z.string(),
-      budgeted: z.number().min(0),
-      spent: z.number().min(0).default(0)
-    })).default([])
-  }).optional(),
-  timeTracking: z.object({
-    estimatedHours: z.number().min(0),
-    actualHours: z.number().min(0).default(0),
-    remainingHours: z.number().min(0),
-    timeEntries: z.array(z.object({
-      id: z.string(),
-      date: z.date(),
-      hours: z.number().min(0),
-      description: z.string(),
-      userId: z.string(),
-      taskId: z.string().optional()
-    })).default([])
-  }).optional(),
+  budget: z
+    .object({
+      totalBudget: z.number().min(0),
+      spentAmount: z.number().min(0).default(0),
+      remainingAmount: z.number().min(0),
+      currency: z.string().length(3),
+      categories: z
+        .array(
+          z.object({
+            name: z.string(),
+            budgeted: z.number().min(0),
+            spent: z.number().min(0).default(0)
+          })
+        )
+        .default([])
+    })
+    .optional(),
+  timeTracking: z
+    .object({
+      estimatedHours: z.number().min(0),
+      actualHours: z.number().min(0).default(0),
+      remainingHours: z.number().min(0),
+      timeEntries: z
+        .array(
+          z.object({
+            id: z.string(),
+            date: z.date(),
+            hours: z.number().min(0),
+            description: z.string(),
+            userId: z.string(),
+            taskId: z.string().optional()
+          })
+        )
+        .default([])
+    })
+    .optional(),
   relatedTaskIds: z.array(z.string()).default([]),
   relatedGoalIds: z.array(z.string()).default([]),
   relatedNoteIds: z.array(z.string()).default([]),
@@ -426,16 +438,20 @@ export const ProjectSchema = z.object({
   parentProjectId: z.string().optional(),
   subProjectIds: z.array(z.string()).default([]),
   objectives: z.array(z.string()).default([]),
-  risks: z.array(z.object({
-    id: z.string(),
-    description: z.string(),
-    impact: z.enum(['low', 'medium', 'high']),
-    probability: z.enum(['low', 'medium', 'high']),
-    mitigation: z.string().optional(),
-    status: z.enum(['open', 'mitigated', 'closed']).default('open')
-  })).default([]),
+  risks: z
+    .array(
+      z.object({
+        id: z.string(),
+        description: z.string(),
+        impact: z.enum(['low', 'medium', 'high']),
+        probability: z.enum(['low', 'medium', 'high']),
+        mitigation: z.string().optional(),
+        status: z.enum(['open', 'mitigated', 'closed']).default('open')
+      })
+    )
+    .default([]),
   tags: z.array(z.string()).default([]),
-  customFields: z.record(z.any()).default({}),
+  customFields: z.record(z.string(), z.any()).default({}),
   isArchived: z.boolean().default(false),
   isTemplate: z.boolean().default(false),
   isPublic: z.boolean().default(false),
@@ -454,52 +470,88 @@ export const CreateProjectRequestSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
   name: z.string().min(1, 'Project name is required').max(200, 'Name too long'),
   description: z.string().max(2000, 'Description too long').optional(),
-  category: z.nativeEnum(EProjectCategory),
-  priority: z.nativeEnum(EProjectPriority).default(EProjectPriority.MEDIUM),
-  phase: z.nativeEnum(EProjectPhase).default(EProjectPhase.INITIATION),
-  startDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  endDate: z.string().datetime().transform(val => new Date(val)).optional(),
+  category: z.enum(EProjectCategory),
+  priority: z.enum(EProjectPriority).default(EProjectPriority.MEDIUM),
+  phase: z.enum(EProjectPhase).default(EProjectPhase.INITIATION),
+  startDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  endDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   ownerId: z.string().optional(),
   teamMemberIds: z.array(z.string()).default([]),
   stakeholderIds: z.array(z.string()).default([]),
   objectives: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
-  customFields: z.record(z.any()).default({}),
-  budget: z.object({
-    totalBudget: z.number().min(0),
-    currency: z.string().length(3).default('USD'),
-    categories: z.array(z.object({
-      name: z.string(),
-      budgeted: z.number().min(0)
-    })).default([])
-  }).optional(),
-  timeTracking: z.object({
-    estimatedHours: z.number().min(0)
-  }).optional(),
-  milestones: z.array(z.object({
-    title: z.string().min(1).max(200),
-    description: z.string().max(1000).optional(),
-    targetDate: z.string().datetime().transform(val => new Date(val)).optional(),
-    order: z.number().min(0)
-  })).default([]),
-  deliverables: z.array(z.object({
-    title: z.string().min(1).max(200),
-    description: z.string().max(1000).optional(),
-    type: z.enum(['document', 'software', 'design', 'report', 'presentation', 'other']),
-    assigneeId: z.string().optional(),
-    dueDate: z.string().datetime().transform(val => new Date(val)).optional()
-  })).default([]),
+  customFields: z.record(z.string(), z.any()).default({}),
+  budget: z
+    .object({
+      totalBudget: z.number().min(0),
+      currency: z.string().length(3).default('USD'),
+      categories: z
+        .array(
+          z.object({
+            name: z.string(),
+            budgeted: z.number().min(0)
+          })
+        )
+        .default([])
+    })
+    .optional(),
+  timeTracking: z
+    .object({
+      estimatedHours: z.number().min(0)
+    })
+    .optional(),
+  milestones: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(1000).optional(),
+        targetDate: z
+          .string()
+          .datetime()
+          .transform(val => new Date(val))
+          .optional(),
+        order: z.number().min(0)
+      })
+    )
+    .default([]),
+  deliverables: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(1000).optional(),
+        type: z.enum(['document', 'software', 'design', 'report', 'presentation', 'other']),
+        assigneeId: z.string().optional(),
+        dueDate: z
+          .string()
+          .datetime()
+          .transform(val => new Date(val))
+          .optional()
+      })
+    )
+    .default([]),
   isTemplate: z.boolean().default(false),
   isPublic: z.boolean().default(false),
-  notificationSettings: z.object({
-    milestoneReminders: z.boolean().default(true),
-    deadlineAlerts: z.boolean().default(true),
-    statusUpdates: z.boolean().default(true)
-  }).default({
-    milestoneReminders: true,
-    deadlineAlerts: true,
-    statusUpdates: true
-  })
+  notificationSettings: z
+    .object({
+      milestoneReminders: z.boolean().default(true),
+      deadlineAlerts: z.boolean().default(true),
+      statusUpdates: z.boolean().default(true)
+    })
+    .default({
+      milestoneReminders: true,
+      deadlineAlerts: true,
+      statusUpdates: true
+    })
 });
 
-export const UpdateProjectRequestSchema = CreateProjectRequestSchema.omit({ databaseId: true }).partial();
+export const UpdateProjectRequestSchema = CreateProjectRequestSchema.omit({
+  databaseId: true
+}).partial();

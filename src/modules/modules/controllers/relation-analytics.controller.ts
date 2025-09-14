@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { relationAnalyticsService } from '../services/relation-analytics.service';
 import { catchAsync, sendSuccessResponse } from '@/utils';
-import { getUserId } from '@/modules/auth';
+import { getUserId } from '@/auth/index';
 
 // Get comprehensive relation analytics
 export const getRelationAnalytics = catchAsync(

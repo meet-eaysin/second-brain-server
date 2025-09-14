@@ -12,34 +12,35 @@ import {
   bulkGrantPermissions,
   bulkRevokePermissions
 } from '../controllers/permission.controller';
-import {
-  EPermissionLevel,
-  EShareScope
-} from '@/modules/core/types/permission.types';
+import { EPermissionLevel, EShareScope } from '@/modules/core/types/permission.types';
 import { authenticateToken } from '@/middlewares';
 
 const router = Router();
 
 // Validation schemas
 const resourceParamsSchema = z.object({
-  resourceType: z.nativeEnum(EShareScope),
+  resourceType: z.enum(EShareScope),
   resourceId: z.string().min(1, 'Resource ID is required')
 });
 
 const grantPermissionSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
-  level: z.nativeEnum(EPermissionLevel),
+  level: z.enum(EPermissionLevel),
   expiresAt: z.string().datetime().optional(),
-  conditions: z.object({
-    ipWhitelist: z.array(z.string()).optional(),
-    timeRestrictions: z.object({
-      startTime: z.string().optional(),
-      endTime: z.string().optional(),
-      timezone: z.string().optional(),
-      daysOfWeek: z.array(z.number().min(0).max(6)).optional()
-    }).optional(),
-    deviceRestrictions: z.array(z.string()).optional()
-  }).optional()
+  conditions: z
+    .object({
+      ipWhitelist: z.array(z.string()).optional(),
+      timeRestrictions: z
+        .object({
+          startTime: z.string().optional(),
+          endTime: z.string().optional(),
+          timezone: z.string().optional(),
+          daysOfWeek: z.array(z.number().min(0).max(6)).optional()
+        })
+        .optional(),
+      deviceRestrictions: z.array(z.string()).optional()
+    })
+    .optional()
 });
 
 const revokePermissionSchema = z.object({
@@ -47,25 +48,35 @@ const revokePermissionSchema = z.object({
 });
 
 const bulkGrantPermissionsSchema = z.object({
-  permissions: z.array(z.object({
-    userId: z.string().min(1, 'User ID is required'),
-    level: z.nativeEnum(EPermissionLevel),
-    expiresAt: z.string().datetime().optional(),
-    conditions: z.object({
-      ipWhitelist: z.array(z.string()).optional(),
-      timeRestrictions: z.object({
-        startTime: z.string().optional(),
-        endTime: z.string().optional(),
-        timezone: z.string().optional(),
-        daysOfWeek: z.array(z.number().min(0).max(6)).optional()
-      }).optional(),
-      deviceRestrictions: z.array(z.string()).optional()
-    }).optional()
-  })).min(1, 'At least one permission is required')
+  permissions: z
+    .array(
+      z.object({
+        userId: z.string().min(1, 'User ID is required'),
+        level: z.enum(EPermissionLevel),
+        expiresAt: z.string().datetime().optional(),
+        conditions: z
+          .object({
+            ipWhitelist: z.array(z.string()).optional(),
+            timeRestrictions: z
+              .object({
+                startTime: z.string().optional(),
+                endTime: z.string().optional(),
+                timezone: z.string().optional(),
+                daysOfWeek: z.array(z.number().min(0).max(6)).optional()
+              })
+              .optional(),
+            deviceRestrictions: z.array(z.string()).optional()
+          })
+          .optional()
+      })
+    )
+    .min(1, 'At least one permission is required')
 });
 
 const bulkRevokePermissionsSchema = z.object({
-  userIds: z.array(z.string().min(1, 'User ID is required')).min(1, 'At least one user ID is required')
+  userIds: z
+    .array(z.string().min(1, 'User ID is required'))
+    .min(1, 'At least one user ID is required')
 });
 
 // Apply authentication to all routes
@@ -132,9 +143,6 @@ router.post(
 );
 
 // Get user's permissions
-router.get(
-  '/user/permissions',
-  getUserPermissions
-);
+router.get('/user/permissions', getUserPermissions);
 
 export default router;

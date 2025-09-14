@@ -81,22 +81,22 @@ export interface IViewSettings {
   frozenColumns: string[];
   pageSize: number;
   showSubItems: boolean;
-  
+
   // Board view specific
   boardGroupProperty?: string;
-  
+
   // Calendar view specific
   calendarDateProperty?: string;
   calendarViewType?: 'month' | 'week' | 'day';
-  
+
   // Gallery view specific
   galleryImageProperty?: string;
   galleryCardSize?: 'small' | 'medium' | 'large';
-  
+
   // Timeline view specific
   timelineStartProperty?: string;
   timelineEndProperty?: string;
-  
+
   // Gantt view specific
   ganttStartProperty?: string;
   ganttEndProperty?: string;
@@ -151,19 +151,19 @@ export interface IViewListResponse {
 export const ViewFilterSchema = z.object({
   id: z.string().optional(),
   property: z.string().min(1, 'Property is required'),
-  condition: z.nativeEnum(EFilterCondition),
+  condition: z.enum(EFilterCondition),
   value: z.any().optional(),
-  operator: z.nativeEnum(EFilterOperator).default(EFilterOperator.AND)
+  operator: z.enum(EFilterOperator).default(EFilterOperator.AND)
 });
 
 export const ViewSortSchema = z.object({
   property: z.string().min(1, 'Property is required'),
-  direction: z.nativeEnum(ESortDirection).default(ESortDirection.ASCENDING)
+  direction: z.enum(ESortDirection).default(ESortDirection.ASCENDING)
 });
 
 export const ViewGroupSchema = z.object({
   property: z.string().min(1, 'Property is required'),
-  direction: z.nativeEnum(ESortDirection).default(ESortDirection.ASCENDING)
+  direction: z.enum(ESortDirection).default(ESortDirection.ASCENDING)
 });
 
 export const ViewSettingsSchema = z.object({
@@ -174,7 +174,7 @@ export const ViewSettingsSchema = z.object({
   frozenColumns: z.array(z.string()).default([]),
   pageSize: z.number().min(1).max(1000).default(25),
   showSubItems: z.boolean().default(true),
-  
+
   // View-specific settings
   boardGroupProperty: z.string().optional(),
   calendarDateProperty: z.string().optional(),
@@ -189,30 +189,26 @@ export const ViewSettingsSchema = z.object({
 });
 
 export const CreateViewSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'View name is required')
     .max(100, 'View name cannot exceed 100 characters')
     .trim(),
-  type: z.nativeEnum(EViewType),
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .trim()
-    .optional(),
+  type: z.enum(EViewType),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
   isDefault: z.boolean().default(false),
   isPublic: z.boolean().default(false),
   settings: ViewSettingsSchema
 });
 
 export const UpdateViewSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'View name is required')
     .max(100, 'View name cannot exceed 100 characters')
     .trim()
     .optional(),
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .trim()
-    .optional(),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
   isDefault: z.boolean().optional(),
   isPublic: z.boolean().optional(),
   settings: ViewSettingsSchema.partial().optional()

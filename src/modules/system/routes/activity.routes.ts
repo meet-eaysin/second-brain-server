@@ -19,10 +19,7 @@ import {
   exportAuditDataController,
   getActivityHeatmapController
 } from '../controllers/activity.controller';
-import {
-  CreateActivityRequestSchema,
-  ActivityQueryOptionsSchema
-} from '../types/activity.types';
+import { CreateActivityRequestSchema, ActivityQueryOptionsSchema } from '../types/activity.types';
 import { z } from 'zod';
 
 const router = Router();
@@ -56,61 +53,48 @@ const taskActivitySchema = z.object({
   action: z.enum(['created', 'updated', 'completed', 'assigned', 'commented']),
   workspaceId: z.string().min(1),
   taskName: z.string().optional(),
-  changes: z.array(z.object({
-    field: z.string(),
-    oldValue: z.unknown(),
-    newValue: z.unknown(),
-    fieldType: z.string()
-  })).optional(),
-  metadata: z.record(z.unknown()).optional()
+  changes: z
+    .array(
+      z.object({
+        field: z.string(),
+        oldValue: z.unknown(),
+        newValue: z.unknown(),
+        fieldType: z.string()
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 const databaseActivitySchema = z.object({
   action: z.enum(['created', 'updated', 'deleted']),
   workspaceId: z.string().min(1),
   databaseName: z.string().optional(),
-  changes: z.array(z.object({
-    field: z.string(),
-    oldValue: z.unknown(),
-    newValue: z.unknown(),
-    fieldType: z.string()
-  })).optional(),
-  metadata: z.record(z.unknown()).optional()
+  changes: z
+    .array(
+      z.object({
+        field: z.string(),
+        oldValue: z.unknown(),
+        newValue: z.unknown(),
+        fieldType: z.string()
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 // Core activity operations
-router.post(
-  '/',
-  validateBody(CreateActivityRequestSchema),
-  createActivityController
-);
+router.post('/', validateBody(CreateActivityRequestSchema), createActivityController);
 
-router.get(
-  '/',
-  validateQuery(ActivityQueryOptionsSchema),
-  getActivitiesController
-);
+router.get('/', validateQuery(ActivityQueryOptionsSchema), getActivitiesController);
 
-router.get(
-  '/feed',
-  getRecentActivityFeedController
-);
+router.get('/feed', getRecentActivityFeedController);
 
-router.get(
-  '/summary',
-  getUserActivitySummaryController
-);
+router.get('/summary', getUserActivitySummaryController);
 
-router.get(
-  '/analytics',
-  getActivityAnalyticsController
-);
+router.get('/analytics', getActivityAnalyticsController);
 
-router.get(
-  '/:id',
-  validateParams(activityIdSchema),
-  getActivityByIdController
-);
+router.get('/:id', validateParams(activityIdSchema), getActivityByIdController);
 
 // Version history
 router.get(
@@ -147,14 +131,16 @@ router.get(
   '/audit/:workspaceId',
   validateParams(z.object({ workspaceId: z.string().min(1) })),
   requireWorkspaceAccess('admin'), // Audit access requires admin role
-  validateQuery(z.object({
-    entityId: z.string().optional(),
-    entityType: z.string().optional(),
-    userId: z.string().optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    includeSystemEvents: z.string().optional()
-  })),
+  validateQuery(
+    z.object({
+      entityId: z.string().optional(),
+      entityType: z.string().optional(),
+      userId: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      includeSystemEvents: z.string().optional()
+    })
+  ),
   generateAuditTrailController
 );
 
@@ -162,12 +148,14 @@ router.get(
   '/security/:workspaceId',
   validateParams(z.object({ workspaceId: z.string().min(1) })),
   requireWorkspaceAccess('admin'), // Security events require admin role
-  validateQuery(z.object({
-    startDate: z.string().optional(),
-    endDate: z.string().optional(),
-    severity: z.string().optional(),
-    limit: z.string().optional()
-  })),
+  validateQuery(
+    z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      severity: z.string().optional(),
+      limit: z.string().optional()
+    })
+  ),
   getSecurityEventsController
 );
 
@@ -175,9 +163,11 @@ router.get(
   '/compliance/:workspaceId',
   validateParams(z.object({ workspaceId: z.string().min(1) })),
   requireWorkspaceAccess('admin'), // Compliance reports require admin role
-  validateQuery(z.object({
-    period: z.enum(['week', 'month', 'quarter', 'year']).optional()
-  })),
+  validateQuery(
+    z.object({
+      period: z.enum(['week', 'month', 'quarter', 'year']).optional()
+    })
+  ),
   getComplianceReportController
 );
 
@@ -185,12 +175,14 @@ router.get(
   '/export/:workspaceId',
   validateParams(z.object({ workspaceId: z.string().min(1) })),
   requireWorkspaceAccess('admin'), // Export requires admin role
-  validateQuery(z.object({
-    format: z.enum(['json', 'csv']).optional(),
-    type: z.enum(['audit', 'security', 'compliance']).optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional()
-  })),
+  validateQuery(
+    z.object({
+      format: z.enum(['json', 'csv']).optional(),
+      type: z.enum(['audit', 'security', 'compliance']).optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional()
+    })
+  ),
   exportAuditDataController
 );
 
@@ -198,9 +190,11 @@ router.get(
   '/heatmap/:workspaceId',
   validateParams(z.object({ workspaceId: z.string().min(1) })),
   requireWorkspaceAccess('member'), // Heatmap accessible to members
-  validateQuery(z.object({
-    period: z.enum(['day', 'week', 'month']).optional()
-  })),
+  validateQuery(
+    z.object({
+      period: z.enum(['day', 'week', 'month']).optional()
+    })
+  ),
   getActivityHeatmapController
 );
 

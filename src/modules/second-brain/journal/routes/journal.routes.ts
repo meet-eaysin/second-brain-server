@@ -72,8 +72,14 @@ const todaysEntrySchema = z.object({
 });
 
 const entriesQuerySchema = z.object({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format').optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional(),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format')
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format')
+    .optional(),
   limit: z.string().regex(/^\d+$/, 'Limit must be a number').optional(),
   offset: z.string().regex(/^\d+$/, 'Offset must be a number').optional(),
   tags: z.string().optional(), // Comma-separated tags
@@ -81,8 +87,14 @@ const entriesQuerySchema = z.object({
 });
 
 const trendsQuerySchema = z.object({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format').optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional()
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format')
+    .optional(),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format')
+    .optional()
 });
 
 const searchQuerySchema = z.object({
@@ -92,8 +104,14 @@ const searchQuerySchema = z.object({
 });
 
 const calendarQuerySchema = z.object({
-  year: z.string().regex(/^\d{4}$/, 'Year must be a 4-digit number').optional(),
-  month: z.string().regex(/^(1[0-2]|[1-9])$/, 'Month must be 1-12').optional()
+  year: z
+    .string()
+    .regex(/^\d{4}$/, 'Year must be a 4-digit number')
+    .optional(),
+  month: z
+    .string()
+    .regex(/^(1[0-2]|[1-9])$/, 'Month must be 1-12')
+    .optional()
 });
 
 const insightsQuerySchema = z.object({
@@ -101,11 +119,7 @@ const insightsQuerySchema = z.object({
 });
 
 // Core journal entry routes
-router.post(
-  '/journal/entries',
-  validateBody(createEntrySchema),
-  createJournalEntry
-);
+router.post('/journal/entries', validateBody(createEntrySchema), createJournalEntry);
 
 router.put(
   '/journal/entries/:entryId',
@@ -114,65 +128,28 @@ router.put(
   updateJournalEntry
 );
 
-router.get(
-  '/journal/entries/:date',
-  validateParams(dateSchema),
-  getJournalEntryByDate
-);
+router.get('/journal/entries/:date', validateParams(dateSchema), getJournalEntryByDate);
 
-router.get(
-  '/journal/entries',
-  validateQuery(entriesQuerySchema),
-  getJournalEntries
-);
+router.get('/journal/entries', validateQuery(entriesQuerySchema), getJournalEntries);
 
 // Today's entry routes
-router.get(
-  '/journal/today',
-  getTodaysEntry
-);
+router.get('/journal/today', getTodaysEntry);
 
-router.post(
-  '/journal/today',
-  validateBody(todaysEntrySchema),
-  createOrUpdateTodaysEntry
-);
+router.post('/journal/today', validateBody(todaysEntrySchema), createOrUpdateTodaysEntry);
 
 // Statistics and analytics routes
-router.get(
-  '/journal/stats',
-  getJournalStats
-);
+router.get('/journal/stats', getJournalStats);
 
-router.get(
-  '/journal/mood-trends',
-  validateQuery(trendsQuerySchema),
-  getMoodTrends
-);
+router.get('/journal/mood-trends', validateQuery(trendsQuerySchema), getMoodTrends);
 
-router.get(
-  '/journal/insights',
-  validateQuery(insightsQuerySchema),
-  getJournalInsights
-);
+router.get('/journal/insights', validateQuery(insightsQuerySchema), getJournalInsights);
 
 // Calendar and visualization routes
-router.get(
-  '/journal/calendar',
-  validateQuery(calendarQuerySchema),
-  getJournalCalendar
-);
+router.get('/journal/calendar', validateQuery(calendarQuerySchema), getJournalCalendar);
 
 // Search and utility routes
-router.get(
-  '/journal/search',
-  validateQuery(searchQuerySchema),
-  searchJournalEntries
-);
+router.get('/journal/search', validateQuery(searchQuerySchema), searchJournalEntries);
 
-router.get(
-  '/journal/prompts',
-  getJournalPrompts
-);
+router.get('/journal/prompts', getJournalPrompts);
 
 export default router;

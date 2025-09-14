@@ -60,38 +60,60 @@ export const groupConfigSchema = z.object({
   showEmpty: z.boolean().default(true)
 });
 
-// View settings schema
-export const viewSettingsSchema = z.object({
-  filters: z.array(filterConditionSchema).default([]),
-  sorts: z.array(sortConfigSchema).default([]),
-  groups: z.array(groupConfigSchema).default([]),
-  visibleProperties: z.array(z.string()).optional(),
-  hiddenProperties: z.array(z.string()).default([]),
-  frozenProperties: z.array(z.string()).default([]),
-  propertyWidths: z.record(z.number()).default({}),
-  showSubItems: z.boolean().default(true),
-  wrapCells: z.boolean().default(false),
-  pageSize: z.number().min(1).max(100).default(25),
-  cardSize: z.enum(['small', 'medium', 'large']).default('medium'),
-  cardCover: z.string().optional(),
-  dateProperty: z.string().optional(), // For calendar/timeline views
-  startDateProperty: z.string().optional(),
-  endDateProperty: z.string().optional(),
-  statusProperty: z.string().optional(), // For board views
-  assigneeProperty: z.string().optional()
-});
+export const viewSettingsSchema = z
+  .object({
+    filters: z.array(filterConditionSchema),
+    sorts: z.array(sortConfigSchema),
+    groups: z.array(groupConfigSchema),
+    visibleProperties: z.array(z.string()).optional(),
+    hiddenProperties: z.array(z.string()),
+    frozenProperties: z.array(z.string()),
+    propertyWidths: z.record(z.string(), z.number()),
+    showSubItems: z.boolean(),
+    wrapCells: z.boolean(),
+    pageSize: z.number().min(1).max(100),
+    cardSize: z.enum(['small', 'medium', 'large']),
+    cardCover: z.string().optional(),
+    dateProperty: z.string().optional(),
+    startDateProperty: z.string().optional(),
+    endDateProperty: z.string().optional(),
+    statusProperty: z.string().optional(),
+    assigneeProperty: z.string().optional()
+  })
+  .default({
+    filters: [],
+    sorts: [],
+    groups: [],
+    hiddenProperties: [],
+    frozenProperties: [],
+    propertyWidths: {},
+    showSubItems: true,
+    wrapCells: false,
+    pageSize: 25,
+    cardSize: 'medium'
+  });
 
 // Create view schema
 export const createViewSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'View name is required')
     .max(100, 'View name cannot exceed 100 characters')
     .trim(),
   type: viewTypeSchema,
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .optional(),
-  settings: viewSettingsSchema.default({}),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').optional(),
+  settings: viewSettingsSchema.default({
+    filters: [],
+    sorts: [],
+    groups: [],
+    hiddenProperties: [],
+    frozenProperties: [],
+    propertyWidths: {},
+    showSubItems: true,
+    wrapCells: false,
+    pageSize: 25,
+    cardSize: 'medium'
+  }),
   isPublic: z.boolean().default(false),
   isDefault: z.boolean().default(false),
   order: z.number().optional()
@@ -99,15 +121,14 @@ export const createViewSchema = z.object({
 
 // Update view schema
 export const updateViewSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'View name is required')
     .max(100, 'View name cannot exceed 100 characters')
     .trim()
     .optional(),
   type: viewTypeSchema.optional(),
-  description: z.string()
-    .max(500, 'Description cannot exceed 500 characters')
-    .optional(),
+  description: z.string().max(500, 'Description cannot exceed 500 characters').optional(),
   settings: viewSettingsSchema.optional(),
   isPublic: z.boolean().optional(),
   isDefault: z.boolean().optional(),
@@ -126,7 +147,8 @@ export const viewQuerySchema = z.object({
 
 // Duplicate view schema
 export const duplicateViewSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'View name is required')
     .max(100, 'View name cannot exceed 100 characters')
     .trim()

@@ -95,13 +95,13 @@ export interface IRecordContent {
   type: EContentBlockType;
   content: IRichText[];
   children?: IRecordContent[];
-  
+
   // Block-specific properties
   checked?: boolean; // for to_do
   language?: string; // for code
   caption?: IRichText[]; // for image, video, file
   url?: string; // for image, video, file, bookmark, embed
-  
+
   // Metadata
   createdAt: Date;
   createdBy: TUserId;
@@ -155,27 +155,35 @@ export interface IRecordActivity {
 }
 
 // Validation schemas
-export const ContentBlockTypeSchema = z.nativeEnum(EContentBlockType);
+export const ContentBlockTypeSchema = z.enum(EContentBlockType);
 
 export const RichTextSchema = z.object({
   type: z.enum(['text', 'mention', 'equation']),
-  text: z.object({
-    content: z.string(),
-    link: z.object({ url: z.string().url() }).optional()
-  }).optional(),
-  mention: z.object({
-    type: z.enum(['user', 'page', 'database', 'date']),
-    user: z.object({ id: z.string() }).optional(),
-    page: z.object({ id: z.string() }).optional(),
-    database: z.object({ id: z.string() }).optional(),
-    date: z.object({ 
-      start: z.string(), 
-      end: z.string().optional() 
-    }).optional()
-  }).optional(),
-  equation: z.object({
-    expression: z.string()
-  }).optional(),
+  text: z
+    .object({
+      content: z.string(),
+      link: z.object({ url: z.string().url() }).optional()
+    })
+    .optional(),
+  mention: z
+    .object({
+      type: z.enum(['user', 'page', 'database', 'date']),
+      user: z.object({ id: z.string() }).optional(),
+      page: z.object({ id: z.string() }).optional(),
+      database: z.object({ id: z.string() }).optional(),
+      date: z
+        .object({
+          start: z.string(),
+          end: z.string().optional()
+        })
+        .optional()
+    })
+    .optional(),
+  equation: z
+    .object({
+      expression: z.string()
+    })
+    .optional(),
   annotations: z.object({
     bold: z.boolean(),
     italic: z.boolean(),
@@ -188,25 +196,27 @@ export const RichTextSchema = z.object({
   href: z.string().url().optional()
 });
 
-export const RecordContentSchema: z.ZodType<IRecordContent> = z.lazy(() => z.object({
-  id: z.string(),
-  type: ContentBlockTypeSchema,
-  content: z.array(RichTextSchema),
-  children: z.array(RecordContentSchema).optional(),
-  checked: z.boolean().optional(),
-  language: z.string().optional(),
-  caption: z.array(RichTextSchema).optional(),
-  url: z.string().url().optional(),
-  createdAt: z.date(),
-  createdBy: z.string(),
-  lastEditedAt: z.date(),
-  lastEditedBy: z.string()
-}));
+export const RecordContentSchema: z.ZodType<IRecordContent> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    type: ContentBlockTypeSchema,
+    content: z.array(RichTextSchema),
+    children: z.array(RecordContentSchema).optional(),
+    checked: z.boolean().optional(),
+    language: z.string().optional(),
+    caption: z.array(RichTextSchema).optional(),
+    url: z.string().url().optional(),
+    createdAt: z.date(),
+    createdBy: z.string(),
+    lastEditedAt: z.date(),
+    lastEditedBy: z.string()
+  })
+);
 
 export const RecordSchema = z.object({
   id: z.string(),
   databaseId: z.string(),
-  properties: z.record(z.any()),
+  properties: z.record(z.string(), z.any()),
   content: z.array(RecordContentSchema).optional(),
   isTemplate: z.boolean().default(false),
   isFavorite: z.boolean().default(false),
@@ -217,7 +227,7 @@ export const RecordSchema = z.object({
   version: z.number().min(1).default(1),
   autoTags: z.array(z.string()).optional(),
   aiSummary: z.string().optional(),
-  relationsCache: z.record(z.array(z.any())).optional(),
+  relationsCache: z.record(z.string(), z.array(z.any())).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string(),
@@ -228,7 +238,7 @@ export const RecordVersionSchema = z.object({
   id: z.string(),
   recordId: z.string(),
   version: z.number().min(1),
-  properties: z.record(z.any()),
+  properties: z.record(z.string(), z.any()),
   content: z.array(RecordContentSchema).optional(),
   createdAt: z.date(),
   createdBy: z.string(),
@@ -256,14 +266,18 @@ export const RecordActivitySchema = z.object({
   databaseId: z.string(),
   type: z.enum(['created', 'updated', 'deleted', 'restored', 'commented', 'mentioned']),
   description: z.string(),
-  changes: z.array(z.object({
-    propertyId: z.string(),
-    oldValue: z.any(),
-    newValue: z.any()
-  })).optional(),
+  changes: z
+    .array(
+      z.object({
+        propertyId: z.string(),
+        oldValue: z.any(),
+        newValue: z.any()
+      })
+    )
+    .optional(),
   createdAt: z.date(),
   createdBy: z.string(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 // Request/Response types

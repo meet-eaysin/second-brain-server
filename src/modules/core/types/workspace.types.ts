@@ -22,22 +22,22 @@ export interface IWorkspaceConfig {
   // Appearance
   theme?: 'light' | 'dark' | 'auto';
   accentColor?: string;
-  
+
   // Features
   enableAI: boolean;
   enableComments: boolean;
   enableVersioning: boolean;
   enablePublicSharing: boolean;
   enableGuestAccess: boolean;
-  
+
   // Limits
   maxDatabases?: number;
   maxMembers?: number;
   storageLimit?: number; // in bytes
-  
+
   // Integrations
   allowedIntegrations?: string[];
-  
+
   // Security
   requireTwoFactor: boolean;
   allowedEmailDomains?: string[];
@@ -75,7 +75,7 @@ export interface IWorkspace extends IBaseEntity, ISoftDelete {
   name: string;
   description?: string;
   type: EWorkspaceType;
-  
+
   // Appearance
   icon?: {
     type: 'emoji' | 'icon' | 'image';
@@ -85,24 +85,24 @@ export interface IWorkspace extends IBaseEntity, ISoftDelete {
     type: 'color' | 'gradient' | 'image';
     value: string;
   };
-  
+
   // Settings
   config: IWorkspaceConfig;
   isPublic: boolean;
   isArchived: boolean;
-  
+
   // Ownership
   ownerId: TUserId;
-  
+
   // Statistics
   memberCount: number;
   databaseCount: number;
   recordCount: number;
   storageUsed: number; // in bytes
-  
+
   // Metadata
   lastActivityAt?: Date;
-  
+
   // Billing (for team/org workspaces)
   planType?: 'free' | 'pro' | 'team' | 'enterprise';
   billingEmail?: string;
@@ -116,20 +116,20 @@ export interface IWorkspaceInvitation extends IBaseEntity {
   workspaceId: TId;
   email: string;
   role: EWorkspaceMemberRole;
-  
+
   // Invitation details
   invitedBy: TUserId;
   token: string;
   expiresAt: Date;
-  
+
   // Status
   status: 'pending' | 'accepted' | 'declined' | 'expired';
   acceptedAt?: Date;
   acceptedBy?: TUserId;
-  
+
   // Custom message
   message?: string;
-  
+
   // Permissions
   customPermissions?: {
     canCreateDatabases: boolean;
@@ -143,23 +143,30 @@ export interface IWorkspaceInvitation extends IBaseEntity {
 // Workspace activity log
 export interface IWorkspaceActivity extends IBaseEntity {
   workspaceId: TId;
-  type: 'member_added' | 'member_removed' | 'member_role_changed' | 'database_created' | 'database_deleted' | 'settings_changed' | 'plan_changed';
+  type:
+    | 'member_added'
+    | 'member_removed'
+    | 'member_role_changed'
+    | 'database_created'
+    | 'database_deleted'
+    | 'settings_changed'
+    | 'plan_changed';
   description: string;
-  
+
   // Actor
   actorId: TUserId;
-  
+
   // Target (if applicable)
   targetId?: TId;
   targetType?: 'user' | 'database' | 'setting';
-  
+
   // Changes
   changes?: {
     field: string;
     oldValue: any;
     newValue: any;
   }[];
-  
+
   // Metadata
   metadata?: Record<string, any>;
 }
@@ -167,29 +174,29 @@ export interface IWorkspaceActivity extends IBaseEntity {
 // Workspace statistics
 export interface IWorkspaceStats {
   workspaceId: TId;
-  
+
   // Counts
   memberCount: number;
   databaseCount: number;
   recordCount: number;
   viewCount: number;
-  
+
   // Activity
   recordsCreatedThisWeek: number;
   recordsUpdatedThisWeek: number;
   activeMembers: number;
-  
+
   // Storage
   storageUsed: number;
   storageLimit: number;
-  
+
   // Top contributors
   topContributors: Array<{
     userId: TUserId;
     recordCount: number;
     lastActiveAt: Date;
   }>;
-  
+
   // Most active databases
   topDatabases: Array<{
     databaseId: TId;
@@ -198,10 +205,6 @@ export interface IWorkspaceStats {
     lastActivityAt: Date;
   }>;
 }
-
-// Validation schemas
-export const WorkspaceTypeSchema = z.nativeEnum(EWorkspaceType);
-export const WorkspaceMemberRoleSchema = z.nativeEnum(EWorkspaceMemberRole);
 
 export const WorkspaceConfigSchema = z.object({
   theme: z.enum(['light', 'dark', 'auto']).default('auto'),
@@ -224,20 +227,22 @@ export const WorkspaceMemberSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   userId: z.string(),
-  role: WorkspaceMemberRoleSchema,
+  role: EWorkspaceMemberRole,
   isActive: z.boolean().default(true),
   joinedAt: z.date(),
   lastActiveAt: z.date().optional(),
   invitedBy: z.string().optional(),
   invitedAt: z.date().optional(),
   invitationAcceptedAt: z.date().optional(),
-  customPermissions: z.object({
-    canCreateDatabases: z.boolean().default(true),
-    canManageMembers: z.boolean().default(false),
-    canManageSettings: z.boolean().default(false),
-    canManageBilling: z.boolean().default(false),
-    canExportData: z.boolean().default(true)
-  }).optional(),
+  customPermissions: z
+    .object({
+      canCreateDatabases: z.boolean().default(true),
+      canManageMembers: z.boolean().default(false),
+      canManageSettings: z.boolean().default(false),
+      canManageBilling: z.boolean().default(false),
+      canExportData: z.boolean().default(true)
+    })
+    .optional(),
   isDeleted: z.boolean().default(false),
   deletedAt: z.date().optional(),
   deletedBy: z.string().optional(),
@@ -251,15 +256,19 @@ export const WorkspaceSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(100),
   description: z.string().max(1000).optional(),
-  type: WorkspaceTypeSchema,
-  icon: z.object({
-    type: z.enum(['emoji', 'icon', 'image']),
-    value: z.string()
-  }).optional(),
-  cover: z.object({
-    type: z.enum(['color', 'gradient', 'image']),
-    value: z.string()
-  }).optional(),
+  type: EWorkspaceType,
+  icon: z
+    .object({
+      type: z.enum(['emoji', 'icon', 'image']),
+      value: z.string()
+    })
+    .optional(),
+  cover: z
+    .object({
+      type: z.enum(['color', 'gradient', 'image']),
+      value: z.string()
+    })
+    .optional(),
   config: WorkspaceConfigSchema,
   isPublic: z.boolean().default(false),
   isArchived: z.boolean().default(false),
@@ -284,7 +293,7 @@ export const WorkspaceInvitationSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   email: z.string().email(),
-  role: WorkspaceMemberRoleSchema,
+  role: EWorkspaceMemberRole,
   invitedBy: z.string(),
   token: z.string(),
   expiresAt: z.date(),
@@ -292,13 +301,15 @@ export const WorkspaceInvitationSchema = z.object({
   acceptedAt: z.date().optional(),
   acceptedBy: z.string().optional(),
   message: z.string().max(500).optional(),
-  customPermissions: z.object({
-    canCreateDatabases: z.boolean().default(true),
-    canManageMembers: z.boolean().default(false),
-    canManageSettings: z.boolean().default(false),
-    canManageBilling: z.boolean().default(false),
-    canExportData: z.boolean().default(true)
-  }).optional(),
+  customPermissions: z
+    .object({
+      canCreateDatabases: z.boolean().default(true),
+      canManageMembers: z.boolean().default(false),
+      canManageSettings: z.boolean().default(false),
+      canManageBilling: z.boolean().default(false),
+      canExportData: z.boolean().default(true)
+    })
+    .optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   createdBy: z.string(),
@@ -365,15 +376,9 @@ export interface IUpdateMemberRequest {
 }
 
 export interface IWorkspaceResponse extends IWorkspace {}
-
 export interface IWorkspaceMemberResponse extends IWorkspaceMember {}
-
 export interface IWorkspaceInvitationResponse extends IWorkspaceInvitation {}
-
 export interface IWorkspaceStatsResponse extends IWorkspaceStats {}
-
 export type TWorkspaceListResponse = IWorkspaceResponse[];
-
 export type TWorkspaceMemberListResponse = IWorkspaceMemberResponse[];
-
 export type TWorkspaceInvitationListResponse = IWorkspaceInvitationResponse[];

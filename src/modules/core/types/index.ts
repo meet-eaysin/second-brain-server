@@ -1,4 +1,3 @@
-// Core Second Brain Types - Data-Table First Architecture
 export * from './property.types';
 export * from './view.types';
 export * from './database.types';

@@ -1,5 +1,9 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { createBaseSchema, IBaseDocument, ISoftDeleteDocument } from '@/modules/core/models/base.model';
+import {
+  createBaseSchema,
+  IBaseDocument,
+  ISoftDeleteDocument
+} from '@/modules/core/models/base.model';
 import {
   IWorkspaceMember,
   EWorkspaceMemberRole,
@@ -16,43 +20,50 @@ export type TWorkspaceMemberModel = Model<TWorkspaceMemberDocument> & {
   isAdmin(workspaceId: string, userId: string): Promise<boolean>;
   hasRole(workspaceId: string, userId: string, role: EWorkspaceMemberRole): Promise<boolean>;
   getActiveMembers(workspaceId: string): Promise<TWorkspaceMemberDocument[]>;
-  hasPermission(workspaceId: string, userId: string, permission: keyof IWorkspaceMemberPermissions): Promise<boolean>;
+  hasPermission(
+    workspaceId: string,
+    userId: string,
+    permission: keyof IWorkspaceMemberPermissions
+  ): Promise<boolean>;
 };
 
-const CustomPermissionsSchema = new Schema<IWorkspaceMemberPermissions>({
-  canCreateDatabases: {
-    type: Boolean,
-    default: true
+const CustomPermissionsSchema = new Schema<IWorkspaceMemberPermissions>(
+  {
+    canCreateDatabases: {
+      type: Boolean,
+      default: true
+    },
+    canManageMembers: {
+      type: Boolean,
+      default: false
+    },
+    canManageSettings: {
+      type: Boolean,
+      default: false
+    },
+    canManageBilling: {
+      type: Boolean,
+      default: false
+    },
+    canExportData: {
+      type: Boolean,
+      default: true
+    },
+    canDeleteWorkspace: {
+      type: Boolean,
+      default: false
+    },
+    canInviteMembers: {
+      type: Boolean,
+      default: false
+    },
+    canRemoveMembers: {
+      type: Boolean,
+      default: false
+    }
   },
-  canManageMembers: {
-    type: Boolean,
-    default: false
-  },
-  canManageSettings: {
-    type: Boolean,
-    default: false
-  },
-  canManageBilling: {
-    type: Boolean,
-    default: false
-  },
-  canExportData: {
-    type: Boolean,
-    default: true
-  },
-  canDeleteWorkspace: {
-    type: Boolean,
-    default: false
-  },
-  canInviteMembers: {
-    type: Boolean,
-    default: false
-  },
-  canRemoveMembers: {
-    type: Boolean,
-    default: false
-  }
-}, { _id: false });
+  { _id: false }
+);
 
 const WorkspaceMemberSchema = createBaseSchema({
   workspaceId: {
@@ -71,8 +82,7 @@ const WorkspaceMemberSchema = createBaseSchema({
     required: true,
     default: EWorkspaceMemberRole.VIEWER
   },
-  
-  // Invitation details
+
   invitedBy: {
     type: String,
     index: true
@@ -83,8 +93,7 @@ const WorkspaceMemberSchema = createBaseSchema({
   invitationAcceptedAt: {
     type: Date
   },
-  
-  // Activity tracking
+
   joinedAt: {
     type: Date,
     default: Date.now,
@@ -95,20 +104,20 @@ const WorkspaceMemberSchema = createBaseSchema({
     default: Date.now,
     index: true
   },
-  
+
   // Status
   isActive: {
     type: Boolean,
     default: true,
     index: true
   },
-  
+
   // Custom permissions (override role defaults)
   customPermissions: {
     type: CustomPermissionsSchema,
     default: null
   },
-  
+
   // Metadata
   notes: {
     type: String,
@@ -124,23 +133,37 @@ WorkspaceMemberSchema.index({ workspaceId: 1, role: 1 });
 WorkspaceMemberSchema.index({ lastActiveAt: -1 });
 
 // Static methods
-WorkspaceMemberSchema.statics.findByWorkspace = function(this: TWorkspaceMemberModel, workspaceId: string): Promise<TWorkspaceMemberDocument[]> {
+WorkspaceMemberSchema.statics.findByWorkspace = function (
+  this: TWorkspaceMemberModel,
+  workspaceId: string
+): Promise<TWorkspaceMemberDocument[]> {
   return this.find({
     workspaceId,
     isActive: true,
     isDeleted: false
-  }).sort({ joinedAt: 1 }).exec();
+  })
+    .sort({ joinedAt: 1 })
+    .exec();
 };
 
-WorkspaceMemberSchema.statics.findByUser = function(this: TWorkspaceMemberModel, userId: string): Promise<TWorkspaceMemberDocument[]> {
+WorkspaceMemberSchema.statics.findByUser = function (
+  this: TWorkspaceMemberModel,
+  userId: string
+): Promise<TWorkspaceMemberDocument[]> {
   return this.find({
     userId,
     isActive: true,
     isDeleted: false
-  }).sort({ lastActiveAt: -1 }).exec();
+  })
+    .sort({ lastActiveAt: -1 })
+    .exec();
 };
 
-WorkspaceMemberSchema.statics.findMember = function(this: TWorkspaceMemberModel, workspaceId: string, userId: string): Promise<TWorkspaceMemberDocument | null> {
+WorkspaceMemberSchema.statics.findMember = function (
+  this: TWorkspaceMemberModel,
+  workspaceId: string,
+  userId: string
+): Promise<TWorkspaceMemberDocument | null> {
   return this.findOne({
     workspaceId,
     userId,
@@ -149,17 +172,30 @@ WorkspaceMemberSchema.statics.findMember = function(this: TWorkspaceMemberModel,
   }).exec();
 };
 
-WorkspaceMemberSchema.statics.isOwner = async function(this: TWorkspaceMemberModel, workspaceId: string, userId: string): Promise<boolean> {
+WorkspaceMemberSchema.statics.isOwner = async function (
+  this: TWorkspaceMemberModel,
+  workspaceId: string,
+  userId: string
+): Promise<boolean> {
   const member = await this.findMember(workspaceId, userId);
   return member?.role === EWorkspaceMemberRole.OWNER;
 };
 
-WorkspaceMemberSchema.statics.isAdmin = async function(this: TWorkspaceMemberModel, workspaceId: string, userId: string): Promise<boolean> {
+WorkspaceMemberSchema.statics.isAdmin = async function (
+  this: TWorkspaceMemberModel,
+  workspaceId: string,
+  userId: string
+): Promise<boolean> {
   const member = await this.findMember(workspaceId, userId);
   return member?.role === EWorkspaceMemberRole.ADMIN || member?.role === EWorkspaceMemberRole.OWNER;
 };
 
-WorkspaceMemberSchema.statics.hasRole = async function(this: TWorkspaceMemberModel, workspaceId: string, userId: string, role: EWorkspaceMemberRole): Promise<boolean> {
+WorkspaceMemberSchema.statics.hasRole = async function (
+  this: TWorkspaceMemberModel,
+  workspaceId: string,
+  userId: string,
+  role: EWorkspaceMemberRole
+): Promise<boolean> {
   const member = await this.findMember(workspaceId, userId);
   if (!member) return false;
 
@@ -178,17 +214,22 @@ WorkspaceMemberSchema.statics.hasRole = async function(this: TWorkspaceMemberMod
   return roleHierarchy[member.role] >= roleHierarchy[role];
 };
 
-WorkspaceMemberSchema.statics.getActiveMembers = function(this: TWorkspaceMemberModel, workspaceId: string): Promise<TWorkspaceMemberDocument[]> {
+WorkspaceMemberSchema.statics.getActiveMembers = function (
+  this: TWorkspaceMemberModel,
+  workspaceId: string
+): Promise<TWorkspaceMemberDocument[]> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   return this.find({
     workspaceId,
     isActive: true,
     isDeleted: false,
     lastActiveAt: { $gte: thirtyDaysAgo }
-  }).sort({ lastActiveAt: -1 }).exec();
+  })
+    .sort({ lastActiveAt: -1 })
+    .exec();
 };
 
-WorkspaceMemberSchema.statics.hasPermission = async function(
+WorkspaceMemberSchema.statics.hasPermission = async function (
   this: TWorkspaceMemberModel,
   workspaceId: string,
   userId: string,
@@ -264,7 +305,7 @@ WorkspaceMemberSchema.statics.hasPermission = async function(
 };
 
 // Pre-save middleware
-WorkspaceMemberSchema.pre('save', function(next) {
+WorkspaceMemberSchema.pre('save', function (next) {
   if (this.isModified() && !this.isModified('lastActiveAt')) {
     this.lastActiveAt = new Date();
   }
@@ -272,7 +313,7 @@ WorkspaceMemberSchema.pre('save', function(next) {
 });
 
 export const WorkspaceMemberModel = mongoose.model<TWorkspaceMemberDocument, TWorkspaceMemberModel>(
-  'WorkspaceMember', 
+  'WorkspaceMember',
   WorkspaceMemberSchema
 );
 

@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { 
-  EContactType, 
-  ERelationshipStatus, 
-  ECommunicationPreference, 
-  EInteractionType 
+import {
+  EContactType,
+  ERelationshipStatus,
+  ECommunicationPreference,
+  EInteractionType
 } from '../types/people.types';
 
 // Base schemas
@@ -12,7 +12,7 @@ export const personIdSchema = z.object({
 });
 
 export const contactTypeParamSchema = z.object({
-  type: z.nativeEnum(EContactType)
+  type: z.enum(EContactType)
 });
 
 export const companyParamSchema = z.object({
@@ -20,25 +20,31 @@ export const companyParamSchema = z.object({
 });
 
 // Contact info schema
-export const contactInfoSchema = z.object({
-  email: z.string().email('Invalid email format').optional(),
-  phone: z.string().max(20, 'Phone number too long').optional(),
-  address: z.object({
-    street: z.string().optional(),
-    city: z.string().optional(),
-    state: z.string().optional(),
-    country: z.string().optional(),
-    zipCode: z.string().optional()
-  }).optional(),
-  socialMedia: z.object({
-    linkedin: z.string().url('Invalid LinkedIn URL').optional(),
-    twitter: z.string().optional(),
-    facebook: z.string().url('Invalid Facebook URL').optional(),
-    instagram: z.string().optional(),
-    github: z.string().optional(),
-    website: z.string().url('Invalid website URL').optional()
-  }).optional()
-}).default({});
+export const contactInfoSchema = z
+  .object({
+    email: z.string().email('Invalid email format').optional(),
+    phone: z.string().max(20, 'Phone number too long').optional(),
+    address: z
+      .object({
+        street: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        country: z.string().optional(),
+        zipCode: z.string().optional()
+      })
+      .optional(),
+    socialMedia: z
+      .object({
+        linkedin: z.string().url('Invalid LinkedIn URL').optional(),
+        twitter: z.string().optional(),
+        facebook: z.string().url('Invalid Facebook URL').optional(),
+        instagram: z.string().optional(),
+        github: z.string().optional(),
+        website: z.string().url('Invalid website URL').optional()
+      })
+      .optional()
+  })
+  .default({});
 
 // Person CRUD schemas
 export const createPersonSchema = z.object({
@@ -51,14 +57,26 @@ export const createPersonSchema = z.object({
   department: z.string().max(100, 'Department too long').optional(),
   position: z.string().max(100, 'Position too long').optional(),
   contactInfo: contactInfoSchema,
-  type: z.nativeEnum(EContactType),
+  type: z.enum(EContactType),
   relationshipNotes: z.string().max(1000, 'Relationship notes too long').optional(),
   howWeMet: z.string().max(500, 'How we met description too long').optional(),
-  metDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  communicationPreference: z.array(z.nativeEnum(ECommunicationPreference)).default([]),
+  metDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  communicationPreference: z.array(z.enum(ECommunicationPreference)).default([]),
   timezone: z.string().optional(),
-  birthday: z.string().datetime().transform(val => new Date(val)).optional(),
-  anniversary: z.string().datetime().transform(val => new Date(val)).optional(),
+  birthday: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  anniversary: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   interests: z.array(z.string()).default([]),
   skills: z.array(z.string()).default([]),
   goals: z.array(z.string()).default([]),
@@ -67,10 +85,16 @@ export const createPersonSchema = z.object({
   industry: z.string().max(100, 'Industry too long').optional(),
   experience: z.string().max(500, 'Experience description too long').optional(),
   expertise: z.array(z.string()).default([]),
-  contactFrequency: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'as_needed']).optional(),
-  nextFollowUpDate: z.string().datetime().transform(val => new Date(val)).optional(),
+  contactFrequency: z
+    .enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'as_needed'])
+    .optional(),
+  nextFollowUpDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   tags: z.array(z.string()).default([]),
-  customFields: z.record(z.any()).default({}),
+  customFields: z.record(z.string(), z.any()).default({}),
   isFavorite: z.boolean().default(false),
   reminderEnabled: z.boolean().default(true)
 });
@@ -84,15 +108,27 @@ export const updatePersonSchema = z.object({
   department: z.string().max(100, 'Department too long').optional(),
   position: z.string().max(100, 'Position too long').optional(),
   contactInfo: contactInfoSchema.optional(),
-  type: z.nativeEnum(EContactType).optional(),
-  status: z.nativeEnum(ERelationshipStatus).optional(),
+  type: z.enum(EContactType).optional(),
+  status: z.enum(ERelationshipStatus).optional(),
   relationshipNotes: z.string().max(1000, 'Relationship notes too long').optional(),
   howWeMet: z.string().max(500, 'How we met description too long').optional(),
-  metDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  communicationPreference: z.array(z.nativeEnum(ECommunicationPreference)).optional(),
+  metDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  communicationPreference: z.array(z.enum(ECommunicationPreference)).optional(),
   timezone: z.string().optional(),
-  birthday: z.string().datetime().transform(val => new Date(val)).optional(),
-  anniversary: z.string().datetime().transform(val => new Date(val)).optional(),
+  birthday: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  anniversary: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   interests: z.array(z.string()).optional(),
   skills: z.array(z.string()).optional(),
   goals: z.array(z.string()).optional(),
@@ -101,10 +137,16 @@ export const updatePersonSchema = z.object({
   industry: z.string().max(100, 'Industry too long').optional(),
   experience: z.string().max(500, 'Experience description too long').optional(),
   expertise: z.array(z.string()).optional(),
-  contactFrequency: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'as_needed']).optional(),
-  nextFollowUpDate: z.string().datetime().transform(val => new Date(val)).optional(),
+  contactFrequency: z
+    .enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'as_needed'])
+    .optional(),
+  nextFollowUpDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   tags: z.array(z.string()).optional(),
-  customFields: z.record(z.any()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   isArchived: z.boolean().optional(),
   isFavorite: z.boolean().optional(),
   reminderEnabled: z.boolean().optional()
@@ -112,26 +154,67 @@ export const updatePersonSchema = z.object({
 
 export const getPeopleQuerySchema = z.object({
   databaseId: z.string().optional(),
-  type: z.array(z.nativeEnum(EContactType)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as EContactType))
-  ).optional(),
-  status: z.array(z.nativeEnum(ERelationshipStatus)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as ERelationshipStatus))
-  ).optional(),
+  type: z
+    .array(z.enum(EContactType))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContactType)))
+    .optional(),
+  status: z
+    .array(z.enum(ERelationshipStatus))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as ERelationshipStatus)))
+    .optional(),
   company: z.string().optional(),
   industry: z.string().optional(),
-  tags: z.array(z.string()).or(z.string().transform(val => val.split(','))).optional(),
+  tags: z
+    .array(z.string())
+    .or(z.string().transform(val => val.split(',')))
+    .optional(),
   search: z.string().optional(),
-  isFavorite: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  isArchived: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  hasUpcomingFollowUp: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  hasOverdueFollowUp: z.boolean().or(z.string().transform(val => val === 'true')).optional(),
-  birthdayMonth: z.number().min(1).max(12).or(z.string().transform(val => parseInt(val, 10))).optional(),
-  lastContactBefore: z.string().datetime().transform(val => new Date(val)).optional(),
-  lastContactAfter: z.string().datetime().transform(val => new Date(val)).optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10))),
-  sortBy: z.enum(['firstName', 'lastName', 'company', 'lastContactDate', 'createdAt', 'updatedAt']).default('lastName'),
+  isFavorite: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  isArchived: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  hasUpcomingFollowUp: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  hasOverdueFollowUp: z
+    .boolean()
+    .or(z.string().transform(val => val === 'true'))
+    .optional(),
+  birthdayMonth: z
+    .number()
+    .min(1)
+    .max(12)
+    .or(z.string().transform(val => parseInt(val, 10)))
+    .optional(),
+  lastContactBefore: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  lastContactAfter: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  sortBy: z
+    .enum(['firstName', 'lastName', 'company', 'lastContactDate', 'createdAt', 'updatedAt'])
+    .default('lastName'),
   sortOrder: z.enum(['asc', 'desc']).default('asc')
 });
 
@@ -154,16 +237,23 @@ export const bulkDeletePeopleSchema = z.object({
 // Interaction schemas
 export const createInteractionSchema = z.object({
   personId: z.string().min(1, 'Person ID is required'),
-  type: z.nativeEnum(EInteractionType),
+  type: z.enum(EInteractionType),
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   description: z.string().max(1000, 'Description too long').optional(),
-  date: z.string().datetime().transform(val => new Date(val)),
+  date: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val)),
   duration: z.number().min(0, 'Duration must be non-negative').optional(),
   location: z.string().max(200, 'Location too long').optional(),
   context: z.string().max(500, 'Context too long').optional(),
   outcome: z.string().max(500, 'Outcome too long').optional(),
   followUpRequired: z.boolean().default(false),
-  followUpDate: z.string().datetime().transform(val => new Date(val)).optional(),
+  followUpDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   followUpNotes: z.string().max(500, 'Follow-up notes too long').optional(),
   relatedProject: z.string().optional(),
   relatedGoal: z.string().optional(),
@@ -173,16 +263,24 @@ export const createInteractionSchema = z.object({
 });
 
 export const updateInteractionSchema = z.object({
-  type: z.nativeEnum(EInteractionType).optional(),
+  type: z.enum(EInteractionType).optional(),
   title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
   description: z.string().max(1000, 'Description too long').optional(),
-  date: z.string().datetime().transform(val => new Date(val)).optional(),
+  date: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   duration: z.number().min(0, 'Duration must be non-negative').optional(),
   location: z.string().max(200, 'Location too long').optional(),
   context: z.string().max(500, 'Context too long').optional(),
   outcome: z.string().max(500, 'Outcome too long').optional(),
   followUpRequired: z.boolean().optional(),
-  followUpDate: z.string().datetime().transform(val => new Date(val)).optional(),
+  followUpDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
   followUpNotes: z.string().max(500, 'Follow-up notes too long').optional(),
   relatedProject: z.string().optional(),
   relatedGoal: z.string().optional(),
@@ -199,22 +297,41 @@ export const interactionIdSchema = z.object({
 export const searchPeopleSchema = z.object({
   q: z.string().min(1, 'Search query is required').max(500, 'Query too long'),
   databaseId: z.string().optional(),
-  type: z.array(z.nativeEnum(EContactType)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as EContactType))
-  ).optional(),
-  status: z.array(z.nativeEnum(ERelationshipStatus)).or(
-    z.string().transform(val => val.split(',').map(s => s.trim() as ERelationshipStatus))
-  ).optional(),
-  page: z.number().min(1).default(1).or(z.string().transform(val => parseInt(val, 10))),
-  limit: z.number().min(1).max(100).default(25).or(z.string().transform(val => parseInt(val, 10)))
+  type: z
+    .array(z.enum(EContactType))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContactType)))
+    .optional(),
+  status: z
+    .array(z.enum(ERelationshipStatus))
+    .or(z.string().transform(val => val.split(',').map(s => s.trim() as ERelationshipStatus)))
+    .optional(),
+  page: z
+    .number()
+    .min(1)
+    .default(1)
+    .or(z.string().transform(val => parseInt(val, 10))),
+  limit: z
+    .number()
+    .min(1)
+    .max(100)
+    .default(25)
+    .or(z.string().transform(val => parseInt(val, 10)))
 });
 
 // Statistics schemas
 export const peopleStatsQuerySchema = z.object({
   databaseId: z.string().optional(),
   period: z.enum(['week', 'month', 'quarter', 'year']).default('month'),
-  startDate: z.string().datetime().transform(val => new Date(val)).optional(),
-  endDate: z.string().datetime().transform(val => new Date(val)).optional()
+  startDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  endDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional()
 });
 
 // Export all schemas
@@ -227,18 +344,18 @@ export const peopleValidators = {
   duplicatePersonSchema,
   bulkUpdatePeopleSchema,
   bulkDeletePeopleSchema,
-  
+
   // Interactions
   createInteractionSchema,
   updateInteractionSchema,
   interactionIdSchema,
-  
+
   // Search and analytics
   searchPeopleSchema,
   peopleStatsQuerySchema,
   contactTypeParamSchema,
   companyParamSchema,
-  
+
   // Utility schemas
   contactInfoSchema
 };

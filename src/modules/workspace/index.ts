@@ -1,4 +1,3 @@
-// Workspace module exports
 export { workspaceService } from './services/workspace.service';
 export { WorkspaceModel } from './models/workspace.model';
 export { WorkspaceMemberModel } from './models/workspace-member.model';

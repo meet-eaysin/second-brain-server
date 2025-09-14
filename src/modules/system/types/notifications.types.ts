@@ -67,16 +67,19 @@ export interface INotification {
 export interface INotificationPreferences {
   readonly userId: string;
   readonly workspaceId: string;
-  readonly preferences: Record<ENotificationType, {
-    readonly enabled: boolean;
-    readonly methods: readonly ENotificationMethod[];
-    readonly quietHours?: {
-      readonly start: string; // HH:mm format
-      readonly end: string;
-      readonly timezone: string;
-    };
-    readonly frequency?: 'immediate' | 'hourly' | 'daily' | 'weekly';
-  }>;
+  readonly preferences: Record<
+    ENotificationType,
+    {
+      readonly enabled: boolean;
+      readonly methods: readonly ENotificationMethod[];
+      readonly quietHours?: {
+        readonly start: string; // HH:mm format
+        readonly end: string;
+        readonly timezone: string;
+      };
+      readonly frequency?: 'immediate' | 'hourly' | 'daily' | 'weekly';
+    }
+  >;
   readonly globalSettings: {
     readonly enabled: boolean;
     readonly quietHours?: {
@@ -218,10 +221,10 @@ export interface IDueTaskNotificationData {
 }
 
 // Validation schemas
-export const NotificationTypeSchema = z.nativeEnum(ENotificationType);
-export const NotificationPrioritySchema = z.nativeEnum(ENotificationPriority);
-export const NotificationMethodSchema = z.nativeEnum(ENotificationMethod);
-export const NotificationStatusSchema = z.nativeEnum(ENotificationStatus);
+export const NotificationTypeSchema = z.enum(ENotificationType);
+export const NotificationPrioritySchema = z.enum(ENotificationPriority);
+export const NotificationMethodSchema = z.enum(ENotificationMethod);
+export const NotificationStatusSchema = z.enum(ENotificationStatus);
 
 export const CreateNotificationRequestSchema = z.object({
   type: NotificationTypeSchema,
@@ -232,7 +235,7 @@ export const CreateNotificationRequestSchema = z.object({
   workspaceId: z.string().min(1),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   methods: z.array(NotificationMethodSchema).optional(),
   scheduledFor: z.date().optional()
 });
@@ -240,7 +243,7 @@ export const CreateNotificationRequestSchema = z.object({
 export const UpdateNotificationRequestSchema = z.object({
   status: NotificationStatusSchema.optional(),
   readAt: z.date().optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 export const NotificationQueryOptionsSchema = z.object({
@@ -252,10 +255,12 @@ export const NotificationQueryOptionsSchema = z.object({
   unreadOnly: z.boolean().optional(),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
-  dateRange: z.object({
-    start: z.date(),
-    end: z.date()
-  }).optional(),
+  dateRange: z
+    .object({
+      start: z.date(),
+      end: z.date()
+    })
+    .optional(),
   limit: z.number().min(1).max(100).optional(),
   offset: z.number().min(0).optional(),
   sortBy: z.enum(['createdAt', 'priority', 'scheduledFor']).optional(),

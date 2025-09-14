@@ -350,7 +350,7 @@ export interface ITemplateBlock {
 }
 
 // Union type for all block types
-export type IContentBlock = 
+export type IContentBlock =
   | IParagraphBlock
   | IHeadingBlock
   | IBulletedListItemBlock
@@ -455,9 +455,11 @@ export const TextContentSchema = z.object({
   type: z.literal(RichTextType.TEXT),
   text: z.object({
     content: z.string(),
-    link: z.object({
-      url: z.string().url()
-    }).optional()
+    link: z
+      .object({
+        url: z.string().url()
+      })
+      .optional()
   }),
   annotations: TextAnnotationsSchema,
   plain_text: z.string(),
@@ -467,31 +469,43 @@ export const TextContentSchema = z.object({
 export const MentionContentSchema = z.object({
   type: z.literal(RichTextType.MENTION),
   mention: z.object({
-    type: z.nativeEnum(MentionType),
-    user: z.object({
-      id: z.string(),
-      name: z.string().optional(),
-      avatar_url: z.string().url().optional()
-    }).optional(),
-    page: z.object({
-      id: z.string(),
-      title: z.string().optional()
-    }).optional(),
-    database: z.object({
-      id: z.string(),
-      name: z.string().optional()
-    }).optional(),
-    date: z.object({
-      start: z.string(),
-      end: z.string().optional(),
-      time_zone: z.string().optional()
-    }).optional(),
-    link_mention: z.object({
-      url: z.string().url()
-    }).optional(),
-    template_mention: z.object({
-      type: z.enum(['template_mention_date', 'template_mention_user'])
-    }).optional()
+    type: z.enum(MentionType),
+    user: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        avatar_url: z.string().url().optional()
+      })
+      .optional(),
+    page: z
+      .object({
+        id: z.string(),
+        title: z.string().optional()
+      })
+      .optional(),
+    database: z
+      .object({
+        id: z.string(),
+        name: z.string().optional()
+      })
+      .optional(),
+    date: z
+      .object({
+        start: z.string(),
+        end: z.string().optional(),
+        time_zone: z.string().optional()
+      })
+      .optional(),
+    link_mention: z
+      .object({
+        url: z.string().url()
+      })
+      .optional(),
+    template_mention: z
+      .object({
+        type: z.enum(['template_mention_date', 'template_mention_user'])
+      })
+      .optional()
   }),
   annotations: TextAnnotationsSchema,
   plain_text: z.string(),
@@ -515,50 +529,56 @@ export const RichTextContentSchema = z.union([
 
 export const FileObjectSchema = z.object({
   type: z.enum(['file', 'external']),
-  file: z.object({
-    url: z.string().url(),
-    expiry_time: z.string().optional()
-  }).optional(),
-  external: z.object({
-    url: z.string().url()
-  }).optional(),
+  file: z
+    .object({
+      url: z.string().url(),
+      expiry_time: z.string().optional()
+    })
+    .optional(),
+  external: z
+    .object({
+      url: z.string().url()
+    })
+    .optional(),
   name: z.string().optional(),
   caption: z.array(RichTextContentSchema).optional()
 });
 
 export const CreateBlockSchema = z.object({
-  type: z.nativeEnum(BlockType),
+  type: z.enum(BlockType),
   afterBlockId: z.string().optional(),
   parentId: z.string().optional(),
-  content: z.record(z.any()) // Will be validated based on block type
+  content: z.record(z.string(), z.any())
 });
 
-export const UpdateBlockSchema = z.object({
-  content: z.record(z.any()).optional(),
-  archived: z.boolean().optional()
-}).refine(
-  (data) => data.content || data.archived !== undefined,
-  { message: 'At least one field must be provided for update' }
-);
+export const UpdateBlockSchema = z
+  .object({
+    content: z.record(z.string(), z.any()).optional(),
+    archived: z.boolean().optional()
+  })
+  .refine(data => data.content || data.archived !== undefined, {
+    message: 'At least one field must be provided for update'
+  });
 
-export const MoveBlockSchema = z.object({
-  afterBlockId: z.string().optional(),
-  parentId: z.string().optional()
-}).refine(
-  (data) => data.afterBlockId || data.parentId,
-  { message: 'Either afterBlockId or parentId must be provided' }
-);
+export const MoveBlockSchema = z
+  .object({
+    afterBlockId: z.string().optional(),
+    parentId: z.string().optional()
+  })
+  .refine(data => data.afterBlockId || data.parentId, {
+    message: 'Either afterBlockId or parentId must be provided'
+  });
 
 export const BulkBlockOperationSchema = z.object({
-  operations: z.array(z.object({
-    operation: z.enum(['create', 'update', 'delete', 'move']),
-    blockId: z.string().optional(),
-    data: z.union([
-      CreateBlockSchema,
-      UpdateBlockSchema,
-      MoveBlockSchema
-    ]).optional()
-  })).min(1, 'At least one operation is required')
+  operations: z
+    .array(
+      z.object({
+        operation: z.enum(['create', 'update', 'delete', 'move']),
+        blockId: z.string().optional(),
+        data: z.union([CreateBlockSchema, UpdateBlockSchema, MoveBlockSchema]).optional()
+      })
+    )
+    .min(1, 'At least one operation is required')
 });
 
 export const BlockIdSchema = z.object({

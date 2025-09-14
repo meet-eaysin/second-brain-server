@@ -14,9 +14,7 @@ import {
   getAnalyticsInsightsController,
   exportAnalyticsController
 } from '../controllers/analytics.controller';
-import {
-  AnalyticsQueryOptionsSchema
-} from '../types/analytics.types';
+import { AnalyticsQueryOptionsSchema } from '../types/analytics.types';
 import { z } from 'zod';
 
 const router = Router();
@@ -28,8 +26,14 @@ router.use(authenticateToken);
 const analyticsQuerySchema = z.object({
   workspaceId: z.string().min(1, 'Workspace ID is required'),
   period: z.enum(['day', 'week', 'month', 'quarter', 'year', 'custom']).optional(),
-  startDate: z.string().optional().transform(str => str ? new Date(str) : undefined),
-  endDate: z.string().optional().transform(str => str ? new Date(str) : undefined),
+  startDate: z
+    .string()
+    .optional()
+    .transform(str => (str ? new Date(str) : undefined)),
+  endDate: z
+    .string()
+    .optional()
+    .transform(str => (str ? new Date(str) : undefined)),
   userId: z.string().optional(),
   entityType: z.string().optional(),
   entityId: z.string().optional(),
@@ -43,24 +47,12 @@ const exportQuerySchema = z.object({
 });
 
 // Main analytics dashboard
-router.get(
-  '/dashboard',
-  validateQuery(analyticsQuerySchema),
-  getAnalyticsDashboardController
-);
+router.get('/dashboard', validateQuery(analyticsQuerySchema), getAnalyticsDashboardController);
 
 // Summary and insights
-router.get(
-  '/summary',
-  validateQuery(analyticsQuerySchema),
-  getAnalyticsSummaryController
-);
+router.get('/summary', validateQuery(analyticsQuerySchema), getAnalyticsSummaryController);
 
-router.get(
-  '/insights',
-  validateQuery(analyticsQuerySchema),
-  getAnalyticsInsightsController
-);
+router.get('/insights', validateQuery(analyticsQuerySchema), getAnalyticsInsightsController);
 
 // Specific analytics categories
 router.get(
@@ -69,11 +61,7 @@ router.get(
   getProductivityAnalyticsController
 );
 
-router.get(
-  '/tasks',
-  validateQuery(analyticsQuerySchema),
-  getTaskAnalyticsController
-);
+router.get('/tasks', validateQuery(analyticsQuerySchema), getTaskAnalyticsController);
 
 router.get(
   '/time-tracking',
@@ -81,35 +69,15 @@ router.get(
   getTimeTrackingAnalyticsController
 );
 
-router.get(
-  '/goals',
-  validateQuery(analyticsQuerySchema),
-  getGoalAnalyticsController
-);
+router.get('/goals', validateQuery(analyticsQuerySchema), getGoalAnalyticsController);
 
-router.get(
-  '/finance',
-  validateQuery(analyticsQuerySchema),
-  getFinanceAnalyticsController
-);
+router.get('/finance', validateQuery(analyticsQuerySchema), getFinanceAnalyticsController);
 
-router.get(
-  '/content',
-  validateQuery(analyticsQuerySchema),
-  getContentAnalyticsController
-);
+router.get('/content', validateQuery(analyticsQuerySchema), getContentAnalyticsController);
 
-router.get(
-  '/workspace',
-  validateQuery(analyticsQuerySchema),
-  getWorkspaceAnalyticsController
-);
+router.get('/workspace', validateQuery(analyticsQuerySchema), getWorkspaceAnalyticsController);
 
 // Export functionality
-router.get(
-  '/export',
-  validateQuery(exportQuerySchema),
-  exportAnalyticsController
-);
+router.get('/export', validateQuery(exportQuerySchema), exportAnalyticsController);
 
 export default router;
