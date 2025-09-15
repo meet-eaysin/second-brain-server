@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
-import { validateBody, validateParams } from '@/middlewares/validation';
+import { validateParams } from '@/middlewares/validation';
 import { requirePermission, requireCapability } from '@/middlewares/permission.middleware';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import {

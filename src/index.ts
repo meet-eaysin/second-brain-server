@@ -11,8 +11,8 @@ const PORT = appConfig.port || 4000;
 
 const debugCallback =
   appConfig.env === 'development'
-    // eslint-disable-next-line no-unused-vars
-    ? (collectionName: string, method: string, query: any, _doc: string) => {
+    ? // eslint-disable-next-line no-unused-vars
+      (collectionName: string, method: string, query: any, _doc: string) => {
         const message = `${collectionName}.${method}(${util.inspect(query, {
           colors: true,
           depth: null
@@ -170,6 +170,3 @@ export default async function handler(req: any, res: any) {
     });
   }
 }
-
-if (require.main === module) startApplication();
-
