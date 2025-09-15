@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/index.ts",
-    "build": "yarn clean && node --max-old-space-size=4096 ./node_modules/.bin/tsc -p tsconfig.build.json && node --max-old-space-size=4096 ./node_modules/.bin/tsc-alias -p tsconfig.build.json && node scripts/copy-assets.js",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "build:prod": "yarn build && node scripts/setup-production.js",
     "start": "node dist/index.js",
     "clean": "rimraf dist coverage",
@@ -20,7 +20,7 @@
     "docker:dev": "docker-compose up --build",
     "docker:prod": "docker-compose -f docker-compose.prod.yml up --build",
     "docker:down": "docker-compose down",
-    "vercel-build": "yarn clean && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "vercel-build": "rimraf dist && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "vercel:dev": "vercel dev",
     "vercel:deploy": "vercel --prod"
   },
