@@ -19,10 +19,7 @@
     "prepare": "husky install",
     "docker:dev": "docker-compose up --build",
     "docker:prod": "docker-compose -f docker-compose.prod.yml up --build",
-    "docker:down": "docker-compose down",
-    "vercel-build": "rimraf dist && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "vercel:dev": "vercel dev",
-    "vercel:deploy": "vercel --prod"
+    "docker:down": "docker-compose down"
   },
   "repository": {
     "type": "git",
