@@ -1,25 +1,15 @@
-
 {
   "version": 2,
-  "name": "second-brain-api",
   "builds": [
     {
-      "src": "dist/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "maxDuration": 30,
-        "includeFiles": ["dist/**"]
-      }
+      "src": "src/index.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "dist/index.js"
+      "dest": "src/index.ts"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
