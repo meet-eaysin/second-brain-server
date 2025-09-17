@@ -1,123 +1,90 @@
-import util from 'util';
-import { appConfig } from '@/config/default-config/app-config';
-import logger from './config/logger';
-import SafeMongooseConnection from './config/db';
+import { createServer } from 'http';
 import app from './app';
+import { appConfig, logger, SafeMongooseConnection } from './config';
+import { initializeRealtimeNotifications } from '@/modules/system/services/realtime-notifications.service';
+import { initializeReminderSystem } from '@/modules/system/services/reminder.service';
+import { initializeCalendarSync } from '@/modules/calendar/services/sync.service';
+import { initializeWebSocketService } from '@/modules/editor/services/websocket.service';
 
 const PORT = appConfig.port || 4000;
 
-const debugCallback =
-  appConfig.env === 'development'
-    ? (collectionName: string, method: string, query: any, _doc: string) => {
-      const message = `${collectionName}.${method}(${util.inspect(query, {
-        colors: true,
-        depth: null
-      })})`;
-      logger.log({
-        level: 'verbose',
-        message,
-        consoleLoggerOptions: { label: 'MONGO' }
-      });
-    }
-    : undefined;
-
 const safeMongooseConnection = new SafeMongooseConnection({
-  mongoUrl: appConfig.mongoose.url ?? '',
-  ...(debugCallback && { debugCallback }),
-  onStartConnection: (mongoUrl) => logger.info(`Connecting to MongoDB at ${mongoUrl}`),
-  onConnectionError: (error, mongoUrl) =>
-    logger.log({
-      level: 'error',
-      message: `Could not connect to MongoDB at ${mongoUrl}`,
-      error
-    }),
-  onConnectionRetry: (mongoUrl) => logger.info(`Retrying to MongoDB at ${mongoUrl}`)
+  mongoUrl: appConfig.mongoose.url || '',
+  onStartConnection: (url) => logger.info(`Connecting to MongoDB at ${url}`),
+  onConnectionError: (err, url) => logger.error(`MongoDB connection error at ${url}`, err),
+  onConnectionRetry: (url) => logger.info(`Retrying MongoDB connection at ${url}`)
 });
 
-const serve = () => {
-  const server = app.listen(PORT, () => {
-    logger.info(`🚀 EXPRESS server started at http://localhost:${PORT}`);
-    logger.info(`📚 API Documentation available at http://localhost:${PORT}/api`);
-    logger.info(`🔍 Health check available at http://localhost:${PORT}/health`);
-    logger.info(`🌟 Environment: ${appConfig.env}`);
+let isInitialized = false;
+
+export const initializeDatabase = async () => {
+  if (isInitialized) return;
+  if (!appConfig.mongoose.url) throw new Error('MONGO_URI environment variable is required');
+
+  await safeMongooseConnection.connectOptimized();
+  logger.info('Database initialized successfully');
+  isInitialized = true;
+};
+
+const startServer = async () => {
+  await initializeDatabase();
+
+  const httpServer = createServer(app);
+
+  initializeRealtimeNotifications(httpServer);
+  initializeWebSocketService(httpServer);
+  initializeReminderSystem();
+  initializeCalendarSync();
+
+  httpServer.listen(PORT, () => {
+    logger.info(`🚀 Server running at http://localhost:${PORT}`);
+    logger.info(`📚 API Docs: http://localhost:${PORT}/api`);
   });
 
-  server.on('error', (error: NodeJS.ErrnoException) => {
+  httpServer.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code === 'EADDRINUSE') {
       logger.error(`Port ${PORT} is already in use`);
-      process.exit(1);
     } else {
       logger.error('Server error:', error);
-      process.exit(1);
     }
+    process.exit(1);
   });
 
-  const gracefulShutdown = (signal: string) => {
-    logger.info(`🛑 ${signal} received`);
-    logger.info('🔄 Gracefully shutting down...');
-
-    server.close(async (err) => {
-      if (err) {
-        logger.error('❌ Error during server shutdown:', err);
-        process.exit(1);
-      }
-
-      logger.info('📴 HTTP server closed');
-
-      try {
-        await safeMongooseConnection.close(true);
-        logger.info('🍃 MongoDB connection closed successfully');
-        logger.info('✅ Graceful shutdown completed');
-        process.exit(0);
-      } catch (error) {
-        logger.error('❌ Error closing MongoDB connection:', error);
-        process.exit(1);
-      }
+  const gracefulShutdown = async (signal: string) => {
+    logger.info(`${signal} received. Shutting down gracefully...`);
+    httpServer.close(async (err) => {
+      if (err) logger.error('Error closing server:', err);
+      await safeMongooseConnection.close(true);
+      logger.info('Shutdown complete');
+      process.exit(0);
     });
   };
 
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-  return server;
 };
 
-process.on('uncaughtException', (error) => {
-  logger.error('💥 Uncaught Exception:', error);
-  logger.error('🚨 Application will exit');
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('🚨 Unhandled Rejection at:', promise);
-  logger.error('💥 Reason:', reason);
-  logger.error('🔄 Application will exit');
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
 
-const startApplication = async () => {
+if (require.main === module) startServer();
+
+export default async function handler(req: any, res: any) {
   try {
-    if (!appConfig.mongoose.url) {
-      throw new Error('DB_CONNECTION_URL not specified in environment');
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      safeMongooseConnection.connect((mongoUrl) => {
-        logger.info(`🍃 Connected to MongoDB at ${mongoUrl}`);
-        resolve();
-      });
-
-      setTimeout(() => {
-        reject(new Error('MongoDB connection timeout'));
-      }, 30000);
-    });
-
-    serve();
-
+    await initializeDatabase();
+    return app(req, res);
   } catch (error) {
-    logger.error('❌ Failed to start application:', error);
-    process.exit(1);
+    logger.error('Handler error:', error);
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Internal server error', statusCode: 500, status: 'error' }
+    });
   }
-};
-
-startApplication();
+}

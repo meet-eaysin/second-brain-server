@@ -17,14 +17,12 @@ interface SafeMongooseConnectionOptions {
 const defaultMongooseConnectionOptions: ConnectOptions = {
   autoCreate: true,
   autoIndex: true,
-  // Function-optimized options
-  maxPoolSize: process.env.NODE_ENV === 'production' ? 1 : 10, // Limit connections for function environments
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  bufferCommands: false // Disable mongoose buffering for function environments
+  maxPoolSize: process.env.NODE_ENV === 'production' ? 1 : 10,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  bufferCommands: false
 };
 
-// Global connection cache for function environments
 let cachedConnection: typeof mongoose | null = null;
 
 export default class SafeMongooseConnection {
