@@ -36,6 +36,8 @@ router.use('/workspaces', workspaceRoutes);
 router.use('/', permissionRoutes);
 
 router.use('/modules', modulesRoutes);
+router.use('/templates', templateRoutes);
+router.use('/databases', databaseRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/system', systemRoutes);
 router.use('/tasks', tasksRoutes);
@@ -50,7 +52,5 @@ router.use('/mood', moodRoutes);
 router.use('/content', contentRoutes);
 router.use('/calendar', calendarRoutes);
 router.use('/search', searchRoutes);
-router.use('/templates', templateRoutes);
-router.use('/databases', databaseRoutes);
 
 export default router;

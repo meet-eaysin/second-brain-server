@@ -19,20 +19,18 @@ import {
   registerDeviceTokenController,
   unregisterDeviceTokenController,
   getUserDeviceTokensController
-} from '../controllers/notifications.controller';
+} from '@/modules/system/controllers/notifications.controller';
 import {
   CreateNotificationRequestSchema,
   UpdateNotificationRequestSchema,
   NotificationQueryOptionsSchema
-} from '../types/notifications.types';
+} from '@/modules/system/types/notifications.types';
 import { z } from 'zod';
 
 const router = Router();
 
-// All routes require authentication
 router.use(authenticateToken);
 
-// Validation schemas
 const notificationIdSchema = z.object({
   id: z.string().min(1, 'Notification ID is required')
 });
@@ -83,57 +81,38 @@ const deviceTokenSchema = z
     }
   );
 
-// Core notification CRUD operations
 router.post('/', validateBody(CreateNotificationRequestSchema), createNotificationController);
-
 router.get('/', validateQuery(NotificationQueryOptionsSchema), getNotificationsController);
-
 router.get('/stats', getNotificationStatsController);
-
 router.get('/unread-count', getUnreadNotificationCountController);
-
 router.get('/recent', getRecentNotificationsController);
-
 router.get('/:id', validateParams(notificationIdSchema), getNotificationByIdController);
-
 router.put(
   '/:id',
   validateParams(notificationIdSchema),
   validateBody(UpdateNotificationRequestSchema),
   updateNotificationController
 );
-
 router.patch('/:id/read', validateParams(notificationIdSchema), markNotificationAsReadController);
-
 router.delete('/:id', validateParams(notificationIdSchema), deleteNotificationController);
-
-// Bulk operations
 router.patch(
   '/bulk/read',
   validateBody(bulkNotificationIdsSchema),
   bulkMarkNotificationsAsReadController
 );
-
 router.delete('/bulk', validateBody(bulkNotificationIdsSchema), bulkDeleteNotificationsController);
-
 router.patch('/all/read', markAllNotificationsAsReadController);
-
-// Specialized notification creation
 router.post(
   '/mention',
   validateBody(mentionNotificationSchema),
   createMentionNotificationController
 );
-
 router.post(
   '/due-task',
   validateBody(dueTaskNotificationSchema),
   createDueTaskNotificationController
 );
-
-// Device token management for push notifications
 router.post('/devices/register', validateBody(deviceTokenSchema), registerDeviceTokenController);
-
 router.post(
   '/devices/unregister',
   validateBody(deviceTokenSchema),

@@ -13,8 +13,8 @@ import {
   bulkDeleteDatabaseRecords,
   reorderDatabaseRecords,
   duplicateDatabaseRecord
-} from '../controllers/records.controllers';
-import { databaseIdSchema } from '../validators/database.validators';
+} from '@/modules/database/controllers/records.controllers';
+import { databaseIdSchema } from '@/modules/database/validators/database.validators';
 
 const router = Router();
 

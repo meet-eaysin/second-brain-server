@@ -5,7 +5,6 @@ import analyticsRoutes from './analytics.routes';
 
 const router = Router();
 
-// Mount all system routes
 router.use('/notifications', notificationsRoutes);
 router.use('/activity', activityRoutes);
 router.use('/analytics', analyticsRoutes);

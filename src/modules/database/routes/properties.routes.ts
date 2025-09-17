@@ -16,8 +16,8 @@ import {
   insertPropertyAfter,
   getPropertyCalculations,
   togglePropertyVisibility
-} from '../controllers/properties.controllers';
-import { databaseIdSchema } from '../validators/database.validators';
+} from '@/modules/database/controllers/properties.controllers';
+import { databaseIdSchema } from '@/modules/database/validators/database.validators';
 
 const router = Router();
 

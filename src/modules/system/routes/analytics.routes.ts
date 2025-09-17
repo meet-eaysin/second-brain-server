@@ -13,13 +13,11 @@ import {
   getAnalyticsSummaryController,
   getAnalyticsInsightsController,
   exportAnalyticsController
-} from '../controllers/analytics.controller';
-import { AnalyticsQueryOptionsSchema } from '../types/analytics.types';
+} from '@/modules/system/controllers/analytics.controller';
 import { z } from 'zod';
 
 const router = Router();
 
-// All routes require authentication
 router.use(authenticateToken);
 
 // Validation schemas
@@ -46,38 +44,24 @@ const exportQuerySchema = z.object({
   format: z.enum(['json', 'csv']).optional()
 });
 
-// Main analytics dashboard
 router.get('/dashboard', validateQuery(analyticsQuerySchema), getAnalyticsDashboardController);
-
-// Summary and insights
 router.get('/summary', validateQuery(analyticsQuerySchema), getAnalyticsSummaryController);
-
 router.get('/insights', validateQuery(analyticsQuerySchema), getAnalyticsInsightsController);
-
-// Specific analytics categories
 router.get(
   '/productivity',
   validateQuery(analyticsQuerySchema),
   getProductivityAnalyticsController
 );
-
 router.get('/tasks', validateQuery(analyticsQuerySchema), getTaskAnalyticsController);
-
 router.get(
   '/time-tracking',
   validateQuery(analyticsQuerySchema),
   getTimeTrackingAnalyticsController
 );
-
 router.get('/goals', validateQuery(analyticsQuerySchema), getGoalAnalyticsController);
-
 router.get('/finance', validateQuery(analyticsQuerySchema), getFinanceAnalyticsController);
-
 router.get('/content', validateQuery(analyticsQuerySchema), getContentAnalyticsController);
-
 router.get('/workspace', validateQuery(analyticsQuerySchema), getWorkspaceAnalyticsController);
-
-// Export functionality
 router.get('/export', validateQuery(exportQuerySchema), exportAnalyticsController);
 
 export default router;

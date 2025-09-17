@@ -28,10 +28,8 @@ import {
 
 const router = Router();
 
-// All routes require authentication
 router.use(authenticateToken);
 
-// Bulk operations (must come before specific block routes)
 router.post(
   '/:databaseId/records/:recordId/blocks/bulk',
   validateParams(recordIdParamSchema),
@@ -46,7 +44,6 @@ router.put(
   bulkUpdateContentBlocks
 );
 
-// Search blocks (must come before specific block routes)
 router.get(
   '/:databaseId/records/:recordId/blocks/search',
   validateParams(recordIdParamSchema),
@@ -54,7 +51,6 @@ router.get(
   searchContentBlocks
 );
 
-// Content blocks CRUD operations
 router.post(
   '/:databaseId/records/:recordId/blocks',
   validateParams(recordIdParamSchema),
@@ -88,7 +84,6 @@ router.delete(
   deleteContentBlock
 );
 
-// Block management operations
 router.put(
   '/:databaseId/records/:recordId/blocks/:blockId/move',
   validateParams(blockIdParamSchema),

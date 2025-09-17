@@ -24,10 +24,8 @@ import { z } from 'zod';
 
 const router = Router();
 
-// All routes require authentication
 router.use(authenticateToken);
 
-// Validation schemas
 const activityIdSchema = z.object({
   id: z.string().min(1, 'Activity ID is required')
 });
@@ -83,20 +81,13 @@ const databaseActivitySchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
-// Core activity operations
 router.post('/', validateBody(CreateActivityRequestSchema), createActivityController);
-
 router.get('/', validateQuery(ActivityQueryOptionsSchema), getActivitiesController);
-
 router.get('/feed', getRecentActivityFeedController);
-
 router.get('/summary', getUserActivitySummaryController);
-
 router.get('/analytics', getActivityAnalyticsController);
-
 router.get('/:id', validateParams(activityIdSchema), getActivityByIdController);
 
-// Version history
 router.get(
   '/history/:entityType/:entityId',
   validateParams(entityParamsSchema),

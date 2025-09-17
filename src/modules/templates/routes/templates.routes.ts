@@ -132,7 +132,6 @@ router.delete(
   deleteTemplate
 );
 
-// Template application routes
 router.post(
   '/:templateId/apply/row',
   validateParams(z.object({ templateId: z.string().min(1) })),
@@ -178,7 +177,6 @@ router.post(
   applyWorkspaceTemplate
 );
 
-// Template rating
 router.post(
   '/:templateId/rate',
   validateParams(z.object({ templateId: z.string().min(1) })),
@@ -190,14 +188,12 @@ router.post(
   rateTemplate
 );
 
-// Template analytics and insights
 router.get(
   '/:templateId/analytics',
   validateParams(z.object({ templateId: z.string().min(1) })),
   getTemplateAnalytics
 );
 
-// User-specific template routes
 router.get('/user/my-templates', getUserTemplates);
 
 router.get(
@@ -210,14 +206,12 @@ router.get(
   getUserTemplateHistory
 );
 
-// Template suggestions
 router.get(
   '/suggestions/:databaseId',
   validateParams(z.object({ databaseId: z.string().min(1) })),
   getTemplateSuggestions
 );
 
-// Template management operations
 router.post(
   '/:templateId/duplicate',
   validateParams(z.object({ templateId: z.string().min(1) })),
@@ -238,7 +232,6 @@ router.get(
 
 router.post('/import', validateBody(CreateTemplateRequestSchema), importTemplate);
 
-// Admin routes
 router.post('/admin/initialize-predefined', requireAdmin, initializePredefinedTemplates);
 
 export default router;

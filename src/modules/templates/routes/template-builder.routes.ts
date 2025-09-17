@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
-import { validateBody, validateParams, validateQuery } from '@/middlewares/validation';
-import { z } from 'zod';
+import { validateBody, validateParams } from '@/middlewares/validation';
 import {
   createRowTemplateFromRecord,
   createDatabaseTemplateFromDatabase,
@@ -9,8 +8,6 @@ import {
   generateTemplateFromPrompt,
   analyzeDatabaseForTemplates,
   validateTemplateData,
-  getTemplateBuilderSuggestions,
-  getTemplateWizardSteps,
   previewTemplate,
   getTemplateCreationAnalytics
 } from '../controllers/template-builder.controller';
@@ -19,13 +16,12 @@ import {
   TemplateTypeSchema,
   TemplateAccessSchema
 } from '../types/template.types';
+import { z } from 'zod';
 
 const router = Router();
 
-// All routes require authentication
 router.use(authenticateToken);
 
-// Validation schemas
 const recordIdSchema = z.object({
   recordId: z.string().min(1, 'Record ID is required')
 });
@@ -36,10 +32,6 @@ const databaseIdSchema = z.object({
 
 const workspaceIdSchema = z.object({
   workspaceId: z.string().min(1, 'Workspace ID is required')
-});
-
-const templateTypeSchema = z.object({
-  templateType: TemplateTypeSchema
 });
 
 const createRowTemplateSchema = z.object({
@@ -101,12 +93,6 @@ const previewTemplateSchema = z.object({
   templateType: TemplateTypeSchema
 });
 
-const builderSuggestionsQuerySchema = z.object({
-  context: z.string().optional(),
-  moduleType: z.string().optional()
-});
-
-// Template creation from existing data
 router.post(
   '/template-builder/from-record/:recordId',
   validateParams(recordIdSchema),
@@ -150,18 +136,17 @@ router.post(
 
 router.post('/template-builder/preview', validateBody(previewTemplateSchema), previewTemplate);
 
-// Template builder utilities
-router.get(
-  '/template-builder/suggestions',
-  validateQuery(builderSuggestionsQuerySchema),
-  getTemplateBuilderSuggestions
-);
-
-router.get(
-  '/template-builder/wizard-steps/:templateType',
-  validateParams(templateTypeSchema),
-  getTemplateWizardSteps
-);
+// router.get(
+//   '/template-builder/suggestions',
+//   validateQuery(builderSuggestionsQuerySchema),
+//   getTemplateBuilderSuggestions
+// );
+//
+// router.get(
+//   '/template-builder/wizard-steps/:templateType',
+//   validateParams(templateTypeSchema),
+//   getTemplateWizardSteps
+// );
 
 router.get('/template-builder/analytics', getTemplateCreationAnalytics);
 

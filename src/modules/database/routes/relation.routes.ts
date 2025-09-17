@@ -23,8 +23,8 @@ import {
   relationIdSchema,
   removeConnectionSchema,
   rollupConfigSchema
-} from '../validators/relation.validators';
-import { databaseIdSchema } from '../validators/database.validators';
+} from '@/modules/database/validators/relation.validators';
+import { databaseIdSchema } from '@/modules/database/validators/database.validators';
 
 const router = Router();
 

@@ -19,7 +19,7 @@ import {
   initializeSpecificWorkspaceModules,
   getWorkspaceModuleRecommendations,
   validateWorkspaceModuleSetup
-} from '../controllers/modules.controllers';
+} from '@/modules/modules/controllers/modules.controllers';
 import {
   workspaceIdSchema,
   moduleIdSchema,

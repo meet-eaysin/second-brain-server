@@ -136,7 +136,6 @@ export type IPropertyConfig =
   | IAutoNumberConfig
   | Record<string, unknown>;
 
-// Database property interface
 export interface IDatabaseProperty {
   id: string;
   databaseId: string;
