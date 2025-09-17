@@ -17,7 +17,7 @@ services:
       - second-brain-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "yarn", "node", "dist/index.js"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', res => process.exit(res.statusCode === 200 ? 0 : 1))"]
       interval: 30s
       timeout: 10s
       retries: 3

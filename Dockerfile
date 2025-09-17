@@ -1,39 +1,49 @@
-# Base image
+# =========================
+# Builder stage
+# =========================
 FROM node:22.15.1-alpine AS builder
 
 WORKDIR /app
 
-# Copy only package metadata for caching
+# Enable Corepack and activate Yarn 4
+RUN corepack enable && corepack prepare yarn@4.9.2 --activate
+
+# Copy package manager configs and lockfile
 COPY package.json yarn.lock .yarnrc.yml ./
 
-# Install dependencies in PnP mode
+# Install dependencies (immutable / PnP)
 RUN yarn install --immutable
 
-# Copy source code
+# Copy full source code
 COPY . .
 
-# Build if needed (e.g., TypeScript)
+# Build the app (TypeScript or whatever build step you have)
 RUN yarn build:production
 
-# Production image
+# =========================
+# Production stage
+# =========================
 FROM node:22.15.1-alpine AS production
 
 WORKDIR /app
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S expressapp -u 1001
+# Enable Corepack and Yarn 4 in production
+RUN corepack enable && corepack prepare yarn@4.9.2 --activate
 
-# Copy PnP files and built code
-COPY --from=builder --chown=expressapp:nodejs /app/.yarn ./.yarn
-COPY --from=builder --chown=expressapp:nodejs /app/.yarnrc.yml ./
-COPY --from=builder --chown=expressapp:nodejs /app/dist ./dist
+# Copy built files and Yarn PnP setup
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/.yarn ./.yarn
+COPY --from=builder /app/.yarnrc.yml ./
 
-# Switch to non-root
-USER expressapp
+# Optional: Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+USER nextjs
 
-# Expose port
 EXPOSE 5000
 
-# Run Express app using Yarn PnP
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/health', res => process.exit(res.statusCode === 200 ? 0 : 1))"
+
+# Start the app using Yarn PnP
 CMD ["yarn", "node", "dist/index.js"]
