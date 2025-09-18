@@ -21,6 +21,7 @@ import {
 } from '../services/modules.service';
 import { IModuleInitRequest } from '../types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
+import { getModuleDatabaseIdsByType } from '@/modules/modules/services/module-config.service';
 
 /**
  * Initialize modules for a workspace
@@ -270,6 +271,32 @@ export const getModuleDatabaseId = catchAsync(
       moduleId,
       databaseId
     });
+  }
+);
+
+/**
+ * Get module database ID by module type
+ */
+export const getModuleDatabaseIdsByModuleType = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { workspaceId, moduleType } = req.params;
+
+    if (!moduleType || !Object.values(EDatabaseType).includes(moduleType)) {
+      res.status(400).json({ success: false, message: 'Valid module type is required' });
+      return;
+    }
+
+    const databaseIds = await getModuleDatabaseIdsByType(workspaceId, moduleType);
+
+    if (!databaseIds) {
+      res.status(404).json({
+        success: false,
+        message: 'Module not initialized in this workspace'
+      });
+      return;
+    }
+
+    sendSuccessResponse(res, 'Module database ID retrieved successfully', databaseIds);
   }
 );
 

@@ -18,7 +18,8 @@ import {
   getWorkspaceModuleStatus,
   initializeSpecificWorkspaceModules,
   getWorkspaceModuleRecommendations,
-  validateWorkspaceModuleSetup
+  validateWorkspaceModuleSetup,
+  getModuleDatabaseIdsByModuleType
 } from '@/modules/modules/controllers/modules.controllers';
 import {
   workspaceIdSchema,
@@ -81,7 +82,7 @@ router.get(
 router.get(
   '/workspace/:workspaceId/:moduleType',
   validateParams(workspaceModuleDatabaseByTypeSchema),
-  getModuleDatabaseIdsByType
+  getModuleDatabaseIdsByModuleType
 );
 router.get(
   '/workspace/:workspaceId/:moduleId/details',
