@@ -161,7 +161,7 @@ export const modulePropertySchema = z.object({
 
 export const moduleViewSettingsSchema = z.object({
   visibleProperties: z.array(z.string()).optional(),
-  frozenProperties: z.array(z.string()).optional(),
+  frozenColumns: z.array(z.string()).optional(),
   sorts: z
     .array(
       z.object({

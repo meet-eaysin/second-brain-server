@@ -10,130 +10,162 @@ export type TViewModel = Model<TViewDocument> & {
   findPublicViews(databaseId: string): Promise<TViewDocument[]>;
 };
 
-const SortConfigSchema = new Schema({
-  propertyId: {
-    type: String,
-    required: true
+const SortConfigSchema = new Schema(
+  {
+    propertyId: {
+      type: String,
+      required: true
+    },
+    direction: {
+      type: String,
+      enum: ['asc', 'desc'],
+      required: true
+    }
   },
-  direction: {
-    type: String,
-    enum: ['asc', 'desc'],
-    required: true
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const FilterGroupSchema: any = new Schema({
-  operator: {
-    type: String,
-    enum: ['and', 'or'],
-    required: true
+const FilterGroupSchema: any = new Schema(
+  {
+    operator: {
+      type: String,
+      enum: ['and', 'or'],
+      required: true
+    },
+    conditions: {
+      type: [Schema.Types.Mixed],
+      default: []
+    }
   },
-  conditions: {
-    type: [Schema.Types.Mixed],
-    default: []
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const ColumnConfigSchema = new Schema({
-  propertyId: {
-    type: String,
-    required: true
+const ColumnConfigSchema = new Schema(
+  {
+    propertyId: {
+      type: String,
+      required: true
+    },
+    width: {
+      type: Number,
+      min: 50
+    },
+    isVisible: {
+      type: Boolean,
+      default: true
+    },
+    order: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    isFrozen: {
+      type: Boolean,
+      default: false
+    }
   },
-  width: {
-    type: Number,
-    min: 50
-  },
-  isVisible: {
-    type: Boolean,
-    default: true
-  },
-  order: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  isFrozen: {
-    type: Boolean,
-    default: false
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const GroupConfigSchema = new Schema({
-  propertyId: {
-    type: String,
-    required: true
+const GroupConfigSchema = new Schema(
+  {
+    propertyId: {
+      type: String,
+      required: true
+    },
+    hideEmpty: {
+      type: Boolean,
+      default: false
+    },
+    sortGroups: {
+      type: String,
+      enum: ['asc', 'desc', 'manual']
+    }
   },
-  hideEmpty: {
-    type: Boolean,
-    default: false
-  },
-  sortGroups: {
-    type: String,
-    enum: ['asc', 'desc', 'manual']
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const CalendarConfigSchema = new Schema({
-  datePropertyId: {
-    type: String,
-    required: true
+const CalendarConfigSchema = new Schema(
+  {
+    datePropertyId: {
+      type: String,
+      required: true
+    },
+    endDatePropertyId: {
+      type: String
+    },
+    showWeekends: {
+      type: Boolean,
+      default: true
+    },
+    defaultView: {
+      type: String,
+      enum: ['month', 'week', 'day'],
+      default: 'month'
+    }
   },
-  endDatePropertyId: {
-    type: String
-  },
-  showWeekends: {
-    type: Boolean,
-    default: true
-  },
-  defaultView: {
-    type: String,
-    enum: ['month', 'week', 'day'],
-    default: 'month'
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const GalleryConfigSchema = new Schema({
-  coverPropertyId: {
-    type: String
+const GalleryConfigSchema = new Schema(
+  {
+    coverPropertyId: {
+      type: String
+    },
+    cardSize: {
+      type: String,
+      enum: ['small', 'medium', 'large'],
+      default: 'medium'
+    },
+    showProperties: [String]
   },
-  cardSize: {
-    type: String,
-    enum: ['small', 'medium', 'large'],
-    default: 'medium'
-  },
-  showProperties: [String]
-}, { _id: false });
+  { _id: false }
+);
 
-const TimelineConfigSchema = new Schema({
-  startDatePropertyId: {
-    type: String,
-    required: true
+const TimelineConfigSchema = new Schema(
+  {
+    startDatePropertyId: {
+      type: String,
+      required: true
+    },
+    endDatePropertyId: {
+      type: String
+    },
+    groupByPropertyId: {
+      type: String
+    },
+    showDependencies: {
+      type: Boolean,
+      default: false
+    }
   },
-  endDatePropertyId: {
-    type: String
-  },
-  groupByPropertyId: {
-    type: String
-  },
-  showDependencies: {
-    type: Boolean,
-    default: false
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const ViewConfigSchema = new Schema({
-  pageSize: {
-    type: Number,
-    min: 1,
-    max: 100,
-    default: 25
+const ViewConfigSchema = new Schema(
+  {
+    pageSize: {
+      type: Number,
+      min: 1,
+      max: 100,
+      default: 25
+    },
+    columns: [ColumnConfigSchema],
+    group: GroupConfigSchema,
+    calendar: CalendarConfigSchema,
+    gallery: GalleryConfigSchema,
+    timeline: TimelineConfigSchema,
+    visibleProperties: {
+      type: [String],
+      default: []
+    },
+    frozenColumns: {
+      type: [String],
+      default: []
+    }
   },
-  columns: [ColumnConfigSchema],
-  group: GroupConfigSchema,
-  calendar: CalendarConfigSchema,
-  gallery: GalleryConfigSchema,
-  timeline: TimelineConfigSchema
-}, { _id: false });
+  { _id: false }
+);
 
 const ViewSchema = createBaseSchema({
   databaseId: {
@@ -199,31 +231,34 @@ ViewSchema.index({ databaseId: 1, isPublic: 1 });
 ViewSchema.index({ databaseId: 1, name: 1 }, { unique: true });
 
 // Ensure only one default view per database
-ViewSchema.index({ databaseId: 1, isDefault: 1 }, {
-  unique: true,
-  partialFilterExpression: { isDefault: true }
-});
+ViewSchema.index(
+  { databaseId: 1, isDefault: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDefault: true }
+  }
+);
 
 // Static methods
-ViewSchema.statics.findByDatabase = function(databaseId: string) {
+ViewSchema.statics.findByDatabase = function (databaseId: string) {
   return this.find({ databaseId }).notDeleted().sort({ order: 1 }).exec();
 };
 
-ViewSchema.statics.findDefaultView = function(databaseId: string) {
+ViewSchema.statics.findDefaultView = function (databaseId: string) {
   return this.findOne({ databaseId, isDefault: true }).notDeleted().exec();
 };
 
-ViewSchema.statics.findPublicViews = function(databaseId: string) {
+ViewSchema.statics.findPublicViews = function (databaseId: string) {
   return this.find({ databaseId, isPublic: true }).notDeleted().sort({ order: 1 }).exec();
 };
 
 // Instance methods
-ViewSchema.methods.updateOrder = function(newOrder: number) {
+ViewSchema.methods.updateOrder = function (newOrder: number) {
   this.order = newOrder;
   return this.save();
 };
 
-ViewSchema.methods.makeDefault = async function() {
+ViewSchema.methods.makeDefault = async function () {
   // Remove default from other views in the same database
   await ViewModel.updateMany(
     { databaseId: this.databaseId, _id: { $ne: this._id } },
@@ -234,19 +269,19 @@ ViewSchema.methods.makeDefault = async function() {
   return this.save();
 };
 
-ViewSchema.methods.addSort = function(sort: any) {
+ViewSchema.methods.addSort = function (sort: any) {
   this.sorts.push(sort);
   this.markModified('sorts');
   return this.save();
 };
 
-ViewSchema.methods.removeSort = function(propertyId: string) {
+ViewSchema.methods.removeSort = function (propertyId: string) {
   this.sorts = this.sorts.filter((sort: ISortConfig) => sort.propertyId !== propertyId);
   this.markModified('sorts');
   return this.save();
 };
 
-ViewSchema.methods.updateSort = function(propertyId: string, direction: 'asc' | 'desc') {
+ViewSchema.methods.updateSort = function (propertyId: string, direction: 'asc' | 'desc') {
   const sort = this.sorts.find((s: ISortConfig) => s.propertyId === propertyId);
   if (sort) {
     sort.direction = direction;
@@ -257,7 +292,7 @@ ViewSchema.methods.updateSort = function(propertyId: string, direction: 'asc' | 
   return this.save();
 };
 
-ViewSchema.methods.addFilter = function(condition: any) {
+ViewSchema.methods.addFilter = function (condition: any) {
   if (!this.filters.conditions) {
     this.filters.conditions = [];
   }
@@ -266,7 +301,7 @@ ViewSchema.methods.addFilter = function(condition: any) {
   return this.save();
 };
 
-ViewSchema.methods.removeFilter = function(index: number) {
+ViewSchema.methods.removeFilter = function (index: number) {
   if (this.filters.conditions && this.filters.conditions[index]) {
     this.filters.conditions.splice(index, 1);
     this.markModified('filters');
@@ -274,14 +309,14 @@ ViewSchema.methods.removeFilter = function(index: number) {
   return this.save();
 };
 
-ViewSchema.methods.clearFilters = function() {
+ViewSchema.methods.clearFilters = function () {
   this.filters = { operator: 'and', conditions: [] };
   this.markModified('filters');
   return this.save();
 };
 
 // Pre-save middleware
-ViewSchema.pre('save', function(next) {
+ViewSchema.pre('save', function (next) {
   // Auto-set order if not provided
   if (this.isNew && this.order === undefined) {
     ViewModel.countDocuments({ databaseId: this.databaseId })
@@ -296,7 +331,7 @@ ViewSchema.pre('save', function(next) {
 });
 
 // Pre-save middleware to ensure default view logic
-ViewSchema.pre('save', async function(next) {
+ViewSchema.pre('save', async function (next) {
   if (this.isDefault) {
     // If this is being set as default, remove default from others
     await ViewModel.updateMany(

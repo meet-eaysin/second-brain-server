@@ -49,7 +49,7 @@ export interface IModuleView {
 
 export interface IModuleViewSettings {
   readonly visibleProperties?: readonly string[];
-  readonly frozenProperties?: readonly string[];
+  readonly frozenColumns?: readonly string[];
   readonly sorts?: readonly IModuleSort[];
   readonly filters?: readonly IModuleFilter[];
   readonly groups?: readonly IModuleGroup[];

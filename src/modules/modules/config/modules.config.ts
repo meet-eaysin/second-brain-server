@@ -71,7 +71,7 @@ export const DASHBOARD_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Widget Name', 'Widget Type', 'Position', 'Is Active'],
-        frozenProperties: ['Widget Name'],
+        frozenColumns: ['Widget Name'],
         sorts: [{ property: 'Position', direction: 'asc' }],
         pageSize: 25
       }
@@ -220,7 +220,7 @@ export const TASKS_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Status', 'Priority', 'Due Date', 'Assignee', 'Project'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [
           { property: 'Priority', direction: 'desc' },
           { property: 'Due Date', direction: 'asc' }
@@ -421,7 +421,7 @@ export const NOTES_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Title', 'Status', 'Category', 'Tags', 'Word Count', 'Last Viewed'],
-        frozenProperties: ['Title'],
+        frozenColumns: ['Title'],
         sorts: [{ property: 'Last Viewed', direction: 'desc' }],
         pageSize: 25
       }
@@ -642,7 +642,7 @@ export const PROJECTS_MODULE: IModuleConfig = {
           'Owner',
           'Progress'
         ],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [
           { property: 'Priority', direction: 'desc' },
           { property: 'Start Date', direction: 'asc' }
@@ -862,7 +862,7 @@ export const GOALS_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Status', 'Priority', 'Target Date', 'Progress', 'Category'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [
           { property: 'Priority', direction: 'desc' },
           { property: 'Target Date', direction: 'asc' }
@@ -1051,7 +1051,7 @@ export const PEOPLE_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Email', 'Phone', 'Role', 'Company', 'Last Contact'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [{ property: 'Name', direction: 'asc' }],
         pageSize: 50
       }
@@ -1194,7 +1194,7 @@ export const FINANCE_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Description', 'Amount', 'Type', 'Category', 'Date', 'Account'],
-        frozenProperties: ['Description'],
+        frozenColumns: ['Description'],
         sorts: [{ property: 'Date', direction: 'desc' }],
         pageSize: 50
       }
@@ -1403,7 +1403,7 @@ export const HABITS_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Category', 'Frequency', 'Current Streak', 'Status'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [{ property: 'Current Streak', direction: 'desc' }],
         pageSize: 25
       }
@@ -1598,7 +1598,7 @@ export const JOURNAL_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Date', 'Title', 'Mood', 'Energy Level', 'Tags'],
-        frozenProperties: ['Date'],
+        frozenColumns: ['Date'],
         sorts: [{ property: 'Date', direction: 'desc' }],
         pageSize: 30
       }
@@ -1775,7 +1775,7 @@ export const MOOD_TRACKER_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Date', 'Mood', 'Intensity', 'Triggers', 'Notes'],
-        frozenProperties: ['Date'],
+        frozenColumns: ['Date'],
         sorts: [{ property: 'Date', direction: 'desc' }],
         pageSize: 50
       }
@@ -1959,7 +1959,7 @@ export const RESOURCES_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Title', 'Type', 'Category', 'Status', 'Rating', 'Date Added'],
-        frozenProperties: ['Title'],
+        frozenColumns: ['Title'],
         sorts: [{ property: 'Date Added', direction: 'desc' }],
         pageSize: 25
       }
@@ -2107,7 +2107,7 @@ export const PARA_PROJECTS_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Deadline', 'Status', 'Priority', 'Progress'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         filters: [{ property: 'Status', operator: 'equals', value: 'active' }],
         sorts: [{ property: 'Deadline', direction: 'asc' }],
         pageSize: 25
@@ -2234,7 +2234,7 @@ export const PARA_AREAS_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Status', 'Review Frequency', 'Last Review'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [{ property: 'Name', direction: 'asc' }],
         pageSize: 25
       }
@@ -2368,7 +2368,7 @@ export const PARA_RESOURCES_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Topic', 'Type', 'Status', 'Tags'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [{ property: 'Name', direction: 'asc' }],
         pageSize: 25
       }
@@ -2482,7 +2482,7 @@ export const PARA_ARCHIVE_MODULE: IModuleConfig = {
       order: 0,
       settings: {
         visibleProperties: ['Name', 'Original Category', 'Archived Date', 'Archive Reason'],
-        frozenProperties: ['Name'],
+        frozenColumns: ['Name'],
         sorts: [{ property: 'Archived Date', direction: 'desc' }],
         pageSize: 50
       }

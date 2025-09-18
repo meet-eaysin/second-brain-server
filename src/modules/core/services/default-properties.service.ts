@@ -76,11 +76,15 @@ const createDefaultViews = (
         isDefault: true,
         isPublic: false,
         order: 0,
-        settings: {
+        config: {
           visibleProperties: properties.map(p => p.id),
-          pageSize: 25,
-          sorts: [],
-          filters: []
+          frozenColumns: [],
+          pageSize: 25
+        },
+        sorts: [],
+        filters: {
+          operator: 'and',
+          conditions: []
         },
         createdAt: now,
         updatedAt: now,

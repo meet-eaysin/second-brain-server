@@ -352,7 +352,7 @@ const createModuleViews = async (
         .filter(Boolean) || [];
 
     const frozenPropertyIds =
-      viewConfig.settings.frozenProperties
+      viewConfig.settings.frozenColumns
         ?.map(propName => properties.find(p => p.name === propName)?._id?.toString())
         .filter(Boolean) || [];
 
@@ -365,24 +365,26 @@ const createModuleViews = async (
       isDefault: viewConfig.isDefault,
       isPublic: false,
       order: viewConfig.order,
-      settings: {
-        ...viewConfig.settings,
+      config: {
         visibleProperties: visiblePropertyIds,
-        frozenProperties: frozenPropertyIds,
-        sorts: viewConfig.settings.sorts?.map(sort => ({
-          ...sort,
-          property: properties.find(p => p.name === sort.property)?._id?.toString() || sort.property
-        })),
-        filters: viewConfig.settings.filters?.map(filter => ({
-          ...filter,
-          property:
-            properties.find(p => p.name === filter.property)?._id?.toString() || filter.property
-        })),
-        groups: viewConfig.settings.groups?.map(group => ({
-          ...group,
-          property:
-            properties.find(p => p.name === group.property)?._id?.toString() || group.property
-        }))
+        frozenColumns: frozenPropertyIds,
+        pageSize: viewConfig.settings.pageSize || 25
+      },
+      sorts:
+        viewConfig.settings.sorts?.map(sort => ({
+          propertyId:
+            properties.find(p => p.name === sort.property)?._id?.toString() || sort.property,
+          direction: sort.direction
+        })) || [],
+      filters: {
+        operator: 'and',
+        conditions:
+          viewConfig.settings.filters?.map(filter => ({
+            propertyId:
+              properties.find(p => p.name === filter.property)?._id?.toString() || filter.property,
+            operator: filter.operator,
+            value: filter.value
+          })) || []
       },
       createdAt: now,
       updatedAt: now,

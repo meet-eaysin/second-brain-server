@@ -80,7 +80,6 @@ export interface IViewSettings {
   visibleProperties: string[];
   frozenColumns: string[];
   pageSize: number;
-  showSubItems: boolean;
 
   // Board view specific
   boardGroupProperty?: string;
@@ -173,7 +172,6 @@ export const ViewSettingsSchema = z.object({
   visibleProperties: z.array(z.string()).default([]),
   frozenColumns: z.array(z.string()).default([]),
   pageSize: z.number().min(1).max(1000).default(25),
-  showSubItems: z.boolean().default(true),
 
   // View-specific settings
   boardGroupProperty: z.string().optional(),

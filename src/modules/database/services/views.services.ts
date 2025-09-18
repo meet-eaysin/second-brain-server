@@ -49,10 +49,9 @@ function formatViewResponse(view: any): IDatabaseView {
           property: sort.propertyId,
           direction: sort.direction
         })) || [],
-      visibleProperties: [],
-      frozenColumns: [],
-      pageSize: view.config?.pageSize || 25,
-      showSubItems: true
+      visibleProperties: view.config?.visibleProperties || [],
+      frozenColumns: view.config?.frozenColumns || [],
+      pageSize: view.config?.pageSize || 25
     },
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
@@ -86,6 +85,8 @@ async function createView(
     order,
     config: {
       pageSize: data.settings?.pageSize || 25,
+      visibleProperties: data.settings?.visibleProperties || [],
+      frozenColumns: data.settings?.frozenColumns || [],
       columns: []
     },
     sorts:
@@ -206,6 +207,14 @@ async function updateView(
   if (data.settings) {
     if (data.settings.pageSize !== undefined) {
       view.config.pageSize = data.settings.pageSize;
+    }
+
+    if (data.settings.visibleProperties !== undefined) {
+      view.config.visibleProperties = data.settings.visibleProperties;
+    }
+
+    if (data.settings.frozenColumns !== undefined) {
+      view.config.frozenColumns = data.settings.frozenColumns;
     }
 
     if (data.settings.sorts !== undefined) {
@@ -447,9 +456,13 @@ async function changeViewType(
     }
   }
 
-  // Update view type and reset type-specific config
+  // Update view type and reset type-specific config while preserving common settings
   view.type = newType;
-  view.config = { pageSize: view.config?.pageSize || 25 };
+  view.config = {
+    pageSize: view.config?.pageSize || 25,
+    visibleProperties: view.config?.visibleProperties || [],
+    frozenColumns: view.config?.frozenColumns || []
+  };
   view.updatedBy = userId;
 
   await view.save();
@@ -460,7 +473,7 @@ async function changeViewType(
 async function updateViewPropertyVisibility(
   databaseId: string,
   viewId: string,
-  _visibleProperties: string[],
+  visibleProperties: string[],
   userId: string
 ): Promise<IDatabaseView> {
   const view = await ViewModel.findOne({
@@ -472,13 +485,8 @@ async function updateViewPropertyVisibility(
     throw createNotFoundError('View not found');
   }
 
-  // Update visible properties in config
-  if (!view.config.columns) {
-    view.config.columns = [];
-  }
-
-  // Store visible properties in a way that works with the model
-  // Since the model doesn't have a settings property, we'll use config
+  // Update visible properties directly in config
+  view.config.visibleProperties = visibleProperties;
   view.updatedBy = userId;
 
   await view.save();
@@ -501,19 +509,8 @@ async function updateViewColumnFreeze(
     throw createNotFoundError('View not found');
   }
 
-  // Update frozen columns in config
-  if (!view.config.columns) {
-    view.config.columns = [];
-  }
-
-  // Update column configurations to mark frozen columns
-  view.config.columns = frozenColumns.map((propertyId, index) => ({
-    propertyId,
-    width: 150, // default width
-    isVisible: true,
-    isFrozen: true,
-    order: index
-  }));
+  // Update frozen columns directly in config
+  view.config.frozenColumns = frozenColumns;
   view.updatedBy = userId;
 
   await view.save();
