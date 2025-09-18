@@ -18,8 +18,8 @@ import {
   initializeSpecificModules,
   getModuleRecommendations,
   validateWorkspaceModules
-} from '../services/modules.service';
-import { IModuleInitRequest } from '../types/module.types';
+} from '@/modules/modules/services/modules.service';
+import { IModuleInitRequest } from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { getModuleDatabaseIdsByType } from '@/modules/modules/services/module-config.service';
 
@@ -281,12 +281,12 @@ export const getModuleDatabaseIdsByModuleType = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId, moduleType } = req.params;
 
-    if (!moduleType || !Object.values(EDatabaseType).includes(moduleType)) {
+    if (!moduleType || !Object.values(EDatabaseType).includes(moduleType as EDatabaseType)) {
       res.status(400).json({ success: false, message: 'Valid module type is required' });
       return;
     }
 
-    const databaseIds = await getModuleDatabaseIdsByType(workspaceId, moduleType);
+    const databaseIds = await getModuleDatabaseIdsByType(workspaceId, moduleType as EDatabaseType);
 
     if (!databaseIds) {
       res.status(404).json({

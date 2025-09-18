@@ -299,7 +299,7 @@ export const getModuleDatabaseId = async (
  */
 export const getModuleDatabaseIdsByType = async (
   workspaceId: string,
-  moduleName: string
+  moduleName: EDatabaseType
 ): Promise<string[]> => {
   if (!moduleName || !Object.values(EDatabaseType).includes(moduleName as EDatabaseType)) {
     throw createAppError('Valid module name is required', 400);
