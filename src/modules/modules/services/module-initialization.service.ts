@@ -39,8 +39,29 @@ const initializeModules = async (request: IModuleInitRequest): Promise<IModuleIn
         });
 
         if (existingDatabase) {
-          errors.push(`Module already exists: ${moduleId}`);
-          continue;
+          const hasProperties =
+            (await PropertyModel.countDocuments({
+              databaseId: existingDatabase._id
+            })) > 0;
+
+          const hasViews =
+            (await ViewModel.countDocuments({
+              databaseId: existingDatabase._id
+            })) > 0;
+
+          if (hasProperties && hasViews) {
+            errors.push(`Module already exists: ${moduleId}`);
+            continue;
+          } else {
+            const completedModule = await completeModuleInitialization(
+              existingDatabase.id.toString(),
+              userId,
+              moduleConfig
+            );
+
+            initializedModules.push(completedModule);
+            continue;
+          }
         }
 
         const initializedModule = await initializeSingleModule(workspaceId, userId, moduleConfig);
@@ -95,6 +116,69 @@ const initializeModules = async (request: IModuleInitRequest): Promise<IModuleIn
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw createAppError(`Module initialization failed: ${errorMessage}`, 500);
   }
+};
+
+const completeModuleInitialization = async (
+  databaseId: string,
+  userId: string,
+  moduleConfig: IModuleConfig
+): Promise<IInitializedModule> => {
+  // Check existing properties and views
+  const existingProperties = await PropertyModel.find({
+    databaseId: new ObjectId(databaseId)
+  });
+
+  const existingViews = await ViewModel.find({
+    databaseId: new ObjectId(databaseId)
+  });
+
+  let propertiesCreated = 0;
+  let viewsCreated = 0;
+
+  // Create missing properties
+  if (existingProperties.length === 0) {
+    const properties = await createModuleProperties(databaseId, moduleConfig, userId);
+    propertiesCreated = properties.length;
+
+    await DatabaseModel.findByIdAndUpdate(databaseId, {
+      $set: {
+        properties: properties.map(p => p._id)
+      }
+    });
+  }
+
+  // Create missing views (need properties for view configuration)
+  if (existingViews.length === 0) {
+    const properties = await PropertyModel.find({
+      databaseId: new ObjectId(databaseId)
+    });
+
+    const propertyMap = properties.map(p => ({
+      _id: p._id as ObjectId,
+      name: p.name,
+      type: p.type
+    }));
+
+    const views = await createModuleViews(databaseId, moduleConfig, propertyMap, userId);
+    viewsCreated = views.length;
+
+    const defaultView = views.find(v => v.isDefault);
+    await DatabaseModel.findByIdAndUpdate(databaseId, {
+      $set: {
+        views: views.map(v => v._id),
+        ...(defaultView && { defaultViewId: defaultView._id })
+      }
+    });
+  }
+
+  return {
+    moduleId: moduleConfig.id,
+    databaseId,
+    name: moduleConfig.name,
+    propertiesCreated,
+    viewsCreated,
+    templatesCreated: 0 // Templates not implemented for completion
+  };
 };
 
 const initializeSingleModule = async (
@@ -529,6 +613,7 @@ export const moduleInitializationService = {
   createModuleRelations,
   createModuleViews,
   createModuleProperties,
+  completeModuleInitialization,
   initializeSingleModule,
   initializeModules
 };
