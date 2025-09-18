@@ -1,5 +1,11 @@
+import { createNotFoundError } from '@/utils/error.utils';
 import { RecordModel, ViewModel } from '../index';
-import { IDatabase, IDatabaseQueryParams, IDatabaseStats, EDatabaseType } from '@/modules/core/types/database.types';
+import {
+  IDatabase,
+  IDatabaseQueryParams,
+  IDatabaseStats,
+  EDatabaseType
+} from '@/modules/core/types/database.types';
 import { DatabaseModel } from '../models/database.model';
 import { PropertyModel } from '../models/property.model';
 import { permissionService } from '../../permissions/services/permission.service';
@@ -12,32 +18,12 @@ export const buildDatabaseQuery = (params: IDatabaseQueryParams, userId: string)
     isDeleted: { $ne: true }
   };
 
-  // Workspace filter
-  if (params.workspaceId) {
-    query.workspaceId = params.workspaceId;
-  }
+  if (params.workspaceId) query.workspaceId = params.workspaceId;
+  if (params.type) query.type = params.type;
+  if (params.isPublic !== undefined) query.isPublic = params.isPublic;
+  if (params.isTemplate !== undefined) query.isTemplate = params.isTemplate;
+  if (params.isArchived !== undefined) query.isArchived = params.isArchived;
 
-  // Type filter
-  if (params.type) {
-    query.type = params.type;
-  }
-
-  // Public filter
-  if (params.isPublic !== undefined) {
-    query.isPublic = params.isPublic;
-  }
-
-  // Template filter
-  if (params.isTemplate !== undefined) {
-    query.isTemplate = params.isTemplate;
-  }
-
-  // Archived filter
-  if (params.isArchived !== undefined) {
-    query.isArchived = params.isArchived;
-  }
-
-  // Search filter
   if (params.search) {
     query.$or = [
       { name: { $regex: params.search, $options: 'i' } },
@@ -46,20 +32,12 @@ export const buildDatabaseQuery = (params: IDatabaseQueryParams, userId: string)
     ];
   }
 
-  // Permission-based filtering
-  // Show databases the user has access to through various means
   query.$or = query.$or || [];
-  query.$or.push(
-    { createdBy: userId }, // User owns the database
-    { isPublic: true }      // Database is public
-    // Note: Additional permission checks are done at the service level
-    // for explicit permissions and workspace membership
-  );
+  query.$or.push({ createdBy: userId }, { isPublic: true });
 
   return query;
 };
 
-// Build workspace-aware database query
 export const buildWorkspaceAwareDatabaseQuery = async (
   params: IDatabaseQueryParams,
   userId: string
@@ -68,17 +46,11 @@ export const buildWorkspaceAwareDatabaseQuery = async (
     isDeleted: { $ne: true }
   };
 
-  // Handle workspace filtering with fallback to user's workspaces
   if (params.workspaceId) {
-    // Verify user has access to the specified workspace
     const hasAccess = await workspaceService.hasWorkspaceAccess(params.workspaceId, userId);
-    if (!hasAccess) {
-      // Return empty query that will match nothing
-      return { _id: null };
-    }
+    if (!hasAccess) return { _id: null };
     query.workspaceId = params.workspaceId;
   } else {
-    // If no workspace specified, get user's accessible workspaces
     try {
       const userWorkspaces = await workspaceService.getUserWorkspaces(userId);
       const workspaceIds = userWorkspaces.map(ws => ws.id);
@@ -86,34 +58,19 @@ export const buildWorkspaceAwareDatabaseQuery = async (
       if (workspaceIds.length > 0) {
         query.workspaceId = { $in: workspaceIds };
       } else {
-        // User has no workspaces, create default workspace
         const defaultWorkspace = await workspaceService.getOrCreateDefaultWorkspace(userId);
         query.workspaceId = defaultWorkspace.id;
       }
     } catch (error) {
-      // Fallback to user-owned databases if workspace service fails
       query.createdBy = userId;
     }
   }
 
-  // Apply other filters
-  if (params.type) {
-    query.type = params.type;
-  }
+  if (params.type) query.type = params.type;
+  if (params.isPublic !== undefined) query.isPublic = params.isPublic;
+  if (params.isTemplate !== undefined) query.isTemplate = params.isTemplate;
+  if (params.isArchived !== undefined) query.isArchived = params.isArchived;
 
-  if (params.isPublic !== undefined) {
-    query.isPublic = params.isPublic;
-  }
-
-  if (params.isTemplate !== undefined) {
-    query.isTemplate = params.isTemplate;
-  }
-
-  if (params.isArchived !== undefined) {
-    query.isArchived = params.isArchived;
-  }
-
-  // Search filter
   if (params.search) {
     query.$or = [
       { name: { $regex: params.search, $options: 'i' } },
@@ -122,19 +79,12 @@ export const buildWorkspaceAwareDatabaseQuery = async (
     ];
   }
 
-  // Add permission-based access (in addition to workspace access)
-  if (!query.$or) {
-    query.$or = [];
-  }
-  query.$or.push(
-    { createdBy: userId }, // User owns the database
-    { isPublic: true }      // Database is public
-  );
+  if (!query.$or) query.$or = [];
+  query.$or.push({ createdBy: userId }, { isPublic: true });
 
   return query;
 };
 
-// Filter databases based on user permissions
 export const filterDatabasesByPermissions = async (
   databases: any[],
   userId: string,
@@ -143,66 +93,55 @@ export const filterDatabasesByPermissions = async (
   const filteredDatabases = [];
 
   for (const database of databases) {
-    try {
-      // Check if user has permission to access this database
-      const hasPermission = await permissionService.hasPermission(
-        EShareScope.DATABASE,
-        database.id,
-        userId,
-        requiredLevel
-      );
+    const hasPermission = await permissionService.hasPermission(
+      EShareScope.DATABASE,
+      database.id,
+      userId,
+      requiredLevel
+    );
 
-      // Allow access if user has explicit permission, owns the database, or it's public
-      if (hasPermission || database.createdBy === userId || database.isPublic) {
-        filteredDatabases.push(database);
-      }
-    } catch (error) {
-      // If permission check fails, exclude the database
-      console.error(`Permission check failed for database ${database.id}:`, error);
+    if (hasPermission || database.createdBy === userId || database.isPublic) {
+      filteredDatabases.push(database);
     }
   }
 
   return filteredDatabases;
 };
 
-// Format database response
 export const formatDatabaseResponse = (database: any): IDatabase => {
   const formatted = database.toJSON ? database.toJSON() : database;
 
-  // The database model's toJSON transform handles ObjectId to string conversion
-  // If properties/views are populated objects, extract their IDs
-  if (formatted.properties && formatted.properties.length > 0 && typeof formatted.properties[0] === 'object') {
-    formatted.properties = formatted.properties.map((prop: any) => prop && (prop.id || prop._id)).filter(Boolean);
+  if (
+    formatted.properties &&
+    formatted.properties.length > 0 &&
+    typeof formatted.properties[0] === 'object'
+  ) {
+    formatted.properties = formatted.properties
+      .map((prop: any) => prop && (prop.id || prop._id))
+      .filter(Boolean);
   }
 
   if (formatted.views && formatted.views.length > 0 && typeof formatted.views[0] === 'object') {
-    formatted.views = formatted.views.map((view: any) => view && (view.id || view._id)).filter(Boolean);
+    formatted.views = formatted.views
+      .map((view: any) => view && (view.id || view._id))
+      .filter(Boolean);
   }
 
   return formatted;
 };
 
-// Calculate database statistics
 export const calculateDatabaseStats = async (databaseId: string): Promise<IDatabaseStats> => {
-  const [
-    database,
-    propertyCount,
-    viewCount,
-    recordCount,
-    recentRecords,
-    topContributors
-  ] = await Promise.all([
-    DatabaseModel.findById(databaseId).exec(),
-    PropertyModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
-    ViewModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
-    RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
-    getRecentRecordStats(databaseId),
-    getTopContributors(databaseId)
-  ]);
+  const [database, propertyCount, viewCount, recordCount, recentRecords, topContributors] =
+    await Promise.all([
+      DatabaseModel.findById(databaseId).exec(),
+      PropertyModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+      ViewModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+      RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+      getRecentRecordStats(databaseId),
+      getTopContributors(databaseId)
+    ]);
 
-  if (!database) {
-    throw new Error('Database not found');
-  }
+  if (!database) throw createNotFoundError('Database not found');
 
   return {
     databaseId,
@@ -217,8 +156,9 @@ export const calculateDatabaseStats = async (databaseId: string): Promise<IDatab
   };
 };
 
-// Get recent record statistics
-const getRecentRecordStats = async (databaseId: string): Promise<{
+const getRecentRecordStats = async (
+  databaseId: string
+): Promise<{
   createdThisWeek: number;
   updatedThisWeek: number;
 }> => {
@@ -241,11 +181,14 @@ const getRecentRecordStats = async (databaseId: string): Promise<{
   return { createdThisWeek, updatedThisWeek };
 };
 
-// Get top contributors
-const getTopContributors = async (databaseId: string): Promise<Array<{
-  userId: string;
-  recordCount: number;
-}>> => {
+const getTopContributors = async (
+  databaseId: string
+): Promise<
+  Array<{
+    userId: string;
+    recordCount: number;
+  }>
+> => {
   const contributors = await RecordModel.aggregate([
     {
       $match: {
@@ -277,7 +220,6 @@ const getTopContributors = async (databaseId: string): Promise<Array<{
   return contributors;
 };
 
-// Validate database access
 export const validateDatabaseAccess = async (
   databaseId: string,
   userId: string,
@@ -288,31 +230,19 @@ export const validateDatabaseAccess = async (
     isDeleted: { $ne: true }
   }).exec();
 
-  if (!database) {
-    return false;
-  }
+  if (!database) return false;
+  if (database.createdBy === userId) return true;
+  if (action === 'read' && database.isPublic) return true;
 
-  // Owner has full access
-  if (database.createdBy === userId) {
-    return true;
-  }
-
-  // Public databases allow read access
-  if (action === 'read' && database.isPublic) {
-    return true;
-  }
-
-  // Check workspace membership
   if (database.workspaceId) {
     try {
       const hasAccess = await workspaceService.hasWorkspaceAccess(database.workspaceId, userId);
       if (hasAccess) {
-        // Check workspace role permissions
         const canManage = await workspaceService.canManageWorkspace(database.workspaceId, userId);
 
         switch (action) {
           case 'read':
-            return true; // All workspace members can read
+            return true;
           case 'write':
             return canManage || database.createdBy === userId;
           case 'delete':
@@ -327,14 +257,13 @@ export const validateDatabaseAccess = async (
     }
   }
 
-  // Check explicit permissions using permission service
   try {
     const { permissionService } = await import('@/modules/permissions/services/permission.service');
     const permissionLevelMap = {
-      'read': 'READ' as const,
-      'write': 'EDIT' as const,
-      'delete': 'FULL_ACCESS' as const,
-      'admin': 'FULL_ACCESS' as const
+      read: 'READ' as const,
+      write: 'EDIT' as const,
+      delete: 'FULL_ACCESS' as const,
+      admin: 'FULL_ACCESS' as const
     };
 
     return await permissionService.hasPermission(
@@ -349,7 +278,6 @@ export const validateDatabaseAccess = async (
   }
 };
 
-// Get database type display name
 export const getDatabaseTypeDisplayName = (type: EDatabaseType): string => {
   const displayNames: Record<EDatabaseType, string> = {
     [EDatabaseType.DASHBOARD]: 'Dashboard',
@@ -379,7 +307,6 @@ export const getDatabaseTypeDisplayName = (type: EDatabaseType): string => {
   return displayNames[type] || type;
 };
 
-// Get database type icon
 export const getDatabaseTypeIcon = (type: EDatabaseType): string => {
   const icons: Record<EDatabaseType, string> = {
     [EDatabaseType.DASHBOARD]: '📊',
@@ -409,12 +336,10 @@ export const getDatabaseTypeIcon = (type: EDatabaseType): string => {
   return icons[type] || '📄';
 };
 
-// Check if database type is system type
 export const isSystemDatabaseType = (type: EDatabaseType): boolean => {
   return type !== EDatabaseType.CUSTOM;
 };
 
-// Get default database configuration for type
 export const getDefaultDatabaseConfig = (type: EDatabaseType): Partial<IDatabase> => {
   const baseConfig = {
     allowComments: true,

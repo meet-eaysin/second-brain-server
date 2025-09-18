@@ -349,7 +349,6 @@ export interface ITemplateBlock {
   };
 }
 
-// Union type for all block types
 export type IContentBlock =
   | IParagraphBlock
   | IHeadingBlock

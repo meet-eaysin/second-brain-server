@@ -17,12 +17,7 @@ import { createAppError } from '@/utils/error.utils';
 import { crossModuleRelationsService } from './cross-module-relations.service';
 import { moduleConfigService } from './module-config.service';
 
-/**
- * Initialize Second Brain modules for a workspace
- */
-const initializeModules = async (
-  request: IModuleInitRequest
-): Promise<IModuleInitResponse> => {
+const initializeModules = async (request: IModuleInitRequest): Promise<IModuleInitResponse> => {
   const { workspaceId, userId, modules, createSampleData } = request;
 
   const initializedModules: IInitializedModule[] = [];
@@ -30,7 +25,6 @@ const initializeModules = async (
   const errors: string[] = [];
 
   try {
-    // Initialize each module
     for (const moduleId of modules) {
       try {
         const moduleConfig = moduleConfigService.getModuleConfig(moduleId);
@@ -39,7 +33,6 @@ const initializeModules = async (
           continue;
         }
 
-        // Check if module already exists
         const existingDatabase = await DatabaseModel.findOne({
           workspaceId: new ObjectId(workspaceId),
           type: moduleId
@@ -50,26 +43,19 @@ const initializeModules = async (
           continue;
         }
 
-        const initializedModule = await initializeSingleModule(
-          workspaceId,
-          userId,
-          moduleConfig
-        );
+        const initializedModule = await initializeSingleModule(workspaceId, userId, moduleConfig);
 
         initializedModules.push(initializedModule);
 
-        // Create sample data if requested
         if (createSampleData) {
           await createSampleDataForModule(initializedModule.databaseId, moduleConfig, userId);
         }
-
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         errors.push(`Failed to initialize ${moduleId}: ${errorMessage}`);
       }
     }
 
-    // Create cross-module relations
     for (const initializedModule of initializedModules) {
       try {
         const moduleConfig = moduleConfigService.getModuleConfig(initializedModule.moduleId);
@@ -83,14 +69,14 @@ const initializeModules = async (
         );
 
         createdRelations.push(...moduleRelations);
-
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        errors.push(`Failed to create relations for ${initializedModule.moduleId}: ${errorMessage}`);
+        errors.push(
+          `Failed to create relations for ${initializedModule.moduleId}: ${errorMessage}`
+        );
       }
     }
 
-    // Initialize cross-module relations after all modules are created
     try {
       await crossModuleRelationsService.initializeCrossModuleRelations(userId);
     } catch (error) {
@@ -105,16 +91,12 @@ const initializeModules = async (
       sampleDataCreated: createSampleData,
       errors
     };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw createAppError(`Module initialization failed: ${errorMessage}`, 500);
   }
 };
 
-/**
- * Initialize a single module
- */
 const initializeSingleModule = async (
   workspaceId: string,
   userId: string,
@@ -122,7 +104,6 @@ const initializeSingleModule = async (
 ): Promise<IInitializedModule> => {
   const now = new Date();
 
-  // Create database
   const database = new DatabaseModel({
     _id: new ObjectId(),
     workspaceId: new ObjectId(workspaceId),
@@ -158,22 +139,10 @@ const initializeSingleModule = async (
 
   await database.save();
 
-  // Create properties
-  const properties = await createModuleProperties(
-    database.id.toString(),
-    moduleConfig,
-    userId
-  );
+  const properties = await createModuleProperties(database.id.toString(), moduleConfig, userId);
 
-  // Create views
-  const views = await createModuleViews(
-    database.id.toString(),
-    moduleConfig,
-    properties,
-    userId
-  );
+  const views = await createModuleViews(database.id.toString(), moduleConfig, properties, userId);
 
-  // Update database with property and view references
   await DatabaseModel.findByIdAndUpdate(database._id, {
     $set: {
       properties: properties.map(p => p._id),
@@ -192,9 +161,6 @@ const initializeSingleModule = async (
   };
 };
 
-/**
- * Create properties for a module
- */
 const createModuleProperties = async (
   databaseId: string,
   moduleConfig: IModuleConfig,
@@ -229,7 +195,6 @@ const createModuleProperties = async (
     });
   }
 
-  // Add system properties
   const systemProperties = [
     {
       name: 'Created Time',
@@ -290,9 +255,6 @@ const createModuleProperties = async (
   return properties;
 };
 
-/**
- * Create views for a module
- */
 const createModuleViews = async (
   databaseId: string,
   moduleConfig: IModuleConfig,
@@ -303,14 +265,15 @@ const createModuleViews = async (
   const views = [];
 
   for (const viewConfig of moduleConfig.defaultViews) {
-    // Map property names to IDs
-    const visiblePropertyIds = viewConfig.settings.visibleProperties?.map(propName =>
-      properties.find(p => p.name === propName)?._id?.toString()
-    ).filter(Boolean) || [];
+    const visiblePropertyIds =
+      viewConfig.settings.visibleProperties
+        ?.map(propName => properties.find(p => p.name === propName)?._id?.toString())
+        .filter(Boolean) || [];
 
-    const frozenPropertyIds = viewConfig.settings.frozenProperties?.map(propName =>
-      properties.find(p => p.name === propName)?._id?.toString()
-    ).filter(Boolean) || [];
+    const frozenPropertyIds =
+      viewConfig.settings.frozenProperties
+        ?.map(propName => properties.find(p => p.name === propName)?._id?.toString())
+        .filter(Boolean) || [];
 
     const view = new ViewModel({
       _id: new ObjectId(),
@@ -331,11 +294,13 @@ const createModuleViews = async (
         })),
         filters: viewConfig.settings.filters?.map(filter => ({
           ...filter,
-          property: properties.find(p => p.name === filter.property)?._id?.toString() || filter.property
+          property:
+            properties.find(p => p.name === filter.property)?._id?.toString() || filter.property
         })),
         groups: viewConfig.settings.groups?.map(group => ({
           ...group,
-          property: properties.find(p => p.name === group.property)?._id?.toString() || group.property
+          property:
+            properties.find(p => p.name === group.property)?._id?.toString() || group.property
         }))
       },
       createdAt: now,
@@ -356,9 +321,6 @@ const createModuleViews = async (
   return views;
 };
 
-/**
- * Create cross-module relations
- */
 const createModuleRelations = async (
   databaseId: string,
   moduleConfig: IModuleConfig,
@@ -369,36 +331,24 @@ const createModuleRelations = async (
 
   for (const relationConfig of moduleConfig.defaultRelations) {
     try {
-      // Find target module
-      const targetModule = initializedModules.find(
-        m => m.moduleId === relationConfig.targetModule
-      );
+      const targetModule = initializedModules.find(m => m.moduleId === relationConfig.targetModule);
 
-      if (!targetModule) {
-        continue; // Target module not initialized, skip relation
-      }
+      if (!targetModule) continue;
 
-      // Find source property
       const sourceProperty = await PropertyModel.findOne({
         databaseId: new ObjectId(databaseId),
         name: relationConfig.sourceProperty
       });
 
-      if (!sourceProperty) {
-        continue; // Source property not found
-      }
+      if (!sourceProperty) continue;
 
-      // Find target property
       const targetProperty = await PropertyModel.findOne({
         databaseId: new ObjectId(targetModule.databaseId),
         name: relationConfig.targetProperty
       });
 
-      if (!targetProperty) {
-        continue; // Target property not found
-      }
+      if (!targetProperty) continue;
 
-      // Update source property with relation configuration
       await PropertyModel.findByIdAndUpdate(sourceProperty._id, {
         $set: {
           'config.relatedDatabase': targetModule.databaseId,
@@ -417,42 +367,34 @@ const createModuleRelations = async (
         relationName: `${moduleConfig.name} -> ${targetModule.name}`,
         propertyId: (sourceProperty._id as ObjectId).toString()
       });
-
     } catch (error) {
-      // Log error but continue with other relations
-      console.error(`Failed to create relation: ${relationConfig.sourceProperty} -> ${relationConfig.targetModule}`, error);
+      console.error(
+        `Failed to create relation: ${relationConfig.sourceProperty} -> ${relationConfig.targetModule}`,
+        error
+      );
     }
   }
 
   return createdRelations;
 };
 
-/**
- * Create sample data for a module
- */
 const createSampleDataForModule = async (
   databaseId: string,
   moduleConfig: IModuleConfig,
   userId: string
 ): Promise<void> => {
-  // Get sample data configuration for the module
   const sampleData = getSampleDataForModule(moduleConfig.id);
 
-  if (!sampleData || sampleData.length === 0) {
-    return; // No sample data defined for this module
-  }
+  if (!sampleData || sampleData.length === 0) return;
 
-  // Get properties for the database
   const properties = await PropertyModel.find({
     databaseId: new ObjectId(databaseId)
   });
 
   const now = new Date();
 
-  // Create sample records
   for (const sampleRecord of sampleData) {
     try {
-      // Map property names to values
       const recordProperties: Record<string, unknown> = {};
 
       for (const [propName, value] of Object.entries(sampleRecord)) {
@@ -482,13 +424,11 @@ const createSampleDataForModule = async (
       });
 
       await record.save();
-
     } catch (error) {
       console.error(`Failed to create sample record for ${moduleConfig.id}:`, error);
     }
   }
 
-  // Update database record count
   const recordCount = await RecordModel.countDocuments({
     databaseId: new ObjectId(databaseId)
   });
@@ -501,32 +441,29 @@ const createSampleDataForModule = async (
   });
 };
 
-/**
- * Get sample data for a module
- */
 const getSampleDataForModule = (moduleId: EDatabaseType): Array<Record<string, unknown>> => {
   switch (moduleId) {
     case EDatabaseType.TASKS:
       return [
         {
-          'Name': 'Set up development environment',
-          'Status': 'completed',
-          'Priority': 'high',
-          'Due Date': new Date(Date.now() - 86400000), // Yesterday
+          Name: 'Set up development environment',
+          Status: 'completed',
+          Priority: 'high',
+          'Due Date': new Date(Date.now() - 86400000),
           'Estimated Hours': 4
         },
         {
-          'Name': 'Review project requirements',
-          'Status': 'in_progress',
-          'Priority': 'medium',
-          'Due Date': new Date(Date.now() + 86400000), // Tomorrow
+          Name: 'Review project requirements',
+          Status: 'in_progress',
+          Priority: 'medium',
+          'Due Date': new Date(Date.now() + 86400000),
           'Estimated Hours': 2
         },
         {
-          'Name': 'Plan sprint activities',
-          'Status': 'not_started',
-          'Priority': 'medium',
-          'Due Date': new Date(Date.now() + 172800000), // Day after tomorrow
+          Name: 'Plan sprint activities',
+          Status: 'not_started',
+          Priority: 'medium',
+          'Due Date': new Date(Date.now() + 172800000),
           'Estimated Hours': 3
         }
       ];
@@ -534,26 +471,26 @@ const getSampleDataForModule = (moduleId: EDatabaseType): Array<Record<string, u
     case EDatabaseType.NOTES:
       return [
         {
-          'Title': 'Project Ideas',
-          'Status': 'draft',
-          'Category': 'ideas',
-          'Tags': ['important', 'idea'],
+          Title: 'Project Ideas',
+          Status: 'draft',
+          Category: 'ideas',
+          Tags: ['important', 'idea'],
           'Word Count': 250,
           'Reading Time': 2
         },
         {
-          'Title': 'Meeting Notes - Team Sync',
-          'Status': 'published',
-          'Category': 'work',
-          'Tags': ['meeting'],
+          Title: 'Meeting Notes - Team Sync',
+          Status: 'published',
+          Category: 'work',
+          Tags: ['meeting'],
           'Word Count': 180,
           'Reading Time': 1
         },
         {
-          'Title': 'Learning Resources',
-          'Status': 'draft',
-          'Category': 'reference',
-          'Tags': ['reference', 'todo'],
+          Title: 'Learning Resources',
+          Status: 'draft',
+          Category: 'reference',
+          Tags: ['reference', 'todo'],
           'Word Count': 320,
           'Reading Time': 2
         }
@@ -562,22 +499,22 @@ const getSampleDataForModule = (moduleId: EDatabaseType): Array<Record<string, u
     case EDatabaseType.PROJECTS:
       return [
         {
-          'Name': 'Second Brain System',
-          'Status': 'active',
-          'Priority': 'high',
-          'Start Date': new Date(Date.now() - 604800000), // Week ago
-          'End Date': new Date(Date.now() + 2592000000), // Month from now
-          'Progress': 75,
-          'Budget': 10000
+          Name: 'Second Brain System',
+          Status: 'active',
+          Priority: 'high',
+          'Start Date': new Date(Date.now() - 604800000),
+          'End Date': new Date(Date.now() + 2592000000),
+          Progress: 75,
+          Budget: 10000
         },
         {
-          'Name': 'Website Redesign',
-          'Status': 'planning',
-          'Priority': 'medium',
-          'Start Date': new Date(Date.now() + 86400000), // Tomorrow
-          'End Date': new Date(Date.now() + 1814400000), // 3 weeks from now
-          'Progress': 0,
-          'Budget': 5000
+          Name: 'Website Redesign',
+          Status: 'planning',
+          Priority: 'medium',
+          'Start Date': new Date(Date.now() + 86400000),
+          'End Date': new Date(Date.now() + 1814400000),
+          Progress: 0,
+          Budget: 5000
         }
       ];
 

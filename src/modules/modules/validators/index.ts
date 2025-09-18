@@ -17,11 +17,6 @@ export const workspaceModuleSchema = z.object({
   moduleId: z.string().min(1, 'Module ID is required')
 });
 
-export const workspaceModuleDatabaseByTypeSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
-  moduleType: z.enum(EDatabaseType)
-});
-
 export const categoryQuerySchema = z.object({
   category: z.string().min(1, 'Category is required')
 });

@@ -1,18 +1,8 @@
-import { IModuleConfig, EModuleCategory } from '../types/module.types';
+import { IModuleConfig, EModuleCategory } from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { EPropertyType } from '@/modules/core/types/property.types';
 import { EViewType } from '@/modules/core/types/view.types';
-import {
-  EStatus,
-  EPriority,
-  EFrequency,
-  EContentType,
-  EMoodScale,
-  EFinanceType,
-  EFinanceCategory
-} from '@/modules/core/types/common.types';
 
-// Dashboard Module Configuration
 export const DASHBOARD_MODULE: IModuleConfig = {
   id: EDatabaseType.DASHBOARD,
   name: 'Dashboard',
@@ -101,7 +91,6 @@ export const DASHBOARD_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Tasks Module Configuration
 export const TASKS_MODULE: IModuleConfig = {
   id: EDatabaseType.TASKS,
   name: 'Tasks',
@@ -318,7 +307,6 @@ export const TASKS_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Notes Module Configuration
 export const NOTES_MODULE: IModuleConfig = {
   id: EDatabaseType.NOTES,
   name: 'Notes',
@@ -513,7 +501,6 @@ export const NOTES_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Projects Module Configuration
 export const PROJECTS_MODULE: IModuleConfig = {
   id: EDatabaseType.PROJECTS,
   name: 'Projects',
@@ -755,7 +742,6 @@ export const PROJECTS_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Goals Module Configuration
 export const GOALS_MODULE: IModuleConfig = {
   id: EDatabaseType.GOALS,
   name: 'Goals',
@@ -958,7 +944,6 @@ export const GOALS_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// People Module Configuration
 export const PEOPLE_MODULE: IModuleConfig = {
   id: EDatabaseType.PEOPLE,
   name: 'People',
@@ -1097,7 +1082,6 @@ export const PEOPLE_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Finance Module Configuration
 export const FINANCE_MODULE: IModuleConfig = {
   id: EDatabaseType.FINANCE,
   name: 'Finance',
@@ -1266,7 +1250,6 @@ export const FINANCE_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Habits Module Configuration
 export const HABITS_MODULE: IModuleConfig = {
   id: EDatabaseType.HABITS,
   name: 'Habits',
@@ -1479,7 +1462,6 @@ export const HABITS_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Journal Module Configuration
 export const JOURNAL_MODULE: IModuleConfig = {
   id: EDatabaseType.JOURNAL,
   name: 'Journal',
@@ -1681,7 +1663,6 @@ export const JOURNAL_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Mood Tracker Module Configuration
 export const MOOD_TRACKER_MODULE: IModuleConfig = {
   id: EDatabaseType.MOOD_TRACKER,
   name: 'Mood Tracker',
@@ -1826,7 +1807,6 @@ export const MOOD_TRACKER_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// Resources Module Configuration
 export const RESOURCES_MODULE: IModuleConfig = {
   id: EDatabaseType.RESOURCES,
   name: 'Resources',
@@ -2020,7 +2000,6 @@ export const RESOURCES_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// PARA Projects Module Configuration
 export const PARA_PROJECTS_MODULE: IModuleConfig = {
   id: EDatabaseType.PARA_PROJECTS,
   name: 'PARA Projects',
@@ -2159,7 +2138,6 @@ export const PARA_PROJECTS_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// PARA Areas Module Configuration
 export const PARA_AREAS_MODULE: IModuleConfig = {
   id: EDatabaseType.PARA_AREAS,
   name: 'PARA Areas',
@@ -2276,7 +2254,6 @@ export const PARA_AREAS_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// PARA Resources Module Configuration
 export const PARA_RESOURCES_MODULE: IModuleConfig = {
   id: EDatabaseType.PARA_RESOURCES,
   name: 'PARA Resources',
@@ -2411,7 +2388,6 @@ export const PARA_RESOURCES_MODULE: IModuleConfig = {
   ]
 } as const;
 
-// PARA Archive Module Configuration
 export const PARA_ARCHIVE_MODULE: IModuleConfig = {
   id: EDatabaseType.PARA_ARCHIVE,
   name: 'PARA Archive',

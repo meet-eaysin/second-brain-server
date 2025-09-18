@@ -2,7 +2,6 @@ import { EDatabaseType } from '@/modules/core/types/database.types';
 import { EPropertyType } from '@/modules/core/types/property.types';
 import { EViewType } from '@/modules/core/types/view.types';
 
-// Module configuration interface
 export interface IModuleConfig {
   readonly id: EDatabaseType;
   readonly name: string;
@@ -18,7 +17,6 @@ export interface IModuleConfig {
   readonly templates: readonly IModuleTemplate[];
 }
 
-// Module categories for organization
 export enum EModuleCategory {
   PRODUCTIVITY = 'productivity',
   KNOWLEDGE = 'knowledge',
@@ -29,7 +27,6 @@ export enum EModuleCategory {
   SYSTEM = 'system'
 }
 
-// Module property configuration
 export interface IModuleProperty {
   readonly name: string;
   readonly type: EPropertyType;
@@ -41,7 +38,6 @@ export interface IModuleProperty {
   readonly description?: string;
 }
 
-// Module view configuration
 export interface IModuleView {
   readonly name: string;
   readonly type: EViewType;
@@ -51,7 +47,6 @@ export interface IModuleView {
   readonly settings: IModuleViewSettings;
 }
 
-// Module view settings
 export interface IModuleViewSettings {
   readonly visibleProperties?: readonly string[];
   readonly frozenProperties?: readonly string[];
@@ -61,39 +56,32 @@ export interface IModuleViewSettings {
   readonly pageSize?: number;
   readonly cardSize?: 'small' | 'medium' | 'large';
 
-  // Calendar view specific properties
   readonly dateProperty?: string;
   readonly titleProperty?: string;
   readonly colorProperty?: string;
 
-  // Board view specific properties
   readonly statusProperty?: string;
 
-  // Gallery view specific properties
   readonly coverProperty?: string;
 }
 
-// Module sort configuration
 export interface IModuleSort {
   readonly property: string;
   readonly direction: 'asc' | 'desc';
 }
 
-// Module filter configuration
 export interface IModuleFilter {
   readonly property: string;
   readonly operator: string;
   readonly value: unknown;
 }
 
-// Module group configuration
 export interface IModuleGroup {
   readonly property: string;
   readonly direction: 'asc' | 'desc';
   readonly showEmpty: boolean;
 }
 
-// Module relation configuration
 export interface IModuleRelation {
   readonly sourceProperty: string;
   readonly targetModule: EDatabaseType;
@@ -103,7 +91,6 @@ export interface IModuleRelation {
   readonly cascadeDelete: boolean;
 }
 
-// Module template configuration
 export interface IModuleTemplate {
   readonly name: string;
   readonly description: string;
@@ -111,7 +98,6 @@ export interface IModuleTemplate {
   readonly isDefault: boolean;
 }
 
-// Module initialization request
 export interface IModuleInitRequest {
   readonly workspaceId: string;
   readonly userId: string;
@@ -119,7 +105,6 @@ export interface IModuleInitRequest {
   readonly createSampleData: boolean;
 }
 
-// Module initialization response
 export interface IModuleInitResponse {
   readonly workspaceId: string;
   readonly initializedModules: readonly IInitializedModule[];
@@ -128,7 +113,6 @@ export interface IModuleInitResponse {
   readonly errors: readonly string[];
 }
 
-// Initialized module info
 export interface IInitializedModule {
   readonly moduleId: EDatabaseType;
   readonly databaseId: string;
@@ -138,7 +122,6 @@ export interface IInitializedModule {
   readonly templatesCreated: number;
 }
 
-// Created relation info
 export interface ICreatedRelation {
   readonly sourceModule: EDatabaseType;
   readonly targetModule: EDatabaseType;
@@ -146,7 +129,6 @@ export interface ICreatedRelation {
   readonly propertyId: string;
 }
 
-// Module status
 export interface IModuleStatus {
   readonly moduleId: EDatabaseType;
   readonly isInitialized: boolean;

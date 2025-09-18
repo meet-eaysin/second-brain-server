@@ -39,7 +39,6 @@ export interface IDatabaseCover {
   value: string;
 }
 
-// Database template for creating new records
 export interface IDatabaseTemplate {
   id: string;
   name: string;
@@ -48,7 +47,6 @@ export interface IDatabaseTemplate {
   isDefault?: boolean;
 }
 
-// Main database interface
 export interface IDatabase extends IBaseEntity {
   workspaceId: TWorkspaceId;
   name: string;
@@ -163,7 +161,6 @@ export const DatabaseStatsSchema = z.object({
   )
 });
 
-// Request/Response types
 export interface ICreateDatabaseRequest {
   workspaceId: TWorkspaceId;
   name: string;
@@ -174,7 +171,6 @@ export interface ICreateDatabaseRequest {
   isPublic?: boolean;
   isTemplate?: boolean;
 
-  // Initial configuration
   allowComments?: boolean;
   allowDuplicates?: boolean;
   enableVersioning?: boolean;
@@ -182,7 +178,6 @@ export interface ICreateDatabaseRequest {
   enableAutoTagging?: boolean;
   enableSmartSuggestions?: boolean;
 
-  // Template to copy from
   templateId?: TId;
 }
 
@@ -215,7 +210,6 @@ export interface IDatabaseListResponse {
 
 export interface IDatabaseStatsResponse extends IDatabaseStats {}
 
-// Query parameters for listing databases
 export interface IDatabaseQueryParams {
   workspaceId?: TWorkspaceId;
   type?: EDatabaseType;

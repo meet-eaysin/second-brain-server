@@ -4,7 +4,7 @@ import {
   IModuleStatus,
   IWorkspaceModules,
   IModuleConfig
-} from '../types/module.types';
+} from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { createAppError } from '@/utils/error.utils';
 import {
@@ -12,30 +12,23 @@ import {
   getInitializedModules,
   getModuleDatabaseId,
   moduleConfigService
-} from './module-config.service';
-// Remove unused imports - these are controller functions, not service functions
+} from '@/modules/modules/module-config.service';
+import { moduleInitializationService } from './module-initialization.service';
 
-/**
- * Initialize Second Brain modules for a workspace
- */
 export const initializeWorkspaceModules = async (
   request: IModuleInitRequest
 ): Promise<IModuleInitResponse> => {
-  // Validate request
   if (!request.workspaceId || !request.userId || !request.modules.length) {
     throw createAppError('Invalid module initialization request', 400);
   }
 
-  // Validate module availability
-  const unavailableModules = request.modules.filter(moduleId => !moduleConfigService.isModuleAvailable(moduleId));
+  const unavailableModules = request.modules.filter(
+    moduleId => !moduleConfigService.isModuleAvailable(moduleId)
+  );
   if (unavailableModules.length > 0) {
-    throw createAppError(
-      `Unavailable modules: ${unavailableModules.join(', ')}`,
-      400
-    );
+    throw createAppError(`Unavailable modules: ${unavailableModules.join(', ')}`, 400);
   }
 
-  // Validate dependencies
   const dependencyValidation = moduleConfigService.validateModuleDependencies([...request.modules]);
   if (!dependencyValidation.isValid) {
     throw createAppError(
@@ -44,29 +37,19 @@ export const initializeWorkspaceModules = async (
     );
   }
 
-  // Get recommended initialization order
-  const orderedModules = moduleConfigService.getRecommendedInitializationOrder([...request.modules]);
+  const orderedModules = moduleConfigService.getRecommendedInitializationOrder([
+    ...request.modules
+  ]);
 
-  // Initialize modules in the correct order
   const orderedRequest: IModuleInitRequest = {
     ...request,
     modules: orderedModules
   };
 
-  // TODO: Implement actual module initialization logic
-  // This should create databases, properties, views, etc.
-  return {
-    workspaceId: orderedRequest.workspaceId,
-    initializedModules: [],
-    createdRelations: [],
-    sampleDataCreated: orderedRequest.createSampleData,
-    errors: []
-  };
+  // Initialize modules using the module initialization service
+  return await moduleInitializationService.initializeModules(orderedRequest);
 };
 
-/**
- * Initialize core Second Brain modules
- */
 export const initializeCoreModules = async (
   workspaceId: string,
   userId: string,
@@ -82,55 +65,38 @@ export const initializeCoreModules = async (
   });
 };
 
-/**
- * Get available module configurations
- */
 export const getAvailableModules = (): IModuleConfig[] => {
   return moduleConfigService.getAllModuleConfigs();
 };
 
-/**
- * Get core module configurations
- */
 export const getCoreModules = (): IModuleConfig[] => {
   return moduleConfigService.getCoreModuleConfigs();
 };
 
-/**
- * Get module configurations by category
- */
 export const getModulesByCategory = (category: string): IModuleConfig[] => {
   return moduleConfigService.getModuleConfigsByCategory(category);
 };
 
-/**
- * Get module configuration by ID
- */
 export const getModule = (moduleId: EDatabaseType): IModuleConfig | undefined => {
   return moduleConfigService.getModuleConfig(moduleId);
 };
 
-/**
- * Check if module is available
- */
 export const checkModuleAvailability = (moduleId: EDatabaseType): boolean => {
   return moduleConfigService.isModuleAvailable(moduleId);
 };
 
-/**
- * Get module dependencies
- */
 export const getModuleRequiredDependencies = (moduleId: EDatabaseType): EDatabaseType[] => {
   const moduleConfig = moduleConfigService.getModuleConfig(moduleId);
   return moduleConfig ? [...moduleConfig.dependencies] : [];
 };
 
-/**
- * Validate module dependencies for initialization
- */
 export const validateModuleInitialization = (
   moduleIds: EDatabaseType[]
-): { isValid: boolean; missingDependencies: EDatabaseType[]; recommendedOrder: EDatabaseType[] } => {
+): {
+  isValid: boolean;
+  missingDependencies: EDatabaseType[];
+  recommendedOrder: EDatabaseType[];
+} => {
   const validation = moduleConfigService.validateModuleDependencies(moduleIds);
   const recommendedOrder = moduleConfigService.getRecommendedInitializationOrder(moduleIds);
 
@@ -141,9 +107,6 @@ export const validateModuleInitialization = (
   };
 };
 
-/**
- * Get workspace modules overview
- */
 export const getWorkspaceModules = async (workspaceId: string): Promise<IWorkspaceModules> => {
   if (!workspaceId) {
     throw createAppError('Workspace ID is required', 400);
@@ -152,9 +115,6 @@ export const getWorkspaceModules = async (workspaceId: string): Promise<IWorkspa
   return await moduleConfigService.getWorkspaceModulesStatus(workspaceId);
 };
 
-/**
- * Check if specific module is initialized in workspace
- */
 export const checkModuleInitialization = async (
   workspaceId: string,
   moduleId: EDatabaseType
@@ -166,9 +126,6 @@ export const checkModuleInitialization = async (
   return await isModuleInitialized(workspaceId, moduleId);
 };
 
-/**
- * Get all initialized modules for workspace
- */
 export const getWorkspaceInitializedModules = async (
   workspaceId: string
 ): Promise<EDatabaseType[]> => {
@@ -179,21 +136,16 @@ export const getWorkspaceInitializedModules = async (
   return await getInitializedModules(workspaceId);
 };
 
-/**
- * Get database ID for a specific module in workspace
- */
 export const getWorkspaceModuleDatabaseId = async (
   workspaceId: string,
   moduleId: EDatabaseType
 ): Promise<string | null> => {
-  if (!workspaceId || !moduleId) throw createAppError('Workspace ID and Module ID are required', 400);
+  if (!workspaceId || !moduleId)
+    throw createAppError('Workspace ID and Module ID are required', 400);
 
   return await getModuleDatabaseId(workspaceId, moduleId);
 };
 
-/**
- * Get module status for workspace
- */
 export const getModuleStatus = async (
   workspaceId: string,
   moduleId: EDatabaseType
@@ -202,9 +154,6 @@ export const getModuleStatus = async (
   return workspaceModules.modules.find(m => m.moduleId === moduleId) || null;
 };
 
-/**
- * Initialize specific modules for workspace
- */
 export const initializeSpecificModules = async (
   workspaceId: string,
   userId: string,
@@ -219,9 +168,6 @@ export const initializeSpecificModules = async (
   });
 };
 
-/**
- * Get module initialization recommendations
- */
 export const getModuleRecommendations = async (
   workspaceId: string
 ): Promise<{
@@ -247,9 +193,6 @@ export const getModuleRecommendations = async (
   };
 };
 
-/**
- * Validate workspace module setup
- */
 export const validateWorkspaceModules = async (
   workspaceId: string
 ): Promise<{
@@ -262,7 +205,6 @@ export const validateWorkspaceModules = async (
   const issues: string[] = [];
   const recommendations: string[] = [];
 
-  // Check for core modules
   const coreModules = moduleConfigService.getCoreModuleConfigs();
   const initializedCoreModules = workspaceModules.modules.filter(
     m => m.isInitialized && coreModules.some(core => core.id === m.moduleId)
@@ -273,7 +215,6 @@ export const validateWorkspaceModules = async (
     recommendations.push('Initialize missing core modules for full functionality');
   }
 
-  // Check module health
   const unhealthyModules = workspaceModules.modules.filter(
     m => m.isInitialized && m.health !== 'healthy'
   );
@@ -283,10 +224,7 @@ export const validateWorkspaceModules = async (
     recommendations.push('Review and address module health issues');
   }
 
-  // Check for modules with no records
-  const emptyModules = workspaceModules.modules.filter(
-    m => m.isInitialized && m.recordCount === 0
-  );
+  const emptyModules = workspaceModules.modules.filter(m => m.isInitialized && m.recordCount === 0);
 
   if (emptyModules.length > 0) {
     recommendations.push('Consider adding content to empty modules or creating sample data');

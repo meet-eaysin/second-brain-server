@@ -21,11 +21,7 @@ import {
 } from '@/modules/modules/services/modules.service';
 import { IModuleInitRequest } from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
-import { getModuleDatabaseIdsByType } from '@/modules/modules/services/module-config.service';
 
-/**
- * Initialize modules for a workspace
- */
 export const initializeModules = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;
@@ -50,9 +46,6 @@ export const initializeModules = catchAsync(
   }
 );
 
-/**
- * Initialize core modules for a workspace
- */
 export const initializeCoreWorkspaceModules = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;
@@ -70,9 +63,6 @@ export const initializeCoreWorkspaceModules = catchAsync(
   }
 );
 
-/**
- * Get available module configurations
- */
 export const getAvailableModuleConfigs = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const modules = getAvailableModules();
@@ -81,9 +71,6 @@ export const getAvailableModuleConfigs = catchAsync(
   }
 );
 
-/**
- * Get core module configurations
- */
 export const getCoreModuleConfigs = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const modules = getCoreModules();
@@ -92,9 +79,6 @@ export const getCoreModuleConfigs = catchAsync(
   }
 );
 
-/**
- * Get module configurations by category
- */
 export const getModulesByCategories = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { category } = req.query;
@@ -113,9 +97,6 @@ export const getModulesByCategories = catchAsync(
   }
 );
 
-/**
- * Get specific module configuration
- */
 export const getModuleConfig = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { moduleId } = req.params;
@@ -136,9 +117,6 @@ export const getModuleConfig = catchAsync(
   }
 );
 
-/**
- * Check module availability
- */
 export const checkModuleAvailabilityStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { moduleId } = req.params;
@@ -154,9 +132,6 @@ export const checkModuleAvailabilityStatus = catchAsync(
   }
 );
 
-/**
- * Get module dependencies
- */
 export const getModuleDependencies = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { moduleId } = req.params;
@@ -175,9 +150,6 @@ export const getModuleDependencies = catchAsync(
   }
 );
 
-/**
- * Validate module initialization request
- */
 export const validateModuleInitializationRequest = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { modules } = req.body;
@@ -193,9 +165,6 @@ export const validateModuleInitializationRequest = catchAsync(
   }
 );
 
-/**
- * Get workspace modules overview
- */
 export const getWorkspaceModulesOverview = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;
@@ -206,9 +175,6 @@ export const getWorkspaceModulesOverview = catchAsync(
   }
 );
 
-/**
- * Check if module is initialized in workspace
- */
 export const checkWorkspaceModuleInitialization = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId, moduleId } = req.params;
@@ -228,9 +194,6 @@ export const checkWorkspaceModuleInitialization = catchAsync(
   }
 );
 
-/**
- * Get initialized modules for workspace
- */
 export const getWorkspaceInitializedModulesList = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;
@@ -244,9 +207,6 @@ export const getWorkspaceInitializedModulesList = catchAsync(
   }
 );
 
-/**
- * Get module database ID for workspace
- */
 export const getModuleDatabaseId = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId, moduleId } = req.params;
@@ -274,35 +234,6 @@ export const getModuleDatabaseId = catchAsync(
   }
 );
 
-/**
- * Get module database ID by module type
- */
-export const getModuleDatabaseIdsByModuleType = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId, moduleType } = req.params;
-
-    if (!moduleType || !Object.values(EDatabaseType).includes(moduleType as EDatabaseType)) {
-      res.status(400).json({ success: false, message: 'Valid module type is required' });
-      return;
-    }
-
-    const databaseIds = await getModuleDatabaseIdsByType(workspaceId, moduleType as EDatabaseType);
-
-    if (!databaseIds) {
-      res.status(404).json({
-        success: false,
-        message: 'Module not initialized in this workspace'
-      });
-      return;
-    }
-
-    sendSuccessResponse(res, 'Module database ID retrieved successfully', databaseIds);
-  }
-);
-
-/**
- * Get module status for workspace
- */
 export const getWorkspaceModuleStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId, moduleId } = req.params;
@@ -330,9 +261,6 @@ export const getWorkspaceModuleStatus = catchAsync(
   }
 );
 
-/**
- * Initialize specific modules for workspace
- */
 export const initializeSpecificWorkspaceModules = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;
@@ -355,9 +283,6 @@ export const initializeSpecificWorkspaceModules = catchAsync(
   }
 );
 
-/**
- * Get module recommendations for workspace
- */
 export const getWorkspaceModuleRecommendations = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;
@@ -368,9 +293,6 @@ export const getWorkspaceModuleRecommendations = catchAsync(
   }
 );
 
-/**
- * Validate workspace module setup
- */
 export const validateWorkspaceModuleSetup = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { workspaceId } = req.params;

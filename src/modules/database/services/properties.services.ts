@@ -6,11 +6,9 @@ import {
   EPropertyType,
   IUpdatePropertyRequest
 } from '@/modules/core/types/property.types';
-import {
-  IReorderPropertiesRequest
-} from '../types/properties.types';
+import { IReorderPropertiesRequest } from '../types/properties.types';
+import { RecordModel } from '@/modules/database/models/record.model';
 
-// Define a local interface that matches the database requirements
 interface ICreatePropertyRequest {
   name: string;
   type: EPropertyType;
@@ -21,42 +19,30 @@ interface ICreatePropertyRequest {
   order?: number;
   config?: any;
 }
-import {
-  createAppError,
-  createNotFoundError,
-  createConflictError
-} from '@/utils/error.utils';
+import { createAppError, createNotFoundError, createConflictError } from '@/utils/error.utils';
 
 export class PropertiesService {
-  // Create a new property
   async createProperty(
     databaseId: string,
     data: ICreatePropertyRequest,
     userId: string
   ): Promise<IProperty> {
-    // Verify database exists
     const database = await DatabaseModel.findById(databaseId);
 
-    if (!database) {
-      throw createNotFoundError('Database');
-    }
+    if (!database) throw createNotFoundError('Database');
 
-    // Check if property name already exists
     const existingProperty = await PropertyModel.findOne({
       databaseId,
       name: { $regex: new RegExp(`^${data.name}$`, 'i') }
     });
 
-    if (existingProperty) {
-      throw createConflictError('Property with this name already exists');
-    }
+    if (existingProperty) throw createConflictError('Property with this name already exists');
 
-    // Get the next order number
     const maxOrder = await PropertyModel.findOne({ databaseId })
       .sort({ order: -1 })
       .select('order');
 
-    const nextOrder = data.order ?? ((maxOrder?.order ?? -1) + 1);
+    const nextOrder = data.order ?? (maxOrder?.order ?? -1) + 1;
 
     const propertyData = {
       databaseId,
@@ -71,15 +57,12 @@ export class PropertiesService {
       updatedBy: userId
     };
 
-    // Create property
     const property = new PropertyModel(propertyData);
 
-    // Validate property configuration
     this.validatePropertyConfig(property.toObject() as IProperty);
 
     await property.save();
 
-    // Add property reference to database
     await DatabaseModel.findByIdAndUpdate(databaseId, {
       $push: { properties: property._id },
       $set: { updatedBy: new ObjectId(userId) }
@@ -88,88 +71,61 @@ export class PropertiesService {
     return property.toObject() as IProperty;
   }
 
-  // Get all properties for a database
   async getProperties(
     databaseId: string,
     _userId: string,
     includeHidden: boolean = false
   ): Promise<IProperty[]> {
-    // Verify database exists
     const database = await DatabaseModel.findById(databaseId);
 
-    if (!database) {
-      throw createNotFoundError('Database');
-    }
+    if (!database) throw createNotFoundError('Database');
 
-    // Get properties from Property model
     const query: any = { databaseId };
-
-    // Filter hidden properties if not requested
-    if (!includeHidden) {
-      query.isVisible = true;
-    }
+    if (!includeHidden) query.isVisible = true;
 
     const properties = await PropertyModel.find(query).sort({ order: 1 });
 
     return properties.map(prop => prop.toObject() as IProperty);
   }
 
-  // Get a specific property
   async getPropertyById(
     databaseId: string,
     propertyId: string,
     _userId: string
   ): Promise<IProperty> {
-    // Verify database exists
     const database = await DatabaseModel.findById(databaseId);
 
-    if (!database) {
-      throw createNotFoundError('Database');
-    }
+    if (!database) throw createNotFoundError('Database');
 
-    // Get property from Property model
     const property = await PropertyModel.findOne({
       databaseId,
       _id: propertyId
     });
 
-    if (!property) {
-      throw createNotFoundError('Property', propertyId);
-    }
+    if (!property) throw createNotFoundError('Property', propertyId);
 
     return property.toObject() as IProperty;
   }
 
-  // Update a property
   async updateProperty(
     databaseId: string,
     propertyId: string,
     data: IUpdatePropertyRequest,
     userId: string
   ): Promise<IProperty> {
-    // Verify database exists
     const database = await DatabaseModel.findById(databaseId);
 
-    if (!database) {
-      throw createNotFoundError('Database');
-    }
+    if (!database) throw createNotFoundError('Database');
 
-    // Get property from Property model
     const property = await PropertyModel.findOne({
       databaseId,
       _id: propertyId
     });
 
-    if (!property) {
-      throw createNotFoundError('Property', propertyId);
-    }
+    if (!property) throw createNotFoundError('Property', propertyId);
 
-    // Cannot modify system properties
-    if (property.isSystem) {
-      throw createAppError('Cannot modify system properties', 400);
-    }
+    if (property.isSystem) throw createAppError('Cannot modify system properties', 400);
 
-    // Check if new name conflicts with existing properties
     if (data.name && data.name !== property.name) {
       const existingProperty = await PropertyModel.findOne({
         databaseId,
@@ -182,7 +138,6 @@ export class PropertiesService {
       }
     }
 
-    // Update property
     const updateData: any = {
       updatedBy: userId
     };
@@ -192,25 +147,20 @@ export class PropertiesService {
     if (data.isVisible !== undefined) updateData.isVisible = data.isVisible;
     if (data.order !== undefined) updateData.order = data.order;
     if (data.config !== undefined) {
-      // Merge with existing config
       updateData.config = { ...property.config, ...data.config };
     }
 
-    // Validate updated property if config changed
     if (data.config) {
       const updatedProperty = { ...property.toObject(), ...updateData };
       this.validatePropertyConfig(updatedProperty as IProperty);
     }
 
-    // Update property
     await PropertyModel.findByIdAndUpdate(propertyId, updateData);
 
-    // Return updated property
     const updatedProperty = await PropertyModel.findById(propertyId);
     return updatedProperty!.toObject() as IProperty;
   }
 
-  // Reorder properties
   async reorderProperties(
     databaseId: string,
     data: IReorderPropertiesRequest,
@@ -218,22 +168,17 @@ export class PropertiesService {
   ): Promise<IProperty[]> {
     const database = await DatabaseModel.findById(databaseId);
 
-    if (!database) {
-      throw createNotFoundError('Database');
-    }
+    if (!database) throw createNotFoundError('Database');
 
-    // Validate all property IDs exist
     const propertyIds = data.propertyOrders.map(po => po.propertyId);
     const existingProperties = await PropertyModel.find({
       databaseId,
       _id: { $in: propertyIds }
     });
 
-    if (existingProperties.length !== propertyIds.length) {
+    if (existingProperties.length !== propertyIds.length)
       throw createNotFoundError('One or more properties not found');
-    }
 
-    // Update orders
     const updatePromises = data.propertyOrders.map(({ propertyId, order }) =>
       PropertyModel.findByIdAndUpdate(propertyId, {
         order,
@@ -243,67 +188,42 @@ export class PropertiesService {
 
     await Promise.all(updatePromises);
 
-    // Return updated properties
     return this.getProperties(databaseId, userId, true);
   }
 
-  // Delete a property
-  async deleteProperty(
-    databaseId: string,
-    propertyId: string,
-    userId: string
-  ): Promise<void> {
-    // Verify database exists
+  async deleteProperty(databaseId: string, propertyId: string, userId: string): Promise<void> {
     const database = await DatabaseModel.findById(databaseId);
 
-    if (!database) {
-      throw createNotFoundError('Database');
-    }
+    if (!database) throw createNotFoundError('Database');
 
-    // Get property
     const property = await PropertyModel.findOne({
       databaseId,
       _id: propertyId
     });
 
-    if (!property) {
-      throw createNotFoundError('Property', propertyId);
-    }
-
-    // Check permissions - for now, only database owner can delete properties
-    if (database.createdBy.toString() !== userId) {
+    if (!property) throw createNotFoundError('Property', propertyId);
+    if (database.createdBy.toString() !== userId)
       throw createAppError('Permission denied to delete this property', 403);
-    }
+    if (property.isSystem) throw createAppError('Cannot delete system properties', 400);
 
-    // Cannot delete system properties
-    if (property.isSystem) {
-      throw createAppError('Cannot delete system properties', 400);
-    }
-
-    // Remove property
     await PropertyModel.findByIdAndDelete(propertyId);
 
-    // Remove property reference from database
     await DatabaseModel.findByIdAndUpdate(databaseId, {
       $pull: { properties: new ObjectId(propertyId) },
       $set: { updatedBy: new ObjectId(userId) }
     });
   }
 
-  // Duplicate a property
   async duplicateProperty(
     databaseId: string,
     propertyId: string,
     userId: string,
     newName?: string
   ): Promise<IProperty> {
-    // Get the original property
     const originalProperty = await this.getPropertyById(databaseId, propertyId, userId);
 
-    // Generate new name if not provided
     const duplicateName = newName || `${originalProperty.name} (Copy)`;
 
-    // Check if the new name conflicts
     const existingProperty = await PropertyModel.findOne({
       databaseId,
       name: { $regex: new RegExp(`^${duplicateName}$`, 'i') }
@@ -337,32 +257,21 @@ export class PropertiesService {
       _id: propertyId
     });
 
-    if (!property) {
-      throw createNotFoundError('Property', propertyId);
-    }
+    if (!property) throw createNotFoundError('Property', propertyId);
 
-    // Cannot change system property types
-    if (property.isSystem) {
-      throw createAppError('Cannot change type of system properties', 400);
-    }
+    if (property.isSystem) throw createAppError('Cannot change type of system properties', 400);
 
-    // Update property type and config
     property.type = newType;
     property.config = newConfig || {};
     property.updatedBy = userId;
 
-    // Validate new configuration
     this.validatePropertyConfig(property.toObject() as IProperty);
 
     await property.save();
 
-    // TODO: Implement data migration for existing records
-    // This would require updating all records that have values for this property
-
     return property.toObject() as IProperty;
   }
 
-  // Insert property at specific position
   async insertPropertyAt(
     databaseId: string,
     data: ICreatePropertyRequest,
@@ -377,7 +286,6 @@ export class PropertiesService {
     let insertOrder = 0;
 
     if (insertAfterPropertyId) {
-      // Find the property to insert after
       const afterProperty = await PropertyModel.findOne({
         databaseId,
         _id: insertAfterPropertyId
@@ -389,20 +297,14 @@ export class PropertiesService {
 
       insertOrder = afterProperty.order + 1;
 
-      // Shift all properties after this position
       await PropertyModel.updateMany(
         { databaseId, order: { $gte: insertOrder } },
         { $inc: { order: 1 } }
       );
     } else {
-      // Insert at beginning
-      await PropertyModel.updateMany(
-        { databaseId },
-        { $inc: { order: 1 } }
-      );
+      await PropertyModel.updateMany({ databaseId }, { $inc: { order: 1 } });
     }
 
-    // Create property with specific order
     const propertyData = {
       databaseId,
       name: data.name,
@@ -420,7 +322,6 @@ export class PropertiesService {
     this.validatePropertyConfig(property.toObject() as IProperty);
     await property.save();
 
-    // Add property reference to database
     await DatabaseModel.findByIdAndUpdate(databaseId, {
       $push: { properties: property._id },
       $set: { updatedBy: new ObjectId(userId) }
@@ -429,7 +330,6 @@ export class PropertiesService {
     return property.toObject() as IProperty;
   }
 
-  // Toggle property visibility
   async togglePropertyVisibility(
     databaseId: string,
     propertyId: string,
@@ -451,16 +351,12 @@ export class PropertiesService {
     return property.toObject() as IProperty;
   }
 
-  // Get property calculations/aggregations
   async getPropertyCalculations(
     databaseId: string,
     propertyId: string,
     userId: string
   ): Promise<any> {
     const property = await this.getPropertyById(databaseId, propertyId, userId);
-
-    // Import RecordModel here to avoid circular dependency
-    const { RecordModel } = await import('../models/record.model');
 
     const calculations: any = {
       propertyId,
@@ -482,8 +378,10 @@ export class PropertiesService {
     calculations.countUnique = new Set(values).size;
 
     // Percentage calculations
-    calculations.percentEmpty = records.length > 0 ? (calculations.countEmpty / records.length) * 100 : 0;
-    calculations.percentNotEmpty = records.length > 0 ? (calculations.countValues / records.length) * 100 : 0;
+    calculations.percentEmpty =
+      records.length > 0 ? (calculations.countEmpty / records.length) * 100 : 0;
+    calculations.percentNotEmpty =
+      records.length > 0 ? (calculations.countValues / records.length) * 100 : 0;
 
     // Type-specific calculations
     if (property.type === EPropertyType.NUMBER) {
@@ -498,8 +396,9 @@ export class PropertiesService {
     }
 
     if (property.type === EPropertyType.DATE) {
-      const dateValues = values.filter((v): v is Date | string =>
-        v instanceof Date || (typeof v === 'string' && !isNaN(Date.parse(v)))
+      const dateValues = values.filter(
+        (v): v is Date | string =>
+          v instanceof Date || (typeof v === 'string' && !isNaN(Date.parse(v)))
       );
       if (dateValues.length > 0) {
         const dates = dateValues.map(v => new Date(v));
@@ -514,32 +413,34 @@ export class PropertiesService {
         const vals = Array.isArray(value) ? value : [value];
         vals.forEach(v => {
           // Convert complex types to strings for use as object keys
-          const key = typeof v === 'string' ? v :
-                     typeof v === 'number' ? v.toString() :
-                     typeof v === 'boolean' ? v.toString() :
-                     v && typeof v === 'object' && 'value' in v ? String(v.value) :
-                     String(v);
+          const key =
+            typeof v === 'string'
+              ? v
+              : typeof v === 'number'
+                ? v.toString()
+                : typeof v === 'boolean'
+                  ? v.toString()
+                  : v && typeof v === 'object' && 'value' in v
+                    ? String(v.value)
+                    : String(v);
           valueCounts[key] = (valueCounts[key] || 0) + 1;
         });
       });
       calculations.valueCounts = valueCounts;
-      calculations.mostCommon = Object.entries(valueCounts)
-        .sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0];
+      calculations.mostCommon = Object.entries(valueCounts).sort(
+        ([, a], [, b]) => (b as number) - (a as number)
+      )[0]?.[0];
     }
 
     return calculations;
   }
 
-  // Helper method for median calculation
   private calculateMedian(numbers: number[]): number {
     const sorted = [...numbers].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0
-      ? (sorted[mid - 1] + sorted[mid]) / 2
-      : sorted[mid];
+    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
   }
 
-  // Validate property configuration
   private validatePropertyConfig(property: IProperty): void {
     const { type, config } = property;
 
@@ -557,7 +458,6 @@ export class PropertiesService {
         if (!config.relationDatabaseId) {
           throw createAppError('Relation properties must specify a target database', 400);
         }
-        // Validate target database exists
         this.validateRelationDatabase(config.relationDatabaseId);
         break;
 
@@ -569,19 +469,19 @@ export class PropertiesService {
 
       case EPropertyType.ROLLUP:
         if (!config.relationPropertyId || !config.rollupPropertyId || !config.rollupFunction) {
-          throw createAppError('Rollup properties must specify relation property, rollup property, and rollup function', 400);
+          throw createAppError(
+            'Rollup properties must specify relation property, rollup property, and rollup function',
+            400
+          );
         }
-        // Validate relation and rollup properties exist
         this.validateRollupConfiguration(config);
         break;
 
       default:
-        // No specific validation needed for other types
         break;
     }
   }
 
-  // Validate relation database exists
   private async validateRelationDatabase(databaseId: string): Promise<void> {
     const database = await DatabaseModel.findById(databaseId);
     if (!database) {
@@ -589,9 +489,7 @@ export class PropertiesService {
     }
   }
 
-  // Validate rollup configuration
   private async validateRollupConfiguration(config: any): Promise<void> {
-    // Check if relation property exists and is of type RELATION
     const relationProperty = await PropertyModel.findById(config.relationPropertyId);
     if (!relationProperty) {
       throw createAppError('Relation property not found', 400);
@@ -617,15 +515,24 @@ export class PropertiesService {
     const checkboxFunctions = ['checked', 'unchecked', 'percent_checked'];
 
     if (numericFunctions.includes(rollupFunction) && propertyType !== EPropertyType.NUMBER) {
-      throw createAppError(`Rollup function '${rollupFunction}' can only be used with number properties`, 400);
+      throw createAppError(
+        `Rollup function '${rollupFunction}' can only be used with number properties`,
+        400
+      );
     }
 
     if (dateFunctions.includes(rollupFunction) && propertyType !== EPropertyType.DATE) {
-      throw createAppError(`Rollup function '${rollupFunction}' can only be used with date properties`, 400);
+      throw createAppError(
+        `Rollup function '${rollupFunction}' can only be used with date properties`,
+        400
+      );
     }
 
     if (checkboxFunctions.includes(rollupFunction) && propertyType !== EPropertyType.CHECKBOX) {
-      throw createAppError(`Rollup function '${rollupFunction}' can only be used with checkbox properties`, 400);
+      throw createAppError(
+        `Rollup function '${rollupFunction}' can only be used with checkbox properties`,
+        400
+      );
     }
   }
 }

@@ -18,8 +18,7 @@ import {
   getWorkspaceModuleStatus,
   initializeSpecificWorkspaceModules,
   getWorkspaceModuleRecommendations,
-  validateWorkspaceModuleSetup,
-  getModuleDatabaseIdsByModuleType
+  validateWorkspaceModuleSetup
 } from '@/modules/modules/controllers/modules.controllers';
 import {
   workspaceIdSchema,
@@ -29,10 +28,8 @@ import {
   initializeCoreModulesSchema,
   initializeSpecificModulesSchema,
   moduleInitRequestSchema,
-  categoryQuerySchema,
-  workspaceModuleDatabaseByTypeSchema
+  categoryQuerySchema
 } from '../validators';
-import { getModuleDatabaseIdsByType } from '@/modules/modules/services/module-config.service';
 
 const router = Router();
 
@@ -78,11 +75,6 @@ router.get(
   '/workspace/:workspaceId/:moduleId/database-id',
   validateParams(workspaceModuleSchema),
   getModuleDatabaseId
-);
-router.get(
-  '/workspace/:workspaceId/:moduleType',
-  validateParams(workspaceModuleDatabaseByTypeSchema),
-  getModuleDatabaseIdsByModuleType
 );
 router.get(
   '/workspace/:workspaceId/:moduleId/details',

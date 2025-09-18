@@ -19,7 +19,9 @@ import {
   formatDatabaseResponse,
   calculateDatabaseStats
 } from '../utils/database.utils';
-import { createDefaultProperties, createDefaultViews } from '../utils/database-setup.utils';
+import { moduleConfigService } from '@/modules/modules/module-config.service';
+import { moduleInitializationService } from '@/modules/modules/module-initialization.service';
+import { EDatabaseType } from '@/modules/core/types/database.types';
 import { generateId } from '@/utils/id-generator';
 import { workspaceService } from '@/modules/workspace/services/workspace.service';
 import { DatabaseModel, PropertyModel, RecordModel, ViewModel } from '@/modules/database';
@@ -33,9 +35,6 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
       workspaceId = defaultWorkspace.id;
     }
 
-    console.log('workspaceId', workspaceId);
-    console.log('UserId', userId);
-    // Verify user has access to the workspace
     const hasAccess = await workspaceService.hasWorkspaceAccess(workspaceId, userId);
     if (!hasAccess) throw createForbiddenError('Access denied to this workspace');
 
@@ -60,11 +59,29 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
 
     await database.save();
 
-    const defaultProperties = await createDefaultProperties(database.id, database.type, userId);
-    database.properties = defaultProperties.map(prop => prop._id).filter(Boolean);
+    // Get module config for this database type
+    const moduleConfig = moduleConfigService.getModuleConfig(database.type as EDatabaseType);
+    if (moduleConfig) {
+      // Use module initialization service to create properties and views
+      const properties = await moduleInitializationService.createModuleProperties(
+        database.id.toString(),
+        moduleConfig,
+        userId
+      );
+      database.properties = properties.map(prop => prop._id).filter(Boolean);
 
-    const defaultViews = await createDefaultViews(database.id, database.type, userId);
-    database.views = defaultViews.map(view => view._id).filter(Boolean);
+      const views = await moduleInitializationService.createModuleViews(
+        database.id.toString(),
+        moduleConfig,
+        properties,
+        userId
+      );
+      database.views = views.map(view => view._id).filter(Boolean);
+    } else {
+      // Fallback for custom databases or unknown types
+      database.properties = [];
+      database.views = [];
+    }
 
     await database.save();
 

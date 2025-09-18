@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// Property types enum (extended from core types)
 export enum EPropertyType {
   // Basic types
   TEXT = 'text',
@@ -302,7 +301,6 @@ export const RollupConfigSchema = z.object({
     .optional()
 });
 
-// Dynamic config validation based on property type
 export const PropertyConfigSchema = z.union([
   TextConfigSchema,
   NumberConfigSchema,
@@ -314,7 +312,7 @@ export const PropertyConfigSchema = z.union([
   RollupConfigSchema,
   FilesConfigSchema,
   AutoNumberConfigSchema,
-  z.record(z.string(), z.unknown()) // Fallback for other configs
+  z.record(z.string(), z.unknown())
 ]);
 
 export const CreatePropertySchema = z.object({
@@ -366,7 +364,6 @@ export const PropertyIdSchema = z.object({
   propertyId: z.string().min(1, 'Property ID is required')
 });
 
-// Property validation and conversion utilities
 export interface IPropertyValidationResult<T = unknown> {
   isValid: boolean;
   errors: string[];
@@ -381,7 +378,6 @@ export interface IPropertyTypeConversion {
   dataLossWarning?: string;
 }
 
-// Property statistics
 export interface IPropertyStats {
   propertyId: string;
   name: string;
@@ -399,7 +395,6 @@ export interface IPropertyStats {
   }>;
 }
 
-// Property template
 export interface IPropertyTemplate {
   id: string;
   name: string;
@@ -413,7 +408,6 @@ export interface IPropertyTemplate {
   createdAt: Date;
 }
 
-// Additional schemas for new endpoints
 export const DuplicatePropertySchema = z.object({
   name: z
     .string()
@@ -440,7 +434,6 @@ export const InsertPropertyAfterSchema = z.object({
   config: PropertyConfigSchema.optional()
 });
 
-// Relation and Rollup schemas
 export const CreateRelationSchema = z.object({
   sourcePropertyId: z.string().min(1, 'Source property ID is required'),
   targetDatabaseId: z.string().min(1, 'Target database ID is required'),
@@ -453,7 +446,6 @@ export const CreateRelationSchema = z.object({
   displayProperty: z.string().optional()
 });
 
-// Type exports for new schemas
 export type IDuplicatePropertyRequest = z.infer<typeof DuplicatePropertySchema>;
 export type IChangePropertyTypeRequest = z.infer<typeof ChangePropertyTypeSchema>;
 export type IInsertPropertyAfterRequest = z.infer<typeof InsertPropertyAfterSchema>;
