@@ -19,8 +19,8 @@ import {
   formatDatabaseResponse,
   calculateDatabaseStats
 } from '../utils/database.utils';
-import { moduleConfigService } from '@/modules/modules/module-config.service';
-import { moduleInitializationService } from '@/modules/modules/module-initialization.service';
+import { moduleConfigService } from '@/modules/modules/services/module-config.service';
+import { moduleInitializationService } from '@/modules/modules/services/module-initialization.service';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { generateId } from '@/utils/id-generator';
 import { workspaceService } from '@/modules/workspace/services/workspace.service';
@@ -68,7 +68,7 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
         moduleConfig,
         userId
       );
-      database.properties = properties.map(prop => prop._id).filter(Boolean);
+      database.properties = properties.map((prop: any) => prop._id).filter(Boolean);
 
       const views = await moduleInitializationService.createModuleViews(
         database.id.toString(),
@@ -76,7 +76,7 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
         properties,
         userId
       );
-      database.views = views.map(view => view._id).filter(Boolean);
+      database.views = views.map((view: any) => view._id).filter(Boolean);
     } else {
       // Fallback for custom databases or unknown types
       database.properties = [];

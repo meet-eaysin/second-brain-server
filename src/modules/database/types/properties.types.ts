@@ -1,45 +1,31 @@
 import { z } from 'zod';
 
 export enum EPropertyType {
-  // Basic types
   TEXT = 'text',
   NUMBER = 'number',
   DATE = 'date',
   CHECKBOX = 'checkbox',
-
-  // Selection types
   SELECT = 'select',
   MULTI_SELECT = 'multi_select',
   STATUS = 'status',
   PRIORITY = 'priority',
-
-  // Rich types
   RICH_TEXT = 'rich_text',
   URL = 'url',
   EMAIL = 'email',
   PHONE = 'phone',
-
-  // Relation types
   PEOPLE = 'people',
   RELATION = 'relation',
-
-  // Advanced types
   FORMULA = 'formula',
   ROLLUP = 'rollup',
   CREATED_TIME = 'created_time',
   CREATED_BY = 'created_by',
   LAST_EDITED_TIME = 'last_edited_time',
   LAST_EDITED_BY = 'last_edited_by',
-
-  // File types
   FILES = 'files',
-
-  // Special types
   UNIQUE_ID = 'unique_id',
   AUTO_NUMBER = 'auto_number'
 }
 
-// Property configuration interfaces
 export interface ISelectOption {
   id: string;
   name: string;
@@ -121,7 +107,6 @@ export interface IAutoNumberConfig {
   increment?: number;
 }
 
-// Main property configuration type
 export type IPropertyConfig =
   | ITextConfig
   | INumberConfig
@@ -153,7 +138,6 @@ export interface IDatabaseProperty {
   updatedBy?: string;
 }
 
-// Request/Response types
 export interface ICreatePropertyRequest {
   name: string;
   type: EPropertyType;

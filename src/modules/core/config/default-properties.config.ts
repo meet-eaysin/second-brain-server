@@ -12,13 +12,13 @@ import {
 export function getDefaultProperties(databaseType: EDatabaseType): IModuleProperty[] {
   switch (databaseType) {
     case EDatabaseType.TASKS:
-      return TASKS_MODULE.defaultProperties;
+      return [...TASKS_MODULE.defaultProperties];
     case EDatabaseType.NOTES:
-      return NOTES_MODULE.defaultProperties;
+      return [...NOTES_MODULE.defaultProperties];
     case EDatabaseType.PROJECTS:
-      return PROJECTS_MODULE.defaultProperties;
+      return [...PROJECTS_MODULE.defaultProperties];
     case EDatabaseType.PEOPLE:
-      return PEOPLE_MODULE.defaultProperties;
+      return [...PEOPLE_MODULE.defaultProperties];
     case EDatabaseType.CUSTOM:
       return [];
     default:

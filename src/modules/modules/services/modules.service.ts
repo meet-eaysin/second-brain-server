@@ -12,8 +12,8 @@ import {
   getInitializedModules,
   getModuleDatabaseId,
   moduleConfigService
-} from '@/modules/modules/module-config.service';
-import { moduleInitializationService } from './module-initialization.service';
+} from '@/modules/modules/services/module-config.service';
+import { moduleInitializationService } from '@/modules/modules/services/module-initialization.service';
 
 export const initializeWorkspaceModules = async (
   request: IModuleInitRequest
@@ -55,7 +55,9 @@ export const initializeCoreModules = async (
   userId: string,
   createSampleData = false
 ): Promise<IModuleInitResponse> => {
-  const coreModules = moduleConfigService.getCoreModuleConfigs().map(config => config.id);
+  const coreModules = moduleConfigService
+    .getCoreModuleConfigs()
+    .map((config: IModuleConfig) => config.id);
 
   return await initializeWorkspaceModules({
     workspaceId,
@@ -182,7 +184,7 @@ export const getModuleRecommendations = async (
 
   // Recommend modules that are not yet initialized
   const recommendedModules = availableModules.filter(
-    config => !initializedModules.includes(config.id) && config.isCore
+    (config: IModuleConfig) => !initializedModules.includes(config.id) && config.isCore
   );
 
   return {
@@ -207,7 +209,7 @@ export const validateWorkspaceModules = async (
 
   const coreModules = moduleConfigService.getCoreModuleConfigs();
   const initializedCoreModules = workspaceModules.modules.filter(
-    m => m.isInitialized && coreModules.some(core => core.id === m.moduleId)
+    m => m.isInitialized && coreModules.some((core: IModuleConfig) => core.id === m.moduleId)
   );
 
   if (initializedCoreModules.length < coreModules.length) {
