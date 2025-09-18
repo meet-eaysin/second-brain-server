@@ -1,4 +1,4 @@
-import { IModuleConfig, IModuleStatus, IWorkspaceModules } from '../types/module.types';
+import { IModuleConfig, IModuleStatus, IWorkspaceModules } from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import {
   DASHBOARD_MODULE,
@@ -16,9 +16,10 @@ import {
   PARA_AREAS_MODULE,
   PARA_RESOURCES_MODULE,
   PARA_ARCHIVE_MODULE
-} from '../config/modules.config';
+} from '@/modules/modules/config/modules.config';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { ObjectId } from 'mongodb';
+import { createAppError } from '@/utils';
 
 /**
  * Registry of all available module configurations
@@ -291,6 +292,28 @@ export const getModuleDatabaseId = async (
   }).select('_id');
 
   return database ? (database._id as ObjectId).toString() : null;
+};
+
+/**
+ * Get module database IDs by module type
+ */
+export const getModuleDatabaseIdsByType = async (
+  workspaceId: string,
+  moduleName: string
+): Promise<string[]> => {
+  if (!moduleName || !Object.values(EDatabaseType).includes(moduleName as EDatabaseType)) {
+    throw createAppError('Valid module name is required', 400);
+  }
+
+  const databases = await DatabaseModel.find({
+    workspaceId: new ObjectId(workspaceId),
+    type: moduleName,
+    isArchived: false
+  })
+    .select('_id')
+    .lean();
+
+  return databases.map((db) => db._id.toString());
 };
 
 /**

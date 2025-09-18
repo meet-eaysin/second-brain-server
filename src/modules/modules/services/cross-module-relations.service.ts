@@ -1,11 +1,11 @@
 import { createNotFoundError } from '@/utils/response.utils';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
-import { relationService, ICreateRelationRequest } from '@/modules/database/services/relation.service';
+import { relationService } from '@/modules/database/services/relation.service';
 import { ERelationType } from '@/modules/database/models/relation.model';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { moduleConfigService } from './module-config.service';
-import { IModuleRelation } from '../types/module.types';
+import { IModuleRelation } from '@/modules/modules/types/module.types';
 
 export interface ICrossModuleRelation {
   id: string;

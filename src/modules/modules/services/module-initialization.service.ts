@@ -9,7 +9,7 @@ import {
   IInitializedModule,
   ICreatedRelation,
   IModuleConfig
-} from '../types/module.types';
+} from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { EPropertyType } from '@/modules/core/types/property.types';
 import { EViewType } from '@/modules/core/types/view.types';

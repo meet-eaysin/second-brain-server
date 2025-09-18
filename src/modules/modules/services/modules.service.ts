@@ -186,9 +186,7 @@ export const getWorkspaceModuleDatabaseId = async (
   workspaceId: string,
   moduleId: EDatabaseType
 ): Promise<string | null> => {
-  if (!workspaceId || !moduleId) {
-    throw createAppError('Workspace ID and Module ID are required', 400);
-  }
+  if (!workspaceId || !moduleId) throw createAppError('Workspace ID and Module ID are required', 400);
 
   return await getModuleDatabaseId(workspaceId, moduleId);
 };

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EModuleCategory } from '../types/module.types';
+import { EModuleCategory } from '@/modules//modules/types';
 import { EDatabaseType, EPropertyType, EViewType } from '@/modules/core/types';
 
 export const workspaceIdSchema = z.object({
@@ -13,6 +13,11 @@ export const moduleIdSchema = z.object({
 export const workspaceModuleSchema = z.object({
   workspaceId: z.string().min(1, 'Workspace ID is required'),
   moduleId: z.string().min(1, 'Module ID is required')
+});
+
+export const workspaceModuleDatabaseByTypeSchema = z.object({
+  workspaceId: z.string().min(1, 'Workspace ID is required'),
+  moduleType: z.enum(EDatabaseType)
 });
 
 export const categoryQuerySchema = z.object({

@@ -26,7 +26,6 @@ export enum EDatabaseType {
   ANALYSIS = 'analysis',
   NOTIFICATIONS = 'notifications',
 
-  // Custom user-created databases
   CUSTOM = 'custom'
 }
 
