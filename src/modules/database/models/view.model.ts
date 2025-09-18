@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IView, EViewType, ISortConfig } from '@/modules/core/types/view.types';
+import { IView, EViewType, ISortConfig, IFilterCondition } from '@/modules/core/types/view.types';
 import { createBaseSchema, IBaseDocument } from '@/modules/core/models/base.model';
 
 export type TViewDocument = IView & IBaseDocument;
@@ -25,7 +25,7 @@ const SortConfigSchema = new Schema(
   { _id: false }
 );
 
-const FilterGroupSchema: any = new Schema(
+const FilterGroupSchema = new Schema(
   {
     operator: {
       type: String,
@@ -269,7 +269,7 @@ ViewSchema.methods.makeDefault = async function () {
   return this.save();
 };
 
-ViewSchema.methods.addSort = function (sort: any) {
+ViewSchema.methods.addSort = function (sort: ISortConfig) {
   this.sorts.push(sort);
   this.markModified('sorts');
   return this.save();
@@ -292,7 +292,7 @@ ViewSchema.methods.updateSort = function (propertyId: string, direction: 'asc' |
   return this.save();
 };
 
-ViewSchema.methods.addFilter = function (condition: any) {
+ViewSchema.methods.addFilter = function (condition: IFilterCondition) {
   if (!this.filters.conditions) {
     this.filters.conditions = [];
   }

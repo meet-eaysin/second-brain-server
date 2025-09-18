@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { DatabaseModel } from '../models/database.model';
-import { ViewModel } from '../models/view.model';
+import { ViewModel, TViewDocument } from '../models/view.model';
 import {
   IDatabaseView,
   ICreateViewRequest,
@@ -10,11 +10,13 @@ import {
   IViewFilter,
   IViewSort
 } from '../types/views.types';
+import { ISortConfig, IFilterCondition } from '@/modules/core/types/view.types';
 import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
 import { createNotFoundError } from '@/utils/response.utils';
+import { IDatabaseQueryParams } from '@/modules/core/types/database.types';
 
-function convertSortDirection(direction: unknown): 'asc' | 'desc' {
+function convertSortDirection(direction: string | number | boolean): 'asc' | 'desc' {
   const dirStr = String(direction).toLowerCase();
   if (dirStr === 'ascending' || dirStr === 'asc') {
     return 'asc';
@@ -25,7 +27,7 @@ function convertSortDirection(direction: unknown): 'asc' | 'desc' {
   return 'asc';
 }
 
-function formatViewResponse(view: any): IDatabaseView {
+function formatViewResponse(view: TViewDocument): IDatabaseView {
   return {
     id: view._id.toString(),
     databaseId: view.databaseId,
@@ -35,6 +37,25 @@ function formatViewResponse(view: any): IDatabaseView {
     isDefault: view.isDefault,
     isPublic: view.isPublic,
     order: view.order,
+    config: {
+      pageSize: view.config?.pageSize || 25,
+      columns: view.config?.columns || [],
+      group: view.config?.group,
+      calendar: view.config?.calendar,
+      gallery: view.config?.gallery,
+      timeline: view.config?.timeline
+    },
+    sorts:
+      view.sorts?.map((sort: ISortConfig) => ({
+        propertyId: sort.propertyId,
+        direction: sort.direction
+      })) || [],
+    filters:
+      view.filters?.conditions?.map((condition: IFilterCondition) => ({
+        propertyId: condition.propertyId,
+        operator: condition.operator,
+        value: condition.value
+      })) || [],
     settings: {
       filters:
         view.filters?.conditions?.map((condition: any) => ({
@@ -45,7 +66,7 @@ function formatViewResponse(view: any): IDatabaseView {
           value: condition.value
         })) || [],
       sorts:
-        view.sorts?.map((sort: any) => ({
+        view.sorts?.map((sort: ISortConfig) => ({
           property: sort.propertyId,
           direction: sort.direction
         })) || [],
@@ -120,7 +141,11 @@ async function createView(
   return formatViewResponse(view);
 }
 
-async function getViews(databaseId: string, _query: any, userId: string): Promise<IDatabaseView[]> {
+async function getViews(
+  databaseId: string,
+  _query: Partial<IDatabaseQueryParams>,
+  userId: string
+): Promise<IDatabaseView[]> {
   const database = await DatabaseModel.findOne({
     _id: new ObjectId(databaseId),
     $or: [{ createdBy: new ObjectId(userId) }, { 'permissions.userId': new ObjectId(userId) }]
@@ -229,7 +254,7 @@ async function updateView(
         operator: 'and',
         conditions: data.settings.filters.map(filter => ({
           propertyId: filter.property,
-          operator: filter.condition as any,
+          operator: filter.condition as EFilterCondition,
           value: filter.value
         }))
       };
@@ -285,12 +310,12 @@ async function deleteView(databaseId: string, viewId: string, userId: string): P
   );
 }
 
-function buildFilterQuery(filters: IViewFilter[]): any {
+function buildFilterQuery(filters: IViewFilter[]): Record<string, unknown> {
   if (!filters || filters.length === 0) {
     return {};
   }
 
-  const conditions: any[] = [];
+  const conditions: Record<string, unknown>[] = [];
 
   for (const filter of filters) {
     const fieldPath =
@@ -300,7 +325,7 @@ function buildFilterQuery(filters: IViewFilter[]): any {
           ? 'updatedAt'
           : `properties.${filter.property}`;
 
-    const condition: any = {};
+    const condition: Record<string, unknown> = {};
 
     switch (filter.condition) {
       case EFilterCondition.EQUALS:
@@ -350,12 +375,12 @@ function buildFilterQuery(filters: IViewFilter[]): any {
 }
 
 // Build MongoDB sort query from view sorts
-function buildSortQuery(sorts: IViewSort[]): any {
+function buildSortQuery(sorts: IViewSort[]): Record<string, 1 | -1> {
   if (!sorts || sorts.length === 0) {
     return { createdAt: -1 }; // Default sort
   }
 
-  const sortObj: any = {};
+  const sortObj: Record<string, 1 | -1> = {};
   for (const sort of sorts) {
     const fieldPath =
       sort.property === 'created_at'
@@ -372,7 +397,7 @@ function buildSortQuery(sorts: IViewSort[]): any {
 }
 
 // Build MongoDB aggregation pipeline for grouping
-function buildGroupQuery(groupBy: string): any[] {
+function buildGroupQuery(groupBy: string): Record<string, unknown>[] {
   if (!groupBy) {
     return [];
   }
@@ -538,7 +563,7 @@ async function updateViewFilters(
     operator: 'and',
     conditions: filters.map(filter => ({
       propertyId: filter.property,
-      operator: filter.condition as any,
+      operator: filter.condition as EFilterCondition,
       value: filter.value
     }))
   };
