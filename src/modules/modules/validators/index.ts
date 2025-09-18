@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EModuleCategory } from '@/modules//modules/types';
+import { EModuleCategory } from '@/modules/modules/types';
 import { EDatabaseType, EPropertyType, EViewType } from '@/modules/core/types';
 
 export const workspaceIdSchema = z.object({
