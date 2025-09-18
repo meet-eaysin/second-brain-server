@@ -123,7 +123,6 @@ const completeModuleInitialization = async (
   userId: string,
   moduleConfig: IModuleConfig
 ): Promise<IInitializedModule> => {
-  // Check existing properties and views
   const existingProperties = await PropertyModel.find({
     databaseId: new ObjectId(databaseId)
   });
@@ -135,7 +134,6 @@ const completeModuleInitialization = async (
   let propertiesCreated = 0;
   let viewsCreated = 0;
 
-  // Create missing properties
   if (existingProperties.length === 0) {
     const properties = await createModuleProperties(databaseId, moduleConfig, userId);
     propertiesCreated = properties.length;
@@ -147,7 +145,6 @@ const completeModuleInitialization = async (
     });
   }
 
-  // Create missing views (need properties for view configuration)
   if (existingViews.length === 0) {
     const properties = await PropertyModel.find({
       databaseId: new ObjectId(databaseId)

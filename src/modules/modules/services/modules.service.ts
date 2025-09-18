@@ -46,7 +46,6 @@ export const initializeWorkspaceModules = async (
     modules: orderedModules
   };
 
-  // Initialize modules using the module initialization service
   return await moduleInitializationService.initializeModules(orderedRequest);
 };
 

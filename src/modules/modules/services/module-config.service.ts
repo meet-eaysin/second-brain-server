@@ -115,7 +115,6 @@ const getRecommendedInitializationOrder = (moduleIds: EDatabaseType[]): EDatabas
   const ordered: EDatabaseType[] = [];
   const remaining = new Set(moduleIds);
 
-  // Add modules with no dependencies first
   for (const moduleId of moduleIds) {
     const dependencies = getModuleDependencies(moduleId);
     if (dependencies.length === 0) {
@@ -124,7 +123,6 @@ const getRecommendedInitializationOrder = (moduleIds: EDatabaseType[]): EDatabas
     }
   }
 
-  // Add remaining modules based on dependencies
   while (remaining.size > 0) {
     let addedInThisRound = false;
 
@@ -139,7 +137,6 @@ const getRecommendedInitializationOrder = (moduleIds: EDatabaseType[]): EDatabas
       }
     }
 
-    // Prevent infinite loop if there are circular dependencies
     if (!addedInThisRound) {
       ordered.push(...Array.from(remaining));
       break;
