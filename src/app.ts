@@ -45,7 +45,8 @@ app.use(express.urlencoded({ extended: true }));
 //     origin: (origin, callback) => {
 //       const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
 //         'http://localhost:5000',
-//         'http://localhost:5173'
+//         'http://localhost:5173',
+//         'https://866vms-5173.csb.app/'
 //       ];
 //
 //       if (!origin) return callback(null, true);
@@ -63,6 +64,15 @@ app.use(express.urlencoded({ extended: true }));
 //     exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
 //   })
 // );
+app.use(
+  cors({
+    origin: (origin, callback) => callback(null, true), // allow any origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Forwarded-For'],
+    exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
+  })
+);
 
 app.use(
   helmet({
