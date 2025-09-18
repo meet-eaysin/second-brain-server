@@ -578,4 +578,19 @@ async function updateViewSorts(
   return formatViewResponse(view);
 }
 
-export const viewsService = {};
+export const viewsService = {
+  updateView,
+  updateViewGrouping,
+  updateViewFilters,
+  createView,
+  getViews,
+  getViewById,
+  deleteView,
+  changeViewType,
+  updateViewSorts,
+  updateViewPropertyVisibility,
+  updateViewColumnFreeze,
+  buildFilterQuery,
+  buildSortQuery,
+  buildGroupQuery
+};
