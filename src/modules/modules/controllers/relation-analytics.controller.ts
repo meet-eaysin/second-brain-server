@@ -3,7 +3,6 @@ import { relationAnalyticsService } from '../services/relation-analytics.service
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/auth/index';
 
-// Get comprehensive relation analytics
 export const getRelationAnalytics = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
@@ -14,7 +13,6 @@ export const getRelationAnalytics = catchAsync(
   }
 );
 
-// Get productivity insights
 export const getProductivityInsights = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
@@ -30,13 +28,11 @@ export const getRelationDashboard = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
 
-    // Get both analytics and productivity insights for dashboard
     const [analytics, productivityInsights] = await Promise.all([
       relationAnalyticsService.generateRelationAnalytics(userId),
       relationAnalyticsService.generateProductivityInsights(userId)
     ]);
 
-    // Create dashboard summary
     const dashboard = {
       summary: {
         totalConnections: analytics.overview.totalConnections,

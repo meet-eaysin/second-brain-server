@@ -3,6 +3,7 @@ import { catchAsync, sendSuccessResponse } from '@/utils';
 import { createAppError } from '@/utils/error.utils';
 import { recordsService } from '../services/records.services';
 import { getUserId } from '@/auth/index';
+import {IRecordQueryOptions} from "@/modules/database/types/records.types";
 
 export const createDatabaseRecord = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -16,8 +17,9 @@ export const createDatabaseRecord = catchAsync(
 export const getDatabaseRecords = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const queryOptions: IRecordQueryOptions = req.query;
     const { databaseId } = req.params;
-    const result = await recordsService.getRecords(databaseId, req.query, userId);
+    const result = await recordsService.getRecords(databaseId, queryOptions, userId);
     sendSuccessResponse(res, 'Records retrieved successfully', result);
   }
 );

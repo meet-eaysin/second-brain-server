@@ -4,7 +4,6 @@ import { EDatabaseType } from '@/modules/core/types/database.types';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/auth/index';
 
-// Initialize cross-module relations for user
 export const initializeCrossModuleRelations = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
@@ -15,7 +14,6 @@ export const initializeCrossModuleRelations = catchAsync(
   }
 );
 
-// Connect two records across modules
 export const connectRecords = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { sourceRecordId, targetRecordId, relationProperty } = req.body;
   const userId = getUserId(req);
@@ -30,7 +28,6 @@ export const connectRecords = catchAsync(async (req: Request, res: Response): Pr
   sendSuccessResponse(res, 'Records connected successfully', connection, 201);
 });
 
-// Disconnect records
 export const disconnectRecords = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { sourceRecordId, targetRecordId, relationProperty } = req.body;
   const userId = getUserId(req);
@@ -45,7 +42,6 @@ export const disconnectRecords = catchAsync(async (req: Request, res: Response):
   sendSuccessResponse(res, 'Records disconnected successfully');
 });
 
-// Get related records for a specific record
 export const getRelatedRecords = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { recordId } = req.params;
   const { moduleTypes, relationTypes, limit, includeMetadata } = req.query;
@@ -62,7 +58,6 @@ export const getRelatedRecords = catchAsync(async (req: Request, res: Response):
   sendSuccessResponse(res, 'Related records retrieved successfully', relatedRecords);
 });
 
-// Get relation statistics for a module
 export const getModuleRelationStats = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const { moduleType } = req.params;
@@ -77,7 +72,6 @@ export const getModuleRelationStats = catchAsync(
   }
 );
 
-// Get comprehensive relation insights
 export const getRelationInsights = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
@@ -104,22 +98,18 @@ export const suggestRelations = catchAsync(async (req: Request, res: Response): 
   sendSuccessResponse(res, 'Relation suggestions generated successfully', suggestions);
 });
 
-// Get relation network for visualization
 export const getRelationNetwork = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { recordId } = req.params;
   const { depth, moduleTypes } = req.query;
 
-  // Get the main record
   const mainRecord = await crossModuleRelationsService.getRelatedRecords(recordId, {
     moduleTypes: moduleTypes ? ((moduleTypes as string).split(',') as EDatabaseType[]) : undefined,
     includeMetadata: true
   });
 
-  // Build network data for visualization
   const nodes = [{ id: recordId, type: 'main', label: 'Main Record' }];
   const edges = [];
 
-  // Add first-level connections
   for (const related of mainRecord) {
     nodes.push({
       id: related.record._id.toString(),
@@ -134,7 +124,6 @@ export const getRelationNetwork = catchAsync(async (req: Request, res: Response)
       property: related.relationProperty
     });
 
-    // Add second-level connections if depth > 1
     if (depth && parseInt(depth as string) > 1) {
       const secondLevel = await crossModuleRelationsService.getRelatedRecords(
         related.record._id.toString(),
@@ -144,7 +133,6 @@ export const getRelationNetwork = catchAsync(async (req: Request, res: Response)
       for (const secondLevelRecord of secondLevel) {
         const nodeId = secondLevelRecord.record._id.toString();
 
-        // Avoid duplicates
         if (!nodes.find(n => n.id === nodeId)) {
           nodes.push({
             id: nodeId,
@@ -171,18 +159,15 @@ export const getRelationNetwork = catchAsync(async (req: Request, res: Response)
   sendSuccessResponse(res, 'Relation network retrieved successfully', networkData);
 });
 
-// Get relation timeline for a record
 export const getRelationTimeline = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const { recordId } = req.params;
     const { startDate, endDate } = req.query;
 
-    // Get related records with creation dates
     const relatedRecords = await crossModuleRelationsService.getRelatedRecords(recordId, {
       includeMetadata: true
     });
 
-    // Build timeline data
     const timelineEvents = relatedRecords.map(related => ({
       date: related.record.createdAt,
       type: 'relation_created',
@@ -195,7 +180,6 @@ export const getRelationTimeline = catchAsync(
       }
     }));
 
-    // Filter by date range if provided
     let filteredEvents = timelineEvents;
     if (startDate || endDate) {
       filteredEvents = timelineEvents.filter(event => {
@@ -206,14 +190,12 @@ export const getRelationTimeline = catchAsync(
       });
     }
 
-    // Sort by date
     filteredEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     sendSuccessResponse(res, 'Relation timeline retrieved successfully', filteredEvents);
   }
 );
 
-// Bulk connect records
 export const bulkConnectRecords = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { connections } = req.body; // Array of { sourceRecordId, targetRecordId, relationProperty }
   const userId = getUserId(req);
@@ -241,16 +223,14 @@ export const bulkConnectRecords = catchAsync(async (req: Request, res: Response)
   sendSuccessResponse(res, 'Bulk connection completed', results);
 });
 
-// Get relation health check
 export const getRelationHealthCheck = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
 
     const insights = await crossModuleRelationsService.getRelationInsights(userId);
 
-    // Calculate health metrics
     const healthMetrics = {
-      overallHealth: 'good', // good, fair, poor
+      overallHealth: 'good',
       totalConnections: insights.totalCrossModuleConnections,
       orphanedRecordsCount: insights.orphanedRecords.length,
       moduleConnectivity: insights.mostConnectedModules.length,
@@ -258,7 +238,6 @@ export const getRelationHealthCheck = catchAsync(
       recommendations: [] as string[]
     };
 
-    // Generate health recommendations
     const recommendations = [];
 
     if (insights.orphanedRecords.length > 10) {

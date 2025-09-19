@@ -83,6 +83,11 @@ export const databaseIdSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required')
 });
 
+export const getDatabasePropertiesQuerySchema = z.object({
+    viewId: z.string().min(1, 'viewId ID is required'),
+    includeHidden: z.boolean().default(false),
+});
+
 export const databaseIdParamSchema = z.object({
   id: z.string().min(1, 'Database ID is required')
 });

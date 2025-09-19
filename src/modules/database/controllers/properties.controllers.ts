@@ -23,13 +23,14 @@ export const createDatabaseProperty = catchAsync(
 export const getDatabaseProperties = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { databaseId } = req.params;
-    const { includeHidden } = req.query;
+    const { includeHidden, viewId } = req.query;
     const userId = getUserId(req);
 
     const properties = await propertiesService.getProperties(
       databaseId,
       userId,
-      includeHidden === 'true'
+      includeHidden === 'true',
+      viewId as string
     );
 
     sendSuccessResponse(res, 'Properties retrieved successfully', properties);

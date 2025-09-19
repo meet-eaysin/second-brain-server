@@ -4,7 +4,6 @@ import { createBaseSchema, IBaseDocument, QueryHelpers } from '@/modules/core/mo
 
 export type TDatabaseDocument = IDatabase &
   IBaseDocument & {
-    // Instance methods from base schema
     softDelete(deletedBy?: string): Promise<TDatabaseDocument>;
     restore(): Promise<TDatabaseDocument>;
     archive(archivedBy?: string): Promise<TDatabaseDocument>;

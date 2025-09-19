@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
-import { validateParams } from '@/middlewares/validation';
+import {validateParams, validateQuery} from '@/middlewares/validation';
 import { requireCapability } from '@/middlewares/permission.middleware';
 import { EShareScope } from '@/modules/core/types/permission.types';
 import {
@@ -17,7 +17,7 @@ import {
   getPropertyCalculations,
   togglePropertyVisibility
 } from '@/modules/database/controllers/properties.controllers';
-import { databaseIdSchema } from '@/modules/database/validators/database.validators';
+import {databaseIdSchema, getDatabasePropertiesQuerySchema} from '@/modules/database/validators/database.validators';
 
 const router = Router();
 
@@ -36,6 +36,7 @@ router.get('/:databaseId/properties', validateParams(databaseIdSchema), getDatab
 router.get(
   '/:databaseId/properties/:propertyId',
   validateParams(databaseIdSchema),
+  validateQuery(getDatabasePropertiesQuerySchema),
   getDatabasePropertyById
 );
 router.put(

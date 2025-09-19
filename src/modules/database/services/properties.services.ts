@@ -8,6 +8,7 @@ import {
 } from '@/modules/core/types/property.types';
 import { IReorderPropertiesRequest } from '../types/properties.types';
 import { RecordModel } from '@/modules/database/models/record.model';
+import { viewsService } from './views.services';
 
 interface ICreatePropertyRequest {
   name: string;
@@ -73,8 +74,9 @@ export class PropertiesService {
 
   async getProperties(
     databaseId: string,
-    _userId: string,
-    includeHidden: boolean = false
+    userId: string,
+    includeHidden: boolean = false,
+    viewId?: string
   ): Promise<IProperty[]> {
     const database = await DatabaseModel.findById(databaseId);
 
@@ -83,7 +85,29 @@ export class PropertiesService {
     const query: any = { databaseId };
     if (!includeHidden) query.isVisible = true;
 
-    const properties = await PropertyModel.find(query).sort({ order: 1 });
+    let properties = await PropertyModel.find(query).sort({ order: 1 });
+
+    // Filter properties based on view settings if viewId is provided
+    if (viewId) {
+      try {
+        const view = await viewsService.getViewById(databaseId, viewId, userId);
+
+        if (view.settings.visibleProperties && view.settings.visibleProperties.length > 0) {
+          // Filter to only visible properties
+          properties = properties.filter(prop =>
+            view.settings.visibleProperties!.includes(prop.name)
+          );
+        } else if (view.settings.hiddenProperties && view.settings.hiddenProperties.length > 0) {
+          // Filter out hidden properties
+          properties = properties.filter(
+            prop => !view.settings.hiddenProperties!.includes(prop.name)
+          );
+        }
+      } catch (error) {
+        // If view not found or access denied, return all properties
+        console.warn('Could not apply view filter:', error);
+      }
+    }
 
     return properties.map(prop => prop.toObject() as IProperty);
   }

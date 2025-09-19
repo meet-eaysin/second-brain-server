@@ -113,7 +113,7 @@ export const getModuleConfig = catchAsync(
       return;
     }
 
-    sendSuccessResponse(res, 'Module configuration retrieved successfully', { module });
+    sendSuccessResponse(res, 'Module configuration retrieved successfully',  module);
   }
 );
 
