@@ -71,6 +71,7 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
           direction: sort.direction
         })) || [],
       visibleProperties: view.config?.visibleProperties || [],
+      hiddenProperties: view.config?.hiddenProperties || [],
       frozenColumns: view.config?.frozenColumns || [],
       pageSize: view.config?.pageSize || 25
     },
@@ -107,6 +108,7 @@ async function createView(
     config: {
       pageSize: data.settings?.pageSize || 25,
       visibleProperties: data.settings?.visibleProperties || [],
+      hiddenProperties: data.settings?.hiddenProperties || [],
       frozenColumns: data.settings?.frozenColumns || [],
       columns: []
     },
@@ -236,6 +238,10 @@ async function updateView(
 
     if (data.settings.visibleProperties !== undefined) {
       view.config.visibleProperties = data.settings.visibleProperties;
+    }
+
+    if (data.settings.hiddenProperties !== undefined) {
+      view.config.hiddenProperties = data.settings.hiddenProperties;
     }
 
     if (data.settings.frozenColumns !== undefined) {
@@ -486,6 +492,7 @@ async function changeViewType(
   view.config = {
     pageSize: view.config?.pageSize || 25,
     visibleProperties: view.config?.visibleProperties || [],
+    hiddenProperties: view.config?.hiddenProperties || [],
     frozenColumns: view.config?.frozenColumns || []
   };
   view.updatedBy = userId;
@@ -512,6 +519,30 @@ async function updateViewPropertyVisibility(
 
   // Update visible properties directly in config
   view.config.visibleProperties = visibleProperties;
+  view.updatedBy = userId;
+
+  await view.save();
+  return formatViewResponse(view);
+}
+
+// Update view hidden properties
+async function updateViewHiddenProperties(
+  databaseId: string,
+  viewId: string,
+  hiddenProperties: string[],
+  userId: string
+): Promise<IDatabaseView> {
+  const view = await ViewModel.findOne({
+    _id: viewId,
+    databaseId
+  });
+
+  if (!view) {
+    throw createNotFoundError('View not found');
+  }
+
+  // Update hidden properties directly in config
+  view.config.hiddenProperties = hiddenProperties;
   view.updatedBy = userId;
 
   await view.save();
@@ -611,6 +642,7 @@ export const viewsService = {
   changeViewType,
   updateViewSorts,
   updateViewPropertyVisibility,
+  updateViewHiddenProperties,
   updateViewColumnFreeze,
   buildFilterQuery,
   buildSortQuery,

@@ -123,6 +123,7 @@ export interface IViewConfig {
   // Common configurations
   pageSize?: number;
   visibleProperties?: string[];
+  hiddenProperties?: string[];
   frozenColumns?: string[];
 
   // Type-specific configurations
@@ -206,6 +207,7 @@ export const TimelineConfigSchema = z.object({
 export const ViewConfigSchema = z.object({
   pageSize: z.number().positive().max(100).default(25),
   visibleProperties: z.array(z.string()).default([]),
+  hiddenProperties: z.array(z.string()).default([]),
   frozenColumns: z.array(z.string()).default([]),
   columns: z.array(ColumnConfigSchema).optional(),
   group: GroupConfigSchema.optional(),

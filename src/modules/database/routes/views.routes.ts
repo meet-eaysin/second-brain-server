@@ -13,6 +13,7 @@ import {
   updateViewGrouping,
   changeViewType,
   updateViewPropertyVisibility,
+  updateViewHiddenProperties,
   updateViewColumnFreeze,
   updateViewFilters,
   updateViewSorts
@@ -103,6 +104,12 @@ router.patch(
   validateParams(databaseIdSchema),
   validateParams(viewIdParamSchema),
   updateViewPropertyVisibility
+);
+router.patch(
+  '/:databaseId/views/:viewId/hidden-properties',
+  validateParams(databaseIdSchema),
+  validateParams(viewIdParamSchema),
+  updateViewHiddenProperties
 );
 router.patch(
   '/:databaseId/views/:viewId/column-freeze',

@@ -90,7 +90,6 @@ export const checkWorkspaceAccess = catchAsync(
   }
 );
 
-// Get user's primary workspace
 export const getPrimaryWorkspace = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
@@ -98,7 +97,6 @@ export const getPrimaryWorkspace = catchAsync(
     const primaryWorkspace = await workspaceService.getUserPrimaryWorkspace(userId);
 
     if (!primaryWorkspace) {
-      // Create default workspace if none exists
       const defaultWorkspace = await workspaceService.createDefaultWorkspace(userId);
       sendSuccessResponse(res, 'Default workspace created', defaultWorkspace, 201);
     } else {
@@ -107,11 +105,10 @@ export const getPrimaryWorkspace = catchAsync(
   }
 );
 
-// Get or create default workspace
 export const getOrCreateDefaultWorkspace = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
-    const userInfo = req.body; // Optional user info for workspace naming
+    const userInfo = req.body;
 
     const workspace = await workspaceService.getOrCreateDefaultWorkspace(userId, userInfo);
 

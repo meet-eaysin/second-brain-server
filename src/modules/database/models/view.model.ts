@@ -159,6 +159,10 @@ const ViewConfigSchema = new Schema(
       type: [String],
       default: []
     },
+    hiddenProperties: {
+      type: [String],
+      default: []
+    },
     frozenColumns: {
       type: [String],
       default: []

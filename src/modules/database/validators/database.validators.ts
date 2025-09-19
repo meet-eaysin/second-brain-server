@@ -79,17 +79,14 @@ export const getDatabasesQuerySchema = z.object({
     .default(25)
 });
 
-// Database ID parameter schema
 export const databaseIdSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required')
 });
 
-// Database ID parameter schema (for routes that use :id)
 export const databaseIdParamSchema = z.object({
   id: z.string().min(1, 'Database ID is required')
 });
 
-// Duplicate database schema
 export const duplicateDatabaseSchema = z.object({
   name: z
     .string()

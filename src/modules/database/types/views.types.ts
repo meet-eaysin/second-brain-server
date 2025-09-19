@@ -78,6 +78,7 @@ export interface IViewSettings {
   sorts: IViewSort[];
   groupBy?: IViewGroup;
   visibleProperties: string[];
+  hiddenProperties?: string[];
   frozenColumns: string[];
   pageSize: number;
 
@@ -170,6 +171,7 @@ export const ViewSettingsSchema = z.object({
   sorts: z.array(ViewSortSchema).default([]),
   groupBy: ViewGroupSchema.optional(),
   visibleProperties: z.array(z.string()).default([]),
+  hiddenProperties: z.array(z.string()).default([]),
   frozenColumns: z.array(z.string()).default([]),
   pageSize: z.number().min(1).max(1000).default(25),
 

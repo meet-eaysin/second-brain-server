@@ -60,7 +60,7 @@ export const duplicateDatabaseView = catchAsync(
       type: originalView.type,
       description: originalView.description,
       settings: originalView.settings,
-      isPublic: false 
+      isPublic: false
     };
 
     const duplicatedView = await viewsService.createView(databaseId, duplicateData, userId);
@@ -98,9 +98,31 @@ export const updateViewPropertyVisibility = catchAsync(
     const { visibleProperties } = req.body;
     const userId = getUserId(req);
 
-    const view = await viewsService.updateViewPropertyVisibility(databaseId, viewId, visibleProperties, userId);
+    const view = await viewsService.updateViewPropertyVisibility(
+      databaseId,
+      viewId,
+      visibleProperties,
+      userId
+    );
 
     sendSuccessResponse(res, 'View property visibility updated successfully', view);
+  }
+);
+
+export const updateViewHiddenProperties = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { databaseId, viewId } = req.params;
+    const { hiddenProperties } = req.body;
+    const userId = getUserId(req);
+
+    const view = await viewsService.updateViewHiddenProperties(
+      databaseId,
+      viewId,
+      hiddenProperties,
+      userId
+    );
+
+    sendSuccessResponse(res, 'View hidden properties updated successfully', view);
   }
 );
 
@@ -110,7 +132,12 @@ export const updateViewColumnFreeze = catchAsync(
     const { frozenColumns } = req.body;
     const userId = getUserId(req);
 
-    const view = await viewsService.updateViewColumnFreeze(databaseId, viewId, frozenColumns, userId);
+    const view = await viewsService.updateViewColumnFreeze(
+      databaseId,
+      viewId,
+      frozenColumns,
+      userId
+    );
 
     sendSuccessResponse(res, 'View column freeze updated successfully', view);
   }
