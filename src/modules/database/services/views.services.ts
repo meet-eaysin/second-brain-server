@@ -260,7 +260,7 @@ async function updateView(
         operator: 'and',
         conditions: data.settings.filters.map(filter => ({
           propertyId: filter.property,
-          operator: filter.condition as EFilterCondition,
+          operator: filter.condition,
           value: filter.value
         }))
       };
@@ -594,7 +594,7 @@ async function updateViewFilters(
     operator: 'and',
     conditions: filters.map(filter => ({
       propertyId: filter.property,
-      operator: filter.condition as EFilterCondition,
+      operator: filter.condition,
       value: filter.value
     }))
   };
