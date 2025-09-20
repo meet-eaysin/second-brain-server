@@ -146,6 +146,7 @@ export interface IView extends IBaseEntity {
   filters: IFilterGroup;
   order: number;
   description?: string;
+  lastUsedAt?: Date;
 }
 
 // Validation schemas
