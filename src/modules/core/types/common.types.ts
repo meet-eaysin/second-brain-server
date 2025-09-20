@@ -73,7 +73,6 @@ export enum EFinanceCategory {
 
 // Base interfaces
 export interface IBaseEntity {
-  _id: string;
   id: string;
   createdAt: Date;
   updatedAt: Date;
