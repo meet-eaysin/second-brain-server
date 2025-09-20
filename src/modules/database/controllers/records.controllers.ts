@@ -84,10 +84,8 @@ export const duplicateDatabaseRecord = catchAsync(
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
 
-    // Get the original record
     const originalRecord = await recordsService.getRecordById(databaseId, recordId, userId);
 
-    // Create a duplicate with modified properties
     const duplicateData = {
       properties: {
         ...originalRecord.properties,

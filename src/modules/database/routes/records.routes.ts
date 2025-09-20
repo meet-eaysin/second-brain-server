@@ -15,7 +15,6 @@ import {
   duplicateDatabaseRecord
 } from '@/modules/database/controllers/records.controllers';
 import { databaseIdSchema } from '@/modules/database/validators/database.validators';
-import {recordQueryOptionsSchema} from "@/modules/database/validators/record.validators";
 
 const router = Router();
 

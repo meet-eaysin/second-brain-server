@@ -42,7 +42,6 @@ export interface IRecordListResponse {
   };
 }
 
-// Request types
 export interface ICreateRecordRequest {
   properties: Record<string, any>;
   content?: any[];
