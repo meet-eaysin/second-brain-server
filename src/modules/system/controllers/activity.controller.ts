@@ -74,7 +74,17 @@ export const getActivitiesController = catchAsync(
 
     const result = await getActivities(options, userId);
 
-    sendSuccessResponse(res, 'Activities retrieved successfully', result);
+    const { activities, summary, ...paginationData } = result;
+    const totalPages = Math.ceil(paginationData.total / paginationData.limit);
+
+    sendSuccessResponse(res, 'Activities retrieved successfully', { activities, summary }, 200, {
+      total: paginationData.total,
+      page: paginationData.page,
+      limit: paginationData.limit,
+      totalPages,
+      hasNext: paginationData.hasNext,
+      hasPrev: paginationData.hasPrev
+    });
   }
 );
 

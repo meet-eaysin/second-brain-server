@@ -69,7 +69,7 @@ export class PropertiesService {
       $set: { updatedBy: new ObjectId(userId) }
     });
 
-    return property.toObject() as IProperty;
+    return property.toJSON() as IProperty;
   }
 
   async getProperties(
@@ -95,12 +95,12 @@ export class PropertiesService {
         if (view.settings.visibleProperties && view.settings.visibleProperties.length > 0) {
           // Filter to only visible properties
           properties = properties.filter(prop =>
-            view.settings.visibleProperties!.includes(prop._id.toString())
+            view.settings.visibleProperties!.includes((prop as any)._id.toString())
           );
         } else if (view.settings.hiddenProperties && view.settings.hiddenProperties.length > 0) {
           // Filter out hidden properties
           properties = properties.filter(
-            prop => !view.settings.hiddenProperties!.includes(prop._id.toString())
+            prop => !view.settings.hiddenProperties!.includes((prop as any)._id.toString())
           );
         }
       } catch (error) {
@@ -109,7 +109,7 @@ export class PropertiesService {
       }
     }
 
-    return properties.map(prop => prop.toObject() as IProperty);
+    return properties.map(prop => prop.toJSON() as IProperty);
   }
 
   async getPropertyById(
@@ -182,7 +182,7 @@ export class PropertiesService {
     await PropertyModel.findByIdAndUpdate(propertyId, updateData);
 
     const updatedProperty = await PropertyModel.findById(propertyId);
-    return updatedProperty!.toObject() as IProperty;
+    return updatedProperty!.toJSON() as IProperty;
   }
 
   async reorderProperties(
@@ -293,7 +293,7 @@ export class PropertiesService {
 
     await property.save();
 
-    return property.toObject() as IProperty;
+    return property.toJSON() as IProperty;
   }
 
   async insertPropertyAt(
@@ -351,7 +351,7 @@ export class PropertiesService {
       $set: { updatedBy: new ObjectId(userId) }
     });
 
-    return property.toObject() as IProperty;
+    return property.toJSON() as IProperty;
   }
 
   async togglePropertyVisibility(

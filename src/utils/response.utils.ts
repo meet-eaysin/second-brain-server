@@ -216,7 +216,10 @@ export function createRateLimitError(message: string = 'Rate limit exceeded'): A
 /**
  * Create internal server error
  */
-export function createInternalServerError(message: string = 'Internal server error', details?: any): ApiError {
+export function createInternalServerError(
+  message: string = 'Internal server error',
+  details?: any
+): ApiError {
   return new ApiError(message, 500, 'INTERNAL_SERVER_ERROR', details);
 }
 

@@ -185,7 +185,24 @@ const ViewSchema = createBaseSchema({
   },
   type: {
     type: String,
-    enum: Object.values(EViewType),
+    enum: [
+      'TABLE',
+      'table',
+      'BOARD',
+      'board',
+      'LIST',
+      'list',
+      'CALENDAR',
+      'calendar',
+      'GALLERY',
+      'gallery',
+      'TIMELINE',
+      'timeline',
+      'GANTT',
+      'gantt',
+      'CHART',
+      'chart'
+    ],
     required: true,
     index: true
   },

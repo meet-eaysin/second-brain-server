@@ -8,13 +8,14 @@ export const viewIdParamSchema = z.object({
 
 // View types enum
 export const viewTypeSchema = z.enum([
-  'table',
-  'board',
-  'calendar',
-  'timeline',
-  'gallery',
-  'list',
-  'gantt'
+  'TABLE',
+  'BOARD',
+  'CALENDAR',
+  'TIMELINE',
+  'GALLERY',
+  'LIST',
+  'GANTT',
+  'CHART'
 ]);
 
 // Filter condition schema
@@ -50,7 +51,14 @@ export const filterConditionSchema = z.object({
 // Sort configuration schema
 export const sortConfigSchema = z.object({
   property: z.string().min(1, 'Property name is required'),
-  direction: z.enum(['asc', 'desc']).default('asc')
+  direction: z
+    .enum(['asc', 'desc', 'ascending', 'descending'])
+    .default('asc')
+    .transform(val => {
+      if (val === 'ascending') return 'asc';
+      if (val === 'descending') return 'desc';
+      return val;
+    })
 });
 
 // Group configuration schema

@@ -19,7 +19,18 @@ export const getDatabaseRecords = catchAsync(
     const queryOptions: IRecordQueryOptions = req.query;
     const { databaseId } = req.params;
     const result = await recordsService.getRecords(databaseId, queryOptions, userId);
-    sendSuccessResponse(res, 'Records retrieved successfully', result);
+
+    const { records, ...paginationData } = result;
+    const totalPages = Math.ceil(paginationData.total / paginationData.limit);
+
+    sendSuccessResponse(res, 'Records retrieved successfully', records, 200, {
+      total: paginationData.total,
+      page: paginationData.page,
+      limit: paginationData.limit,
+      totalPages,
+      hasNext: paginationData.hasNext,
+      hasPrev: paginationData.hasPrev
+    });
   }
 );
 

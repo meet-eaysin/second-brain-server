@@ -57,11 +57,9 @@ export const getUserWithWorkspaces = async (userId: string) => {
 
   // Combine workspace data with membership info
   const userWorkspaces = workspaces.map(workspace => {
-    const membership = workspaceMemberships.find(
-      m => m.workspaceId.toString() === workspace._id.toString()
-    );
+    const membership = workspaceMemberships.find(m => m.workspaceId.toString() === workspace.id);
     return {
-      id: workspace._id.toString(),
+      id: workspace.id,
       name: workspace.name,
       description: workspace.description,
       type: workspace.type,

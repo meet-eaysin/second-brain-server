@@ -149,8 +149,7 @@ export const getRecords = async (
     page,
     limit,
     hasNext: skip + limit < total,
-    hasPrev: page > 1,
-    view: appliedView
+    hasPrev: page > 1
   };
 };
 

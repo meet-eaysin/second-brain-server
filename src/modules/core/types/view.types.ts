@@ -3,13 +3,14 @@ import { IBaseEntity, TDatabaseId, TPropertyId } from './common.types';
 
 // View Types - All supported Notion-like view types
 export enum EViewType {
-  TABLE = 'table',
-  BOARD = 'board', // Kanban
-  LIST = 'list',
-  CALENDAR = 'calendar',
-  GALLERY = 'gallery',
-  TIMELINE = 'timeline',
-  GANTT = 'gantt'
+  TABLE = 'TABLE',
+  BOARD = 'BOARD', // Kanban
+  LIST = 'LIST',
+  CALENDAR = 'CALENDAR',
+  GALLERY = 'GALLERY',
+  TIMELINE = 'TIMELINE',
+  GANTT = 'GANTT',
+  CHART = 'CHART'
 }
 
 // Sort configuration

@@ -110,7 +110,18 @@ export const getUsers = catchAsync(
 
     const result = await getAllUsers(parseInt(page as string), parseInt(limit as string), filters);
 
-    sendSuccessResponse(res, 'Users retrieved successfully', result);
+    const { users, ...paginationData } = result;
+    const hasNext = paginationData.currentPage < paginationData.totalPages;
+    const hasPrev = paginationData.currentPage > 1;
+
+    sendSuccessResponse(res, 'Users retrieved successfully', users, 200, {
+      total: paginationData.total,
+      page: paginationData.currentPage,
+      limit: parseInt(limit as string),
+      totalPages: paginationData.totalPages,
+      hasNext,
+      hasPrev
+    });
   }
 );
 

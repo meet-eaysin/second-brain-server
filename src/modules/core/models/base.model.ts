@@ -8,37 +8,6 @@ export interface QueryHelpers {
   active<T>(this: Query<T[], T>): Query<T[], T>;
 }
 
-export const BaseSchema = new Schema(
-  {
-    createdBy: {
-      type: String,
-      required: true,
-      index: true
-    },
-    updatedBy: {
-      type: String,
-      index: true
-    }
-  },
-  {
-    timestamps: true,
-    toJSON: {
-      virtuals: true,
-      versionKey: false,
-      transform: (_doc: Document, ret: Record<string, unknown>) => {
-        if (ret._id) {
-          ret.id = ret._id.toString();
-          delete ret._id;
-        }
-        if ('__v' in ret) {
-          delete ret.__v;
-        }
-        return ret;
-      }
-    }
-  }
-);
-
 export const SoftDeleteSchema = new Schema({
   isDeleted: {
     type: Boolean,
@@ -120,7 +89,17 @@ export interface IFullDocument
     ISearchableDocument {}
 
 export const addBaseSchema = (schema: Schema) => {
-  schema.add(BaseSchema.obj);
+  schema.add({
+    createdBy: {
+      type: String,
+      required: true,
+      index: true
+    },
+    updatedBy: {
+      type: String,
+      index: true
+    }
+  });
   return schema;
 };
 
@@ -244,7 +223,23 @@ export const addSoftDeleteMethods = (schema: Schema) => {
 };
 
 export const createBaseSchema = (additionalFields?: any): Schema<any, any, QueryHelpers> => {
-  const schema = new Schema(additionalFields || {}) as Schema<any, any, QueryHelpers>;
+  const schema = new Schema(additionalFields || {}, {
+    timestamps: true,
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (_doc: Document, ret: Record<string, unknown>) => {
+        if (ret._id) {
+          ret.id = ret._id.toString();
+          delete ret._id;
+        }
+        if ('__v' in ret) {
+          delete ret.__v;
+        }
+        return ret;
+      }
+    }
+  }) as Schema<any, any, QueryHelpers>;
 
   addBaseSchema(schema);
   addSoftDelete(schema);

@@ -49,12 +49,22 @@ function convertToDatabaseFilterOperator(operator: string): EFilterOperator {
   throw new Error(`Invalid filter operator: ${operator}`);
 }
 
+function convertToEViewType(type: string): EViewType {
+  const upperType = type.toUpperCase();
+  const validTypes = Object.values(EViewType);
+  if (validTypes.includes(upperType as EViewType)) {
+    return upperType as EViewType;
+  }
+  // Default to TABLE if invalid
+  return EViewType.TABLE;
+}
+
 function formatViewResponse(view: TViewDocument): IDatabaseView {
   return {
     id: (view._id as Types.ObjectId).toString(),
     databaseId: view.databaseId,
     name: view.name,
-    type: view.type,
+    type: convertToEViewType(view.type),
     description: view.description,
     isDefault: view.isDefault,
     isPublic: view.isPublic,
