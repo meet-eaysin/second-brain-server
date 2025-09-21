@@ -95,12 +95,12 @@ export class PropertiesService {
         if (view.settings.visibleProperties && view.settings.visibleProperties.length > 0) {
           // Filter to only visible properties
           properties = properties.filter(prop =>
-            view.settings.visibleProperties!.includes(prop.name)
+            view.settings.visibleProperties!.includes(prop._id.toString())
           );
         } else if (view.settings.hiddenProperties && view.settings.hiddenProperties.length > 0) {
           // Filter out hidden properties
           properties = properties.filter(
-            prop => !view.settings.hiddenProperties!.includes(prop.name)
+            prop => !view.settings.hiddenProperties!.includes(prop._id.toString())
           );
         }
       } catch (error) {
