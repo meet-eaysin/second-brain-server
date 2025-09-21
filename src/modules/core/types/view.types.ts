@@ -66,27 +66,23 @@ export enum EFilterOperator {
   NOT_CONTAINS_RELATION = 'not_contains_relation'
 }
 
-// Filter condition
 export interface IFilterCondition {
   propertyId: TPropertyId;
   operator: EFilterOperator;
   value?: any;
 }
 
-// Filter group with logical operators
 export interface IFilterGroup {
   operator: 'and' | 'or';
   conditions: (IFilterCondition | IFilterGroup)[];
 }
 
-// Group configuration for board/kanban views
 export interface IGroupConfig {
   propertyId: TPropertyId;
   hideEmpty?: boolean;
   sortGroups?: 'asc' | 'desc' | 'manual';
 }
 
-// Column configuration for table views
 export interface IColumnConfig {
   propertyId: TPropertyId;
   width?: number;
@@ -95,7 +91,6 @@ export interface IColumnConfig {
   isFrozen?: boolean;
 }
 
-// Calendar configuration
 export interface ICalendarConfig {
   datePropertyId: TPropertyId;
   endDatePropertyId?: TPropertyId;

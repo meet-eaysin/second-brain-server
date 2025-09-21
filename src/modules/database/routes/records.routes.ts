@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
-import {validateParams, validateQuery} from '@/middlewares/validation';
+import { validateParams, validateQuery } from '@/middlewares/validation';
 import { requirePermission, requireCapability } from '@/middlewares/permission.middleware';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import {
@@ -15,6 +15,7 @@ import {
   duplicateDatabaseRecord
 } from '@/modules/database/controllers/records.controllers';
 import { databaseIdSchema } from '@/modules/database/validators/database.validators';
+import { recordQueryOptionsSchema } from '@/modules/database/validators/record.validators';
 
 const router = Router();
 

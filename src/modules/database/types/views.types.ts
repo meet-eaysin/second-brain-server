@@ -4,6 +4,7 @@ import { z } from 'zod';
 export enum EViewType {
   TABLE = 'table',
   BOARD = 'board',
+  LIST = 'list',
   CALENDAR = 'calendar',
   GALLERY = 'gallery',
   TIMELINE = 'timeline',

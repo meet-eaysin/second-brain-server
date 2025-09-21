@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 import { DatabaseModel } from '../models/database.model';
 import { ViewModel, TViewDocument } from '../models/view.model';
 import {
@@ -7,10 +8,16 @@ import {
   IUpdateViewRequest,
   EViewType,
   EFilterCondition,
+  EFilterOperator,
+  ESortDirection,
   IViewFilter,
   IViewSort
 } from '../types/views.types';
-import { ISortConfig, IFilterCondition } from '@/modules/core/types/view.types';
+import {
+  ISortConfig,
+  IFilterCondition,
+  EFilterOperator as CoreEFilterOperator
+} from '@/modules/core/types/view.types';
 import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
 import { createNotFoundError } from '@/utils/response.utils';
@@ -27,9 +34,24 @@ function convertSortDirection(direction: string | number | boolean): 'asc' | 'de
   return 'asc';
 }
 
+function convertToDatabaseSortDirection(direction: 'asc' | 'desc'): 'ascending' | 'descending' {
+  return direction === 'asc' ? 'ascending' : 'descending';
+}
+
+function isValidFilterOperator(value: string): value is EFilterOperator {
+  return Object.values(EFilterOperator).includes(value as EFilterOperator);
+}
+
+function convertToDatabaseFilterOperator(operator: string): EFilterOperator {
+  if (isValidFilterOperator(operator)) {
+    return operator;
+  }
+  throw new Error(`Invalid filter operator: ${operator}`);
+}
+
 function formatViewResponse(view: TViewDocument): IDatabaseView {
   return {
-    id: view._id.toString(),
+    id: (view._id as Types.ObjectId).toString(),
     databaseId: view.databaseId,
     name: view.name,
     type: view.type,
@@ -37,38 +59,21 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
     isDefault: view.isDefault,
     isPublic: view.isPublic,
     order: view.order,
-    config: {
-      pageSize: view.config?.pageSize || 25,
-      columns: view.config?.columns || [],
-      group: view.config?.group,
-      calendar: view.config?.calendar,
-      gallery: view.config?.gallery,
-      timeline: view.config?.timeline
-    },
-    sorts:
-      view.sorts?.map((sort: ISortConfig) => ({
-        propertyId: sort.propertyId,
-        direction: sort.direction
-      })) || [],
-    filters:
-      view.filters?.conditions?.map((condition: IFilterCondition) => ({
-        propertyId: condition.propertyId,
-        operator: condition.operator,
-        value: condition.value
-      })) || [],
     settings: {
       filters:
-        view.filters?.conditions?.map((condition: any) => ({
-          id: generateId(),
-          property: condition.propertyId,
-          condition: condition.operator,
-          operator: view.filters.operator,
-          value: condition.value
-        })) || [],
+        view.filters?.conditions
+          ?.filter((condition): condition is IFilterCondition => 'propertyId' in condition)
+          .map((condition: IFilterCondition) => ({
+            id: generateId(),
+            property: condition.propertyId,
+            condition: condition.operator as unknown as EFilterCondition,
+            operator: convertToDatabaseFilterOperator(view.filters.operator),
+            value: condition.value
+          })) || [],
       sorts:
         view.sorts?.map((sort: ISortConfig) => ({
           property: sort.propertyId,
-          direction: sort.direction
+          direction: convertToDatabaseSortDirection(sort.direction) as ESortDirection
         })) || [],
       visibleProperties: view.config?.visibleProperties || [],
       hiddenProperties: view.config?.hiddenProperties || [],
@@ -78,6 +83,7 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
     createdBy: view.createdBy,
+    updatedBy: view.updatedBy,
     lastUsedAt: view.lastUsedAt
   };
 }
@@ -260,7 +266,7 @@ async function updateView(
         operator: 'and',
         conditions: data.settings.filters.map(filter => ({
           propertyId: filter.property,
-          operator: filter.condition,
+          operator: filter.condition as unknown as CoreEFilterOperator,
           value: filter.value
         }))
       };
@@ -594,7 +600,7 @@ async function updateViewFilters(
     operator: 'and',
     conditions: filters.map(filter => ({
       propertyId: filter.property,
-      operator: filter.condition,
+      operator: filter.condition as unknown as CoreEFilterOperator,
       value: filter.value
     }))
   };
