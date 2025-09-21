@@ -23,6 +23,12 @@ export const getDatabases = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const params: IDatabaseQueryParams = req.query as any;
     const userId = getUserId(req);
+    const workspaceId = (req as any).workspace?.id;
+
+    // If workspace context is available, filter by that workspace
+    if (workspaceId) {
+      params.workspaceId = workspaceId;
+    }
 
     const result = await databaseService.getDatabases(params, userId);
 

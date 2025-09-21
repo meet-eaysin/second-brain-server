@@ -69,7 +69,13 @@ app.use(
     origin: (origin, callback) => callback(null, true), // allow any origin
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Forwarded-For'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Forwarded-For',
+      'x-workspace-id'
+    ],
     exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
   })
 );

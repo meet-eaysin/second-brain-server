@@ -104,13 +104,7 @@ const getDatabases = async (params: IDatabaseQueryParams, userId: string) => {
     const sortOptions: any = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
     const [databases, total] = await Promise.all([
-      DatabaseModel.find(query)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(limit)
-        .populate('properties', 'name type isSystem order')
-        .populate('views', 'name type isDefault order')
-        .exec(),
+      DatabaseModel.find(query).sort(sortOptions).skip(skip).limit(limit).exec(),
       DatabaseModel.countDocuments(query)
     ]);
 

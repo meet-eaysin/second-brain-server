@@ -1,4 +1,4 @@
-import { JwtPayload } from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import {
   TAuthResponse,
   TLoginRequest,
@@ -25,7 +25,6 @@ import {
 import { UserModel } from '../../users/models/users.model';
 import { sendEmail } from '../../../utils/email.utils';
 import { jwtConfig } from '@/config/jwt/jwt.config';
-import jwt from 'jsonwebtoken';
 import { workspaceService } from '@/modules/workspace';
 import { WorkspaceMemberModel } from '@/modules/workspace/models/workspace-member.model';
 import {
@@ -58,9 +57,11 @@ export const getUserWithWorkspaces = async (userId: string) => {
 
   // Combine workspace data with membership info
   const userWorkspaces = workspaces.map(workspace => {
-    const membership = workspaceMemberships.find(m => m.workspaceId.toString() === workspace.id);
+    const membership = workspaceMemberships.find(
+      m => m.workspaceId.toString() === workspace._id.toString()
+    );
     return {
-      id: workspace.id,
+      id: workspace._id.toString(),
       name: workspace.name,
       description: workspace.description,
       type: workspace.type,
@@ -126,12 +127,6 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    console.error('Authentication failed:', {
-      email,
-      error: errorMessage,
-      timestamp: new Date().toISOString()
-    });
 
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error;
