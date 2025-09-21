@@ -5,7 +5,11 @@ import { PropertyModel } from '@/modules/database/models/property.model';
 import { propertiesService } from '@/modules/database/services/properties.services';
 import { viewsService } from '@/modules/database/services/views.services';
 import { relationService } from '@/modules/database/services/relation.service';
-import { rollupService } from '@/modules/database/services/rollup.service';
+import {
+  rollupService,
+  IRollupConfig,
+  ERollupFunction
+} from '@/modules/database/services/rollup.service';
 import {
   IDatabaseRecord,
   ICreateRecordRequest,
@@ -544,12 +548,21 @@ export const updateRollupProperties = async (recordId: string): Promise<void> =>
   const updates: Record<string, any> = {};
 
   for (const rollupProperty of rollupProperties) {
-    if (rollupProperty.config.rollupPropertyId && rollupProperty.config.relationPropertyId) {
+    if (
+      rollupProperty.config.rollupPropertyId &&
+      rollupProperty.config.relationPropertyId &&
+      rollupProperty.config.rollupFunction
+    ) {
       try {
-        const rollupValue = await rollupService.calculateRollupValue(
-          recordId,
-          rollupProperty.config as any
-        );
+        const rollupConfig: IRollupConfig = {
+          relationPropertyId: rollupProperty.config.relationPropertyId,
+          rollupPropertyId: rollupProperty.config.rollupPropertyId,
+          rollupFunction: rollupProperty.config.rollupFunction as ERollupFunction,
+          filters: undefined,
+          dateFormat: undefined,
+          numberFormat: undefined
+        };
+        const rollupValue = await rollupService.calculateRollupValue(recordId, rollupConfig);
         updates[`properties.${rollupProperty.name}`] = rollupValue;
       } catch (error) {
         console.error(`Error calculating rollup for property ${rollupProperty.name}:`, error);
