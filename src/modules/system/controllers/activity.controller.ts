@@ -19,6 +19,7 @@ import {
   EActivityContext
 } from '../types/activity.types';
 import { getUserId } from '@/auth/index';
+import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
 // Helper function to get user name
 const getUserName = (req: Request): string => {
@@ -61,10 +62,13 @@ export const getActivitiesController = catchAsync(
       limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
       includeSystem: req.query.includeSystem === 'true',
-      dateRange: req.query.startDate && req.query.endDate ? {
-        start: new Date(req.query.startDate as string),
-        end: new Date(req.query.endDate as string)
-      } : undefined,
+      dateRange:
+        req.query.startDate && req.query.endDate
+          ? {
+              start: new Date(req.query.startDate as string),
+              end: new Date(req.query.endDate as string)
+            }
+          : undefined,
       userId: req?.query?.workspaceId ? undefined : userId
     };
 
@@ -102,7 +106,7 @@ export const getRecentActivityFeedController = catchAsync(
 
     const activities = await getRecentActivityFeed(
       workspaceId as string,
-      filterUserId as string || undefined,
+      (filterUserId as string) || undefined,
       parseInt(limit as string)
     );
 
@@ -195,11 +199,11 @@ export const recordTaskActivityController = catchAsync(
 
     // Map action to activity type
     const activityTypeMap: Record<string, EActivityType> = {
-      'created': EActivityType.TASK_CREATED,
-      'updated': EActivityType.TASK_UPDATED,
-      'completed': EActivityType.TASK_COMPLETED,
-      'assigned': EActivityType.TASK_ASSIGNED,
-      'commented': EActivityType.TASK_COMMENTED
+      created: EActivityType.TASK_CREATED,
+      updated: EActivityType.TASK_UPDATED,
+      completed: EActivityType.TASK_COMPLETED,
+      assigned: EActivityType.TASK_ASSIGNED,
+      commented: EActivityType.TASK_COMMENTED
     };
 
     const activityType = activityTypeMap[action];
@@ -246,9 +250,9 @@ export const recordDatabaseActivityController = catchAsync(
 
     // Map action to activity type
     const activityTypeMap: Record<string, EActivityType> = {
-      'created': EActivityType.DATABASE_CREATED,
-      'updated': EActivityType.DATABASE_UPDATED,
-      'deleted': EActivityType.DATABASE_DELETED
+      created: EActivityType.DATABASE_CREATED,
+      updated: EActivityType.DATABASE_UPDATED,
+      deleted: EActivityType.DATABASE_DELETED
     };
 
     const activityType = activityTypeMap[action];
@@ -283,8 +287,8 @@ export const recordDatabaseActivityController = catchAsync(
  * Get workspace activity overview
  */
 export const getWorkspaceActivityOverviewController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
     const { period = 'week' } = req.query;
 
     if (!workspaceId) {
@@ -351,8 +355,8 @@ const getDateRangeForPeriod = (period: string): { start: Date; end: Date } => {
  * Generate comprehensive audit trail
  */
 export const generateAuditTrailController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
     const {
       entityId,
       entityType,
@@ -361,6 +365,10 @@ export const generateAuditTrailController = catchAsync(
       endDate,
       includeSystemEvents = false
     } = req.query;
+
+    if (!workspaceId) {
+      throw createAppError('Workspace ID is required', 400);
+    }
 
     const options: any = {};
 
@@ -386,9 +394,13 @@ export const generateAuditTrailController = catchAsync(
  * Get security events for workspace
  */
 export const getSecurityEventsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
     const { startDate, endDate, severity, limit } = req.query;
+
+    if (!workspaceId) {
+      throw createAppError('Workspace ID is required', 400);
+    }
 
     const options: any = {};
 
@@ -410,7 +422,9 @@ export const getSecurityEventsController = catchAsync(
       summary: {
         highRisk: securityEvents.filter(e => e.type.includes('DELETED')).length,
         mediumRisk: securityEvents.filter(e => e.type.includes('SETTINGS')).length,
-        lowRisk: securityEvents.filter(e => !e.type.includes('DELETED') && !e.type.includes('SETTINGS')).length
+        lowRisk: securityEvents.filter(
+          e => !e.type.includes('DELETED') && !e.type.includes('SETTINGS')
+        ).length
       }
     });
   }
@@ -420,9 +434,13 @@ export const getSecurityEventsController = catchAsync(
  * Get compliance report for workspace
  */
 export const getComplianceReportController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
     const { period = 'month' } = req.query;
+
+    if (!workspaceId) {
+      throw createAppError('Workspace ID is required', 400);
+    }
 
     const complianceReport = await getComplianceReport(
       workspaceId,
@@ -482,10 +500,16 @@ export const exportAuditDataController = catchAsync(
     // Set appropriate headers for download
     if (format === 'csv') {
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="audit-${type}-${workspaceId}.csv"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="audit-${type}-${workspaceId}.csv"`
+      );
     } else {
       res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="audit-${type}-${workspaceId}.json"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="audit-${type}-${workspaceId}.json"`
+      );
     }
 
     sendSuccessResponse(res, 'Audit data exported successfully', exportPackage);
@@ -519,8 +543,8 @@ export const getActivityHeatmapController = catchAsync(
       const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-      const activityCount = activities.filter(a =>
-        a.timestamp >= dayStart && a.timestamp < dayEnd
+      const activityCount = activities.filter(
+        a => a.timestamp >= dayStart && a.timestamp < dayEnd
       ).length;
 
       const intensity = activityCount > 30 ? 'high' : activityCount > 15 ? 'medium' : 'low';
@@ -538,8 +562,8 @@ export const getActivityHeatmapController = catchAsync(
       summary: {
         totalDays: 30,
         averageActivity: heatmapData.reduce((sum, day) => sum + day.count, 0) / 30,
-        peakDay: heatmapData.reduce((max, day) => day.count > max.count ? day : max),
-        quietDay: heatmapData.reduce((min, day) => day.count < min.count ? day : min)
+        peakDay: heatmapData.reduce((max, day) => (day.count > max.count ? day : max)),
+        quietDay: heatmapData.reduce((min, day) => (day.count < min.count ? day : min))
       }
     });
   }

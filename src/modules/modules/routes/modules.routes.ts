@@ -21,15 +21,14 @@ import {
   validateWorkspaceModuleSetup
 } from '@/modules/modules/controllers/modules.controllers';
 import {
-  workspaceIdSchema,
   moduleIdSchema,
-  workspaceModuleSchema,
   validateModulesSchema,
   initializeCoreModulesSchema,
   initializeSpecificModulesSchema,
   moduleInitRequestSchema,
   categoryQuerySchema
 } from '../validators';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -46,56 +45,37 @@ router.get(
 );
 router.get('/dependencies/:moduleId', validateParams(moduleIdSchema), getModuleDependencies);
 router.post('/validate', validateBody(validateModulesSchema), validateModuleInitializationRequest);
+router.get('/workspace', getWorkspaceModulesOverview);
+router.get('/workspace/initialized', getWorkspaceInitializedModulesList);
+router.get('/workspace/recommendations', getWorkspaceModuleRecommendations);
+router.get('/workspace/validate', validateWorkspaceModuleSetup);
 router.get(
-  '/workspace/:workspaceId',
-  validateParams(workspaceIdSchema),
-  getWorkspaceModulesOverview
-);
-router.get(
-  '/workspace/:workspaceId/initialized',
-  validateParams(workspaceIdSchema),
-  getWorkspaceInitializedModulesList
-);
-router.get(
-  '/workspace/:workspaceId/recommendations',
-  validateParams(workspaceIdSchema),
-  getWorkspaceModuleRecommendations
-);
-router.get(
-  '/workspace/:workspaceId/validate',
-  validateParams(workspaceIdSchema),
-  validateWorkspaceModuleSetup
-);
-router.get(
-  '/workspace/:workspaceId/:moduleId/status',
-  validateParams(workspaceModuleSchema),
+  '/workspace/:moduleId/status',
+  validateParams(z.object({ moduleId: z.string().min(1) })),
   checkWorkspaceModuleInitialization
 );
 router.get(
-  '/workspace/:workspaceId/:moduleId/database-id',
-  validateParams(workspaceModuleSchema),
+  '/workspace/:moduleId/database-id',
+  validateParams(z.object({ moduleId: z.string().min(1) })),
   getModuleDatabaseId
 );
 router.get(
-  '/workspace/:workspaceId/:moduleId/details',
-  validateParams(workspaceModuleSchema),
+  '/workspace/:moduleId/details',
+  validateParams(z.object({ moduleId: z.string().min(1) })),
   getWorkspaceModuleStatus
 );
 router.post(
-  '/workspace/:workspaceId/initialize',
-  validateParams(workspaceIdSchema),
+  '/workspace/initialize',
   validateBody(moduleInitRequestSchema.omit({ workspaceId: true, userId: true })),
   initializeModules
 );
 router.post(
-  '/workspace/:workspaceId/initialize/core',
-  validateParams(workspaceIdSchema),
+  '/workspace/initialize/core',
   validateBody(initializeCoreModulesSchema),
   initializeCoreWorkspaceModules
 );
 router.post(
-  '/workspace/:workspaceId/initialize/specific',
-  validateParams(workspaceIdSchema),
+  '/workspace/initialize/specific',
   validateBody(initializeSpecificModulesSchema),
   initializeSpecificWorkspaceModules
 );

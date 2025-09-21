@@ -3,6 +3,7 @@ import { workspaceService } from '../services/workspace.service';
 import { sendSuccessResponse } from '@/utils/response.utils';
 import { getUserId } from '@/modules/auth';
 import { catchAsync } from '@/utils';
+import { getWorkspaceId } from '../middleware/workspace.middleware';
 
 // Create workspace
 export const createWorkspace = catchAsync(async (req: Request, res: Response): Promise<void> => {
@@ -14,8 +15,12 @@ export const createWorkspace = catchAsync(async (req: Request, res: Response): P
 
 // Get workspace by ID
 export const getWorkspaceById = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { workspaceId } = req.params;
+  const workspaceId = getWorkspaceId(req);
   const userId = getUserId(req);
+
+  if (!workspaceId) {
+    throw new Error('Workspace ID is required');
+  }
 
   const workspace = await workspaceService.getWorkspaceById(workspaceId, userId);
 
@@ -32,8 +37,12 @@ export const getUserWorkspaces = catchAsync(async (req: Request, res: Response):
 
 // Update workspace
 export const updateWorkspace = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { workspaceId } = req.params;
+  const workspaceId = getWorkspaceId(req);
   const userId = getUserId(req);
+
+  if (!workspaceId) {
+    throw new Error('Workspace ID is required');
+  }
 
   const workspace = await workspaceService.updateWorkspace(workspaceId, req.body, userId);
 
@@ -42,8 +51,12 @@ export const updateWorkspace = catchAsync(async (req: Request, res: Response): P
 
 // Delete workspace
 export const deleteWorkspace = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { workspaceId } = req.params;
+  const workspaceId = getWorkspaceId(req);
   const userId = getUserId(req);
+
+  if (!workspaceId) {
+    throw new Error('Workspace ID is required');
+  }
 
   await workspaceService.deleteWorkspace(workspaceId, userId);
 
@@ -52,8 +65,12 @@ export const deleteWorkspace = catchAsync(async (req: Request, res: Response): P
 
 // Get workspace statistics
 export const getWorkspaceStats = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { workspaceId } = req.params;
+  const workspaceId = getWorkspaceId(req);
   const userId = getUserId(req);
+
+  if (!workspaceId) {
+    throw new Error('Workspace ID is required');
+  }
 
   // Get workspace with stats
   const workspace = await workspaceService.getWorkspaceById(workspaceId, userId);
@@ -75,8 +92,12 @@ export const getWorkspaceStats = catchAsync(async (req: Request, res: Response):
 // Check workspace access
 export const checkWorkspaceAccess = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
-    const { workspaceId } = req.params;
+    const workspaceId = getWorkspaceId(req);
     const userId = getUserId(req);
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
 
     const hasAccess = await workspaceService.hasWorkspaceAccess(workspaceId, userId);
     const canManage = await workspaceService.canManageWorkspace(workspaceId, userId);

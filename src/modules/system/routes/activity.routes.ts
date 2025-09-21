@@ -35,10 +35,6 @@ const entityParamsSchema = z.object({
   entityType: z.string().min(1, 'Entity type is required')
 });
 
-const workspaceIdSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required')
-});
-
 const taskIdSchema = z.object({
   taskId: z.string().min(1, 'Task ID is required')
 });
@@ -96,8 +92,7 @@ router.get(
 
 // Workspace activity overview
 router.get(
-  '/workspace/:workspaceId/overview',
-  validateParams(workspaceIdSchema),
+  '/workspace/overview',
   requireWorkspaceAccess('member'),
   getWorkspaceActivityOverviewController
 );
@@ -119,8 +114,7 @@ router.post(
 
 // Audit Trail Routes
 router.get(
-  '/audit/:workspaceId',
-  validateParams(z.object({ workspaceId: z.string().min(1) })),
+  '/audit',
   requireWorkspaceAccess('admin'), // Audit access requires admin role
   validateQuery(
     z.object({
@@ -136,8 +130,7 @@ router.get(
 );
 
 router.get(
-  '/security/:workspaceId',
-  validateParams(z.object({ workspaceId: z.string().min(1) })),
+  '/security',
   requireWorkspaceAccess('admin'), // Security events require admin role
   validateQuery(
     z.object({
@@ -151,8 +144,7 @@ router.get(
 );
 
 router.get(
-  '/compliance/:workspaceId',
-  validateParams(z.object({ workspaceId: z.string().min(1) })),
+  '/compliance',
   requireWorkspaceAccess('admin'), // Compliance reports require admin role
   validateQuery(
     z.object({
@@ -163,8 +155,7 @@ router.get(
 );
 
 router.get(
-  '/export/:workspaceId',
-  validateParams(z.object({ workspaceId: z.string().min(1) })),
+  '/export',
   requireWorkspaceAccess('admin'), // Export requires admin role
   validateQuery(
     z.object({
@@ -178,8 +169,7 @@ router.get(
 );
 
 router.get(
-  '/heatmap/:workspaceId',
-  validateParams(z.object({ workspaceId: z.string().min(1) })),
+  '/heatmap',
   requireWorkspaceAccess('member'), // Heatmap accessible to members
   validateQuery(
     z.object({

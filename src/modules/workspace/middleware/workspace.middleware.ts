@@ -18,6 +18,7 @@ export const resolveWorkspaceContext = (options?: {
   paramName?: string;
   queryName?: string;
   allowFromBody?: boolean;
+  allowFromHeader?: boolean;
 }) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -31,20 +32,30 @@ export const resolveWorkspaceContext = (options?: {
 
       let workspaceId: string | undefined;
 
-      workspaceId = req.params[paramName];
+      // Check header first (recommended approach)
+      if (options?.allowFromHeader !== false) {
+        workspaceId =
+          (req.headers['x-workspace-id'] as string) || (req.headers['workspace-id'] as string);
+      }
 
+      // Fallback to params (for workspace-specific routes)
+      if (!workspaceId) workspaceId = req.params[paramName];
+
+      // Fallback to query
       if (!workspaceId) workspaceId = req.query[queryName] as string;
 
+      // Fallback to body
       if (!workspaceId && options?.allowFromBody && req.body) {
         workspaceId = req.body[paramName] || req.body.workspaceId;
       }
 
       if (!workspaceId && !options?.required) {
-          const primaryWorkspace = await workspaceService.getUserPrimaryWorkspace(userId);
-          if (primaryWorkspace) workspaceId = primaryWorkspace.id;
+        const primaryWorkspace = await workspaceService.getUserPrimaryWorkspace(userId);
+        if (primaryWorkspace) workspaceId = primaryWorkspace.id;
       }
 
-      if (options?.required && !workspaceId) return next(createForbiddenError('Workspace ID is required'));
+      if (options?.required && !workspaceId)
+        return next(createForbiddenError('Workspace ID is required'));
 
       if (workspaceId) {
         try {

@@ -21,6 +21,7 @@ import {
 } from '@/modules/modules/services/modules.service';
 import { IModuleInitRequest } from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
+import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
 export const initializeModules = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -113,7 +114,7 @@ export const getModuleConfig = catchAsync(
       return;
     }
 
-    sendSuccessResponse(res, 'Module configuration retrieved successfully',  module);
+    sendSuccessResponse(res, 'Module configuration retrieved successfully', module);
   }
 );
 
@@ -166,8 +167,12 @@ export const validateModuleInitializationRequest = catchAsync(
 );
 
 export const getWorkspaceModulesOverview = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
 
     const workspaceModules = await getWorkspaceModules(workspaceId);
 
@@ -195,8 +200,12 @@ export const checkWorkspaceModuleInitialization = catchAsync(
 );
 
 export const getWorkspaceInitializedModulesList = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
 
     const initializedModules = await getWorkspaceInitializedModules(workspaceId);
 
@@ -284,8 +293,12 @@ export const initializeSpecificWorkspaceModules = catchAsync(
 );
 
 export const getWorkspaceModuleRecommendations = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
 
     const recommendations = await getModuleRecommendations(workspaceId);
 
@@ -294,8 +307,12 @@ export const getWorkspaceModuleRecommendations = catchAsync(
 );
 
 export const validateWorkspaceModuleSetup = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+  async (req: Request, res: Response): Promise<void> => {
+    const workspaceId = getWorkspaceId(req);
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
 
     const validation = await validateWorkspaceModules(workspaceId);
 
