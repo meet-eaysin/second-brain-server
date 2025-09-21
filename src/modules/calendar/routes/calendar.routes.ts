@@ -41,11 +41,18 @@ import {
   EEventVisibility
 } from '../types/calendar.types';
 import { authenticateToken, validateRequest } from '@/middlewares';
+import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace,
+  injectWorkspaceContext
+} from '@/modules/workspace/middleware/workspace.middleware';
 
 const router = Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 // Validation schemas
 const createCalendarSchema = CalendarSchema;
@@ -133,7 +140,12 @@ const entityParamsSchema = z.object({
 });
 
 // Calendar CRUD routes
-router.post('/', validateBody(createCalendarSchema), createCalendarController);
+router.post(
+  '/',
+  validateBody(createCalendarSchema),
+  injectWorkspaceContext,
+  createCalendarController
+);
 
 router.get('/', getCalendarsController);
 
@@ -149,7 +161,12 @@ router.put(
 router.delete('/:calendarId', validateParams(calendarIdSchema), deleteCalendarController);
 
 // Event CRUD routes
-router.post('/events', validateBody(createEventSchema), createEventController);
+router.post(
+  '/events',
+  validateBody(createEventSchema),
+  injectWorkspaceContext,
+  createEventController
+);
 
 router.get('/events', getEventsController);
 

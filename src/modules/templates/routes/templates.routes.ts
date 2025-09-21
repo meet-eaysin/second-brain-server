@@ -5,6 +5,11 @@ import { requirePermission } from '@/middlewares/permission.middleware';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import { z } from 'zod';
 import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace,
+  injectWorkspaceContext
+} from '@/modules/workspace/middleware/workspace.middleware';
+import {
   createTemplate,
   getTemplate,
   searchTemplates,
@@ -94,6 +99,8 @@ router.get(
 
 // All routes below require authentication
 router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 // Get all templates (authenticated)
 router.get('/', getUserTemplates);

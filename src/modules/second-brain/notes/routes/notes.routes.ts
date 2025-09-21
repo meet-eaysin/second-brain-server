@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
+import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace,
+  injectWorkspaceContext
+} from '@/modules/workspace/middleware/workspace.middleware';
 
 // Note controllers
 import {
@@ -81,43 +86,22 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 // ===== NOTES CRUD OPERATIONS =====
 
-router.post(
-  '/',
-  validateBody(createNoteSchema),
-  createNote
-);
+router.post('/', validateBody(createNoteSchema), injectWorkspaceContext, createNote);
 
-router.get(
-  '/',
-  validateQuery(getNoteQuerySchema),
-  getNotes
-);
+router.get('/', validateQuery(getNoteQuerySchema), getNotes);
 
-router.get(
-  '/stats',
-  getNoteStats
-);
+router.get('/stats', getNoteStats);
 
-router.get(
-  '/published',
-  validateQuery(getNoteQuerySchema),
-  getPublishedNotes
-);
+router.get('/published', validateQuery(getNoteQuerySchema), getPublishedNotes);
 
-router.get(
-  '/bookmarked',
-  validateQuery(getNoteQuerySchema),
-  getBookmarkedNotes
-);
+router.get('/bookmarked', validateQuery(getNoteQuerySchema), getBookmarkedNotes);
 
-router.get(
-  '/search',
-  validateQuery(searchNotesSchema),
-  searchNotes
-);
+router.get('/search', validateQuery(searchNotesSchema), searchNotes);
 
 router.get(
   '/tag/:tag',
@@ -126,18 +110,9 @@ router.get(
   getNotesByTag
 );
 
-router.get(
-  '/:id',
-  validateParams(noteIdSchema),
-  getNoteById
-);
+router.get('/:id', validateParams(noteIdSchema), getNoteById);
 
-router.put(
-  '/:id',
-  validateParams(noteIdSchema),
-  validateBody(updateNoteSchema),
-  updateNote
-);
+router.put('/:id', validateParams(noteIdSchema), validateBody(updateNoteSchema), updateNote);
 
 router.put(
   '/:id/content',
@@ -146,37 +121,17 @@ router.put(
   updateNoteContent
 );
 
-router.delete(
-  '/:id',
-  validateParams(noteIdSchema),
-  deleteNote
-);
+router.delete('/:id', validateParams(noteIdSchema), deleteNote);
 
 // ===== NOTE ACTIONS =====
 
-router.post(
-  '/:id/publish',
-  validateParams(noteIdSchema),
-  publishNote
-);
+router.post('/:id/publish', validateParams(noteIdSchema), publishNote);
 
-router.post(
-  '/:id/unpublish',
-  validateParams(noteIdSchema),
-  unpublishNote
-);
+router.post('/:id/unpublish', validateParams(noteIdSchema), unpublishNote);
 
-router.post(
-  '/:id/bookmark',
-  validateParams(noteIdSchema),
-  bookmarkNote
-);
+router.post('/:id/bookmark', validateParams(noteIdSchema), bookmarkNote);
 
-router.post(
-  '/:id/unbookmark',
-  validateParams(noteIdSchema),
-  unbookmarkNote
-);
+router.post('/:id/unbookmark', validateParams(noteIdSchema), unbookmarkNote);
 
 router.post(
   '/:id/duplicate',
@@ -190,44 +145,28 @@ router.post(
 router.post(
   '/bulk/update',
   validateBody(bulkUpdateNotesSchema),
+  injectWorkspaceContext,
   bulkUpdateNotes
 );
 
-router.post(
-  '/bulk/delete',
-  validateBody(bulkDeleteNotesSchema),
-  bulkDeleteNotes
-);
+router.post('/bulk/delete', validateBody(bulkDeleteNotesSchema), bulkDeleteNotes);
 
 // ===== NOTE TEMPLATES =====
 
 router.post(
   '/templates',
   validateBody(createNoteTemplateSchema),
+  injectWorkspaceContext,
   createNoteTemplate
 );
 
-router.get(
-  '/templates',
-  validateQuery(getNoteTemplatesQuerySchema),
-  getNoteTemplates
-);
+router.get('/templates', validateQuery(getNoteTemplatesQuerySchema), getNoteTemplates);
 
-router.get(
-  '/templates/popular',
-  getPopularNoteTemplates
-);
+router.get('/templates/popular', getPopularNoteTemplates);
 
-router.get(
-  '/templates/featured',
-  getFeaturedNoteTemplates
-);
+router.get('/templates/featured', getFeaturedNoteTemplates);
 
-router.get(
-  '/templates/:id',
-  validateParams(templateIdSchema),
-  getNoteTemplateById
-);
+router.get('/templates/:id', validateParams(templateIdSchema), getNoteTemplateById);
 
 router.put(
   '/templates/:id',
@@ -236,11 +175,7 @@ router.put(
   updateNoteTemplate
 );
 
-router.delete(
-  '/templates/:id',
-  validateParams(templateIdSchema),
-  deleteNoteTemplate
-);
+router.delete('/templates/:id', validateParams(templateIdSchema), deleteNoteTemplate);
 
 router.post(
   '/templates/:id/apply',
@@ -274,40 +209,48 @@ router.get(
 
 router.put(
   '/:noteId/comments/:commentId',
-  validateParams(noteIdSchema.extend({
-    noteId: noteIdSchema.shape.id,
-    commentId: commentIdSchema.shape.commentId
-  })),
+  validateParams(
+    noteIdSchema.extend({
+      noteId: noteIdSchema.shape.id,
+      commentId: commentIdSchema.shape.commentId
+    })
+  ),
   validateBody(updateCommentSchema),
   updateComment
 );
 
 router.delete(
   '/:noteId/comments/:commentId',
-  validateParams(noteIdSchema.extend({
-    noteId: noteIdSchema.shape.id,
-    commentId: commentIdSchema.shape.commentId
-  })),
+  validateParams(
+    noteIdSchema.extend({
+      noteId: noteIdSchema.shape.id,
+      commentId: commentIdSchema.shape.commentId
+    })
+  ),
   deleteComment
 );
 
 // Comment reactions
 router.post(
   '/:noteId/comments/:commentId/reactions',
-  validateParams(noteIdSchema.extend({
-    noteId: noteIdSchema.shape.id,
-    commentId: commentIdSchema.shape.commentId
-  })),
+  validateParams(
+    noteIdSchema.extend({
+      noteId: noteIdSchema.shape.id,
+      commentId: commentIdSchema.shape.commentId
+    })
+  ),
   validateBody(addReactionSchema),
   addReaction
 );
 
 router.delete(
   '/:noteId/comments/:commentId/reactions',
-  validateParams(noteIdSchema.extend({
-    noteId: noteIdSchema.shape.id,
-    commentId: commentIdSchema.shape.commentId
-  })),
+  validateParams(
+    noteIdSchema.extend({
+      noteId: noteIdSchema.shape.id,
+      commentId: commentIdSchema.shape.commentId
+    })
+  ),
   validateBody(addReactionSchema),
   removeReaction
 );
@@ -315,19 +258,23 @@ router.delete(
 // Comment resolution
 router.post(
   '/:noteId/comments/:commentId/resolve',
-  validateParams(noteIdSchema.extend({
-    noteId: noteIdSchema.shape.id,
-    commentId: commentIdSchema.shape.commentId
-  })),
+  validateParams(
+    noteIdSchema.extend({
+      noteId: noteIdSchema.shape.id,
+      commentId: commentIdSchema.shape.commentId
+    })
+  ),
   resolveComment
 );
 
 router.post(
   '/:noteId/comments/:commentId/unresolve',
-  validateParams(noteIdSchema.extend({
-    noteId: noteIdSchema.shape.id,
-    commentId: commentIdSchema.shape.commentId
-  })),
+  validateParams(
+    noteIdSchema.extend({
+      noteId: noteIdSchema.shape.id,
+      commentId: commentIdSchema.shape.commentId
+    })
+  ),
   unresolveComment
 );
 

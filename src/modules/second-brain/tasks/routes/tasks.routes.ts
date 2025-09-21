@@ -2,6 +2,11 @@ import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
 import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace,
+  injectWorkspaceContext
+} from '@/modules/workspace/middleware/workspace.middleware';
+import {
   createTask,
   getTasks,
   getTaskById,
@@ -50,45 +55,22 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 // Task CRUD operations
-router.post(
-  '/',
-  validateBody(createTaskSchema),
-  createTask
-);
+router.post('/', validateBody(createTaskSchema), injectWorkspaceContext, createTask);
 
-router.get(
-  '/',
-  validateQuery(getTasksQuerySchema),
-  getTasks
-);
+router.get('/', validateQuery(getTasksQuerySchema), getTasks);
 
-router.get(
-  '/:id',
-  validateParams(taskIdSchema),
-  getTaskById
-);
+router.get('/:id', validateParams(taskIdSchema), getTaskById);
 
-router.put(
-  '/:id',
-  validateParams(taskIdSchema),
-  validateBody(updateTaskSchema),
-  updateTask
-);
+router.put('/:id', validateParams(taskIdSchema), validateBody(updateTaskSchema), updateTask);
 
-router.delete(
-  '/:id',
-  validateParams(taskIdSchema),
-  deleteTask
-);
+router.delete('/:id', validateParams(taskIdSchema), deleteTask);
 
 // Task actions
-router.post(
-  '/:id/complete',
-  validateParams(taskIdSchema),
-  completeTask
-);
+router.post('/:id/complete', validateParams(taskIdSchema), completeTask);
 
 router.post(
   '/:id/assign',
@@ -105,129 +87,54 @@ router.post(
 );
 
 // Task queries
-router.get(
-  '/project/:projectId',
-  getTasksByProject
-);
+router.get('/project/:projectId', getTasksByProject);
 
-router.get(
-  '/assignee/:assigneeId',
-  getTasksByAssignee
-);
+router.get('/assignee/:assigneeId', getTasksByAssignee);
 
-router.get(
-  '/overdue',
-  getOverdueTasks
-);
+router.get('/overdue', getOverdueTasks);
 
-router.get(
-  '/upcoming',
-  getUpcomingTasks
-);
+router.get('/upcoming', getUpcomingTasks);
 
 // Bulk operations
 router.post(
   '/bulk/update',
   validateBody(bulkUpdateTasksSchema),
+  injectWorkspaceContext,
   bulkUpdateTasks
 );
 
 // Time tracking routes
-router.post(
-  '/:id/time/start',
-  validateParams(taskIdSchema),
-  startTimeTracking
-);
+router.post('/:id/time/start', validateParams(taskIdSchema), startTimeTracking);
 
-router.post(
-  '/:id/time/stop',
-  validateParams(taskIdSchema),
-  stopTimeTracking
-);
+router.post('/:id/time/stop', validateParams(taskIdSchema), stopTimeTracking);
 
-router.get(
-  '/:id/time',
-  validateParams(taskIdSchema),
-  getTimeTrackingStatus
-);
+router.get('/:id/time', validateParams(taskIdSchema), getTimeTrackingStatus);
 
-router.post(
-  '/:id/time-entries',
-  validateParams(taskIdSchema),
-  addTimeEntry
-);
+router.post('/:id/time-entries', validateParams(taskIdSchema), addTimeEntry);
 
-router.get(
-  '/:id/time-entries',
-  validateParams(taskIdSchema),
-  getTimeEntries
-);
+router.get('/:id/time-entries', validateParams(taskIdSchema), getTimeEntries);
 
-router.put(
-  '/:id/time-entries/:entryId',
-  validateParams(taskIdSchema),
-  updateTimeEntry
-);
+router.put('/:id/time-entries/:entryId', validateParams(taskIdSchema), updateTimeEntry);
 
-router.delete(
-  '/:id/time-entries/:entryId',
-  validateParams(taskIdSchema),
-  deleteTimeEntry
-);
+router.delete('/:id/time-entries/:entryId', validateParams(taskIdSchema), deleteTimeEntry);
 
 // Comments routes
-router.post(
-  '/:id/comments',
-  validateParams(taskIdSchema),
-  addComment
-);
+router.post('/:id/comments', validateParams(taskIdSchema), addComment);
 
-router.get(
-  '/:id/comments',
-  validateParams(taskIdSchema),
-  getComments
-);
+router.get('/:id/comments', validateParams(taskIdSchema), getComments);
 
-router.get(
-  '/:id/comments/:commentId',
-  validateParams(taskIdSchema),
-  getCommentById
-);
+router.get('/:id/comments/:commentId', validateParams(taskIdSchema), getCommentById);
 
-router.put(
-  '/:id/comments/:commentId',
-  validateParams(taskIdSchema),
-  updateComment
-);
+router.put('/:id/comments/:commentId', validateParams(taskIdSchema), updateComment);
 
-router.delete(
-  '/:id/comments/:commentId',
-  validateParams(taskIdSchema),
-  deleteComment
-);
+router.delete('/:id/comments/:commentId', validateParams(taskIdSchema), deleteComment);
 
-router.post(
-  '/:id/comments/:commentId/reactions',
-  validateParams(taskIdSchema),
-  addReaction
-);
+router.post('/:id/comments/:commentId/reactions', validateParams(taskIdSchema), addReaction);
 
-router.delete(
-  '/:id/comments/:commentId/reactions',
-  validateParams(taskIdSchema),
-  removeReaction
-);
+router.delete('/:id/comments/:commentId/reactions', validateParams(taskIdSchema), removeReaction);
 
-router.put(
-  '/:id/comments/:commentId/resolve',
-  validateParams(taskIdSchema),
-  resolveComment
-);
+router.put('/:id/comments/:commentId/resolve', validateParams(taskIdSchema), resolveComment);
 
-router.put(
-  '/:id/comments/:commentId/unresolve',
-  validateParams(taskIdSchema),
-  unresolveComment
-);
+router.put('/:id/comments/:commentId/unresolve', validateParams(taskIdSchema), unresolveComment);
 
 export default router;
