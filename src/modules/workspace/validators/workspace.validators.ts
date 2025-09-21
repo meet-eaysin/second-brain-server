@@ -24,8 +24,14 @@ export const memberQuerySchema = z.object({
 });
 
 // Validation schemas
-export const WorkspaceTypeSchema = z.enum(EWorkspaceType);
-export const WorkspaceMemberRoleSchema = z.enum(EWorkspaceMemberRole);
+export const WorkspaceTypeSchema = z.enum(['personal', 'team', 'organization', 'public']);
+export const WorkspaceMemberRoleSchema = z.enum([
+  'owner',
+  'admin',
+  'editor',
+  'commenter',
+  'viewer'
+]);
 
 export const WorkspaceConfigSchema = z.object({
   theme: z.enum(['light', 'dark', 'auto']).optional(),
@@ -47,7 +53,7 @@ export const WorkspaceConfigSchema = z.object({
 export const CreateWorkspaceSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(1000).optional(),
-  type: WorkspaceTypeSchema.default(EWorkspaceType.PERSONAL),
+  type: WorkspaceTypeSchema.default('personal'),
   icon: z
     .object({
       type: z.enum(['emoji', 'icon', 'image']),

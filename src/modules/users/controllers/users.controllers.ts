@@ -21,6 +21,7 @@ import {
   createUserNotFoundError
 } from '../utils/user-errors';
 import { createNotFoundError } from '../../../utils/error.utils';
+import { getUserWithWorkspaces } from '../../auth/services/auth.service';
 
 export const getUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -31,14 +32,29 @@ export const getUser = catchAsync(
       return next(createNotFoundError('User not found'));
     }
 
-    sendSuccessResponse(res, 'User retrieved successfully', user);
+    // Add workspace information to user
+    const workspaces = await getUserWithWorkspaces(id);
+    const userWithWorkspaces = {
+      ...user,
+      workspaces
+    };
+
+    sendSuccessResponse(res, 'User retrieved successfully', userWithWorkspaces);
   }
 );
 
 export const getProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
-    sendSuccessResponse(res, 'Profile retrieved successfully', user);
+
+    // Add workspace information to user
+    const workspaces = await getUserWithWorkspaces(user.userId);
+    const userWithWorkspaces = {
+      ...user,
+      workspaces
+    };
+
+    sendSuccessResponse(res, 'Profile retrieved successfully', userWithWorkspaces);
   }
 );
 
@@ -107,7 +123,14 @@ export const getUserDetails = catchAsync(
       return next(createUserNotFoundError(id));
     }
 
-    sendSuccessResponse(res, 'User details retrieved successfully', user);
+    // Add workspace information to user
+    const workspaces = await getUserWithWorkspaces(id);
+    const userWithWorkspaces = {
+      ...user,
+      workspaces
+    };
+
+    sendSuccessResponse(res, 'User details retrieved successfully', userWithWorkspaces);
   }
 );
 

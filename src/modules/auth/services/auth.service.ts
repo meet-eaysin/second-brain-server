@@ -26,6 +26,8 @@ import { UserModel } from '../../users/models/users.model';
 import { sendEmail } from '../../../utils/email.utils';
 import { jwtConfig } from '@/config/jwt/jwt.config';
 import jwt from 'jsonwebtoken';
+import { workspaceService } from '@/modules/workspace';
+import { WorkspaceMemberModel } from '@/modules/workspace/models/workspace-member.model';
 import {
   createInvalidCredentialsError,
   createAccountDeactivatedError,
@@ -47,6 +49,32 @@ import {
   createAuthenticationFailedError,
   createResetTokenExpiredError
 } from '../utils/auth-errors';
+
+// Helper function to get user with workspace information
+export const getUserWithWorkspaces = async (userId: string) => {
+  // Fetch user's workspaces with membership details
+  const workspaces = await workspaceService.getUserWorkspaces(userId);
+  const workspaceMemberships = await WorkspaceMemberModel.findByUser(userId);
+
+  // Combine workspace data with membership info
+  const userWorkspaces = workspaces.map(workspace => {
+    const membership = workspaceMemberships.find(m => m.workspaceId.toString() === workspace.id);
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      description: workspace.description,
+      type: workspace.type,
+      role: membership?.role || 'viewer',
+      isDefault: workspace.type === 'personal',
+      memberCount: workspace.memberCount,
+      databaseCount: workspace.databaseCount,
+      createdAt: workspace.createdAt.toISOString(),
+      updatedAt: workspace.updatedAt.toISOString()
+    };
+  });
+
+  return userWorkspaces;
+};
 
 export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthResponse> => {
   const { email, password } = loginData;
@@ -84,8 +112,15 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 
     const { password: _, ...userWithoutPassword } = user;
 
+    // Add workspace information to user
+    const workspaces = await getUserWithWorkspaces(user.id);
+    const userWithWorkspaces = {
+      ...userWithoutPassword,
+      workspaces
+    };
+
     return {
-      user: userWithoutPassword,
+      user: userWithWorkspaces,
       accessToken: accessToken,
       refreshToken
     };
@@ -144,8 +179,15 @@ export const handleGoogleCallback = async (code: string): Promise<TAuthResponse>
     const newAccessToken = generateAccessToken(accessTokenPayload);
     const newRefreshToken = generateRefreshToken(refreshTokenPayload);
 
+    // Add workspace information to user
+    const workspaces = await getUserWithWorkspaces(user.id);
+    const userWithWorkspaces = {
+      ...user,
+      workspaces
+    };
+
     return {
-      user,
+      user: userWithWorkspaces,
       accessToken: newAccessToken,
       refreshToken: newRefreshToken
     };
@@ -338,7 +380,9 @@ export class AuthService {
     return handleGoogleCallback(code);
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshAccessToken(
+    refreshToken: string
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     return refreshAccessToken(refreshToken);
   }
 

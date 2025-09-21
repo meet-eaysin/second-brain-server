@@ -28,6 +28,8 @@ export type TUser = {
   // Optional password reset fields (not exposed in API responses)
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  // Workspace information
+  workspaces?: TUserWorkspace[];
 };
 
 export type TUserCreateRequest = {
@@ -86,4 +88,17 @@ export type TForgotPasswordRequest = {
 export type TResetPasswordRequest = {
   resetToken: string;
   newPassword: string;
+};
+
+export type TUserWorkspace = {
+  id: string;
+  name: string;
+  description?: string;
+  type: string; // 'personal', 'team', 'organization', 'public'
+  role: string; // 'owner', 'admin', 'editor', 'commenter', 'viewer'
+  isDefault?: boolean;
+  memberCount: number;
+  databaseCount: number;
+  createdAt: string;
+  updatedAt: string;
 };

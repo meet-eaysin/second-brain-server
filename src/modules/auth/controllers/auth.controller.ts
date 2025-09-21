@@ -1,27 +1,34 @@
+import { getUserWithWorkspaces } from './../services/auth.service';
 import { Request, Response, NextFunction } from 'express';
-import {catchAsync, sendSuccessResponse, sendErrorResponse} from '@/utils';
+import { catchAsync, sendSuccessResponse } from '@/utils';
 import {
-    createUser,
-    getUsersWithoutPassword,
-    TChangePasswordRequest, TForgotPasswordRequest,
-    TLoginRequest, TResetPasswordRequest,
-    TUserCreateRequest
+  createUser,
+  getUsersWithoutPassword,
+  TChangePasswordRequest,
+  TForgotPasswordRequest,
+  TLoginRequest,
+  TResetPasswordRequest,
+  TUserCreateRequest
 } from '@/modules/users';
 import {
-    authenticateUser,
-    changePassword,
-    forgotPassword, generateGoogleLoginUrl, handleGoogleCallback, logoutAllDevices,
-    logoutUser,
-    refreshAccessToken,
-    resetPassword, verifyStateToken
+  authenticateUser,
+  changePassword,
+  forgotPassword,
+  generateGoogleLoginUrl,
+  handleGoogleCallback,
+  logoutAllDevices,
+  logoutUser,
+  refreshAccessToken,
+  resetPassword,
+  verifyStateToken
 } from '@/modules/auth';
-import {AuthenticatedRequest} from '@/middlewares';
+import { AuthenticatedRequest } from '@/middlewares';
 import {
-    createAuthenticationFailedError,
-    createOAuthCodeInvalidError
+  createAuthenticationFailedError,
+  createOAuthCodeInvalidError
 } from '@/auth/utils/auth-errors';
-import {appConfig} from "@/config";
-import {googleConfig} from "@/config/google/google";
+import { appConfig } from '@/config';
+import { googleConfig } from '@/config/google/google';
 
 export const register = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -81,7 +88,6 @@ export const logout = catchAsync(
     const { user } = req as AuthenticatedRequest;
     await logoutUser(user.userId);
 
-    console.log('✅ User logged out successfully');
     sendSuccessResponse(res, 'Logged out successfully', null);
   }
 );
@@ -91,7 +97,6 @@ export const logoutAll = catchAsync(
     const { user } = req as AuthenticatedRequest;
     await logoutAllDevices(user.userId);
 
-    console.log('✅ User logged out from all devices successfully');
     sendSuccessResponse(res, 'Logged out from all devices successfully', null);
   }
 );
@@ -99,23 +104,24 @@ export const logoutAll = catchAsync(
 export const getProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { user } = req as AuthenticatedRequest;
-    sendSuccessResponse(res, 'Profile retrieved successfully', user);
+
+    const workspaces = await getUserWithWorkspaces(user.userId);
+    const userWithWorkspaces = {
+      ...user,
+      workspaces
+    };
+
+    sendSuccessResponse(res, 'Profile retrieved successfully', userWithWorkspaces);
   }
 );
 
 export const googleLogin = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      console.log('🚀 Initiating Google OAuth redirect flow');
-
-      // Generate Google OAuth URL for redirect flow
       const { url } = generateGoogleLoginUrl();
 
-      console.log('🔄 Redirecting to Google OAuth URL');
       res.redirect(url);
-
     } catch (error) {
-      console.error('❌ Failed to generate Google OAuth URL:', error);
       return next(createAuthenticationFailedError('Failed to generate Google OAuth URL'));
     }
   }
@@ -123,37 +129,15 @@ export const googleLogin = catchAsync(
 
 export const googleCallback = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const {
-      code,
-      state,
-      error,
-      error_description,
-      scope,
-      authuser,
-      prompt
-    } = req.query;
+    const { code, state, error, error_description } = req.query;
 
-    console.log('🔍 Google OAuth callback received:', {
-      hasCode: !!code,
-      hasState: !!state,
-      error,
-      error_description,
-      scope,
-      authuser,
-      prompt,
-      allQueryParams: req.query // Log all parameters for debugging
-    });
-
-    // Handle OAuth errors from Google
     if (error) {
-      console.error('❌ Google OAuth error:', error, error_description);
       const errorMessage = String(error_description || 'Google authentication failed');
       const errorUrl = `${appConfig.clientUrl}/auth/callback?error=${encodeURIComponent(String(error))}&message=${encodeURIComponent(errorMessage)}`;
       return res.redirect(errorUrl);
     }
 
     if (!code || typeof code !== 'string') {
-      console.error('❌ No authorization code received');
       const errorUrl = `${appConfig.clientUrl}/login?error=missing_code&message=Authorization code not received`;
       return res.redirect(errorUrl);
     }
@@ -162,32 +146,23 @@ export const googleCallback = catchAsync(
       // Verify state token for security
       if (state && typeof state === 'string') {
         try {
-          const stateData = verifyStateToken(state);
-          console.log('✅ State token verified successfully');
+          verifyStateToken(state);
         } catch (error) {
-          console.error('❌ Invalid state token:', error);
           const errorUrl = `${appConfig.clientUrl}/login?error=invalid_state&message=Security validation failed`;
           return res.redirect(errorUrl);
         }
       }
 
-      // Exchange authorization code for tokens
-      console.log('🔄 Exchanging authorization code for tokens...');
       const authResponse = await handleGoogleCallback(code);
-      console.log('✅ Authentication successful, tokens received');
 
-      // Stateless approach: Redirect with tokens in URL parameters
-      // Frontend will extract and store tokens in localStorage/sessionStorage
-      const redirectUrl = `${appConfig.clientUrl}/auth/callback?` +
+      const redirectUrl =
+        `${appConfig.clientUrl}/auth/callback?` +
         `accessToken=${encodeURIComponent(authResponse.accessToken)}&` +
         `refreshToken=${encodeURIComponent(authResponse.refreshToken)}&` +
-        `auth=success`;
+        'auth=success';
 
-      console.log('🎉 Redirecting to frontend with JWT tokens');
       res.redirect(redirectUrl);
-
     } catch (error) {
-      console.error('❌ Google OAuth callback processing failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
       const errorUrl = `${appConfig.clientUrl}/login?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`;
       return res.redirect(errorUrl);
@@ -218,7 +193,7 @@ export const testGoogleConfig = catchAsync(
       hasClientId: !!googleConfig.clientId,
       hasClientSecret: !!googleConfig.clientSecret,
       redirectUri: googleConfig.redirectUri,
-      frontendUrl: appConfig.clientUrl,
+      frontendUrl: appConfig.clientUrl
     };
 
     sendSuccessResponse(res, 'Google OAuth configuration status', config);
