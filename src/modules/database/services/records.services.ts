@@ -21,6 +21,7 @@ import {
 import { IProperty, EPropertyType } from '@/modules/core/types/property.types';
 import { createAppError } from '@/utils/error.utils';
 
+type IUpdateRecordData = IUpdateRecordRequest | Record<string, any>;
 export const createRecord = async (
   databaseId: string,
   data: ICreateRecordRequest,
@@ -180,7 +181,7 @@ export const getRecordById = async (
 export const updateRecord = async (
   databaseId: string,
   recordId: string,
-  data: IUpdateRecordRequest,
+  data: IUpdateRecordData,
   userId: string
 ): Promise<IDatabaseRecord> => {
   const record = await RecordModel.findOne({
@@ -193,15 +194,19 @@ export const updateRecord = async (
   // Check permissions (basic check - can be enhanced)
   // For now, allow if user has database access
 
-  const updateData: any = {
+  const updateData: Partial<
+    Pick<IDatabaseRecord, 'properties' | 'content' | 'order' | 'lastEditedBy' | 'lastEditedAt'>
+  > = {
     lastEditedBy: userId,
     lastEditedAt: new Date()
   };
 
-  if (data.properties) {
+  // Handle both { properties: {...} } and { ...properties } formats
+  const properties = data.properties || data;
+  if (properties && typeof properties === 'object') {
     const validationResult = await validateRecordProperties(
       databaseId,
-      { ...record.properties, ...data.properties },
+      { ...record.properties, ...properties },
       userId
     );
     if (!validationResult.isValid) {
@@ -356,17 +361,18 @@ export const validateRecordProperties = async (
 
   const propertyNameMap = createPropertyNameMap(databaseProperties);
 
-  for (const [propertyName, value] of Object.entries(properties)) {
-    const matchedPropertyName = findMatchingPropertyName(propertyName, propertyNameMap);
-    const property = databaseProperties.find(p => p.name === matchedPropertyName);
+  for (const [propertyKey, value] of Object.entries(properties)) {
+    // Check if propertyKey is a property ID first
+    let property = databaseProperties.find(p => p.id === propertyKey);
 
     if (!property) {
-      warnings.push({
-        field: propertyName,
-        message: `Property '${propertyName}' does not exist in database schema`,
-        code: 'UNKNOWN_PROPERTY'
-      });
-      continue;
+      // If not found by ID, try to match by name
+      const matchedPropertyName = findMatchingPropertyName(propertyKey, propertyNameMap);
+      property = databaseProperties.find(p => p.name === matchedPropertyName);
+    }
+
+    if (!property) {
+      throw createAppError(`Property '${propertyKey}' does not exist in database schema`, 400);
     }
 
     validatedProperties[property.name] = value;
@@ -424,14 +430,14 @@ export const findMatchingPropertyName = (
   return propertyMap.get(normalizedInput) || null;
 };
 
-export const formatRecordResponse = (record: any): IDatabaseRecord => {
+export const formatRecordResponse = (record: InstanceType<typeof RecordModel>): IDatabaseRecord => {
   return {
-    id: record._id.toString(),
+    id: (record._id as ObjectId).toString(),
     databaseId: record.databaseId,
     properties: record.properties || {},
     content: record.content || [],
     order: record.order || 0,
-    hasContent: record.content && record.content.length > 0,
+    hasContent: Boolean(record.content && record.content.length > 0),
     isTemplate: record.isTemplate || false,
     isFavorite: record.isFavorite || false,
     isArchived: record.isArchived || false,
@@ -538,7 +544,7 @@ export const updateRollupProperties = async (recordId: string): Promise<void> =>
   const updates: Record<string, any> = {};
 
   for (const rollupProperty of rollupProperties) {
-    if (rollupProperty.config.rollupPropertyId) {
+    if (rollupProperty.config.rollupPropertyId && rollupProperty.config.relationPropertyId) {
       try {
         const rollupValue = await rollupService.calculateRollupValue(
           recordId,

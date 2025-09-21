@@ -9,6 +9,7 @@ import {
 import { IReorderPropertiesRequest } from '../types/properties.types';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { viewsService } from './views.services';
+import { createAppError, createNotFoundError, createConflictError } from '@/utils/error.utils';
 
 interface ICreatePropertyRequest {
   name: string;
@@ -20,7 +21,6 @@ interface ICreatePropertyRequest {
   order?: number;
   config?: any;
 }
-import { createAppError, createNotFoundError, createConflictError } from '@/utils/error.utils';
 
 export class PropertiesService {
   async createProperty(
