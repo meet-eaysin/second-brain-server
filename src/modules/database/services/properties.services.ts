@@ -377,22 +377,46 @@ export class PropertiesService {
   async togglePropertyVisibility(
     databaseId: string,
     propertyId: string,
+    viewId: string,
     userId: string
   ): Promise<IProperty> {
-    const property = await PropertyModel.findOne({
-      databaseId,
-      _id: propertyId
-    });
+    // Get the property to return it
+    const property = await this.getPropertyById(databaseId, propertyId);
 
-    if (!property) {
-      throw createNotFoundError('Property', propertyId);
+    // Get the current view
+    const view = await viewsService.getViewById(databaseId, viewId, userId);
+
+    const currentVisible = view.settings.visibleProperties || [];
+    const currentHidden = view.settings.hiddenProperties || [];
+
+    let updatedVisible: string[];
+    let updatedHidden: string[];
+
+    // Check if property is currently visible in this view
+    const isCurrentlyVisible = currentVisible.includes(propertyId);
+
+    if (isCurrentlyVisible) {
+      // Move from visible to hidden
+      updatedVisible = currentVisible.filter(id => id !== propertyId);
+      updatedHidden = [...currentHidden.filter(id => id !== propertyId), propertyId];
+    } else {
+      // Move from hidden to visible
+      updatedHidden = currentHidden.filter(id => id !== propertyId);
+      updatedVisible = [...currentVisible.filter(id => id !== propertyId), propertyId];
     }
 
-    property.isVisible = !property.isVisible;
-    property.updatedBy = userId;
-    await property.save();
+    // Update the view
+    await ViewModel.findOneAndUpdate(
+      { _id: viewId, databaseId },
+      {
+        'config.visibleProperties': updatedVisible,
+        'config.hiddenProperties': updatedHidden,
+        updatedBy: userId,
+        updatedAt: new Date()
+      }
+    );
 
-    return property.toObject() as IProperty;
+    return property;
   }
 
   async getPropertyCalculations(

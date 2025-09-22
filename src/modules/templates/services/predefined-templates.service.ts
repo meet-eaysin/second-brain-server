@@ -19,7 +19,6 @@ export class PredefinedTemplatesService {
     // Check if templates already exist
     const existingTemplates = await TemplateModel.findOfficial();
     if (existingTemplates.length > 0) {
-      console.log('Predefined templates already exist, skipping initialization');
       return;
     }
 
@@ -31,8 +30,6 @@ export class PredefinedTemplatesService {
 
     // Create workspace templates
     await this.createWorkspaceTemplates();
-
-    console.log('Predefined templates initialized successfully');
   }
 
   // Create row templates
@@ -50,8 +47,8 @@ export class PredefinedTemplatesService {
         color: '#3B82F6',
         moduleType: EDatabaseType.TASKS,
         defaultValues: {
-          'Status': 'not_started',
-          'Priority': 'medium',
+          Status: 'not_started',
+          Priority: 'medium',
           'Due Date': new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         },
         isOfficial: true,
@@ -68,9 +65,9 @@ export class PredefinedTemplatesService {
         color: '#10B981',
         moduleType: EDatabaseType.TASKS,
         defaultValues: {
-          'Status': 'not_started',
-          'Priority': 'medium',
-          'Category': 'work',
+          Status: 'not_started',
+          Priority: 'medium',
+          Category: 'work',
           'Estimated Time': 60,
           'Due Date': new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         },
@@ -89,10 +86,10 @@ export class PredefinedTemplatesService {
         color: '#EF4444',
         moduleType: EDatabaseType.GOALS,
         defaultValues: {
-          'Status': 'not_started',
-          'Priority': 'high',
-          'Timeframe': 'quarterly',
-          'Progress': 0,
+          Status: 'not_started',
+          Priority: 'high',
+          Timeframe: 'quarterly',
+          Progress: 0,
           'Target Date': new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         },
         isOfficial: true,
@@ -111,9 +108,9 @@ export class PredefinedTemplatesService {
         color: '#8B5CF6',
         moduleType: EDatabaseType.HABITS,
         defaultValues: {
-          'Frequency': 'daily',
-          'Category': 'health',
-          'Status': 'active',
+          Frequency: 'daily',
+          Category: 'health',
+          Status: 'active',
           'Current Streak': 0,
           'Best Streak': 0,
           'Start Date': new Date().toISOString().split('T')[0]
@@ -134,11 +131,11 @@ export class PredefinedTemplatesService {
         color: '#F59E0B',
         moduleType: EDatabaseType.JOURNAL,
         defaultValues: {
-          'Date': new Date().toISOString().split('T')[0],
-          'Mood': 'good',
+          Date: new Date().toISOString().split('T')[0],
+          Mood: 'good',
           'Energy Level': 7,
-          'Gratitude': 'I am grateful for...',
-          'Highlights': 'Today\'s best moments...',
+          Gratitude: 'I am grateful for...',
+          Highlights: "Today's best moments...",
           'Tomorrow Goals': 'Tomorrow I will...'
         },
         isOfficial: true,
@@ -157,9 +154,9 @@ export class PredefinedTemplatesService {
         color: '#6366F1',
         moduleType: EDatabaseType.NOTES,
         defaultValues: {
-          'Category': 'meeting',
-          'Tags': ['meeting'],
-          'Date': new Date().toISOString().split('T')[0]
+          Category: 'meeting',
+          Tags: ['meeting'],
+          Date: new Date().toISOString().split('T')[0]
         },
         isOfficial: true
       },
@@ -176,10 +173,10 @@ export class PredefinedTemplatesService {
         color: '#059669',
         moduleType: EDatabaseType.PROJECTS,
         defaultValues: {
-          'Status': 'planning',
-          'Priority': 'high',
-          'Category': 'software',
-          'Budget': 10000,
+          Status: 'planning',
+          Priority: 'high',
+          Category: 'software',
+          Budget: 10000,
           'Start Date': new Date().toISOString().split('T')[0],
           'End Date': new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         },
@@ -304,18 +301,18 @@ export class PredefinedTemplatesService {
         rowTemplates: [],
         sampleData: [
           {
-            'Title': 'Review project proposal',
-            'Status': 'not_started',
-            'Priority': 'high',
+            Title: 'Review project proposal',
+            Status: 'not_started',
+            Priority: 'high',
             'Due Date': new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            'Category': 'work'
+            Category: 'work'
           },
           {
-            'Title': 'Schedule dentist appointment',
-            'Status': 'not_started',
-            'Priority': 'medium',
+            Title: 'Schedule dentist appointment',
+            Status: 'not_started',
+            Priority: 'medium',
             'Due Date': new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            'Category': 'health'
+            Category: 'health'
           }
         ],
         settings: {
@@ -342,7 +339,8 @@ export class PredefinedTemplatesService {
     const workspaceTemplates = [
       {
         name: 'Personal Productivity Hub',
-        description: 'Complete personal productivity workspace with tasks, goals, habits, and journal',
+        description:
+          'Complete personal productivity workspace with tasks, goals, habits, and journal',
         category: ETemplateCategory.PRODUCTIVITY,
         type: ETemplateType.WORKSPACE,
         access: ETemplateAccess.PUBLIC,
@@ -391,7 +389,7 @@ export class PredefinedTemplatesService {
           {
             id: 'welcome',
             title: 'Welcome to Your Productivity Hub',
-            description: 'Let\'s set up your personal productivity system',
+            description: "Let's set up your personal productivity system",
             type: 'welcome',
             order: 0,
             isRequired: true
@@ -513,7 +511,6 @@ export class PredefinedTemplatesService {
       });
 
       await template.save();
-      console.log(`Created template: ${templateData.name}`);
     } catch (error) {
       console.error(`Failed to create template ${templateData.name}:`, error);
     }

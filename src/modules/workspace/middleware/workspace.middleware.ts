@@ -161,7 +161,6 @@ export const canManageWorkspaceMembers = (req: Request): boolean => {
 
 export const injectWorkspaceContext = (req: Request, res: Response, next: NextFunction): void => {
   const workspaceId = getWorkspaceId(req);
-  console.log('WORKSPACE', workspaceId);
 
   if (workspaceId && req.body && typeof req.body === 'object') {
     if (!req.body.workspaceId) req.body.workspaceId = workspaceId;

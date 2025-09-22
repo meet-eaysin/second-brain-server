@@ -208,18 +208,15 @@ export const updateRecord = async (
   // Handle both { properties: {...} } and { ...properties } formats
   const properties = data.properties || data;
   if (properties && typeof properties === 'object') {
-    const validationResult = await validateRecordProperties(
-      databaseId,
-      { ...record.properties, ...properties },
-      userId
-    );
+    const validationResult = await validateRecordProperties(databaseId, properties, userId);
     if (!validationResult.isValid) {
       throw createAppError(
         `Validation failed: ${validationResult.errors.map(e => e.message).join(', ')}`,
         400
       );
     }
-    updateData.properties = validationResult.validatedProperties;
+    // Merge validated properties with existing record properties
+    updateData.properties = { ...record.properties, ...validationResult.validatedProperties };
   }
 
   if (data.content !== undefined) updateData.content = data.content;
@@ -370,9 +367,13 @@ export const validateRecordProperties = async (
     let property = databaseProperties.find(p => p.id === propertyKey);
 
     if (!property) {
-      // If not found by ID, try to match by name
-      const matchedPropertyName = findMatchingPropertyName(propertyKey, propertyNameMap);
-      property = databaseProperties.find(p => p.name === matchedPropertyName);
+      // If not found by ID, try to find by exact name match
+      property = databaseProperties.find(p => p.name === propertyKey);
+      if (!property) {
+        // Try normalized name matching as fallback
+        const matchedPropertyName = findMatchingPropertyName(propertyKey, propertyNameMap);
+        property = databaseProperties.find(p => p.name === matchedPropertyName);
+      }
     }
 
     if (!property) {

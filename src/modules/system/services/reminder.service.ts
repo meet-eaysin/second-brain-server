@@ -15,12 +15,12 @@ export interface IReminderConfig {
   enabled: boolean;
   intervals: {
     beforeDue: number[]; // minutes before due date
-    afterDue: number[];  // minutes after due date (for overdue)
+    afterDue: number[]; // minutes after due date (for overdue)
   };
   maxReminders: number;
   quietHours: {
     start: string; // HH:mm
-    end: string;   // HH:mm
+    end: string; // HH:mm
     timezone: string;
   };
 }
@@ -30,16 +30,16 @@ const DEFAULT_REMINDER_CONFIG: IReminderConfig = {
   enabled: true,
   intervals: {
     beforeDue: [
-      24 * 60,      // 1 day before
-      4 * 60,       // 4 hours before
-      60,           // 1 hour before
-      15            // 15 minutes before
+      24 * 60, // 1 day before
+      4 * 60, // 4 hours before
+      60, // 1 hour before
+      15 // 15 minutes before
     ],
     afterDue: [
-      60,           // 1 hour after
-      24 * 60,      // 1 day after
-      3 * 24 * 60,  // 3 days after
-      7 * 24 * 60   // 1 week after
+      60, // 1 hour after
+      24 * 60, // 1 day after
+      3 * 24 * 60, // 3 days after
+      7 * 24 * 60 // 1 week after
     ]
   },
   maxReminders: 10,
@@ -81,8 +81,6 @@ export const initializeReminderSystem = (): void => {
   cron.schedule('0 0 * * *', () => {
     cleanupReminderTracking();
   });
-
-  console.log('✅ Due Task Reminder System initialized');
 };
 
 /**
@@ -122,7 +120,8 @@ export const checkDueTasks = async (): Promise<void> => {
 
         // Check if we should send a reminder
         for (const interval of config.intervals.beforeDue) {
-          if (Math.abs(minutesToDue - interval) <= 2) { // 2-minute tolerance
+          if (Math.abs(minutesToDue - interval) <= 2) {
+            // 2-minute tolerance
             const reminderKey = `${task._id}-${interval}`;
 
             if (!hasReminderBeenSent(reminderKey)) {
@@ -170,11 +169,14 @@ export const checkOverdueTasks = async (): Promise<void> => {
 
         // Check if we should send an overdue reminder
         for (const interval of config.intervals.afterDue) {
-          if (Math.abs(minutesOverdue - interval) <= 30) { // 30-minute tolerance for overdue
+          if (Math.abs(minutesOverdue - interval) <= 30) {
+            // 30-minute tolerance for overdue
             const reminderKey = `${task._id}-overdue-${interval}`;
 
-            if (!hasReminderBeenSent(reminderKey) &&
-                getReminderCount(task.id.toString()) < config.maxReminders) {
+            if (
+              !hasReminderBeenSent(reminderKey) &&
+              getReminderCount(task.id.toString()) < config.maxReminders
+            ) {
               await sendOverdueTaskReminder(task, database, minutesOverdue);
               markReminderSent(reminderKey);
             }
@@ -220,15 +222,9 @@ const sendDueTaskReminder = async (
           minutesToDue,
           reminderType: 'due_soon'
         },
-        methods: [
-          ENotificationMethod.IN_APP,
-          ENotificationMethod.EMAIL,
-          ENotificationMethod.PUSH
-        ]
+        methods: [ENotificationMethod.IN_APP, ENotificationMethod.EMAIL, ENotificationMethod.PUSH]
       });
     }
-
-    console.log(`📅 Sent due task reminder for: ${taskName} (${minutesToDue} minutes)`);
   } catch (error) {
     console.error('Error sending due task reminder:', error);
   }
@@ -268,15 +264,9 @@ const sendOverdueTaskReminder = async (
           overdueDays: Math.floor(minutesOverdue / (24 * 60)),
           reminderType: 'overdue'
         },
-        methods: [
-          ENotificationMethod.IN_APP,
-          ENotificationMethod.EMAIL,
-          ENotificationMethod.PUSH
-        ]
+        methods: [ENotificationMethod.IN_APP, ENotificationMethod.EMAIL, ENotificationMethod.PUSH]
       });
     }
-
-    console.log(`🚨 Sent overdue task reminder for: ${taskName} (${minutesOverdue} minutes overdue)`);
   } catch (error) {
     console.error('Error sending overdue task reminder:', error);
   }
@@ -313,15 +303,13 @@ const getReminderCount = (taskId: string): number => {
  * Clean up old reminder tracking data
  */
 const cleanupReminderTracking = (): void => {
-  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
   for (const [key, timestamp] of remindersSent.entries()) {
     if (timestamp < oneDayAgo) {
       remindersSent.delete(key);
     }
   }
-
-  console.log('🧹 Cleaned up reminder tracking data');
 };
 
 /**
@@ -394,13 +382,8 @@ export const createCustomReminder = async (
         reminderType: 'custom',
         customMessage: message
       },
-      methods: [
-        ENotificationMethod.IN_APP,
-        ENotificationMethod.PUSH
-      ]
+      methods: [ENotificationMethod.IN_APP, ENotificationMethod.PUSH]
     });
-
-    console.log(`⏰ Created custom reminder for task: ${taskName}`);
   } catch (error) {
     console.error('Error creating custom reminder:', error);
     throw error;
@@ -417,8 +400,6 @@ export const stopTaskReminders = async (taskId: string): Promise<void> => {
       remindersSent.delete(key);
     }
   }
-
-  console.log(`🛑 Stopped reminders for task: ${taskId}`);
 };
 
 export { DEFAULT_REMINDER_CONFIG };

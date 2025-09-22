@@ -180,11 +180,17 @@ export const getPropertyCalculations = catchAsync(
 export const togglePropertyVisibility = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { databaseId, propertyId } = req.params;
+    const { viewId } = req.query;
     const userId = getUserId(req);
+
+    if (!viewId || typeof viewId !== 'string') {
+      throw createAppError('viewId is required to toggle property visibility', 400);
+    }
 
     const property = await propertiesService.togglePropertyVisibility(
       databaseId,
       propertyId,
+      viewId,
       userId
     );
 
