@@ -52,14 +52,30 @@ export const duplicateDatabaseView = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, viewId } = req.params;
+    const { newName } = req.body;
 
     const originalView = await viewsService.getViewById(databaseId, viewId, userId);
 
+    // Normalize sort directions to ensure compatibility
+    const normalizedSettings = {
+      ...originalView.settings,
+      sorts:
+        originalView.settings?.sorts?.map((sort: any) => ({
+          ...sort,
+          direction:
+            sort.direction === 'descending'
+              ? 'desc'
+              : sort.direction === 'ascending'
+                ? 'asc'
+                : sort.direction
+        })) || []
+    };
+
     const duplicateData = {
-      name: `${originalView.name} (Copy)`,
+      name: newName || `${originalView.name} (Copy)`,
       type: originalView.type,
       description: originalView.description,
-      settings: originalView.settings,
+      settings: normalizedSettings,
       isPublic: false
     };
 
