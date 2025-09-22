@@ -21,7 +21,7 @@ interface ICreatePropertyRequest {
   isFrozen?: boolean;
   order?: number;
   config?: any;
-  viewId: string;
+  viewId?: string;
 }
 
 export class PropertiesService {
@@ -76,7 +76,7 @@ export class PropertiesService {
       await ViewModel.findOneAndUpdate(
         { _id: data.viewId, databaseId },
         {
-          $push: { 'config.visibleProperties': property._id.toString() },
+          $push: { 'config.visibleProperties': (property._id as any).toString() },
           $set: { updatedBy: userId, updatedAt: new Date() }
         }
       );
@@ -365,7 +365,7 @@ export class PropertiesService {
       await ViewModel.findOneAndUpdate(
         { _id: data.viewId, databaseId },
         {
-          $push: { 'config.visibleProperties': property._id.toString() },
+          $push: { 'config.visibleProperties': (property._id as any).toString() },
           $set: { updatedBy: userId, updatedAt: new Date() }
         }
       );
@@ -419,12 +419,8 @@ export class PropertiesService {
     return property;
   }
 
-  async getPropertyCalculations(
-    databaseId: string,
-    propertyId: string,
-    userId: string
-  ): Promise<any> {
-    const property = await this.getPropertyById(databaseId, propertyId, userId);
+  async getPropertyCalculations(databaseId: string, propertyId: string): Promise<any> {
+    const property = await this.getPropertyById(databaseId, propertyId);
 
     const calculations: any = {
       propertyId,

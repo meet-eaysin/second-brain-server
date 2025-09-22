@@ -57,6 +57,15 @@ export class WorkspaceService {
 
       await ownerMember.save();
 
+      // Initialize core database modules for the new workspace
+      try {
+        const { initializeCoreModules } = await import('@/modules/modules');
+        await initializeCoreModules(workspace.id.toString(), ownerId, false);
+      } catch (moduleError: any) {
+        // Log the error but don't fail workspace creation
+        console.error('Failed to initialize core modules for workspace:', moduleError.message);
+      }
+
       return workspace.toJSON() as IWorkspace;
     } catch (error: any) {
       if (error.statusCode) throw error;

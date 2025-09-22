@@ -45,9 +45,8 @@ export const getDatabaseProperties = catchAsync(
 export const getDatabasePropertyById = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { databaseId, propertyId } = req.params;
-    const userId = getUserId(req);
 
-    const property = await propertiesService.getPropertyById(databaseId, propertyId, userId);
+    const property = await propertiesService.getPropertyById(databaseId, propertyId);
 
     sendSuccessResponse(res, 'Property retrieved successfully', property);
   }
@@ -95,11 +94,10 @@ export const validatePropertyValue = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { databaseId, propertyId } = req.params;
     const { value } = req.body;
-    const userId = getUserId(req);
-
-    const property = await propertiesService.getPropertyById(databaseId, propertyId);
 
     // Basic validation - just check if property exists
+    await propertiesService.getPropertyById(databaseId, propertyId);
+
     const validation = {
       isValid: true,
       errors: [],
@@ -165,13 +163,8 @@ export const insertPropertyAfter = catchAsync(
 export const getPropertyCalculations = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { databaseId, propertyId } = req.params;
-    const userId = getUserId(req);
 
-    const calculations = await propertiesService.getPropertyCalculations(
-      databaseId,
-      propertyId,
-      userId
-    );
+    const calculations = await propertiesService.getPropertyCalculations(databaseId, propertyId);
 
     sendSuccessResponse(res, 'Property calculations retrieved successfully', calculations);
   }
