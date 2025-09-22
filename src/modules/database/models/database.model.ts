@@ -102,13 +102,20 @@ const DatabaseSchema = createBaseSchema({
   cover: DatabaseCoverSchema,
   isPublic: {
     type: Boolean,
-    default: false,
-    index: true
+    default: false
   },
   isTemplate: {
     type: Boolean,
-    default: false,
-    index: true
+    default: false
+  },
+  isFrozen: {
+    type: Boolean,
+    default: false
+  },
+  frozenReason: {
+    type: String,
+    trim: true,
+    maxlength: 500
   },
 
   // Schema references (populated separately for performance)

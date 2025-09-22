@@ -57,6 +57,8 @@ export interface IDatabase extends IBaseEntity {
   isPublic: boolean;
   isTemplate: boolean;
   isArchived: boolean;
+  isFrozen: boolean;
+  frozenReason?: string;
 
   // Schema
   properties: IProperty[];
@@ -129,6 +131,8 @@ export const DatabaseSchema = z.object({
   isPublic: z.boolean().default(false),
   isTemplate: z.boolean().default(false),
   isArchived: z.boolean().default(false),
+  isFrozen: z.boolean().default(false),
+  frozenReason: z.string().max(500).optional(),
   recordCount: z.number().min(0).default(0),
   lastActivityAt: z.date().optional(),
   allowComments: z.boolean().default(true),
@@ -170,6 +174,8 @@ export interface ICreateDatabaseRequest {
   cover?: IDatabaseCover;
   isPublic?: boolean;
   isTemplate?: boolean;
+  isFrozen?: boolean;
+  frozenReason?: string;
 
   allowComments?: boolean;
   allowDuplicates?: boolean;
@@ -188,6 +194,8 @@ export interface IUpdateDatabaseRequest {
   cover?: IDatabaseCover;
   isPublic?: boolean;
   isArchived?: boolean;
+  isFrozen?: boolean;
+  frozenReason?: string;
   allowComments?: boolean;
   allowDuplicates?: boolean;
   enableVersioning?: boolean;

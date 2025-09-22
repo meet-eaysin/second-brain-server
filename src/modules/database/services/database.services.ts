@@ -167,6 +167,11 @@ const updateDatabase = async (
     }).exec();
     if (!database) throw createNotFoundError('Database', id);
 
+    // Check if database is frozen
+    if (database.isFrozen) {
+      throw createForbiddenError('Cannot edit a frozen database');
+    }
+
     // Check permission to edit this database
     const hasPermission = await permissionService.hasPermission(
       EShareScope.DATABASE,
@@ -215,6 +220,11 @@ const deleteDatabase = async (
       isDeleted: { $ne: true }
     }).exec();
     if (!database) throw createNotFoundError('Database', id);
+
+    // Check if database is frozen
+    if (database.isFrozen) {
+      throw createForbiddenError('Cannot delete a frozen database');
+    }
 
     // Check permission to delete this database
     const hasPermission = await permissionService.hasPermission(
@@ -313,6 +323,8 @@ const duplicateDatabase = async (
       cover: sourceDatabase.cover,
       isPublic: false,
       isTemplate: false,
+      isFrozen: false,
+      frozenReason: sourceDatabase.frozenReason,
       allowComments: sourceDatabase.allowComments,
       allowDuplicates: sourceDatabase.allowDuplicates,
       enableVersioning: sourceDatabase.enableVersioning,
@@ -511,6 +523,8 @@ const bulkUpdateDatabases = async (
     description?: string;
     isPublic?: boolean;
     isArchived?: boolean;
+    isFrozen?: boolean;
+    frozenReason?: string;
     icon?: { type: 'emoji' | 'icon' | 'image'; value: string };
     cover?: { type: 'image' | 'color' | 'gradient'; value: string };
   },
@@ -533,6 +547,12 @@ const bulkUpdateDatabases = async (
       // Update each database
       for (const database of databases) {
         try {
+          // Check if database is frozen
+          if (database.isFrozen) {
+            results.failed.push(database.id);
+            continue;
+          }
+
           // Check permission to edit this database
           const hasPermission = await permissionService.hasPermission(
             EShareScope.DATABASE,
@@ -551,6 +571,8 @@ const bulkUpdateDatabases = async (
           if (updates.description !== undefined) database.description = updates.description;
           if (updates.isPublic !== undefined) database.isPublic = updates.isPublic;
           if (updates.isArchived !== undefined) database.isArchived = updates.isArchived;
+          if (updates.isFrozen !== undefined) database.isFrozen = updates.isFrozen;
+          if (updates.frozenReason !== undefined) database.frozenReason = updates.frozenReason;
           if (updates.icon !== undefined) database.icon = updates.icon;
           if (updates.cover !== undefined) database.cover = updates.cover;
 
@@ -599,6 +621,12 @@ const bulkDeleteDatabases = async (
       // Delete each database
       for (const database of databases) {
         try {
+          // Check if database is frozen
+          if (database.isFrozen) {
+            results.failed.push(database.id);
+            continue;
+          }
+
           // Check permission to delete this database
           const hasPermission = await permissionService.hasPermission(
             EShareScope.DATABASE,

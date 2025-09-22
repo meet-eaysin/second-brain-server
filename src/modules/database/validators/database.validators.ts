@@ -24,6 +24,8 @@ export const createDatabaseSchema = z.object({
   cover: databaseCoverSchema.optional(),
   isPublic: z.boolean().default(false),
   isTemplate: z.boolean().default(false),
+  isFrozen: z.boolean().default(false),
+  frozenReason: z.string().max(500).optional(),
 
   // Initial configuration
   allowComments: z.boolean().default(true),
@@ -50,6 +52,8 @@ export const updateDatabaseSchema = z.object({
   cover: databaseCoverSchema.optional(),
   isPublic: z.boolean().optional(),
   isArchived: z.boolean().optional(),
+  isFrozen: z.boolean().optional(),
+  frozenReason: z.string().max(500).optional(),
   allowComments: z.boolean().optional(),
   allowDuplicates: z.boolean().optional(),
   enableVersioning: z.boolean().optional(),
@@ -84,8 +88,8 @@ export const databaseIdSchema = z.object({
 });
 
 export const getDatabasePropertiesQuerySchema = z.object({
-    viewId: z.string().min(1, 'viewId ID is required'),
-    includeHidden: z.boolean().default(false),
+  viewId: z.string().min(1, 'viewId ID is required'),
+  includeHidden: z.boolean().default(false)
 });
 
 export const databaseIdParamSchema = z.object({
@@ -201,6 +205,8 @@ export const bulkUpdateDatabasesSchema = z.object({
       description: z.string().max(1000).optional(),
       isPublic: z.boolean().optional(),
       isArchived: z.boolean().optional(),
+      isFrozen: z.boolean().optional(),
+      frozenReason: z.string().max(500).optional(),
       allowComments: z.boolean().optional(),
       allowDuplicates: z.boolean().optional(),
       enableVersioning: z.boolean().optional(),
