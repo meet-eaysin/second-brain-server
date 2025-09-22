@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
+import { createAppError } from '@/utils/error.utils';
 import { propertiesService } from '../services/properties.services';
 import {
   ICreatePropertyRequest,
@@ -13,6 +14,10 @@ export const createDatabaseProperty = catchAsync(
     const { databaseId } = req.params;
     const data: ICreatePropertyRequest = req.body;
     const userId = getUserId(req);
+
+    if (!data.viewId) {
+      throw createAppError('viewId is required to create a property', 400);
+    }
 
     const property = await propertiesService.createProperty(databaseId, data, userId);
 
@@ -92,7 +97,7 @@ export const validatePropertyValue = catchAsync(
     const { value } = req.body;
     const userId = getUserId(req);
 
-    const property = await propertiesService.getPropertyById(databaseId, propertyId, userId);
+    const property = await propertiesService.getPropertyById(databaseId, propertyId);
 
     // Basic validation - just check if property exists
     const validation = {

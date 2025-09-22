@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { DatabaseModel } from '../models/database.model';
 import { PropertyModel } from '../models/property.model';
+import { ViewModel } from '../models/view.model';
 import {
   IProperty,
   EPropertyType,
@@ -20,6 +21,7 @@ interface ICreatePropertyRequest {
   isFrozen?: boolean;
   order?: number;
   config?: any;
+  viewId: string;
 }
 
 export class PropertiesService {
@@ -69,6 +71,17 @@ export class PropertiesService {
       $set: { updatedBy: new ObjectId(userId) }
     });
 
+    // Update the specific view if viewId is provided
+    if (data.viewId) {
+      await ViewModel.findOneAndUpdate(
+        { _id: data.viewId, databaseId },
+        {
+          $push: { 'config.visibleProperties': property._id.toString() },
+          $set: { updatedBy: userId, updatedAt: new Date() }
+        }
+      );
+    }
+
     return property.toJSON() as IProperty;
   }
 
@@ -112,11 +125,7 @@ export class PropertiesService {
     return properties.map(prop => prop.toJSON() as IProperty);
   }
 
-  async getPropertyById(
-    databaseId: string,
-    propertyId: string,
-    _userId: string
-  ): Promise<IProperty> {
+  async getPropertyById(databaseId: string, propertyId: string): Promise<IProperty> {
     const database = await DatabaseModel.findById(databaseId);
 
     if (!database) throw createNotFoundError('Database');
@@ -244,7 +253,7 @@ export class PropertiesService {
     userId: string,
     newName?: string
   ): Promise<IProperty> {
-    const originalProperty = await this.getPropertyById(databaseId, propertyId, userId);
+    const originalProperty = await this.getPropertyById(databaseId, propertyId);
 
     const duplicateName = newName || `${originalProperty.name} (Copy)`;
 
@@ -350,6 +359,17 @@ export class PropertiesService {
       $push: { properties: property._id },
       $set: { updatedBy: new ObjectId(userId) }
     });
+
+    // Update the specific view if viewId is provided
+    if (data.viewId) {
+      await ViewModel.findOneAndUpdate(
+        { _id: data.viewId, databaseId },
+        {
+          $push: { 'config.visibleProperties': property._id.toString() },
+          $set: { updatedBy: userId, updatedAt: new Date() }
+        }
+      );
+    }
 
     return property.toJSON() as IProperty;
   }

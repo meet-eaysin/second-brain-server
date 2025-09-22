@@ -219,6 +219,7 @@ export interface ICreatePropertyRequest {
   config?: IPropertyConfig;
   description?: string;
   order?: number;
+  viewId: string;
 }
 
 export interface IUpdatePropertyRequest {
