@@ -167,8 +167,9 @@ const updateDatabase = async (
     }).exec();
     if (!database) throw createNotFoundError('Database', id);
 
-    // Check if database is frozen
-    if (database.isFrozen) {
+    // Check if database is frozen - allow unfreezing
+    const isTryingToUnfreeze = data.isFrozen === false;
+    if (database.isFrozen && !isTryingToUnfreeze) {
       throw createForbiddenError('Cannot edit a frozen database');
     }
 
@@ -547,8 +548,9 @@ const bulkUpdateDatabases = async (
       // Update each database
       for (const database of databases) {
         try {
-          // Check if database is frozen
-          if (database.isFrozen) {
+          // Check if database is frozen - allow unfreezing
+          const isTryingToUnfreeze = updates.isFrozen === false;
+          if (database.isFrozen && !isTryingToUnfreeze) {
             results.failed.push(database.id);
             continue;
           }
