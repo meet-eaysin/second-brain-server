@@ -106,7 +106,11 @@ export const getRecords = async (
     };
 
     if (view.settings.filters && view.settings.filters.length > 0) {
-      const viewQuery = viewsService.buildFilterQuery(view.settings.filters);
+      const viewQuery = await viewsService.buildFilterQuery(
+        view.settings.filters,
+        databaseId,
+        userId
+      );
       query = { ...query, ...viewQuery };
     }
   }
@@ -124,7 +128,7 @@ export const getRecords = async (
   let sort: any = {};
   if (options.viewId && appliedView) {
     const view = await viewsService.getViewById(databaseId, options.viewId, userId);
-    sort = viewsService.buildSortQuery(view.settings.sorts);
+    sort = await viewsService.buildSortQuery(view.settings.sorts, databaseId, userId);
   } else if (options.sortBy) {
     const direction = options.sortOrder === 'asc' ? 1 : -1;
     if (options.sortBy === 'created_at') {

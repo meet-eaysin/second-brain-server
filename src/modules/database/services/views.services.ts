@@ -332,20 +332,38 @@ async function deleteView(databaseId: string, viewId: string, userId: string): P
   );
 }
 
-function buildFilterQuery(filters: IViewFilter[]): Record<string, unknown> {
+async function buildFilterQuery(
+  filters: IViewFilter[],
+  databaseId: string,
+  userId: string
+): Promise<Record<string, unknown>> {
   if (!filters || filters.length === 0) {
     return {};
   }
 
+  // Get properties to map IDs to names
+  const { propertiesService } = await import('./properties.services');
+  const properties = await propertiesService.getProperties(databaseId, userId, true);
+  const propertyMap = new Map(properties.map(p => [p.id, p.name]));
+
   const conditions: Record<string, unknown>[] = [];
 
   for (const filter of filters) {
-    const fieldPath =
-      filter.property === 'created_at'
-        ? 'createdAt'
-        : filter.property === 'updated_at'
-          ? 'updatedAt'
-          : `properties.${filter.property}`;
+    let fieldPath: string;
+
+    if (filter.property === 'created_at') {
+      fieldPath = 'createdAt';
+    } else if (filter.property === 'updated_at') {
+      fieldPath = 'updatedAt';
+    } else {
+      // Convert property ID to property name
+      const propertyName = propertyMap.get(filter.property);
+      if (!propertyName) {
+        console.warn(`Property ${filter.property} not found, skipping filter`);
+        continue;
+      }
+      fieldPath = `properties.${propertyName}`;
+    }
 
     const condition: Record<string, unknown> = {};
 
@@ -397,19 +415,38 @@ function buildFilterQuery(filters: IViewFilter[]): Record<string, unknown> {
 }
 
 // Build MongoDB sort query from view sorts
-function buildSortQuery(sorts: IViewSort[]): Record<string, 1 | -1> {
+async function buildSortQuery(
+  sorts: IViewSort[],
+  databaseId: string,
+  userId: string
+): Promise<Record<string, 1 | -1>> {
   if (!sorts || sorts.length === 0) {
     return { createdAt: -1 }; // Default sort
   }
 
+  // Get properties to map IDs to names
+  const { propertiesService } = await import('./properties.services');
+  const properties = await propertiesService.getProperties(databaseId, userId, true);
+  const propertyMap = new Map(properties.map(p => [p.id, p.name]));
+
   const sortObj: Record<string, 1 | -1> = {};
   for (const sort of sorts) {
-    const fieldPath =
-      sort.property === 'created_at'
-        ? 'createdAt'
-        : sort.property === 'updated_at'
-          ? 'updatedAt'
-          : `properties.${sort.property}`;
+    let fieldPath: string;
+
+    if (sort.property === 'created_at') {
+      fieldPath = 'createdAt';
+    } else if (sort.property === 'updated_at') {
+      fieldPath = 'updatedAt';
+    } else {
+      // Convert property ID to property name
+      const propertyName = propertyMap.get(sort.property);
+      if (!propertyName) {
+        console.warn(`Property ${sort.property} not found, skipping sort`);
+        continue;
+      }
+      fieldPath = `properties.${propertyName}`;
+    }
+
     // Convert direction to standard format and check if ascending
     const standardDirection = convertSortDirection(sort.direction);
     sortObj[fieldPath] = standardDirection === 'asc' ? 1 : -1;
