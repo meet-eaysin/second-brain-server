@@ -1,13 +1,7 @@
 import { IProperty } from '@/modules/core/types/property.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { generateId } from '@/utils/id-generator';
-import {
-  IModuleProperty,
-  NOTES_MODULE,
-  PEOPLE_MODULE,
-  PROJECTS_MODULE,
-  TASKS_MODULE
-} from '@/modules/modules';
+import { IModuleProperty, NOTES_MODULE, PEOPLE_MODULE, TASKS_MODULE } from '@/modules/modules';
 
 export function getDefaultProperties(databaseType: EDatabaseType): IModuleProperty[] {
   switch (databaseType) {
@@ -15,8 +9,6 @@ export function getDefaultProperties(databaseType: EDatabaseType): IModuleProper
       return [...TASKS_MODULE.defaultProperties];
     case EDatabaseType.NOTES:
       return [...NOTES_MODULE.defaultProperties];
-    case EDatabaseType.PROJECTS:
-      return [...PROJECTS_MODULE.defaultProperties];
     case EDatabaseType.PEOPLE:
       return [...PEOPLE_MODULE.defaultProperties];
     case EDatabaseType.CUSTOM:

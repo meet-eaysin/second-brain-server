@@ -10,25 +10,25 @@ import {
   getParaItemById,
   updateParaItem,
   deleteParaItem,
-  
+
   // PARA categories
   getProjects,
   getAreas,
   getResources,
   getArchive,
-  
+
   // PARA analytics
   getItemsByStatus,
   getItemsByPriority,
   getReviewsOverdue,
   searchParaItems,
-  
+
   // PARA actions
   moveToArchive,
   restoreFromArchive,
   categorizeExistingItem,
   markReviewed,
-  
+
   // Statistics
   getParaStats
 } from '../controllers/para.controller';
@@ -56,35 +56,15 @@ router.use(authenticateToken);
 
 // ===== PARA ITEM CRUD OPERATIONS =====
 
-router.post(
-  '/',
-  validateBody(createParaItemSchema),
-  createParaItem
-);
+router.post('/', validateBody(createParaItemSchema), createParaItem);
 
-router.get(
-  '/',
-  validateQuery(getParaItemsQuerySchema),
-  getParaItems
-);
+router.get('/', validateQuery(getParaItemsQuerySchema), getParaItems);
 
-router.get(
-  '/stats',
-  validateQuery(paraStatsQuerySchema),
-  getParaStats
-);
+router.get('/stats', validateQuery(paraStatsQuerySchema), getParaStats);
 
-router.get(
-  '/search',
-  validateQuery(searchParaItemsSchema),
-  searchParaItems
-);
+router.get('/search', validateQuery(searchParaItemsSchema), searchParaItems);
 
-router.get(
-  '/:id',
-  validateParams(paraItemIdSchema),
-  getParaItemById
-);
+router.get('/:id', validateParams(paraItemIdSchema), getParaItemById);
 
 router.put(
   '/:id',
@@ -93,37 +73,17 @@ router.put(
   updateParaItem
 );
 
-router.delete(
-  '/:id',
-  validateParams(paraItemIdSchema),
-  deleteParaItem
-);
+router.delete('/:id', validateParams(paraItemIdSchema), deleteParaItem);
 
 // ===== PARA CATEGORIES =====
 
-router.get(
-  '/categories/projects',
-  validateQuery(getParaItemsQuerySchema),
-  getProjects
-);
+router.get('/categories/projects', validateQuery(getParaItemsQuerySchema), getProjects);
 
-router.get(
-  '/categories/areas',
-  validateQuery(getParaItemsQuerySchema),
-  getAreas
-);
+router.get('/categories/areas', validateQuery(getParaItemsQuerySchema), getAreas);
 
-router.get(
-  '/categories/resources',
-  validateQuery(getParaItemsQuerySchema),
-  getResources
-);
+router.get('/categories/resources', validateQuery(getParaItemsQuerySchema), getResources);
 
-router.get(
-  '/categories/archive',
-  validateQuery(getParaItemsQuerySchema),
-  getArchive
-);
+router.get('/categories/archive', validateQuery(getParaItemsQuerySchema), getArchive);
 
 // ===== PARA ANALYTICS =====
 
@@ -141,31 +101,15 @@ router.get(
   getItemsByPriority
 );
 
-router.get(
-  '/reviews/overdue',
-  validateQuery(getParaItemsQuerySchema),
-  getReviewsOverdue
-);
+router.get('/reviews/overdue', validateQuery(getParaItemsQuerySchema), getReviewsOverdue);
 
 // ===== PARA ACTIONS =====
 
-router.post(
-  '/archive',
-  validateBody(moveToArchiveSchema),
-  moveToArchive
-);
+router.post('/archive', validateBody(moveToArchiveSchema), moveToArchive);
 
-router.post(
-  '/restore',
-  validateBody(restoreFromArchiveSchema),
-  restoreFromArchive
-);
+router.post('/restore', validateBody(restoreFromArchiveSchema), restoreFromArchive);
 
-router.post(
-  '/categorize',
-  validateBody(categorizeExistingItemSchema),
-  categorizeExistingItem
-);
+router.post('/categorize', validateBody(categorizeExistingItemSchema), categorizeExistingItem);
 
 router.post(
   '/:id/review',

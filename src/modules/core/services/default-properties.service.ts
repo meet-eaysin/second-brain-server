@@ -6,7 +6,7 @@ import { createDefaultPropertiesForDatabase } from '../config/default-properties
 import { createAppError } from '@/utils';
 import { generateId } from '@/utils/id-generator';
 import { EDatabaseType } from '../types';
-import { NOTES_MODULE, PROJECTS_MODULE, TASKS_MODULE } from '@/modules/modules';
+import { NOTES_MODULE, TASKS_MODULE } from '@/modules/modules';
 
 /**
  * Initialize default properties and views for a new database
@@ -60,10 +60,6 @@ const createDefaultViews = (
 
     case EDatabaseType.NOTES:
       views.push(NOTES_MODULE.defaultViews);
-      break;
-
-    case EDatabaseType.PROJECTS:
-      views.push(PROJECTS_MODULE.defaultViews);
       break;
 
     default:

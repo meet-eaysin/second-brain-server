@@ -70,7 +70,6 @@ export {
   DASHBOARD_MODULE,
   TASKS_MODULE,
   NOTES_MODULE,
-  PROJECTS_MODULE,
   GOALS_MODULE,
   PEOPLE_MODULE,
   FINANCE_MODULE
@@ -102,5 +101,3 @@ export {
   moduleTemplateSchema,
   moduleConfigSchema
 } from './validators';
-
-

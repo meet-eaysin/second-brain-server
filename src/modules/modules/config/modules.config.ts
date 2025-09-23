@@ -271,7 +271,7 @@ export const TASKS_MODULE: IModuleConfig = {
   defaultRelations: [
     {
       sourceProperty: 'Project',
-      targetModule: EDatabaseType.PROJECTS,
+      targetModule: EDatabaseType.PARA_PROJECTS,
       targetProperty: 'Name',
       type: 'many_to_many',
       isRequired: false,
@@ -462,7 +462,7 @@ export const NOTES_MODULE: IModuleConfig = {
   defaultRelations: [
     {
       sourceProperty: 'Project',
-      targetModule: EDatabaseType.PROJECTS,
+      targetModule: EDatabaseType.PARA_PROJECTS,
       targetProperty: 'Name',
       type: 'many_to_one',
       isRequired: false,
@@ -504,249 +504,6 @@ export const NOTES_MODULE: IModuleConfig = {
         Tags: ['meeting']
       },
       isDefault: false
-    }
-  ]
-} as const;
-
-export const PROJECTS_MODULE: IModuleConfig = {
-  id: EDatabaseType.PROJECTS,
-  name: 'Projects',
-  description: 'Project management with timelines, goals, and task tracking',
-  icon: '🚀',
-  color: '#F59E0B',
-  category: EModuleCategory.PRODUCTIVITY,
-  isCore: true,
-  dependencies: [],
-  defaultProperties: [
-    {
-      name: 'Name',
-      type: EPropertyType.TEXT,
-      config: { required: true, maxLength: 200 },
-      isSystem: true,
-      isFrozen: true,
-      isVisible: true,
-      order: 0,
-      description: 'Project name'
-    },
-    {
-      name: 'Status',
-      type: EPropertyType.STATUS,
-      config: {
-        options: [
-          { id: 'planning', value: 'planning', label: 'Planning', color: 'gray' },
-          { id: 'active', value: 'active', label: 'Active', color: 'blue' },
-          { id: 'on_hold', value: 'on_hold', label: 'On Hold', color: 'yellow' },
-          { id: 'completed', value: 'completed', label: 'Completed', color: 'green' },
-          { id: 'cancelled', value: 'cancelled', label: 'Cancelled', color: 'red' }
-        ],
-        defaultValue: 'planning'
-      },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 1,
-      description: 'Current project status'
-    },
-    {
-      name: 'Priority',
-      type: EPropertyType.PRIORITY,
-      config: {
-        options: [
-          { id: 'low', value: 'low', label: 'Low', color: 'gray' },
-          { id: 'medium', value: 'medium', label: 'Medium', color: 'yellow' },
-          { id: 'high', value: 'high', label: 'High', color: 'orange' },
-          { id: 'critical', value: 'critical', label: 'Critical', color: 'red' }
-        ],
-        defaultValue: 'medium'
-      },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 2,
-      description: 'Project priority level'
-    },
-    {
-      name: 'Start Date',
-      type: EPropertyType.DATE,
-      config: { includeTime: false },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 3,
-      description: 'Project start date'
-    },
-    {
-      name: 'End Date',
-      type: EPropertyType.DATE,
-      config: { includeTime: false },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 4,
-      description: 'Project end date'
-    },
-    {
-      name: 'Owner',
-      type: EPropertyType.RELATION,
-      config: {
-        relatedDatabase: EDatabaseType.PEOPLE,
-        allowMultiple: false
-      },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 5,
-      description: 'Project owner'
-    },
-    {
-      name: 'Team',
-      type: EPropertyType.RELATION,
-      config: {
-        relatedDatabase: EDatabaseType.PEOPLE,
-        allowMultiple: true
-      },
-      isSystem: false,
-      isFrozen: false,
-      isVisible: true,
-      order: 6,
-      description: 'Project team members'
-    },
-    {
-      name: 'Progress',
-      type: EPropertyType.NUMBER,
-      config: { min: 0, max: 100, format: 'percentage', defaultValue: 0 },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 7,
-      description: 'Project completion percentage'
-    },
-    {
-      name: 'Budget',
-      type: EPropertyType.NUMBER,
-      config: { min: 0, format: 'currency', currency: 'USD' },
-      isSystem: false,
-      isFrozen: false,
-      isVisible: true,
-      order: 8,
-      description: 'Project budget'
-    }
-  ],
-  defaultViews: [
-    {
-      name: 'All Projects',
-      type: EViewType.TABLE,
-      description: 'Complete list of all projects',
-      isDefault: true,
-      order: 0,
-      settings: {
-        hiddenProperties: [],
-        visibleProperties: [
-          'Name',
-          'Status',
-          'Priority',
-          'Start Date',
-          'End Date',
-          'Owner',
-          'Progress'
-        ],
-        frozenColumns: ['Name'],
-        sorts: [
-          { property: 'Priority', direction: 'desc' },
-          { property: 'Start Date', direction: 'asc' }
-        ],
-        pageSize: 25
-      }
-    },
-    {
-      name: 'Active Projects',
-      type: EViewType.BOARD,
-      description: 'Kanban board of active projects',
-      isDefault: false,
-      order: 1,
-      settings: {
-        groups: [{ property: 'Status', direction: 'asc', showEmpty: true }],
-        visibleProperties: ['Name', 'Priority', 'End Date', 'Owner', 'Progress'],
-        filters: [
-          { property: 'Status', operator: 'not_equals', value: 'completed' },
-          { property: 'Status', operator: 'not_equals', value: 'cancelled' }
-        ],
-        cardSize: 'medium'
-      }
-    },
-    {
-      name: 'Timeline',
-      type: EViewType.TIMELINE,
-      description: 'Timeline view of projects',
-      isDefault: false,
-      order: 2,
-      settings: {
-        hiddenProperties: [],
-        visibleProperties: ['Name', 'Status', 'Priority', 'Owner', 'Progress'],
-        sorts: [{ property: 'Start Date', direction: 'asc' }]
-      }
-    }
-  ],
-  defaultRelations: [
-    {
-      sourceProperty: 'Owner',
-      targetModule: EDatabaseType.PEOPLE,
-      targetProperty: 'Name',
-      type: 'many_to_one',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Team',
-      targetModule: EDatabaseType.PEOPLE,
-      targetProperty: 'Name',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Related Tasks',
-      targetModule: EDatabaseType.TASKS,
-      targetProperty: 'Title',
-      type: 'one_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Project Goals',
-      targetModule: EDatabaseType.GOALS,
-      targetProperty: 'Title',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Project Notes',
-      targetModule: EDatabaseType.NOTES,
-      targetProperty: 'Title',
-      type: 'one_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Resources',
-      targetModule: EDatabaseType.RESOURCES,
-      targetProperty: 'Title',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    }
-  ],
-  templates: [
-    {
-      name: 'Standard Project',
-      description: 'Standard project template',
-      defaultValues: {
-        Status: 'planning',
-        Priority: 'medium',
-        Progress: 0
-      },
-      isDefault: true
     }
   ]
 } as const;
@@ -908,7 +665,7 @@ export const GOALS_MODULE: IModuleConfig = {
     },
     {
       sourceProperty: 'Related Projects',
-      targetModule: EDatabaseType.PROJECTS,
+      targetModule: EDatabaseType.PARA_PROJECTS,
       targetProperty: 'Name',
       type: 'many_to_many',
       isRequired: false,
@@ -932,8 +689,8 @@ export const GOALS_MODULE: IModuleConfig = {
     },
     {
       sourceProperty: 'Learning Resources',
-      targetModule: EDatabaseType.RESOURCES,
-      targetProperty: 'Title',
+      targetModule: EDatabaseType.PARA_RESOURCES,
+      targetProperty: 'Name',
       type: 'many_to_many',
       isRequired: false,
       cascadeDelete: false
@@ -1457,8 +1214,8 @@ export const HABITS_MODULE: IModuleConfig = {
     },
     {
       sourceProperty: 'Learning Resources',
-      targetModule: EDatabaseType.RESOURCES,
-      targetProperty: 'Title',
+      targetModule: EDatabaseType.PARA_RESOURCES,
+      targetProperty: 'Name',
       type: 'many_to_many',
       isRequired: false,
       cascadeDelete: false
@@ -1821,200 +1578,6 @@ export const MOOD_TRACKER_MODULE: IModuleConfig = {
         Intensity: 5
       },
       isDefault: true
-    }
-  ]
-} as const;
-
-export const RESOURCES_MODULE: IModuleConfig = {
-  id: EDatabaseType.RESOURCES,
-  name: 'Resources',
-  description: 'Knowledge resources, bookmarks, and reference materials',
-  icon: '📚',
-  color: '#7C3AED',
-  category: EModuleCategory.KNOWLEDGE,
-  isCore: true,
-  dependencies: [],
-  defaultProperties: [
-    {
-      name: 'Title',
-      type: EPropertyType.TEXT,
-      config: { required: true, maxLength: 200 },
-      isSystem: true,
-      isFrozen: true,
-      isVisible: true,
-      order: 0,
-      description: 'Resource title'
-    },
-    {
-      name: 'Type',
-      type: EPropertyType.SELECT,
-      config: {
-        options: [
-          { id: 'article', value: 'article', label: 'Article', color: 'blue' },
-          { id: 'book', value: 'book', label: 'Book', color: 'green' },
-          { id: 'video', value: 'video', label: 'Video', color: 'red' },
-          { id: 'podcast', value: 'podcast', label: 'Podcast', color: 'purple' },
-          { id: 'course', value: 'course', label: 'Course', color: 'orange' },
-          { id: 'tool', value: 'tool', label: 'Tool', color: 'teal' },
-          { id: 'website', value: 'website', label: 'Website', color: 'pink' },
-          { id: 'document', value: 'document', label: 'Document', color: 'gray' }
-        ],
-        required: true
-      },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 1,
-      description: 'Type of resource'
-    },
-    {
-      name: 'URL',
-      type: EPropertyType.URL,
-      config: {},
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 2,
-      description: 'Resource URL'
-    },
-    {
-      name: 'Category',
-      type: EPropertyType.SELECT,
-      config: {
-        options: [
-          { id: 'programming', value: 'programming', label: 'Programming', color: 'blue' },
-          { id: 'design', value: 'design', label: 'Design', color: 'pink' },
-          { id: 'business', value: 'business', label: 'Business', color: 'green' },
-          { id: 'productivity', value: 'productivity', label: 'Productivity', color: 'orange' },
-          { id: 'health', value: 'health', label: 'Health', color: 'red' },
-          { id: 'finance', value: 'finance', label: 'Finance', color: 'yellow' },
-          { id: 'education', value: 'education', label: 'Education', color: 'purple' },
-          { id: 'entertainment', value: 'entertainment', label: 'Entertainment', color: 'teal' }
-        ]
-      },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 3,
-      description: 'Resource category'
-    },
-    {
-      name: 'Status',
-      type: EPropertyType.STATUS,
-      config: {
-        options: [
-          { id: 'to_read', value: 'to_read', label: 'To Read', color: 'gray' },
-          { id: 'reading', value: 'reading', label: 'Reading', color: 'yellow' },
-          { id: 'completed', value: 'completed', label: 'Completed', color: 'green' },
-          { id: 'reference', value: 'reference', label: 'Reference', color: 'blue' },
-          { id: 'archived', value: 'archived', label: 'Archived', color: 'purple' }
-        ],
-        defaultValue: 'to_read'
-      },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 4,
-      description: 'Reading/usage status'
-    },
-    {
-      name: 'Rating',
-      type: EPropertyType.NUMBER,
-      config: { min: 1, max: 5 },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 5,
-      description: 'Resource rating (1-5 stars)'
-    },
-    {
-      name: 'Tags',
-      type: EPropertyType.MULTI_SELECT,
-      config: {
-        options: [
-          { id: 'tutorial', value: 'tutorial', label: 'Tutorial', color: 'blue' },
-          { id: 'reference', value: 'reference', label: 'Reference', color: 'green' },
-          { id: 'inspiration', value: 'inspiration', label: 'Inspiration', color: 'purple' },
-          { id: 'beginner', value: 'beginner', label: 'Beginner', color: 'yellow' },
-          { id: 'advanced', value: 'advanced', label: 'Advanced', color: 'red' },
-          { id: 'free', value: 'free', label: 'Free', color: 'teal' },
-          { id: 'paid', value: 'paid', label: 'Paid', color: 'orange' }
-        ]
-      },
-      isSystem: false,
-      isFrozen: false,
-      isVisible: true,
-      order: 6,
-      description: 'Resource tags'
-    },
-    {
-      name: 'Notes',
-      type: EPropertyType.TEXT,
-      config: { maxLength: 1000 },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 7,
-      description: 'Personal notes about the resource'
-    },
-    {
-      name: 'Date Added',
-      type: EPropertyType.DATE,
-      config: { includeTime: true },
-      isSystem: true,
-      isFrozen: false,
-      isVisible: true,
-      order: 8,
-      description: 'When the resource was added'
-    }
-  ],
-  defaultViews: [
-    {
-      name: 'All Resources',
-      type: EViewType.TABLE,
-      description: 'Complete list of all resources',
-      isDefault: true,
-      order: 0,
-      settings: {
-        hiddenProperties: [],
-        visibleProperties: ['Title', 'Type', 'Category', 'Status', 'Rating', 'Date Added'],
-        frozenColumns: ['Title'],
-        sorts: [{ property: 'Date Added', direction: 'desc' }],
-        pageSize: 25
-      }
-    },
-    {
-      name: 'By Category',
-      type: EViewType.BOARD,
-      description: 'Resources organized by category',
-      isDefault: false,
-      order: 1,
-      settings: {
-        groups: [{ property: 'Category', direction: 'asc', showEmpty: true }],
-        visibleProperties: ['Title', 'Type', 'Status', 'Rating'],
-        cardSize: 'medium'
-      }
-    }
-  ],
-  defaultRelations: [],
-  templates: [
-    {
-      name: 'Article',
-      description: 'Article resource template',
-      defaultValues: {
-        Type: 'article',
-        Status: 'to_read'
-      },
-      isDefault: true
-    },
-    {
-      name: 'Book',
-      description: 'Book resource template',
-      defaultValues: {
-        Type: 'book',
-        Status: 'to_read'
-      },
-      isDefault: false
     }
   ]
 } as const;

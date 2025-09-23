@@ -1,17 +1,19 @@
-import { IModuleConfig, IModuleStatus, IWorkspaceModules } from '@/modules/modules/types/module.types';
+import {
+  IModuleConfig,
+  IModuleStatus,
+  IWorkspaceModules
+} from '@/modules/modules/types/module.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import {
   DASHBOARD_MODULE,
   TASKS_MODULE,
   NOTES_MODULE,
-  PROJECTS_MODULE,
   GOALS_MODULE,
   PEOPLE_MODULE,
   FINANCE_MODULE,
   HABITS_MODULE,
   JOURNAL_MODULE,
   MOOD_TRACKER_MODULE,
-  RESOURCES_MODULE,
   PARA_PROJECTS_MODULE,
   PARA_AREAS_MODULE,
   PARA_RESOURCES_MODULE,
@@ -28,14 +30,12 @@ const MODULE_REGISTRY = new Map<EDatabaseType, IModuleConfig>([
   [EDatabaseType.DASHBOARD, DASHBOARD_MODULE],
   [EDatabaseType.TASKS, TASKS_MODULE],
   [EDatabaseType.NOTES, NOTES_MODULE],
-  [EDatabaseType.PROJECTS, PROJECTS_MODULE],
   [EDatabaseType.GOALS, GOALS_MODULE],
   [EDatabaseType.PEOPLE, PEOPLE_MODULE],
   [EDatabaseType.FINANCE, FINANCE_MODULE],
   [EDatabaseType.HABITS, HABITS_MODULE],
   [EDatabaseType.JOURNAL, JOURNAL_MODULE],
   [EDatabaseType.MOOD_TRACKER, MOOD_TRACKER_MODULE],
-  [EDatabaseType.RESOURCES, RESOURCES_MODULE],
   [EDatabaseType.PARA_PROJECTS, PARA_PROJECTS_MODULE],
   [EDatabaseType.PARA_AREAS, PARA_AREAS_MODULE],
   [EDatabaseType.PARA_RESOURCES, PARA_RESOURCES_MODULE],
@@ -310,7 +310,7 @@ export const getModuleDatabaseIdsByType = async (
     .select('_id')
     .lean();
 
-  return databases.map((db) => db._id.toString());
+  return databases.map(db => db._id.toString());
 };
 
 /**
