@@ -1,5 +1,5 @@
 import express from 'express';
-import { auth, users } from '../modules';
+import { auth, users, settings } from '../modules';
 import { emailRoutes } from '../modules/email';
 import databaseRoutes from '@/modules/database/routes';
 import {
@@ -29,6 +29,7 @@ const router = express.Router();
 router.use('/docs', swaggerRoute);
 router.use('/auth', auth.authRoutes);
 router.use('/users', users.usersRoutes);
+router.use('/settings', settings.settingsRoutes);
 router.use('/email', emailRoutes);
 
 router.use('/workspaces', workspaceRoutes);
