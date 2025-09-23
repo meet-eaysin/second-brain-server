@@ -11,7 +11,8 @@ import {
   getRecentNotes,
   getGoalProgress,
   getHabitStreaks,
-  getFinanceSummary
+  getFinanceSummary,
+  getRecentlyVisited
 } from '../controllers/dashboard.controllers';
 import { DashboardQuerySchema } from '@/modules/dashboard/types/dashboard.types';
 
@@ -29,5 +30,6 @@ router.get('/recent-notes', getRecentNotes);
 router.get('/goal-progress', getGoalProgress);
 router.get('/habit-streaks', getHabitStreaks);
 router.get('/finance-summary', getFinanceSummary);
+router.get('/recently-visited', getRecentlyVisited);
 
 export default router;

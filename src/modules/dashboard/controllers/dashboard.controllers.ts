@@ -6,7 +6,12 @@ import { IDashboardQueryParams, IDashboardStats } from '../types/dashboard.types
 import { RecordModel } from '@/modules/database/models/record.model';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { EStatus } from '@/modules/core/types/common.types';
-import { getStringProperty, getNumberProperty, getDateProperty, getStringArrayProperty } from '@/modules/core/utils/type-guards';
+import {
+  getStringProperty,
+  getNumberProperty,
+  getDateProperty,
+  getStringArrayProperty
+} from '@/modules/core/utils/type-guards';
 import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
 // Helper function to get authenticated user ID
@@ -118,7 +123,8 @@ const calculateTrends = async (
       const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       const dateKey = date.toISOString().split('T')[0];
       const moods = moodByDate.get(dateKey) || [];
-      const averageMood = moods.length > 0 ? moods.reduce((sum, mood) => sum + mood, 0) / moods.length : 0;
+      const averageMood =
+        moods.length > 0 ? moods.reduce((sum, mood) => sum + mood, 0) / moods.length : 0;
       trends.moodTrend.push({
         date: dateKey,
         mood: averageMood
@@ -220,20 +226,29 @@ const calculateInsights = async (
     insights.mostProductiveDay = mostProductiveDay;
 
     // Calculate average tasks per day
-    const totalDays = Math.ceil((new Date().getTime() - oneMonthAgo.getTime()) / (1000 * 60 * 60 * 24));
+    const totalDays = Math.ceil(
+      (new Date().getTime() - oneMonthAgo.getTime()) / (1000 * 60 * 60 * 24)
+    );
     insights.averageTasksPerDay = totalDays > 0 ? taskRecords.length / totalDays : 0;
   }
 
   // Calculate most used tags across all modules
   const tagCounts = new Map<string, number>();
-  const moduleTypes = [EDatabaseType.TASKS, EDatabaseType.NOTES, EDatabaseType.GOALS, EDatabaseType.PROJECTS];
+  const moduleTypes = [
+    EDatabaseType.TASKS,
+    EDatabaseType.NOTES,
+    EDatabaseType.GOALS,
+    EDatabaseType.PROJECTS
+  ];
 
   for (const moduleType of moduleTypes) {
     if (databaseMap[moduleType]) {
       const records = await RecordModel.find({
         databaseId: databaseMap[moduleType],
         isDeleted: { $ne: true }
-      }).limit(1000).exec(); // Limit for performance
+      })
+        .limit(1000)
+        .exec(); // Limit for performance
 
       records.forEach(record => {
         const tags = getStringArrayProperty(record.properties, 'tags', []);
@@ -248,7 +263,7 @@ const calculateInsights = async (
 
   // Get top 5 most used tags
   const sortedTags = Array.from(tagCounts.entries())
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([tag]) => tag);
   insights.mostUsedTags = sortedTags;
@@ -333,7 +348,11 @@ export const getRecentActivity = catchAsync(
 
     // Get user's databases
     const databaseMap = await dashboardService.getDatabaseMapping(userId, workspaceId);
-    const activities = await dashboardService.getRecentActivityFeed(databaseMap, userId, Number(limit));
+    const activities = await dashboardService.getRecentActivityFeed(
+      databaseMap,
+      userId,
+      Number(limit)
+    );
 
     sendSuccessResponse(res, 'Recent activity retrieved successfully', activities);
   }
@@ -417,5 +436,23 @@ export const getFinanceSummary = catchAsync(
     const summary = await dashboardService.getFinanceSummary(databaseMap, userId, String(period));
 
     sendSuccessResponse(res, 'Finance summary retrieved successfully', summary);
+  }
+);
+
+export const getRecentlyVisited = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { limit = 8 } = req.query;
+    const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
+
+    // Get user's databases
+    const databaseMap = await dashboardService.getDatabaseMapping(userId, workspaceId);
+    const recentlyVisited = await dashboardService.getRecentlyVisited(
+      databaseMap,
+      userId,
+      Number(limit)
+    );
+
+    sendSuccessResponse(res, 'Recently visited items retrieved successfully', recentlyVisited);
   }
 );

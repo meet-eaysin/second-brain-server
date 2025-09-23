@@ -11,6 +11,7 @@ export interface IDashboardOverview {
   habitStreaks: IHabitStreak[];
   financeSummary: IFinanceSummary;
   workspaceStats: IWorkspaceStats;
+  recentlyVisited: IRecentlyVisitedItem[];
 }
 
 // Quick statistics
@@ -130,6 +131,19 @@ export interface IWorkspaceStats {
   storageLimit: number;
   activeMembers: number;
   lastActivityAt: Date;
+}
+
+// Recently visited items
+export interface IRecentlyVisitedItem {
+  id: string;
+  name: string;
+  type: 'note' | 'database' | 'task' | 'goal' | 'project' | 'habit';
+  preview?: string;
+  lastVisitedAt: Date;
+  icon?: string;
+  color?: string;
+  tags?: string[];
+  moduleType: string;
 }
 
 // Dashboard statistics (more detailed)
@@ -267,6 +281,18 @@ export const WorkspaceStatsSchema = z.object({
   lastActivityAt: z.date()
 });
 
+export const RecentlyVisitedItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(['note', 'database', 'task', 'goal', 'project', 'habit']),
+  preview: z.string().optional(),
+  lastVisitedAt: z.date(),
+  icon: z.string().optional(),
+  color: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  moduleType: z.string()
+});
+
 export const DashboardOverviewSchema = z.object({
   quickStats: QuickStatsSchema,
   recentActivity: z.array(ActivityFeedItemSchema),
@@ -275,7 +301,8 @@ export const DashboardOverviewSchema = z.object({
   goalProgress: z.array(GoalProgressSchema),
   habitStreaks: z.array(HabitStreakSchema),
   financeSummary: FinanceSummarySchema,
-  workspaceStats: WorkspaceStatsSchema
+  workspaceStats: WorkspaceStatsSchema,
+  recentlyVisited: z.array(RecentlyVisitedItemSchema)
 });
 
 // Request/Response types

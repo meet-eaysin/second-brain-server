@@ -50,7 +50,7 @@ router.use('/resources', resourcesRoutes);
 router.use('/para', paraRoutes);
 router.use('/mood', moodRoutes);
 router.use('/content', contentRoutes);
-router.use('/calendar', calendarRoutes);
+router.use('/calendars', calendarRoutes);
 router.use('/search', searchRoutes);
 
 export default router;

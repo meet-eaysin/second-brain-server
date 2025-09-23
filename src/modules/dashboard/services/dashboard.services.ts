@@ -8,6 +8,7 @@ import {
   IHabitStreak,
   IFinanceSummary,
   IWorkspaceStats,
+  IRecentlyVisitedItem,
   IDashboardQueryParams
 } from '../types/dashboard.types';
 import { DatabaseModel } from '@/modules/database/models/database.model';
@@ -46,10 +47,7 @@ export class DashboardService {
         ];
       } else {
         // If no workspace specified, get user's accessible databases across all workspaces
-        query.$or = [
-          { createdBy: userId },
-          { isPublic: true }
-        ];
+        query.$or = [{ createdBy: userId }, { isPublic: true }];
       }
 
       const databases = await DatabaseModel.find(query).exec();
@@ -136,7 +134,8 @@ export class DashboardService {
         goalProgress,
         habitStreaks,
         financeSummary,
-        workspaceStats
+        workspaceStats,
+        recentlyVisited
       ] = await Promise.all([
         this.calculateQuickStats(databaseMap, userId),
         params.includeActivity
@@ -147,7 +146,8 @@ export class DashboardService {
         this.getGoalProgress(databaseMap, userId),
         this.getHabitStreaks(databaseMap, userId),
         this.getFinanceSummary(databaseMap, userId, params.period || 'month'),
-        this.getWorkspaceStats(workspaceId, userId)
+        this.getWorkspaceStats(workspaceId, userId),
+        this.getRecentlyVisited(databaseMap, userId)
       ]);
 
       return {
@@ -158,7 +158,8 @@ export class DashboardService {
         goalProgress,
         habitStreaks,
         financeSummary,
-        workspaceStats
+        workspaceStats,
+        recentlyVisited
       };
     } catch (error: any) {
       throw createAppError(`Failed to get dashboard overview: ${error.message}`, 500);
@@ -181,10 +182,7 @@ export class DashboardService {
       ];
     } else {
       // If no workspace specified, get all user's accessible databases
-      query.$or = [
-        { createdBy: userId },
-        { isPublic: true }
-      ];
+      query.$or = [{ createdBy: userId }, { isPublic: true }];
     }
 
     return await DatabaseModel.find(query).exec();
@@ -700,6 +698,122 @@ export class DashboardService {
     }
 
     return summary;
+  }
+
+  async getRecentlyVisited(
+    databaseMap: Record<EDatabaseType, string | null>,
+    userId: string,
+    limit: number = 8
+  ): Promise<IRecentlyVisitedItem[]> {
+    const recentlyVisited: IRecentlyVisitedItem[] = [];
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    // Get recently updated records from different modules
+    const moduleTypes = [
+      { type: EDatabaseType.NOTES, itemType: 'note' as const, moduleType: 'notes' },
+      { type: EDatabaseType.TASKS, itemType: 'task' as const, moduleType: 'tasks' },
+      { type: EDatabaseType.GOALS, itemType: 'goal' as const, moduleType: 'goals' },
+      { type: EDatabaseType.PROJECTS, itemType: 'project' as const, moduleType: 'projects' },
+      { type: EDatabaseType.HABITS, itemType: 'habit' as const, moduleType: 'habits' }
+    ];
+
+    for (const module of moduleTypes) {
+      if (databaseMap[module.type]) {
+        const records = await RecordModel.find({
+          databaseId: databaseMap[module.type],
+          isDeleted: { $ne: true },
+          updatedAt: { $gte: oneWeekAgo }
+        })
+          .sort({ updatedAt: -1 })
+          .limit(3) // Get 3 most recent from each module
+          .exec();
+
+        records.forEach(record => {
+          const item: IRecentlyVisitedItem = {
+            id: record.id,
+            name: this.getItemName(record, module.itemType),
+            type: module.itemType,
+            preview: this.getItemPreview(record, module.itemType),
+            lastVisitedAt: record.updatedAt,
+            icon: this.getItemIcon(module.itemType),
+            color: this.getItemColor(module.itemType),
+            tags: getStringArrayProperty(record.properties, 'tags', []),
+            moduleType: module.moduleType
+          };
+          recentlyVisited.push(item);
+        });
+      }
+    }
+
+    // Sort by last visited date and limit results
+    return recentlyVisited
+      .sort((a, b) => b.lastVisitedAt.getTime() - a.lastVisitedAt.getTime())
+      .slice(0, limit);
+  }
+
+  private getItemName(record: any, type: string): string {
+    switch (type) {
+      case 'note':
+        return getStringProperty(record.properties, 'title', 'Untitled Note');
+      case 'task':
+        return getStringProperty(record.properties, 'name', 'Untitled Task');
+      case 'goal':
+        return getStringProperty(record.properties, 'name', 'Untitled Goal');
+      case 'project':
+        return getStringProperty(record.properties, 'name', 'Untitled Project');
+      case 'habit':
+        return getStringProperty(record.properties, 'name', 'Untitled Habit');
+      default:
+        return 'Untitled Item';
+    }
+  }
+
+  private getItemPreview(record: any, type: string): string | undefined {
+    switch (type) {
+      case 'note':
+        return this.extractTextPreview(record.properties?.content || record.content);
+      case 'task':
+        return getStringProperty(record.properties, 'description');
+      case 'goal':
+        return getStringProperty(record.properties, 'description');
+      default:
+        return undefined;
+    }
+  }
+
+  private getItemIcon(type: string): string {
+    switch (type) {
+      case 'note':
+        return '📝';
+      case 'task':
+        return '✅';
+      case 'goal':
+        return '🎯';
+      case 'project':
+        return '📁';
+      case 'habit':
+        return '🔥';
+      default:
+        return '📄';
+    }
+  }
+
+  private getItemColor(type: string): string {
+    switch (type) {
+      case 'note':
+        return '#3b82f6';
+      case 'task':
+        return '#10b981';
+      case 'goal':
+        return '#8b5cf6';
+      case 'project':
+        return '#f59e0b';
+      case 'habit':
+        return '#ef4444';
+      default:
+        return '#6b7280';
+    }
   }
 
   async getWorkspaceStats(
