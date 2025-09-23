@@ -22,6 +22,8 @@ import {
 import { moduleConfigService } from '@/modules/modules/services/module-config.service';
 import { moduleInitializationService } from '@/modules/modules/services/module-initialization.service';
 import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EViewType } from '@/modules/core/types/view.types';
+import { EPropertyType } from '@/modules/core/types/property.types';
 import { generateId } from '@/utils/id-generator';
 import { workspaceService } from '@/modules/workspace/services/workspace.service';
 import { DatabaseModel, PropertyModel, RecordModel, ViewModel } from '@/modules/database';
@@ -79,8 +81,48 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
       database.views = views.map((view: any) => view._id).filter(Boolean);
     } else {
       // Fallback for custom databases or unknown types
-      database.properties = [];
-      database.views = [];
+      // Always create a default "name" property for custom databases
+      const nameProperty = new PropertyModel({
+        databaseId: database.id,
+        name: 'Name',
+        type: EPropertyType.TEXT,
+        config: {
+          maxLength: 255,
+          required: true,
+          unique: false
+        },
+        isSystem: false,
+        isVisible: true,
+        required: true,
+        order: 0,
+        createdBy: userId,
+        updatedBy: userId
+      });
+      await nameProperty.save();
+      database.properties = [nameProperty.id];
+
+      // Create default view based on defaultViewType or TABLE
+      const defaultViewType = (data.defaultViewType as EViewType) || EViewType.TABLE;
+      const defaultView = new ViewModel({
+        databaseId: database.id,
+        name: 'Default View',
+        type: defaultViewType,
+        isDefault: true,
+        isPublic: false,
+        config: {
+          pageSize: 25,
+          visibleProperties: [nameProperty.id],
+          hiddenProperties: [],
+          frozenColumns: []
+        },
+        sorts: [],
+        filters: { operator: 'and', conditions: [] },
+        order: 0,
+        createdBy: userId,
+        updatedBy: userId
+      });
+      await defaultView.save();
+      database.views = [defaultView.id];
     }
 
     await database.save();

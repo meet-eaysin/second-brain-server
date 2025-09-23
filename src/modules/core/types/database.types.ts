@@ -185,6 +185,7 @@ export interface ICreateDatabaseRequest {
   enableSmartSuggestions?: boolean;
 
   templateId?: TId;
+  defaultViewType?: string; // EViewType from view.types
 }
 
 export interface IUpdateDatabaseRequest {
