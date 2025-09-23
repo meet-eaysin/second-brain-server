@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { validateBody } from '@/middlewares/validation';
 import { authenticateToken } from '@/middlewares/auth';
-import { requireWorkspaceAccess } from '@/middlewares/permission.middleware';
+import {
+  resolveWorkspaceContext,
+  requireWorkspaceManagement
+} from '../middleware/workspace.middleware';
 import {
   createWorkspace,
-  getWorkspaceById,
   getUserWorkspaces,
   updateWorkspace,
   deleteWorkspace,
@@ -26,15 +28,21 @@ router.post('/', validateBody(CreateWorkspaceSchema), createWorkspace);
 router.get('/', getUserWorkspaces);
 router.get('/primary', getPrimaryWorkspace);
 router.post('/default', getOrCreateDefaultWorkspace);
-router.get('/current', requireWorkspaceAccess(), getWorkspaceById);
+router.get('/current', getPrimaryWorkspace);
 router.put(
   '/current',
   validateBody(UpdateWorkspaceSchema),
-  requireWorkspaceAccess('admin'),
+  resolveWorkspaceContext({ required: true }),
+  requireWorkspaceManagement,
   updateWorkspace
 );
-router.delete('/current', requireWorkspaceAccess('owner'), deleteWorkspace);
-router.get('/current/stats', requireWorkspaceAccess(), getWorkspaceStats);
-router.get('/current/access', requireWorkspaceAccess(), checkWorkspaceAccess);
+router.delete(
+  '/current',
+  resolveWorkspaceContext({ required: true }),
+  requireWorkspaceManagement,
+  deleteWorkspace
+);
+router.get('/current/stats', resolveWorkspaceContext({ required: true }), getWorkspaceStats);
+router.get('/current/access', resolveWorkspaceContext({ required: true }), checkWorkspaceAccess);
 
 export default router;
