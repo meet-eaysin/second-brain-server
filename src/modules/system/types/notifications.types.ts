@@ -252,17 +252,23 @@ export const NotificationQueryOptionsSchema = z.object({
   type: NotificationTypeSchema.optional(),
   status: NotificationStatusSchema.optional(),
   priority: NotificationPrioritySchema.optional(),
-  unreadOnly: z.boolean().optional(),
+  unreadOnly: z.union([z.boolean(), z.string().transform(val => val === 'true')]).optional(),
   entityId: z.string().optional(),
   entityType: z.string().optional(),
   dateRange: z
     .object({
-      start: z.date(),
-      end: z.date()
+      start: z.string().transform(str => new Date(str)),
+      end: z.string().transform(str => new Date(str))
     })
     .optional(),
-  limit: z.number().min(1).max(100).optional(),
-  offset: z.number().min(0).optional(),
+  limit: z
+    .union([z.number(), z.string().transform(val => parseInt(val))])
+    .refine(val => val >= 1 && val <= 100)
+    .optional(),
+  offset: z
+    .union([z.number(), z.string().transform(val => parseInt(val))])
+    .refine(val => val >= 0)
+    .optional(),
   sortBy: z.enum(['createdAt', 'priority', 'scheduledFor']).optional(),
   sortOrder: z.enum(['asc', 'desc']).optional()
 });

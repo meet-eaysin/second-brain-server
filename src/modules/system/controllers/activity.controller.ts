@@ -527,6 +527,41 @@ export const exportAuditDataController = catchAsync(
 );
 
 /**
+ * Record page visit
+ */
+export const recordPageVisitController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const { page, workspaceId } = req.body;
+    const userId = getUserId(req);
+    const userName = getUserName(req);
+
+    if (!page || !workspaceId) {
+      throw createAppError('Page and workspace ID are required', 400);
+    }
+
+    const activityData: ICreateActivityRequest = {
+      type: EActivityType.PAGE_VISITED,
+      context: EActivityContext.USER,
+      title: `Visited ${page}`,
+      description: `User visited the ${page} page`,
+      userId,
+      userName,
+      workspaceId,
+      entityId: page,
+      entityType: 'page',
+      entityName: page,
+      metadata: { page },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    };
+
+    const activity = await createActivity(activityData);
+
+    sendSuccessResponse(res, 'Page visit recorded successfully', activity, 201);
+  }
+);
+
+/**
  * Get activity heatmap data
  */
 export const getActivityHeatmapController = catchAsync(

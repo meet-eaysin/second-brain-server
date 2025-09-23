@@ -705,51 +705,305 @@ export class DashboardService {
     userId: string,
     limit: number = 8
   ): Promise<IRecentlyVisitedItem[]> {
-    const recentlyVisited: IRecentlyVisitedItem[] = [];
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    try {
+      // Import activity service
+      const { getActivities } = await import('@/modules/system/services/activity.service');
 
-    // Get recently updated records from different modules
-    const moduleTypes = [
-      { type: EDatabaseType.NOTES, itemType: 'note' as const, moduleType: 'notes' },
-      { type: EDatabaseType.TASKS, itemType: 'task' as const, moduleType: 'tasks' },
-      { type: EDatabaseType.GOALS, itemType: 'goal' as const, moduleType: 'goals' },
-      { type: EDatabaseType.PROJECTS, itemType: 'project' as const, moduleType: 'projects' },
-      { type: EDatabaseType.HABITS, itemType: 'habit' as const, moduleType: 'habits' }
+      // Import activity types
+      const { EActivityType } = await import('@/modules/system/types/activity.types');
+
+      // Get recent page visits for this user
+      const activitiesResponse = await getActivities({
+        userId,
+        type: EActivityType.PAGE_VISITED,
+        limit: limit * 2 // Get more to deduplicate
+      });
+
+      const pageVisits = activitiesResponse.activities;
+
+      // Define page metadata
+      const pageMetadata: Record<
+        string,
+        { name: string; preview: string; icon: string; color: string }
+      > = {
+        '/home': {
+          name: 'Home',
+          preview: 'Your personal dashboard',
+          icon: '🏠',
+          color: '#6366f1'
+        },
+        '/notes': {
+          name: 'Notes',
+          preview: 'View and manage your knowledge base',
+          icon: '📝',
+          color: '#3b82f6'
+        },
+        '/tasks': {
+          name: 'Tasks',
+          preview: 'Track and manage your tasks',
+          icon: '✅',
+          color: '#10b981'
+        },
+        '/goals': {
+          name: 'Goals',
+          preview: 'Set and track your objectives',
+          icon: '🎯',
+          color: '#8b5cf6'
+        },
+        '/projects': {
+          name: 'Projects',
+          preview: 'Manage your projects and initiatives',
+          icon: '📁',
+          color: '#f59e0b'
+        },
+        '/habits': {
+          name: 'Habits',
+          preview: 'Build and maintain good habits',
+          icon: '🔥',
+          color: '#ef4444'
+        },
+        '/finance': {
+          name: 'Finance',
+          preview: 'Track income and expenses',
+          icon: '💰',
+          color: '#059669'
+        }
+      };
+
+      // Group by page and get most recent visit for each
+      const recentPages = new Map<string, Date>();
+
+      pageVisits.forEach(activity => {
+        const page = activity.metadata?.page as string;
+        if (page && pageMetadata[page]) {
+          if (!recentPages.has(page) || activity.timestamp > recentPages.get(page)!) {
+            recentPages.set(page, activity.timestamp);
+          }
+        }
+      });
+
+      // Convert to IRecentlyVisitedItem array
+      const recentlyVisited: IRecentlyVisitedItem[] = Array.from(recentPages.entries())
+        .map(([page, lastVisitedAt]) => ({
+          id: page.replace('/', ''),
+          name: pageMetadata[page].name,
+          type: 'page' as const,
+          preview: pageMetadata[page].preview,
+          route: page,
+          lastVisitedAt,
+          moduleType: page.replace('/', ''),
+          icon: pageMetadata[page].icon,
+          color: pageMetadata[page].color
+        }))
+        .sort((a, b) => b.lastVisitedAt.getTime() - a.lastVisitedAt.getTime())
+        .slice(0, limit);
+
+      // If no recent visits, fall back to available modules
+      if (recentlyVisited.length === 0) {
+        const availablePages: IRecentlyVisitedItem[] = [];
+        const now = new Date();
+
+        // Define available pages based on existing databases
+        const pageDefinitions = [
+          {
+            id: 'home',
+            name: 'Home',
+            preview: 'Your personal dashboard',
+            route: '/home',
+            moduleType: 'home',
+            icon: '🏠',
+            color: '#6366f1',
+            databaseType: null // Home is always available
+          },
+          {
+            id: 'notes',
+            name: 'Notes',
+            preview: 'View and manage your knowledge base',
+            route: '/notes',
+            moduleType: 'notes',
+            icon: '📝',
+            color: '#3b82f6',
+            databaseType: EDatabaseType.NOTES
+          },
+          {
+            id: 'tasks',
+            name: 'Tasks',
+            preview: 'Track and manage your tasks',
+            route: '/tasks',
+            moduleType: 'tasks',
+            icon: '✅',
+            color: '#10b981',
+            databaseType: EDatabaseType.TASKS
+          },
+          {
+            id: 'goals',
+            name: 'Goals',
+            preview: 'Set and track your objectives',
+            route: '/goals',
+            moduleType: 'goals',
+            icon: '🎯',
+            color: '#8b5cf6',
+            databaseType: EDatabaseType.GOALS
+          },
+          {
+            id: 'projects',
+            name: 'Projects',
+            preview: 'Manage your projects and initiatives',
+            route: '/projects',
+            moduleType: 'projects',
+            icon: '📁',
+            color: '#f59e0b',
+            databaseType: EDatabaseType.PROJECTS
+          },
+          {
+            id: 'habits',
+            name: 'Habits',
+            preview: 'Build and maintain good habits',
+            route: '/habits',
+            moduleType: 'habits',
+            icon: '🔥',
+            color: '#ef4444',
+            databaseType: EDatabaseType.HABITS
+          },
+          {
+            id: 'finance',
+            name: 'Finance',
+            preview: 'Track income and expenses',
+            route: '/finance',
+            moduleType: 'finance',
+            icon: '💰',
+            color: '#059669',
+            databaseType: EDatabaseType.FINANCE
+          }
+        ];
+
+        // Filter pages based on available databases
+        for (const page of pageDefinitions) {
+          if (!page.databaseType || databaseMap[page.databaseType]) {
+            availablePages.push({
+              id: page.id,
+              name: page.name,
+              type: 'page' as const,
+              preview: page.preview,
+              route: page.route,
+              lastVisitedAt: now,
+              moduleType: page.moduleType,
+              icon: page.icon,
+              color: page.color
+            });
+          }
+        }
+
+        return availablePages.slice(0, limit);
+      }
+
+      return recentlyVisited;
+    } catch (error) {
+      console.error('Error getting recently visited pages:', error);
+      // Fallback to available modules if activity service fails
+      return this.getAvailableModules(databaseMap, limit);
+    }
+  }
+
+  private async getAvailableModules(
+    databaseMap: Record<EDatabaseType, string | null>,
+    limit: number
+  ): Promise<IRecentlyVisitedItem[]> {
+    const availablePages: IRecentlyVisitedItem[] = [];
+    const now = new Date();
+
+    // Define available pages based on existing databases
+    const pageDefinitions = [
+      {
+        id: 'home',
+        name: 'Home',
+        preview: 'Your personal dashboard',
+        route: '/home',
+        moduleType: 'home',
+        icon: '🏠',
+        color: '#6366f1',
+        databaseType: null // Home is always available
+      },
+      {
+        id: 'notes',
+        name: 'Notes',
+        preview: 'View and manage your knowledge base',
+        route: '/notes',
+        moduleType: 'notes',
+        icon: '📝',
+        color: '#3b82f6',
+        databaseType: EDatabaseType.NOTES
+      },
+      {
+        id: 'tasks',
+        name: 'Tasks',
+        preview: 'Track and manage your tasks',
+        route: '/tasks',
+        moduleType: 'tasks',
+        icon: '✅',
+        color: '#10b981',
+        databaseType: EDatabaseType.TASKS
+      },
+      {
+        id: 'goals',
+        name: 'Goals',
+        preview: 'Set and track your objectives',
+        route: '/goals',
+        moduleType: 'goals',
+        icon: '🎯',
+        color: '#8b5cf6',
+        databaseType: EDatabaseType.GOALS
+      },
+      {
+        id: 'projects',
+        name: 'Projects',
+        preview: 'Manage your projects and initiatives',
+        route: '/projects',
+        moduleType: 'projects',
+        icon: '📁',
+        color: '#f59e0b',
+        databaseType: EDatabaseType.PROJECTS
+      },
+      {
+        id: 'habits',
+        name: 'Habits',
+        preview: 'Build and maintain good habits',
+        route: '/habits',
+        moduleType: 'habits',
+        icon: '🔥',
+        color: '#ef4444',
+        databaseType: EDatabaseType.HABITS
+      },
+      {
+        id: 'finance',
+        name: 'Finance',
+        preview: 'Track income and expenses',
+        route: '/finance',
+        moduleType: 'finance',
+        icon: '💰',
+        color: '#059669',
+        databaseType: EDatabaseType.FINANCE
+      }
     ];
 
-    for (const module of moduleTypes) {
-      if (databaseMap[module.type]) {
-        const records = await RecordModel.find({
-          databaseId: databaseMap[module.type],
-          isDeleted: { $ne: true },
-          updatedAt: { $gte: oneWeekAgo }
-        })
-          .sort({ updatedAt: -1 })
-          .limit(3) // Get 3 most recent from each module
-          .exec();
-
-        records.forEach(record => {
-          const item: IRecentlyVisitedItem = {
-            id: record.id,
-            name: this.getItemName(record, module.itemType),
-            type: module.itemType,
-            preview: this.getItemPreview(record, module.itemType),
-            lastVisitedAt: record.updatedAt,
-            icon: this.getItemIcon(module.itemType),
-            color: this.getItemColor(module.itemType),
-            tags: getStringArrayProperty(record.properties, 'tags', []),
-            moduleType: module.moduleType
-          };
-          recentlyVisited.push(item);
+    // Filter pages based on available databases
+    for (const page of pageDefinitions) {
+      if (!page.databaseType || databaseMap[page.databaseType]) {
+        availablePages.push({
+          id: page.id,
+          name: page.name,
+          type: 'page' as const,
+          preview: page.preview,
+          route: page.route,
+          lastVisitedAt: now,
+          moduleType: page.moduleType,
+          icon: page.icon,
+          color: page.color
         });
       }
     }
 
-    // Sort by last visited date and limit results
-    return recentlyVisited
-      .sort((a, b) => b.lastVisitedAt.getTime() - a.lastVisitedAt.getTime())
-      .slice(0, limit);
+    return availablePages.slice(0, limit);
   }
 
   private getItemName(record: any, type: string): string {

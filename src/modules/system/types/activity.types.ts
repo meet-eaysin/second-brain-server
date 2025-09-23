@@ -59,7 +59,10 @@ export enum EActivityType {
   // View operations
   VIEW_CREATED = 'view_created',
   VIEW_UPDATED = 'view_updated',
-  VIEW_ACCESSED = 'view_accessed'
+  VIEW_ACCESSED = 'view_accessed',
+
+  // Page navigation
+  PAGE_VISITED = 'page_visited'
 }
 
 // Activity context

@@ -17,7 +17,8 @@ import {
   getSecurityEventsController,
   getComplianceReportController,
   exportAuditDataController,
-  getActivityHeatmapController
+  getActivityHeatmapController,
+  recordPageVisitController
 } from '../controllers/activity.controller';
 import { CreateActivityRequestSchema, ActivityQueryOptionsSchema } from '../types/activity.types';
 import { z } from 'zod';
@@ -83,6 +84,9 @@ router.get('/feed', getRecentActivityFeedController);
 router.get('/summary', getUserActivitySummaryController);
 router.get('/analytics', getActivityAnalyticsController);
 router.get('/:id', validateParams(activityIdSchema), getActivityByIdController);
+
+// Page visit tracking
+router.post('/page-visit', recordPageVisitController);
 
 router.get(
   '/history/:entityType/:entityId',

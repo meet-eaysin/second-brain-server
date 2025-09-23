@@ -164,8 +164,8 @@ export const getActivities = async (
   }
 
   if (options.dateRange) {
-    filteredActivities = filteredActivities.filter(a =>
-      a.timestamp >= options.dateRange!.start && a.timestamp <= options.dateRange!.end
+    filteredActivities = filteredActivities.filter(
+      a => a.timestamp >= options.dateRange!.start && a.timestamp <= options.dateRange!.end
     );
   }
 
@@ -250,8 +250,9 @@ export const getRecentActivityFeed = async (
   userId?: string,
   limit: number = 20
 ): Promise<IActivityFeedItem[]> => {
-  let filteredActivities = Array.from(activities.values())
-    .filter(a => a.workspaceId === workspaceId);
+  let filteredActivities = Array.from(activities.values()).filter(
+    a => a.workspaceId === workspaceId
+  );
 
   if (userId) {
     filteredActivities = filteredActivities.filter(a => a.userId === userId);
@@ -284,8 +285,9 @@ export const getActivityAnalytics = async (
   workspaceId: string,
   period: 'day' | 'week' | 'month' | 'year' = 'week'
 ): Promise<IActivityAnalytics> => {
-  const workspaceActivities = Array.from(activities.values())
-    .filter(a => a.workspaceId === workspaceId);
+  const workspaceActivities = Array.from(activities.values()).filter(
+    a => a.workspaceId === workspaceId
+  );
 
   const now = new Date();
   let startDate: Date;
@@ -436,8 +438,7 @@ const generateActivitySummary = (activities: IActivity[]): IActivitySummary => {
   });
 
   // Find most active day and user
-  const mostActiveUser = Object.entries(byUser)
-    .sort(([,a], [,b]) => b - a)[0]?.[0] || '';
+  const mostActiveUser = Object.entries(byUser).sort(([, a], [, b]) => b - a)[0]?.[0] || '';
 
   return {
     totalActivities: activities.length,
@@ -463,10 +464,18 @@ const generateActivityTrend = (
 
   let days: number;
   switch (period) {
-    case 'day': days = 1; break;
-    case 'week': days = 7; break;
-    case 'month': days = 30; break;
-    case 'year': days = 365; break;
+    case 'day':
+      days = 1;
+      break;
+    case 'week':
+      days = 7;
+      break;
+    case 'month':
+      days = 30;
+      break;
+    case 'year':
+      days = 365;
+      break;
   }
 
   for (let i = days - 1; i >= 0; i--) {
@@ -475,9 +484,7 @@ const generateActivityTrend = (
     const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-    const count = activities.filter(a =>
-      a.timestamp >= dayStart && a.timestamp < dayEnd
-    ).length;
+    const count = activities.filter(a => a.timestamp >= dayStart && a.timestamp < dayEnd).length;
 
     trend.push({ date: dateStr, count });
   }
@@ -578,7 +585,8 @@ const getActivityIcon = (type: EActivityType): string => {
     [EActivityType.BLOCK_DELETED]: '🗑️',
     [EActivityType.VIEW_CREATED]: '👁️',
     [EActivityType.VIEW_UPDATED]: '📝',
-    [EActivityType.VIEW_ACCESSED]: '👀'
+    [EActivityType.VIEW_ACCESSED]: '👀',
+    [EActivityType.PAGE_VISITED]: '🏠'
   };
 
   return icons[type] || '📝';
@@ -646,8 +654,9 @@ export const generateAuditTrail = async (
   const activities = activitiesResponse.activities;
 
   // Calculate summary
-  const totalChanges = activities.reduce((sum, activity) =>
-    sum + (activity.changes?.length || 0), 0
+  const totalChanges = activities.reduce(
+    (sum, activity) => sum + (activity.changes?.length || 0),
+    0
   );
 
   const affectedEntities = new Set(
@@ -660,15 +669,19 @@ export const generateAuditTrail = async (
   };
 
   // Assess risk level
-  const highRiskActivities = activities.filter(activity =>
-    activity.type.includes('DELETED') ||
-    activity.type.includes('SETTINGS') ||
-    activity.entityType === 'workspace'
+  const highRiskActivities = activities.filter(
+    activity =>
+      activity.type.includes('DELETED') ||
+      activity.type.includes('SETTINGS') ||
+      activity.entityType === 'workspace'
   );
 
   const riskLevel: 'low' | 'medium' | 'high' =
-    highRiskActivities.length > activities.length * 0.3 ? 'high' :
-    highRiskActivities.length > activities.length * 0.1 ? 'medium' : 'low';
+    highRiskActivities.length > activities.length * 0.3
+      ? 'high'
+      : highRiskActivities.length > activities.length * 0.1
+        ? 'medium'
+        : 'low';
 
   // Compliance analysis
   const complianceStatus = analyzeCompliance(activities);
@@ -767,8 +780,8 @@ export const getComplianceReport = async (
   });
 
   const activities = activitiesResponse.activities;
-  const criticalActivities = activities.filter(a =>
-    a.type.includes('DELETED') || a.type.includes('SETTINGS')
+  const criticalActivities = activities.filter(
+    a => a.type.includes('DELETED') || a.type.includes('SETTINGS')
   );
 
   // Mock compliance data (would be calculated from actual data)

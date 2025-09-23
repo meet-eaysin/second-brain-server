@@ -137,12 +137,12 @@ export interface IWorkspaceStats {
 export interface IRecentlyVisitedItem {
   id: string;
   name: string;
-  type: 'note' | 'database' | 'task' | 'goal' | 'project' | 'habit';
+  type: 'page';
   preview?: string;
+  route: string;
   lastVisitedAt: Date;
   icon?: string;
   color?: string;
-  tags?: string[];
   moduleType: string;
 }
 
@@ -284,12 +284,12 @@ export const WorkspaceStatsSchema = z.object({
 export const RecentlyVisitedItemSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.enum(['note', 'database', 'task', 'goal', 'project', 'habit']),
+  type: z.literal('page'),
   preview: z.string().optional(),
+  route: z.string(),
   lastVisitedAt: z.date(),
   icon: z.string().optional(),
   color: z.string().optional(),
-  tags: z.array(z.string()).optional(),
   moduleType: z.string()
 });
 
