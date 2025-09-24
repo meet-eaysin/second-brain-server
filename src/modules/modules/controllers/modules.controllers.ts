@@ -272,10 +272,14 @@ export const getWorkspaceModuleStatus = catchAsync(
 
 export const initializeSpecificWorkspaceModules = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-
     const workspaceId = getWorkspaceId(req);
     const { modules, createSampleData = false } = req.body;
     const userId = req.user?.userId;
+
+    if (!workspaceId) {
+      res.status(400).json({ success: false, message: 'Workspace ID is required' });
+      return;
+    }
 
     if (!userId) {
       res.status(401).json({ success: false, message: 'User not authenticated' });

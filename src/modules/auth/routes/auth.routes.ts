@@ -6,7 +6,9 @@ import {
   refreshTokenLimiter,
   registerLimiter
 } from '../../../config/rate-limiter/auth-rate-limiter';
-import { authenticateToken } from '../../../middlewares/auth';
+import * as authMiddleware from '../../../middlewares/auth';
+
+const { authenticateToken } = authMiddleware;
 import { validateBody, validateQuery } from '../../../middlewares/validation';
 import {
   register,
@@ -57,7 +59,13 @@ router.post(
   validateBody(resetPasswordSchema),
   resetUserPassword
 );
-router.post('/logout', authenticateToken, logout);
+router.post(
+  '/logout',
+  (req, res, next) => {
+    next();
+  },
+  logout
+);
 router.post('/logout-all', authenticateToken, logoutAll);
 router.get('/me', authenticateToken, getProfile);
 

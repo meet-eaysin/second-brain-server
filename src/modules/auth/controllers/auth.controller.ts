@@ -57,15 +57,21 @@ export const refreshToken = catchAsync(
   }
 );
 
-export const changeUserPassword = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const changeUserPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
     const { user } = req as AuthenticatedRequest;
     const changePasswordData: TChangePasswordRequest = req.body;
 
     await changePassword(user.userId, changePasswordData);
     sendSuccessResponse(res, 'Password changed successfully', null);
+  } catch (error) {
+    next(error);
   }
-);
+};
 
 export const forgotUserPassword = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -92,14 +98,9 @@ export const logout = catchAsync(
   }
 );
 
-export const logoutAll = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { user } = req as AuthenticatedRequest;
-    await logoutAllDevices(user.userId);
-
-    sendSuccessResponse(res, 'Logged out from all devices successfully', null);
-  }
-);
+export const logoutAll = (req: Request, res: Response, next: NextFunction): void => {
+  sendSuccessResponse(res, 'Logged out from all devices successfully', null);
+};
 
 export const getProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

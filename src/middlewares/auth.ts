@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { TJwtPayload, TUserRole } from '@/users/types/user.types';
 import { extractTokenFromHeader, verifyAccessToken } from '@/auth/utils/auth.utils';
 import { createForbiddenError, createUnauthorizedError } from '@/utils/response.utils';
-import { getUserById } from '@/modules/users';
+import { getUserById } from '../modules/users/services/users.services';
 
 export interface AuthenticatedRequest extends Request {
   user: TJwtPayload & { userId: string };

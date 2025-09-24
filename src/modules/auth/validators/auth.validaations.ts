@@ -32,10 +32,9 @@ export const changePasswordSchema = z.object({
   newPassword: z
     .string()
     .min(8, 'New password must be at least 8 characters long')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-      'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
-    )
+    .refine(password => {
+      return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(password);
+    }, 'New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character')
 });
 
 export const forgotPasswordSchema = z.object({
@@ -57,19 +56,21 @@ export const googleCallbackSchema = z.object({
   code: z.string().min(1, 'Authorization code is required')
 });
 
-export const googleCallbackQuerySchema = z.object({
-  // Required parameters (either code for success or error for failure)
-  code: z.string().optional(),
-  error: z.string().optional(),
+export const googleCallbackQuerySchema = z
+  .object({
+    // Required parameters (either code for success or error for failure)
+    code: z.string().optional(),
+    error: z.string().optional(),
 
-  // Optional parameters that Google may send
-  error_description: z.string().optional(),
-  state: z.string().optional(),
-  scope: z.string().optional(),
-  authuser: z.union([z.string(), z.number()]).optional(),
-  prompt: z.string().optional(),
+    // Optional parameters that Google may send
+    error_description: z.string().optional(),
+    state: z.string().optional(),
+    scope: z.string().optional(),
+    authuser: z.union([z.string(), z.number()]).optional(),
+    prompt: z.string().optional(),
 
-  // Additional parameters Google might send
-  session_state: z.string().optional(),
-  hd: z.string().optional() // Hosted domain
-}).passthrough(); // Allow any additional parameters from Google
+    // Additional parameters Google might send
+    session_state: z.string().optional(),
+    hd: z.string().optional() // Hosted domain
+  })
+  .passthrough(); // Allow any additional parameters from Google
