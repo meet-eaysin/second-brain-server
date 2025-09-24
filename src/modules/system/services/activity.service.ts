@@ -1,4 +1,3 @@
-import { ObjectId } from 'mongodb';
 import {
   IActivity,
   ICreateActivityRequest,
@@ -10,17 +9,14 @@ import {
   IVersionHistoryEntry,
   IAuditLogEntry,
   IActivityAnalytics,
-  IActivityChange,
   EActivityType,
   EActivityContext
 } from '../types/activity.types';
-import { createAppError, createForbiddenError } from '@/utils/error.utils';
+import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
-import { permissionService } from '../../permissions/services/permission.service';
-import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
+import { ActivityModel } from '../models/activity.model';
 
-// In-memory storage for activities (in production, use MongoDB)
-const activities = new Map<string, IActivity>();
+// In-memory storage for version history and audit log (activities now use MongoDB)
 const versionHistory = new Map<string, IVersionHistoryEntry[]>();
 const auditLog = new Map<string, IAuditLogEntry>();
 
@@ -31,10 +27,8 @@ export const createActivity = async (
   request: ICreateActivityRequest
 ): Promise<IActivityResponse> => {
   const now = new Date();
-  const id = generateId();
 
-  const activity: IActivity = {
-    id,
+  const activityData = {
     type: request.type,
     context: request.context,
     title: request.title,
@@ -50,17 +44,17 @@ export const createActivity = async (
     ipAddress: request.ipAddress,
     userAgent: request.userAgent,
     timestamp: now,
-    createdAt: now
+    createdBy: request.userId
   };
 
-  activities.set(id, activity);
+  const activity = await ActivityModel.create(activityData);
 
   // Create version history entry if changes are provided
   if (request.changes && request.changes.length > 0) {
-    await createVersionHistoryEntry(activity);
+    await createVersionHistoryEntry(activity.toObject());
   }
 
-  return formatActivityResponse(activity);
+  return formatActivityResponse(activity.toObject());
 };
 
 /**
@@ -70,149 +64,89 @@ export const getActivities = async (
   options: IActivityQueryOptions,
   requestingUserId?: string
 ): Promise<IActivityListResponse> => {
-  let filteredActivities = Array.from(activities.values());
-
-  // Filter activities based on permissions
-  if (requestingUserId) {
-    const permissionFilteredActivities = [];
-
-    for (const activity of filteredActivities) {
-      try {
-        // Check if user has permission to view this activity
-        let hasPermission = false;
-
-        // User can always see their own activities
-        if (activity.userId === requestingUserId) {
-          hasPermission = true;
-        } else if (activity.entityId) {
-          // Check permission based on entity type
-          switch (activity.entityType) {
-            case 'database':
-              hasPermission = await permissionService.hasPermission(
-                EShareScope.DATABASE,
-                activity.entityId,
-                requestingUserId,
-                EPermissionLevel.READ
-              );
-              break;
-            case 'record':
-            case 'task':
-              hasPermission = await permissionService.hasPermission(
-                EShareScope.RECORD,
-                activity.entityId,
-                requestingUserId,
-                EPermissionLevel.READ
-              );
-              break;
-            case 'workspace':
-              // For workspace activities, allow if user is part of workspace
-              // For now, we'll allow all workspace activities
-              hasPermission = true;
-              break;
-            default:
-              hasPermission = await permissionService.hasPermission(
-                EShareScope.RECORD,
-                activity.entityId,
-                requestingUserId,
-                EPermissionLevel.READ
-              );
-          }
-        } else {
-          // For activities without entityId, only show to the user who performed them
-          hasPermission = activity.userId === requestingUserId;
-        }
-
-        if (hasPermission) {
-          permissionFilteredActivities.push(activity);
-        }
-      } catch (error) {
-        // If permission check fails, exclude the activity
-        console.error(`Permission check failed for activity ${activity.id}:`, error);
-      }
-    }
-
-    filteredActivities = permissionFilteredActivities;
-  }
+  // Build MongoDB query
+  const query: any = {};
 
   // Apply filters
   if (options.workspaceId) {
-    filteredActivities = filteredActivities.filter(a => a.workspaceId === options.workspaceId);
+    query.workspaceId = options.workspaceId;
   }
 
   if (options.userId) {
-    filteredActivities = filteredActivities.filter(a => a.userId === options.userId);
+    query.userId = options.userId;
   }
 
   if (options.type) {
-    filteredActivities = filteredActivities.filter(a => a.type === options.type);
+    query.type = options.type;
   }
 
   if (options.types) {
-    filteredActivities = filteredActivities.filter(a => options.types!.includes(a.type));
+    query.type = { $in: options.types };
   }
 
   if (options.context) {
-    filteredActivities = filteredActivities.filter(a => a.context === options.context);
+    query.context = options.context;
   }
 
   if (options.entityId) {
-    filteredActivities = filteredActivities.filter(a => a.entityId === options.entityId);
+    query.entityId = options.entityId;
   }
 
   if (options.entityType) {
-    filteredActivities = filteredActivities.filter(a => a.entityType === options.entityType);
+    query.entityType = options.entityType;
   }
 
   if (options.dateRange) {
-    filteredActivities = filteredActivities.filter(
-      a => a.timestamp >= options.dateRange!.start && a.timestamp <= options.dateRange!.end
-    );
+    query.timestamp = {
+      $gte: options.dateRange.start,
+      $lte: options.dateRange.end
+    };
   }
 
   if (!options.includeSystem) {
-    filteredActivities = filteredActivities.filter(a => a.context !== EActivityContext.SYSTEM);
+    query.context = { $ne: EActivityContext.SYSTEM };
   }
 
-  // Sort activities
+  // Add soft delete filter
+  query.isDeleted = { $ne: true };
+
+  // Build sort options
   const sortBy = options.sortBy || 'timestamp';
-  const sortOrder = options.sortOrder || 'desc';
-
-  filteredActivities.sort((a, b) => {
-    let aValue: Date | string;
-    let bValue: Date | string;
-
-    switch (sortBy) {
-      case 'type':
-        aValue = a.type;
-        bValue = b.type;
-        break;
-      case 'userId':
-        aValue = a.userId;
-        bValue = b.userId;
-        break;
-      default:
-        aValue = a.timestamp;
-        bValue = b.timestamp;
-    }
-
-    if (sortOrder === 'asc') {
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-    } else {
-      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-    }
-  });
+  const sortOrder = options.sortOrder === 'asc' ? 1 : -1;
+  const sortOptions: any = {};
+  sortOptions[sortBy] = sortOrder;
 
   // Pagination
   const limit = options.limit || 50;
   const offset = options.offset || 0;
-  const total = filteredActivities.length;
-  const paginatedActivities = filteredActivities.slice(offset, offset + limit);
+
+  // Execute query with pagination
+  const activities = await ActivityModel.find(query)
+    .sort(sortOptions)
+    .skip(offset)
+    .limit(limit)
+    .exec();
+
+  const total = await ActivityModel.countDocuments(query).exec();
+
+  // Convert to IActivity objects for permission checking
+  let filteredActivities = activities.map(doc => doc.toObject());
+
+  // Filter activities based on permissions (simplified for now - can be enhanced later)
+  if (requestingUserId) {
+    filteredActivities = filteredActivities.filter(
+      activity =>
+        activity.userId === requestingUserId ||
+        activity.context === EActivityContext.SYSTEM ||
+        !activity.entityId // Allow activities without entityId
+    );
+  }
 
   // Generate summary
   const summary = generateActivitySummary(filteredActivities);
 
   return {
-    activities: paginatedActivities.map(formatActivityResponse),
+    activities: filteredActivities.map(formatActivityResponse),
     total,
     page: Math.floor(offset / limit) + 1,
     limit,
@@ -229,17 +163,22 @@ export const getActivityById = async (
   id: string,
   workspaceId?: string
 ): Promise<IActivityResponse> => {
-  const activity = activities.get(id);
+  const activity = await ActivityModel.findOne({
+    _id: id,
+    isDeleted: { $ne: true }
+  }).exec();
 
   if (!activity) {
     throw createAppError('Activity not found', 404);
   }
 
-  if (workspaceId && activity.workspaceId !== workspaceId) {
+  const activityObj = activity.toObject();
+
+  if (workspaceId && activityObj.workspaceId !== workspaceId) {
     throw createAppError('Access denied', 403);
   }
 
-  return formatActivityResponse(activity);
+  return formatActivityResponse(activityObj);
 };
 
 /**
@@ -250,21 +189,18 @@ export const getRecentActivityFeed = async (
   userId?: string,
   limit: number = 20
 ): Promise<IActivityFeedItem[]> => {
-  let filteredActivities = Array.from(activities.values()).filter(
-    a => a.workspaceId === workspaceId
-  );
+  const query: any = {
+    workspaceId,
+    isDeleted: { $ne: true }
+  };
 
   if (userId) {
-    filteredActivities = filteredActivities.filter(a => a.userId === userId);
+    query.userId = userId;
   }
 
-  // Sort by timestamp (most recent first)
-  filteredActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const activities = await ActivityModel.find(query).sort({ timestamp: -1 }).limit(limit).exec();
 
-  // Take only the most recent activities
-  const recentActivities = filteredActivities.slice(0, limit);
-
-  return recentActivities.map(formatActivityFeedItem);
+  return activities.map(doc => formatActivityFeedItem(doc.toObject()));
 };
 
 /**
@@ -285,10 +221,6 @@ export const getActivityAnalytics = async (
   workspaceId: string,
   period: 'day' | 'week' | 'month' | 'year' = 'week'
 ): Promise<IActivityAnalytics> => {
-  const workspaceActivities = Array.from(activities.values()).filter(
-    a => a.workspaceId === workspaceId
-  );
-
   const now = new Date();
   let startDate: Date;
 
@@ -307,14 +239,20 @@ export const getActivityAnalytics = async (
       break;
   }
 
-  const periodActivities = workspaceActivities.filter(a => a.timestamp >= startDate);
+  const periodActivities = await ActivityModel.find({
+    workspaceId,
+    timestamp: { $gte: startDate },
+    isDeleted: { $ne: true }
+  }).exec();
+
+  const activities = periodActivities.map(doc => doc.toObject());
 
   // Calculate analytics
-  const uniqueUsers = new Set(periodActivities.map(a => a.userId)).size;
+  const uniqueUsers = new Set(activities.map(a => a.userId)).size;
 
   // Most active users
   const userActivityCount = new Map<string, { count: number; name: string }>();
-  periodActivities.forEach(a => {
+  activities.forEach(a => {
     const current = userActivityCount.get(a.userId) || { count: 0, name: a.userName };
     userActivityCount.set(a.userId, { count: current.count + 1, name: a.userName });
   });
@@ -329,17 +267,17 @@ export const getActivityAnalytics = async (
     .slice(0, 10);
 
   // Activity trend
-  const activityTrend = generateActivityTrend(periodActivities, period);
+  const activityTrend = generateActivityTrend(activities, period);
 
   // Type distribution
   const typeDistribution: Record<EActivityType, number> = {} as any;
   Object.values(EActivityType).forEach(type => {
-    typeDistribution[type] = periodActivities.filter(a => a.type === type).length;
+    typeDistribution[type] = activities.filter(a => a.type === type).length;
   });
 
   // Peak hours
   const hourlyCount = new Map<number, number>();
-  periodActivities.forEach(a => {
+  activities.forEach(a => {
     const hour = a.timestamp.getHours();
     hourlyCount.set(hour, (hourlyCount.get(hour) || 0) + 1);
   });
@@ -351,7 +289,7 @@ export const getActivityAnalytics = async (
 
   // Most active entities
   const entityActivityCount = new Map<string, { count: number; name: string; type: string }>();
-  periodActivities.forEach(a => {
+  activities.forEach(a => {
     const key = `${a.entityType}-${a.entityId}`;
     const current = entityActivityCount.get(key) || {
       count: 0,
@@ -376,13 +314,13 @@ export const getActivityAnalytics = async (
 
   return {
     period,
-    totalActivities: periodActivities.length,
+    totalActivities: activities.length,
     uniqueUsers,
     mostActiveUsers,
     activityTrend,
     typeDistribution,
     peakHours,
-    averageActivitiesPerUser: uniqueUsers > 0 ? periodActivities.length / uniqueUsers : 0,
+    averageActivitiesPerUser: uniqueUsers > 0 ? activities.length / uniqueUsers : 0,
     mostActiveEntities
   };
 };

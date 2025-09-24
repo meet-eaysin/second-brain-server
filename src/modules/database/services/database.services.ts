@@ -28,6 +28,20 @@ import { generateId } from '@/utils/id-generator';
 import { workspaceService } from '@/modules/workspace/services/workspace.service';
 import { DatabaseModel, PropertyModel, RecordModel, ViewModel } from '@/modules/database';
 
+// Types for internal use
+interface DatabaseWithPermissions {
+  database: any;
+  hasEditPermission: boolean;
+  hasDeletePermission: boolean;
+  hasExportPermission: boolean;
+}
+
+interface BulkOperationResult {
+  updated?: number;
+  deleted?: number;
+  failed: string[];
+}
+
 const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Promise<IDatabase> => {
   try {
     // If no workspaceId provided, get or create user's default workspace

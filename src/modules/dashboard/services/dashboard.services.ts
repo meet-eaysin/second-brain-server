@@ -25,1134 +25,1392 @@ import {
   getPriorityProperty
 } from '@/modules/core/utils/type-guards';
 
-export class DashboardService {
-  // Get database mapping for a user/workspace
-  async getDatabaseMapping(
-    userId: string,
-    workspaceId?: string
-  ): Promise<Record<EDatabaseType, string | null>> {
-    try {
-      const query: any = {
-        isDeleted: { $ne: true },
-        isArchived: { $ne: true }
-      };
+// Helper functions
 
-      if (workspaceId) {
-        // If workspace specified, filter by workspace and check access
-        query.workspaceId = workspaceId;
-        query.$or = [
-          { createdBy: userId },
-          { isPublic: true }
-          // TODO: Add workspace member check when workspace membership is implemented
-        ];
-      } else {
-        // If no workspace specified, get user's accessible databases across all workspaces
-        query.$or = [{ createdBy: userId }, { isPublic: true }];
-      }
+// Helper Functions
+const createDefaultDatabaseMapping = (): Record<EDatabaseType, string | null> => ({
+  [EDatabaseType.DASHBOARD]: null,
+  [EDatabaseType.FINANCE]: null,
+  [EDatabaseType.GOALS]: null,
+  [EDatabaseType.JOURNAL]: null,
+  [EDatabaseType.MOOD_TRACKER]: null,
+  [EDatabaseType.NOTES]: null,
+  [EDatabaseType.TASKS]: null,
+  [EDatabaseType.HABITS]: null,
+  [EDatabaseType.PEOPLE]: null,
+  [EDatabaseType.RESOURCES]: null,
+  [EDatabaseType.PARA_PROJECTS]: null,
+  [EDatabaseType.PARA_AREAS]: null,
+  [EDatabaseType.PARA_RESOURCES]: null,
+  [EDatabaseType.PARA_ARCHIVE]: null,
+  [EDatabaseType.PROJECTS]: null,
+  [EDatabaseType.QUICK_TASKS]: null,
+  [EDatabaseType.QUICK_NOTES]: null,
+  [EDatabaseType.CONTENT]: null,
+  [EDatabaseType.ACTIVITY]: null,
+  [EDatabaseType.ANALYSIS]: null,
+  [EDatabaseType.NOTIFICATIONS]: null,
+  [EDatabaseType.CUSTOM]: null
+});
 
-      const databases = await DatabaseModel.find(query).exec();
-
-      const mapping: Record<EDatabaseType, string | null> = {
-        [EDatabaseType.DASHBOARD]: null,
-        [EDatabaseType.FINANCE]: null,
-        [EDatabaseType.GOALS]: null,
-        [EDatabaseType.JOURNAL]: null,
-        [EDatabaseType.MOOD_TRACKER]: null,
-        [EDatabaseType.NOTES]: null,
-        [EDatabaseType.TASKS]: null,
-        [EDatabaseType.HABITS]: null,
-        [EDatabaseType.PEOPLE]: null,
-        [EDatabaseType.RESOURCES]: null,
-        [EDatabaseType.PARA_PROJECTS]: null,
-        [EDatabaseType.PARA_AREAS]: null,
-        [EDatabaseType.PARA_RESOURCES]: null,
-        [EDatabaseType.PARA_ARCHIVE]: null,
-        [EDatabaseType.PROJECTS]: null,
-        [EDatabaseType.QUICK_TASKS]: null,
-        [EDatabaseType.QUICK_NOTES]: null,
-        [EDatabaseType.CONTENT]: null,
-        [EDatabaseType.ACTIVITY]: null,
-        [EDatabaseType.ANALYSIS]: null,
-        [EDatabaseType.NOTIFICATIONS]: null,
-        [EDatabaseType.CUSTOM]: null
-      };
-
-      // Map each database type to its ID (use the first found database of each type)
-      for (const db of databases) {
-        if (mapping[db.type] === null) {
-          mapping[db.type] = db.id;
-        }
-      }
-
-      return mapping;
-    } catch (error: any) {
-      console.error('Failed to get database mapping:', error);
-      return {
-        [EDatabaseType.DASHBOARD]: null,
-        [EDatabaseType.FINANCE]: null,
-        [EDatabaseType.GOALS]: null,
-        [EDatabaseType.JOURNAL]: null,
-        [EDatabaseType.MOOD_TRACKER]: null,
-        [EDatabaseType.NOTES]: null,
-        [EDatabaseType.TASKS]: null,
-        [EDatabaseType.HABITS]: null,
-        [EDatabaseType.PEOPLE]: null,
-        [EDatabaseType.RESOURCES]: null,
-        [EDatabaseType.PARA_PROJECTS]: null,
-        [EDatabaseType.PARA_AREAS]: null,
-        [EDatabaseType.PARA_RESOURCES]: null,
-        [EDatabaseType.PARA_ARCHIVE]: null,
-        [EDatabaseType.PROJECTS]: null,
-        [EDatabaseType.QUICK_TASKS]: null,
-        [EDatabaseType.QUICK_NOTES]: null,
-        [EDatabaseType.CONTENT]: null,
-        [EDatabaseType.ACTIVITY]: null,
-        [EDatabaseType.ANALYSIS]: null,
-        [EDatabaseType.NOTIFICATIONS]: null,
-        [EDatabaseType.CUSTOM]: null
-      };
-    }
-  }
-
-  async getDashboardOverview(
-    params: IDashboardQueryParams,
-    userId: string
-  ): Promise<IDashboardOverview> {
-    try {
-      const workspaceId = params.workspaceId;
-
-      // Get all user's databases
-      const databases = await this.getUserDatabases(workspaceId, userId);
-      const databaseMap = await this.getDatabaseMapping(userId, workspaceId);
-
-      // Calculate all dashboard components in parallel
-      const [
-        quickStats,
-        recentActivity,
-        upcomingTasks,
-        recentNotes,
-        goalProgress,
-        habitStreaks,
-        financeSummary,
-        workspaceStats,
-        recentlyVisited
-      ] = await Promise.all([
-        this.calculateQuickStats(databaseMap, userId),
-        params.includeActivity
-          ? this.getRecentActivityFeed(databaseMap, userId, params.activityLimit || 10)
-          : [],
-        this.getUpcomingTasks(databaseMap, userId, params.upcomingTasksLimit || 5),
-        this.getRecentNotes(databaseMap, userId, params.recentNotesLimit || 5),
-        this.getGoalProgress(databaseMap, userId),
-        this.getHabitStreaks(databaseMap, userId),
-        this.getFinanceSummary(databaseMap, userId, params.period || 'month'),
-        this.getWorkspaceStats(workspaceId, userId),
-        this.getRecentlyVisited(databaseMap, userId)
-      ]);
-
-      return {
-        quickStats,
-        recentActivity,
-        upcomingTasks,
-        recentNotes,
-        goalProgress,
-        habitStreaks,
-        financeSummary,
-        workspaceStats,
-        recentlyVisited
-      };
-    } catch (error: any) {
-      throw createAppError(`Failed to get dashboard overview: ${error.message}`, 500);
-    }
-  }
-
-  private async getUserDatabases(workspaceId: string | undefined, userId: string): Promise<any[]> {
+const getDatabaseMapping = async (
+  userId: string,
+  workspaceId?: string
+): Promise<Record<EDatabaseType, string | null>> => {
+  try {
     const query: any = {
       isDeleted: { $ne: true },
       isArchived: { $ne: true }
     };
 
     if (workspaceId) {
-      // If workspace specified, filter by workspace
       query.workspaceId = workspaceId;
-      query.$or = [
-        { createdBy: userId },
-        { isPublic: true }
-        // TODO: Add workspace member check when implemented
-      ];
+      query.$or = [{ createdBy: userId }, { isPublic: true }];
     } else {
-      // If no workspace specified, get all user's accessible databases
       query.$or = [{ createdBy: userId }, { isPublic: true }];
     }
 
-    return await DatabaseModel.find(query).exec();
-  }
+    const databases = await DatabaseModel.find(query).exec();
+    const mapping = createDefaultDatabaseMapping();
 
-  private createDatabaseMap(databases: any[]): Record<EDatabaseType, string | null> {
-    const map: Record<EDatabaseType, string | null> = {} as any;
-
-    // Initialize all types as null
-    Object.values(EDatabaseType).forEach(type => {
-      map[type] = null;
-    });
-
-    // Map existing databases
-    databases.forEach(db => {
-      if (Object.values(EDatabaseType).includes(db.type as EDatabaseType)) {
-        map[db.type as EDatabaseType] = db.id;
+    for (const db of databases) {
+      if (mapping[db.type] === null) {
+        mapping[db.type] = db.id;
       }
-    });
-
-    return map;
-  }
-
-  async calculateQuickStats(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string
-  ): Promise<IQuickStats> {
-    const stats: IQuickStats = {
-      totalTasks: 0,
-      completedTasks: 0,
-      overdueTasks: 0,
-      totalNotes: 0,
-      totalGoals: 0,
-      activeHabits: 0,
-      totalProjects: 0,
-      activeProjects: 0,
-      thisWeekExpenses: 0,
-      thisWeekIncome: 0,
-      journalEntriesThisMonth: 0,
-      averageMoodThisWeek: 0
-    };
-
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-    const now = new Date();
-
-    if (databaseMap[EDatabaseType.TASKS]) {
-      const tasksDb = databaseMap[EDatabaseType.TASKS];
-      const [totalTasks, completedTasks, overdueTasks] = await Promise.all([
-        RecordModel.countDocuments({ databaseId: tasksDb, isDeleted: { $ne: true } }),
-        RecordModel.countDocuments({
-          databaseId: tasksDb,
-          isDeleted: { $ne: true },
-          'properties.status': EStatus.COMPLETED
-        }),
-        RecordModel.countDocuments({
-          databaseId: tasksDb,
-          isDeleted: { $ne: true },
-          'properties.status': { $ne: EStatus.COMPLETED },
-          'properties.due_date': { $lt: now }
-        })
-      ]);
-
-      stats.totalTasks = totalTasks;
-      stats.completedTasks = completedTasks;
-      stats.overdueTasks = overdueTasks;
     }
+
+    return mapping;
+  } catch (error: any) {
+    console.error('Failed to get database mapping:', error);
+    return createDefaultDatabaseMapping();
+  }
+};
+
+const getDashboardOverview = async (
+  params: IDashboardQueryParams,
+  userId: string
+): Promise<IDashboardOverview> => {
+  try {
+    const workspaceId = params.workspaceId;
+    const databaseMap = await getDatabaseMapping(userId, workspaceId);
+
+    // Calculate all dashboard components in parallel
+    const [
+      quickStats,
+      recentActivity,
+      upcomingTasks,
+      recentNotes,
+      goalProgress,
+      habitStreaks,
+      financeSummary,
+      workspaceStats,
+      recentlyVisited
+    ] = await Promise.all([
+      calculateQuickStats(databaseMap, userId),
+      params.includeActivity
+        ? getRecentActivityFeed(databaseMap, userId, params.activityLimit || 10)
+        : [],
+      getUpcomingTasks(databaseMap, userId, params.upcomingTasksLimit || 5),
+      getRecentNotes(databaseMap, userId, params.recentNotesLimit || 5),
+      getGoalProgress(databaseMap, userId),
+      getHabitStreaks(databaseMap, userId),
+      getFinanceSummary(databaseMap, userId, params.period || 'month'),
+      getWorkspaceStats(workspaceId, userId),
+      getRecentlyVisited(databaseMap, userId, workspaceId)
+    ]);
+
+    return {
+      quickStats,
+      recentActivity,
+      upcomingTasks,
+      recentNotes,
+      goalProgress,
+      habitStreaks,
+      financeSummary,
+      workspaceStats,
+      recentlyVisited
+    };
+  } catch (error: any) {
+    throw createAppError(`Failed to get dashboard overview: ${error.message}`, 500);
+  }
+};
+
+const calculateQuickStats = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string
+): Promise<IQuickStats> => {
+  const stats: IQuickStats = {
+    totalTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
+    totalNotes: 0,
+    totalGoals: 0,
+    activeHabits: 0,
+    totalProjects: 0,
+    activeProjects: 0,
+    thisWeekExpenses: 0,
+    thisWeekIncome: 0,
+    journalEntriesThisMonth: 0,
+    averageMoodThisWeek: 0
+  };
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+  const now = new Date();
+
+  // Calculate stats for each database type in parallel
+  const statPromises = [
+    // Tasks statistics
+    databaseMap[EDatabaseType.TASKS]
+      ? calculateTaskStats(databaseMap[EDatabaseType.TASKS], now)
+      : Promise.resolve({}),
 
     // Notes statistics
-    if (databaseMap[EDatabaseType.NOTES]) {
-      stats.totalNotes = await RecordModel.countDocuments({
-        databaseId: databaseMap[EDatabaseType.NOTES],
-        isDeleted: { $ne: true }
-      });
-    }
+    databaseMap[EDatabaseType.NOTES]
+      ? calculateNotesStats(databaseMap[EDatabaseType.NOTES])
+      : Promise.resolve({}),
 
     // Goals statistics
-    if (databaseMap[EDatabaseType.GOALS]) {
-      stats.totalGoals = await RecordModel.countDocuments({
-        databaseId: databaseMap[EDatabaseType.GOALS],
-        isDeleted: { $ne: true }
-      });
-    }
+    databaseMap[EDatabaseType.GOALS]
+      ? calculateGoalsStats(databaseMap[EDatabaseType.GOALS])
+      : Promise.resolve({}),
 
     // Habits statistics
-    if (databaseMap[EDatabaseType.HABITS]) {
-      stats.activeHabits = await RecordModel.countDocuments({
-        databaseId: databaseMap[EDatabaseType.HABITS],
-        isDeleted: { $ne: true },
-        isArchived: { $ne: true }
-      });
-    }
+    databaseMap[EDatabaseType.HABITS]
+      ? calculateHabitsStats(databaseMap[EDatabaseType.HABITS])
+      : Promise.resolve({}),
 
     // Projects statistics
-    if (databaseMap[EDatabaseType.PROJECTS]) {
-      const [totalProjects, activeProjects] = await Promise.all([
-        RecordModel.countDocuments({
-          databaseId: databaseMap[EDatabaseType.PROJECTS],
-          isDeleted: { $ne: true }
-        }),
-        RecordModel.countDocuments({
-          databaseId: databaseMap[EDatabaseType.PROJECTS],
-          isDeleted: { $ne: true },
-          'properties.status': { $in: [EStatus.NOT_STARTED, EStatus.IN_PROGRESS] }
-        })
-      ]);
-
-      stats.totalProjects = totalProjects;
-      stats.activeProjects = activeProjects;
-    }
+    databaseMap[EDatabaseType.PROJECTS]
+      ? calculateProjectsStats(databaseMap[EDatabaseType.PROJECTS])
+      : Promise.resolve({}),
 
     // Finance statistics
-    if (databaseMap[EDatabaseType.FINANCE]) {
-      const financeRecords = await RecordModel.find({
-        databaseId: databaseMap[EDatabaseType.FINANCE],
-        isDeleted: { $ne: true },
-        'properties.date': { $gte: oneWeekAgo }
-      }).exec();
-
-      financeRecords.forEach(record => {
-        const amount = getNumberProperty(record.properties, 'amount', 0);
-        const type = getStringProperty(record.properties, 'type');
-
-        if (type === EFinanceType.INCOME) {
-          stats.thisWeekIncome += amount;
-        } else if (type === EFinanceType.EXPENSE) {
-          stats.thisWeekExpenses += amount;
-        }
-      });
-    }
+    databaseMap[EDatabaseType.FINANCE]
+      ? calculateFinanceStats(databaseMap[EDatabaseType.FINANCE], oneWeekAgo)
+      : Promise.resolve({}),
 
     // Journal statistics
-    if (databaseMap[EDatabaseType.JOURNAL]) {
-      stats.journalEntriesThisMonth = await RecordModel.countDocuments({
-        databaseId: databaseMap[EDatabaseType.JOURNAL],
-        isDeleted: { $ne: true },
-        'properties.date': { $gte: oneMonthAgo }
-      });
-    }
+    databaseMap[EDatabaseType.JOURNAL]
+      ? calculateJournalStats(databaseMap[EDatabaseType.JOURNAL], oneMonthAgo)
+      : Promise.resolve({}),
 
     // Mood statistics
-    if (databaseMap[EDatabaseType.MOOD_TRACKER]) {
-      const moodRecords = await RecordModel.find({
-        databaseId: databaseMap[EDatabaseType.MOOD_TRACKER],
-        isDeleted: { $ne: true },
-        'properties.date': { $gte: oneWeekAgo }
-      }).exec();
+    databaseMap[EDatabaseType.MOOD_TRACKER]
+      ? calculateMoodStats(databaseMap[EDatabaseType.MOOD_TRACKER], oneWeekAgo)
+      : Promise.resolve({})
+  ];
 
-      if (moodRecords.length > 0) {
-        const totalMood = moodRecords.reduce((sum, record) => {
-          const moodScale = getNumberProperty(record.properties, 'mood_scale', 0);
-          return sum + moodScale;
-        }, 0);
-        stats.averageMoodThisWeek = totalMood / moodRecords.length;
-      }
-    }
+  const results = await Promise.all(statPromises);
 
-    return stats;
-  }
+  // Merge all results into stats
+  return results.reduce((acc, result) => ({ ...acc, ...result }), stats);
+};
 
-  async getRecentActivityFeed(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string,
-    limit: number
-  ): Promise<IActivityFeedItem[]> {
-    const activities: IActivityFeedItem[] = [];
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const recentRecords = await RecordModel.find({
-      databaseId: { $in: Object.values(databaseMap).filter(id => id !== null) },
+// Helper functions for calculating individual stats
+const calculateTaskStats = async (databaseId: string, now: Date) => {
+  const [totalTasks, completedTasks, overdueTasks] = await Promise.all([
+    RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+    RecordModel.countDocuments({
+      databaseId,
       isDeleted: { $ne: true },
-      createdAt: { $gte: oneWeekAgo }
-    })
-      .sort({ createdAt: -1 })
-      .limit(limit * 2)
-      .exec();
-
-    recentRecords.forEach(record => {
-      const database = Object.entries(databaseMap).find(([type, id]) => id === record.databaseId);
-      if (!database) return;
-
-      const [dbType] = database;
-      const activity = this.recordToActivityItem(record, dbType as EDatabaseType);
-      if (activity) {
-        activities.push(activity);
-      }
-    });
-
-    return activities.slice(0, limit);
-  }
-
-  private recordToActivityItem(record: any, dbType: EDatabaseType): IActivityFeedItem | null {
-    const baseActivity = {
-      id: record.id,
-      entityId: record.id,
-      entityType: dbType,
-      userId: record.createdBy,
-      timestamp: record.createdAt,
-      metadata: {}
-    };
-
-    switch (dbType) {
-      case EDatabaseType.TASKS:
-        return {
-          ...baseActivity,
-          type: 'task_created' as const,
-          title: 'Task Created',
-          description: `Created task: ${record.properties?.name || 'Untitled'}`
-        };
-
-      case EDatabaseType.NOTES:
-        return {
-          ...baseActivity,
-          type: 'note_created' as const,
-          title: 'Note Created',
-          description: `Created note: ${record.properties?.title || 'Untitled'}`
-        };
-
-      case EDatabaseType.GOALS:
-        return {
-          ...baseActivity,
-          type: 'goal_updated' as const,
-          title: 'Goal Updated',
-          description: `Updated goal: ${record.properties?.name || 'Untitled'}`
-        };
-
-      case EDatabaseType.JOURNAL:
-        return {
-          ...baseActivity,
-          type: 'journal_entry' as const,
-          title: 'Journal Entry',
-          description: `Added journal entry for ${record.properties?.date || 'today'}`
-        };
-
-      case EDatabaseType.FINANCE:
-        return {
-          ...baseActivity,
-          type: 'finance_added' as const,
-          title: 'Finance Record',
-          description: `Added ${record.properties?.type || 'transaction'}: $${record.properties?.amount || 0}`
-        };
-
-      default:
-        return null;
-    }
-  }
-
-  async getUpcomingTasks(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string,
-    limit: number
-  ): Promise<IUpcomingTask[]> {
-    if (!databaseMap[EDatabaseType.TASKS]) {
-      return [];
-    }
-
-    const now = new Date();
-    const oneMonthFromNow = new Date();
-    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
-
-    const tasks = await RecordModel.find({
-      databaseId: databaseMap[EDatabaseType.TASKS],
+      'properties.status': EStatus.COMPLETED
+    }),
+    RecordModel.countDocuments({
+      databaseId,
       isDeleted: { $ne: true },
       'properties.status': { $ne: EStatus.COMPLETED },
-      'properties.due_date': {
-        $exists: true,
-        $ne: null,
-        $lte: oneMonthFromNow
-      }
+      'properties.due_date': { $lt: now }
     })
-      .sort({ 'properties.due_date': 1 })
-      .limit(limit)
-      .exec();
+  ]);
 
-    return tasks.map(task => {
-      const dueDateValue = getDateProperty(task.properties, 'due_date');
-      const dueDate = dueDateValue || new Date();
-      const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return { totalTasks, completedTasks, overdueTasks };
+};
 
-      return {
-        id: task.id,
-        name: getStringProperty(task.properties, 'name', 'Untitled Task'),
-        dueDate,
-        priority: getPriorityProperty(task.properties, 'priority', EPriority.MEDIUM),
-        status: getStatusProperty(task.properties, 'status', EStatus.NOT_STARTED),
-        projectName: getStringProperty(task.properties, 'project_name'),
-        projectId: getStringProperty(task.properties, 'project_id'),
-        isOverdue: daysUntilDue < 0,
-        daysUntilDue
-      };
-    });
-  }
+const calculateNotesStats = async (databaseId: string) => ({
+  totalNotes: await RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } })
+});
 
-  async getRecentNotes(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string,
-    limit: number
-  ): Promise<IRecentNote[]> {
-    if (!databaseMap[EDatabaseType.NOTES]) {
-      return [];
-    }
+const calculateGoalsStats = async (databaseId: string) => ({
+  totalGoals: await RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } })
+});
 
-    const notes = await RecordModel.find({
-      databaseId: databaseMap[EDatabaseType.NOTES],
-      isDeleted: { $ne: true }
-    })
-      .sort({ lastEditedAt: -1, updatedAt: -1 })
-      .limit(limit)
-      .exec();
+const calculateHabitsStats = async (databaseId: string) => ({
+  activeHabits: await RecordModel.countDocuments({
+    databaseId,
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true }
+  })
+});
 
-    return notes.map(note => ({
-      id: note.id,
-      title: getStringProperty(note.properties, 'title', 'Untitled Note'),
-      preview: this.extractTextPreview(note.properties?.content || note.content),
-      tags: getStringArrayProperty(note.properties, 'tags', []),
-      lastEditedAt: note.lastEditedAt || note.updatedAt,
-      wordCount: this.calculateWordCount(note.properties?.content || note.content)
-    }));
-  }
-
-  async getGoalProgress(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string
-  ): Promise<IGoalProgress[]> {
-    if (!databaseMap[EDatabaseType.GOALS]) {
-      return [];
-    }
-
-    const goals = await RecordModel.find({
-      databaseId: databaseMap[EDatabaseType.GOALS],
-      isDeleted: { $ne: true }
-    }).exec();
-
-    const goalProgress: IGoalProgress[] = [];
-
-    for (const goal of goals) {
-      // Calculate actual progress based on related tasks
-      const goalId = goal.id;
-      let relatedTasksCount = 0;
-      let completedTasksCount = 0;
-
-      // Find tasks related to this goal
-      if (databaseMap[EDatabaseType.TASKS]) {
-        const relatedTasks = await RecordModel.find({
-          databaseId: databaseMap[EDatabaseType.TASKS],
-          'properties.goal_id': goalId,
-          isDeleted: { $ne: true }
-        }).exec();
-
-        relatedTasksCount = relatedTasks.length;
-        completedTasksCount = relatedTasks.filter(
-          task =>
-            getStatusProperty(task.properties, 'status', EStatus.NOT_STARTED) === EStatus.COMPLETED
-        ).length;
-      }
-
-      const progressPercentage =
-        relatedTasksCount > 0 ? (completedTasksCount / relatedTasksCount) * 100 : 0;
-
-      const deadline = getDateProperty(goal.properties, 'deadline') || undefined;
-      const status = getStatusProperty(goal.properties, 'status', EStatus.NOT_STARTED);
-      const isOverdue = deadline ? deadline < new Date() && status !== EStatus.COMPLETED : false;
-
-      goalProgress.push({
-        id: goal.id,
-        name: getStringProperty(goal.properties, 'name', 'Untitled Goal'),
-        status,
-        deadline,
-        progressPercentage,
-        relatedTasksCount,
-        completedTasksCount,
-        isOverdue
-      });
-    }
-
-    return goalProgress;
-  }
-
-  async getHabitStreaks(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string
-  ): Promise<IHabitStreak[]> {
-    if (!databaseMap[EDatabaseType.HABITS]) {
-      return [];
-    }
-
-    const habits = await RecordModel.find({
-      databaseId: databaseMap[EDatabaseType.HABITS],
+const calculateProjectsStats = async (databaseId: string) => {
+  const [totalProjects, activeProjects] = await Promise.all([
+    RecordModel.countDocuments({ databaseId, isDeleted: { $ne: true } }),
+    RecordModel.countDocuments({
+      databaseId,
       isDeleted: { $ne: true },
-      isArchived: { $ne: true }
-    }).exec();
+      'properties.status': { $in: [EStatus.NOT_STARTED, EStatus.IN_PROGRESS] }
+    })
+  ]);
 
-    return habits.map(habit => {
-      const frequency = getStringProperty(habit.properties, 'frequency', 'daily');
-      const lastCompleted = getDateProperty(habit.properties, 'last_completed');
-      const createdAt = habit.createdAt;
+  return { totalProjects, activeProjects };
+};
 
-      // Calculate completion rate based on frequency and history
-      let completionRate = 0;
-      if (lastCompleted && createdAt) {
-        const daysSinceCreated = Math.floor(
-          (new Date().getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const daysSinceLastCompleted = Math.floor(
-          (new Date().getTime() - lastCompleted.getTime()) / (1000 * 60 * 60 * 24)
-        );
+const calculateFinanceStats = async (databaseId: string, oneWeekAgo: Date) => {
+  const financeRecords = await RecordModel.find({
+    databaseId,
+    isDeleted: { $ne: true },
+    'properties.date': { $gte: oneWeekAgo }
+  }).exec();
 
-        // Simple calculation based on frequency
-        let expectedCompletions = 0;
-        switch (frequency) {
-          case 'daily':
-            expectedCompletions = daysSinceCreated;
-            break;
-          case 'weekly':
-            expectedCompletions = Math.floor(daysSinceCreated / 7);
-            break;
-          case 'monthly':
-            expectedCompletions = Math.floor(daysSinceCreated / 30);
-            break;
-          default:
-            expectedCompletions = daysSinceCreated;
-        }
+  const stats = { thisWeekExpenses: 0, thisWeekIncome: 0 };
 
-        // Get actual completions from habit history (simplified)
-        const currentStreak = getNumberProperty(habit.properties, 'current_streak', 0);
-        const bestStreak = getNumberProperty(habit.properties, 'best_streak', 0);
-        const estimatedCompletions = Math.max(currentStreak, bestStreak * 0.7); // Rough estimate
+  financeRecords.forEach(record => {
+    const amount = getNumberProperty(record.properties, 'amount', 0);
+    const type = getStringProperty(record.properties, 'type');
 
-        completionRate =
-          expectedCompletions > 0
-            ? Math.min(100, (estimatedCompletions / expectedCompletions) * 100)
-            : 0;
-      }
+    if (type === EFinanceType.INCOME) {
+      stats.thisWeekIncome += amount;
+    } else if (type === EFinanceType.EXPENSE) {
+      stats.thisWeekExpenses += amount;
+    }
+  });
 
-      return {
-        id: habit.id,
-        name: getStringProperty(habit.properties, 'name', 'Untitled Habit'),
-        currentStreak: getNumberProperty(habit.properties, 'current_streak', 0),
-        bestStreak: getNumberProperty(habit.properties, 'best_streak', 0),
-        frequency,
-        lastCompleted: lastCompleted || undefined,
-        completionRate: Math.round(completionRate)
-      };
-    });
+  return stats;
+};
+
+const calculateJournalStats = async (databaseId: string, oneMonthAgo: Date) => ({
+  journalEntriesThisMonth: await RecordModel.countDocuments({
+    databaseId,
+    isDeleted: { $ne: true },
+    'properties.date': { $gte: oneMonthAgo }
+  })
+});
+
+const calculateMoodStats = async (databaseId: string, oneWeekAgo: Date) => {
+  const moodRecords = await RecordModel.find({
+    databaseId,
+    isDeleted: { $ne: true },
+    'properties.date': { $gte: oneWeekAgo }
+  }).exec();
+
+  if (moodRecords.length > 0) {
+    const totalMood = moodRecords.reduce((sum, record) => {
+      const moodScale = getNumberProperty(record.properties, 'mood_scale', 0);
+      return sum + moodScale;
+    }, 0);
+    return { averageMoodThisWeek: totalMood / moodRecords.length };
   }
 
-  async getFinanceSummary(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string,
-    period: string
-  ): Promise<IFinanceSummary> {
-    const summary: IFinanceSummary = {
-      thisMonthIncome: 0,
-      thisMonthExpenses: 0,
-      thisMonthNet: 0,
-      lastMonthIncome: 0,
-      lastMonthExpenses: 0,
-      lastMonthNet: 0,
-      incomeChange: 0,
-      expenseChange: 0,
-      topExpenseCategories: [],
-      recentTransactions: []
-    };
+  return {};
+};
 
-    if (!databaseMap[EDatabaseType.FINANCE]) {
-      return summary;
+const getRecentActivityFeed = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string,
+  limit: number
+): Promise<IActivityFeedItem[]> => {
+  const activities: IActivityFeedItem[] = [];
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const recentRecords = await RecordModel.find({
+    databaseId: { $in: Object.values(databaseMap).filter(id => id !== null) },
+    isDeleted: { $ne: true },
+    createdAt: { $gte: oneWeekAgo }
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit * 2)
+    .exec();
+
+  recentRecords.forEach(record => {
+    const dbType = Object.keys(databaseMap).find(
+      key => databaseMap[key as EDatabaseType] === record.databaseId
+    ) as EDatabaseType;
+    if (!dbType) return;
+
+    const activity = recordToActivityItem(record, dbType);
+    if (activity) {
+      activities.push(activity);
     }
+  });
 
-    try {
-      // Get finance records
-      const financeRecords = await RecordModel.find({
-        databaseId: databaseMap[EDatabaseType.FINANCE],
+  return activities.slice(0, limit);
+};
+
+const recordToActivityItem = (record: any, dbType: EDatabaseType): IActivityFeedItem | null => {
+  const baseActivity = {
+    id: record.id,
+    entityId: record.id,
+    entityType: dbType,
+    userId: record.createdBy,
+    timestamp: record.createdAt,
+    metadata: {}
+  };
+
+  const activityTypeMap = {
+    [EDatabaseType.TASKS]: {
+      type: 'task_created' as const,
+      title: 'Task Created',
+      description: `Created task: ${record.properties?.name || 'Untitled'}`
+    },
+    [EDatabaseType.NOTES]: {
+      type: 'note_created' as const,
+      title: 'Note Created',
+      description: `Created note: ${record.properties?.title || 'Untitled'}`
+    },
+    [EDatabaseType.GOALS]: {
+      type: 'goal_updated' as const,
+      title: 'Goal Updated',
+      description: `Updated goal: ${record.properties?.name || 'Untitled'}`
+    },
+    [EDatabaseType.JOURNAL]: {
+      type: 'journal_entry' as const,
+      title: 'Journal Entry',
+      description: `Added journal entry for ${record.properties?.date || 'today'}`
+    },
+    [EDatabaseType.FINANCE]: {
+      type: 'finance_added' as const,
+      title: 'Finance Record',
+      description: `Added ${record.properties?.type || 'transaction'}: $${record.properties?.amount || 0}`
+    }
+  };
+
+  const activityConfig = activityTypeMap[dbType];
+  return activityConfig ? { ...baseActivity, ...activityConfig } : null;
+};
+
+const getUpcomingTasks = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string,
+  limit: number
+): Promise<IUpcomingTask[]> => {
+  if (!databaseMap[EDatabaseType.TASKS]) {
+    return [];
+  }
+
+  const now = new Date();
+  const oneMonthFromNow = new Date();
+  oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+  const tasks = await RecordModel.find({
+    databaseId: databaseMap[EDatabaseType.TASKS],
+    isDeleted: { $ne: true },
+    'properties.status': { $ne: EStatus.COMPLETED },
+    'properties.due_date': {
+      $exists: true,
+      $ne: null,
+      $lte: oneMonthFromNow
+    }
+  })
+    .sort({ 'properties.due_date': 1 })
+    .limit(limit)
+    .exec();
+
+  return tasks.map(task => {
+    const dueDateValue = getDateProperty(task.properties, 'due_date');
+    const dueDate = dueDateValue || new Date();
+    const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    return {
+      id: task.id,
+      name: getStringProperty(task.properties, 'name', 'Untitled Task'),
+      dueDate,
+      priority: getPriorityProperty(task.properties, 'priority', EPriority.MEDIUM),
+      status: getStatusProperty(task.properties, 'status', EStatus.NOT_STARTED),
+      projectName: getStringProperty(task.properties, 'project_name'),
+      projectId: getStringProperty(task.properties, 'project_id'),
+      isOverdue: daysUntilDue < 0,
+      daysUntilDue
+    };
+  });
+};
+
+const getRecentNotes = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string,
+  limit: number
+): Promise<IRecentNote[]> => {
+  if (!databaseMap[EDatabaseType.NOTES]) {
+    return [];
+  }
+
+  const notes = await RecordModel.find({
+    databaseId: databaseMap[EDatabaseType.NOTES],
+    isDeleted: { $ne: true }
+  })
+    .sort({ lastEditedAt: -1, updatedAt: -1 })
+    .limit(limit)
+    .exec();
+
+  return notes.map(note => ({
+    id: note.id,
+    title: getStringProperty(note.properties, 'title', 'Untitled Note'),
+    preview: extractTextPreview(note.properties?.content || note.content),
+    tags: getStringArrayProperty(note.properties, 'tags', []),
+    lastEditedAt: note.lastEditedAt || note.updatedAt,
+    wordCount: calculateWordCount(note.properties?.content || note.content)
+  }));
+};
+
+const getGoalProgress = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string
+): Promise<IGoalProgress[]> => {
+  if (!databaseMap[EDatabaseType.GOALS]) {
+    return [];
+  }
+
+  const goals = await RecordModel.find({
+    databaseId: databaseMap[EDatabaseType.GOALS],
+    isDeleted: { $ne: true }
+  }).exec();
+
+  const goalProgressPromises = goals.map(async goal => {
+    const goalId = goal.id;
+    let relatedTasksCount = 0;
+    let completedTasksCount = 0;
+
+    if (databaseMap[EDatabaseType.TASKS]) {
+      const relatedTasks = await RecordModel.find({
+        databaseId: databaseMap[EDatabaseType.TASKS],
+        'properties.goal_id': goalId,
         isDeleted: { $ne: true }
       }).exec();
 
-      let totalIncome = 0;
-      let totalExpenses = 0;
-      let monthlyIncome = 0;
-      let monthlyExpenses = 0;
-
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-
-      for (const record of financeRecords) {
-        const amount = getNumberProperty(record.properties, 'amount', 0);
-        const type = getStringProperty(record.properties, 'type', 'expense');
-        const date = getDateProperty(record.properties, 'date') || record.createdAt;
-
-        if (type === 'income') {
-          totalIncome += amount;
-          if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-            monthlyIncome += amount;
-          }
-        } else {
-          totalExpenses += amount;
-          if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-            monthlyExpenses += amount;
-          }
-        }
-      }
-
-      summary.thisMonthIncome = monthlyIncome;
-      summary.thisMonthExpenses = monthlyExpenses;
-      summary.thisMonthNet = monthlyIncome - monthlyExpenses;
-    } catch (error) {
-      console.error('Error calculating finance summary:', error);
+      relatedTasksCount = relatedTasks.length;
+      completedTasksCount = relatedTasks.filter(
+        task =>
+          getStatusProperty(task.properties, 'status', EStatus.NOT_STARTED) === EStatus.COMPLETED
+      ).length;
     }
 
+    const progressPercentage =
+      relatedTasksCount > 0 ? (completedTasksCount / relatedTasksCount) * 100 : 0;
+    const deadline = getDateProperty(goal.properties, 'deadline') || undefined;
+    const status = getStatusProperty(goal.properties, 'status', EStatus.NOT_STARTED);
+    const isOverdue = deadline ? deadline < new Date() && status !== EStatus.COMPLETED : false;
+
+    return {
+      id: goal.id,
+      name: getStringProperty(goal.properties, 'name', 'Untitled Goal'),
+      status,
+      deadline,
+      progressPercentage,
+      relatedTasksCount,
+      completedTasksCount,
+      isOverdue
+    };
+  });
+
+  return Promise.all(goalProgressPromises);
+};
+
+const getHabitStreaks = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string
+): Promise<IHabitStreak[]> => {
+  if (!databaseMap[EDatabaseType.HABITS]) {
+    return [];
+  }
+
+  const habits = await RecordModel.find({
+    databaseId: databaseMap[EDatabaseType.HABITS],
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true }
+  }).exec();
+
+  return habits.map(habit => {
+    const frequency = getStringProperty(habit.properties, 'frequency', 'daily');
+    const lastCompleted = getDateProperty(habit.properties, 'last_completed');
+    const createdAt = habit.createdAt;
+
+    let completionRate = 0;
+    if (lastCompleted && createdAt) {
+      const daysSinceCreated = Math.floor(
+        (new Date().getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      const expectedCompletions = calculateExpectedCompletions(frequency, daysSinceCreated);
+      const estimatedCompletions = calculateEstimatedCompletions(habit.properties);
+
+      completionRate =
+        expectedCompletions > 0
+          ? Math.min(100, (estimatedCompletions / expectedCompletions) * 100)
+          : 0;
+    }
+
+    return {
+      id: habit.id,
+      name: getStringProperty(habit.properties, 'name', 'Untitled Habit'),
+      currentStreak: getNumberProperty(habit.properties, 'current_streak', 0),
+      bestStreak: getNumberProperty(habit.properties, 'best_streak', 0),
+      frequency,
+      lastCompleted: lastCompleted || undefined,
+      completionRate: Math.round(completionRate)
+    };
+  });
+};
+
+// Helper functions for habit calculations
+const calculateExpectedCompletions = (frequency: string, daysSinceCreated: number): number => {
+  switch (frequency) {
+    case 'daily':
+      return daysSinceCreated;
+    case 'weekly':
+      return Math.floor(daysSinceCreated / 7);
+    case 'monthly':
+      return Math.floor(daysSinceCreated / 30);
+    default:
+      return daysSinceCreated;
+  }
+};
+
+const calculateEstimatedCompletions = (properties: any): number => {
+  const currentStreak = getNumberProperty(properties, 'current_streak', 0);
+  const bestStreak = getNumberProperty(properties, 'best_streak', 0);
+  return Math.max(currentStreak, bestStreak * 0.7);
+};
+
+const getFinanceSummary = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string,
+  period: string
+): Promise<IFinanceSummary> => {
+  const summary: IFinanceSummary = {
+    thisMonthIncome: 0,
+    thisMonthExpenses: 0,
+    thisMonthNet: 0,
+    lastMonthIncome: 0,
+    lastMonthExpenses: 0,
+    lastMonthNet: 0,
+    incomeChange: 0,
+    expenseChange: 0,
+    topExpenseCategories: [],
+    recentTransactions: []
+  };
+
+  if (!databaseMap[EDatabaseType.FINANCE]) {
     return summary;
   }
 
-  async getRecentlyVisited(
-    databaseMap: Record<EDatabaseType, string | null>,
-    userId: string,
-    limit: number = 8
-  ): Promise<IRecentlyVisitedItem[]> {
-    try {
-      // Import activity service
-      const { getActivities } = await import('@/modules/system/services/activity.service');
-
-      // Import activity types
-      const { EActivityType } = await import('@/modules/system/types/activity.types');
-
-      // Get recent page visits for this user
-      const activitiesResponse = await getActivities({
-        userId,
-        type: EActivityType.PAGE_VISITED,
-        limit: limit * 2 // Get more to deduplicate
-      });
-
-      const pageVisits = activitiesResponse.activities;
-
-      // Define page metadata
-      const pageMetadata: Record<
-        string,
-        { name: string; preview: string; icon: string; color: string }
-      > = {
-        '/home': {
-          name: 'Home',
-          preview: 'Your personal dashboard',
-          icon: '🏠',
-          color: '#6366f1'
-        },
-        '/notes': {
-          name: 'Notes',
-          preview: 'View and manage your knowledge base',
-          icon: '📝',
-          color: '#3b82f6'
-        },
-        '/tasks': {
-          name: 'Tasks',
-          preview: 'Track and manage your tasks',
-          icon: '✅',
-          color: '#10b981'
-        },
-        '/goals': {
-          name: 'Goals',
-          preview: 'Set and track your objectives',
-          icon: '🎯',
-          color: '#8b5cf6'
-        },
-        '/projects': {
-          name: 'Projects',
-          preview: 'Manage your projects and initiatives',
-          icon: '📁',
-          color: '#f59e0b'
-        },
-        '/habits': {
-          name: 'Habits',
-          preview: 'Build and maintain good habits',
-          icon: '🔥',
-          color: '#ef4444'
-        },
-        '/finance': {
-          name: 'Finance',
-          preview: 'Track income and expenses',
-          icon: '💰',
-          color: '#059669'
-        }
-      };
-
-      // Group by page and get most recent visit for each
-      const recentPages = new Map<string, Date>();
-
-      pageVisits.forEach(activity => {
-        const page = activity.metadata?.page as string;
-        if (page && pageMetadata[page]) {
-          if (!recentPages.has(page) || activity.timestamp > recentPages.get(page)!) {
-            recentPages.set(page, activity.timestamp);
-          }
-        }
-      });
-
-      // Convert to IRecentlyVisitedItem array
-      const recentlyVisited: IRecentlyVisitedItem[] = Array.from(recentPages.entries())
-        .map(([page, lastVisitedAt]) => ({
-          id: page.replace('/', ''),
-          name: pageMetadata[page].name,
-          type: 'page' as const,
-          preview: pageMetadata[page].preview,
-          route: page,
-          lastVisitedAt,
-          moduleType: page.replace('/', ''),
-          icon: pageMetadata[page].icon,
-          color: pageMetadata[page].color
-        }))
-        .sort((a, b) => b.lastVisitedAt.getTime() - a.lastVisitedAt.getTime())
-        .slice(0, limit);
-
-      // If no recent visits, fall back to available modules
-      if (recentlyVisited.length === 0) {
-        const availablePages: IRecentlyVisitedItem[] = [];
-        const now = new Date();
-
-        // Define available pages based on existing databases
-        const pageDefinitions = [
-          {
-            id: 'home',
-            name: 'Home',
-            preview: 'Your personal dashboard',
-            route: '/home',
-            moduleType: 'home',
-            icon: '🏠',
-            color: '#6366f1',
-            databaseType: null // Home is always available
-          },
-          {
-            id: 'notes',
-            name: 'Notes',
-            preview: 'View and manage your knowledge base',
-            route: '/notes',
-            moduleType: 'notes',
-            icon: '📝',
-            color: '#3b82f6',
-            databaseType: EDatabaseType.NOTES
-          },
-          {
-            id: 'tasks',
-            name: 'Tasks',
-            preview: 'Track and manage your tasks',
-            route: '/tasks',
-            moduleType: 'tasks',
-            icon: '✅',
-            color: '#10b981',
-            databaseType: EDatabaseType.TASKS
-          },
-          {
-            id: 'goals',
-            name: 'Goals',
-            preview: 'Set and track your objectives',
-            route: '/goals',
-            moduleType: 'goals',
-            icon: '🎯',
-            color: '#8b5cf6',
-            databaseType: EDatabaseType.GOALS
-          },
-          {
-            id: 'projects',
-            name: 'Projects',
-            preview: 'Manage your projects and initiatives',
-            route: '/projects',
-            moduleType: 'projects',
-            icon: '📁',
-            color: '#f59e0b',
-            databaseType: EDatabaseType.PROJECTS
-          },
-          {
-            id: 'habits',
-            name: 'Habits',
-            preview: 'Build and maintain good habits',
-            route: '/habits',
-            moduleType: 'habits',
-            icon: '🔥',
-            color: '#ef4444',
-            databaseType: EDatabaseType.HABITS
-          },
-          {
-            id: 'finance',
-            name: 'Finance',
-            preview: 'Track income and expenses',
-            route: '/finance',
-            moduleType: 'finance',
-            icon: '💰',
-            color: '#059669',
-            databaseType: EDatabaseType.FINANCE
-          }
-        ];
-
-        // Filter pages based on available databases
-        for (const page of pageDefinitions) {
-          if (!page.databaseType || databaseMap[page.databaseType]) {
-            availablePages.push({
-              id: page.id,
-              name: page.name,
-              type: 'page' as const,
-              preview: page.preview,
-              route: page.route,
-              lastVisitedAt: now,
-              moduleType: page.moduleType,
-              icon: page.icon,
-              color: page.color
-            });
-          }
-        }
-
-        return availablePages.slice(0, limit);
-      }
-
-      return recentlyVisited;
-    } catch (error) {
-      console.error('Error getting recently visited pages:', error);
-      // Fallback to available modules if activity service fails
-      return this.getAvailableModules(databaseMap, limit);
-    }
-  }
-
-  private async getAvailableModules(
-    databaseMap: Record<EDatabaseType, string | null>,
-    limit: number
-  ): Promise<IRecentlyVisitedItem[]> {
-    const availablePages: IRecentlyVisitedItem[] = [];
-    const now = new Date();
-
-    // Define available pages based on existing databases
-    const pageDefinitions = [
-      {
-        id: 'home',
-        name: 'Home',
-        preview: 'Your personal dashboard',
-        route: '/home',
-        moduleType: 'home',
-        icon: '🏠',
-        color: '#6366f1',
-        databaseType: null // Home is always available
-      },
-      {
-        id: 'notes',
-        name: 'Notes',
-        preview: 'View and manage your knowledge base',
-        route: '/notes',
-        moduleType: 'notes',
-        icon: '📝',
-        color: '#3b82f6',
-        databaseType: EDatabaseType.NOTES
-      },
-      {
-        id: 'tasks',
-        name: 'Tasks',
-        preview: 'Track and manage your tasks',
-        route: '/tasks',
-        moduleType: 'tasks',
-        icon: '✅',
-        color: '#10b981',
-        databaseType: EDatabaseType.TASKS
-      },
-      {
-        id: 'goals',
-        name: 'Goals',
-        preview: 'Set and track your objectives',
-        route: '/goals',
-        moduleType: 'goals',
-        icon: '🎯',
-        color: '#8b5cf6',
-        databaseType: EDatabaseType.GOALS
-      },
-      {
-        id: 'projects',
-        name: 'Projects',
-        preview: 'Manage your projects and initiatives',
-        route: '/projects',
-        moduleType: 'projects',
-        icon: '📁',
-        color: '#f59e0b',
-        databaseType: EDatabaseType.PROJECTS
-      },
-      {
-        id: 'habits',
-        name: 'Habits',
-        preview: 'Build and maintain good habits',
-        route: '/habits',
-        moduleType: 'habits',
-        icon: '🔥',
-        color: '#ef4444',
-        databaseType: EDatabaseType.HABITS
-      },
-      {
-        id: 'finance',
-        name: 'Finance',
-        preview: 'Track income and expenses',
-        route: '/finance',
-        moduleType: 'finance',
-        icon: '💰',
-        color: '#059669',
-        databaseType: EDatabaseType.FINANCE
-      }
-    ];
-
-    // Filter pages based on available databases
-    for (const page of pageDefinitions) {
-      if (!page.databaseType || databaseMap[page.databaseType]) {
-        availablePages.push({
-          id: page.id,
-          name: page.name,
-          type: 'page' as const,
-          preview: page.preview,
-          route: page.route,
-          lastVisitedAt: now,
-          moduleType: page.moduleType,
-          icon: page.icon,
-          color: page.color
-        });
-      }
-    }
-
-    return availablePages.slice(0, limit);
-  }
-
-  private getItemName(record: any, type: string): string {
-    switch (type) {
-      case 'note':
-        return getStringProperty(record.properties, 'title', 'Untitled Note');
-      case 'task':
-        return getStringProperty(record.properties, 'name', 'Untitled Task');
-      case 'goal':
-        return getStringProperty(record.properties, 'name', 'Untitled Goal');
-      case 'project':
-        return getStringProperty(record.properties, 'name', 'Untitled Project');
-      case 'habit':
-        return getStringProperty(record.properties, 'name', 'Untitled Habit');
-      default:
-        return 'Untitled Item';
-    }
-  }
-
-  private getItemPreview(record: any, type: string): string | undefined {
-    switch (type) {
-      case 'note':
-        return this.extractTextPreview(record.properties?.content || record.content);
-      case 'task':
-        return getStringProperty(record.properties, 'description');
-      case 'goal':
-        return getStringProperty(record.properties, 'description');
-      default:
-        return undefined;
-    }
-  }
-
-  private getItemIcon(type: string): string {
-    switch (type) {
-      case 'note':
-        return '📝';
-      case 'task':
-        return '✅';
-      case 'goal':
-        return '🎯';
-      case 'project':
-        return '📁';
-      case 'habit':
-        return '🔥';
-      default:
-        return '📄';
-    }
-  }
-
-  private getItemColor(type: string): string {
-    switch (type) {
-      case 'note':
-        return '#3b82f6';
-      case 'task':
-        return '#10b981';
-      case 'goal':
-        return '#8b5cf6';
-      case 'project':
-        return '#f59e0b';
-      case 'habit':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  }
-
-  async getWorkspaceStats(
-    workspaceId: string | undefined,
-    userId: string
-  ): Promise<IWorkspaceStats> {
-    const query: any = {
-      isDeleted: { $ne: true },
-      $or: [{ createdBy: userId }, { isPublic: true }]
-    };
-
-    if (workspaceId) {
-      query.workspaceId = workspaceId;
-    }
-
-    const [databases, totalRecords] = await Promise.all([
-      DatabaseModel.find(query).exec(),
-      RecordModel.countDocuments({
-        databaseId: { $in: await DatabaseModel.find(query).distinct('_id') },
-        isDeleted: { $ne: true }
-      })
-    ]);
-
-    const totalViews = databases.reduce((sum, db) => sum + (db.views?.length || 0), 0);
-
-    // Calculate storage usage (rough estimate based on record count and content)
-    let storageUsed = 0;
-    for (const db of databases) {
-      // Estimate: each record ~1KB base + content size
-      const recordSize = 1024; // 1KB base per record
-      storageUsed += db.recordCount * recordSize;
-    }
-
-    // Get active members (users who have accessed databases recently)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const activeMembers = await DatabaseModel.distinct('updatedBy', {
-      workspaceId: databases[0]?.workspaceId,
-      lastActivityAt: { $gte: thirtyDaysAgo }
+  try {
+    const financeRecords = await RecordModel.find({
+      databaseId: databaseMap[EDatabaseType.FINANCE],
+      isDeleted: { $ne: true }
     }).exec();
 
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    let monthlyIncome = 0;
+    let monthlyExpenses = 0;
+
+    for (const record of financeRecords) {
+      const amount = getNumberProperty(record.properties, 'amount', 0);
+      const type = getStringProperty(record.properties, 'type', 'expense');
+      const date = getDateProperty(record.properties, 'date') || record.createdAt;
+
+      if (type === 'income') {
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          monthlyIncome += amount;
+        }
+      } else {
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          monthlyExpenses += amount;
+        }
+      }
+    }
+
+    summary.thisMonthIncome = monthlyIncome;
+    summary.thisMonthExpenses = monthlyExpenses;
+    summary.thisMonthNet = monthlyIncome - monthlyExpenses;
+  } catch (error) {
+    console.error('Error calculating finance summary:', error);
+  }
+
+  return summary;
+};
+
+const getRecentlyVisited = async (
+  databaseMap: Record<EDatabaseType, string | null>,
+  userId: string,
+  workspaceId: string,
+  limit: number = 15
+): Promise<IRecentlyVisitedItem[]> => {
+  try {
+    const { getActivities } = await import('@/modules/system/services/activity.service');
+    const { EActivityType } = await import('@/modules/system/types/activity.types');
+
+    const activitiesResponse = await getActivities(
+      { userId, workspaceId, type: EActivityType.PAGE_VISITED, limit: limit * 2 },
+      userId
+    );
+
+    const pageVisits = activitiesResponse.activities;
+    const pageMetadata = createPageMetadata();
+
+    const recentPages = processPageVisits(pageVisits, pageMetadata);
+    const recentlyVisited = await createRecentlyVisitedItems(recentPages, limit);
+    console.log('## recentlyVisited', recentlyVisited);
+
+    return recentlyVisited.length > 0 ? recentlyVisited : getAvailableModules(databaseMap, limit);
+  } catch (error) {
+    console.error('Error getting recently visited pages:', error);
+    return getAvailableModules(databaseMap, limit);
+  }
+};
+
+// Helper functions for recently visited
+const createPageMetadata = () => ({
+  '/app': { name: 'Home', preview: 'Your personal dashboard', icon: '🏠', color: '#6366f1' },
+  '/app/second-brain': {
+    name: 'Second Brain',
+    preview: 'Organize your knowledge and thoughts',
+    icon: '🧠',
+    color: '#6366f1'
+  },
+  '/app/databases': {
+    name: 'Databases',
+    preview: 'Manage your data tables and records',
+    icon: '🗄️',
+    color: '#8b5cf6'
+  },
+  '/app/ai-assistant': {
+    name: 'AI Assistant',
+    preview: 'Get help with AI-powered features',
+    icon: '🤖',
+    color: '#f59e0b'
+  },
+  '/app/notes': {
+    name: 'Notes',
+    preview: 'View and manage your knowledge base',
+    icon: '📝',
+    color: '#3b82f6'
+  },
+  '/app/ideas': {
+    name: 'Ideas',
+    preview: 'Capture and organize your ideas',
+    icon: '💡',
+    color: '#3b82f6'
+  },
+  '/app/capture': {
+    name: 'Quick Capture',
+    preview: 'Quickly capture thoughts and notes',
+    icon: '⚡',
+    color: '#3b82f6'
+  },
+  '/app/collections': {
+    name: 'Collections',
+    preview: 'Organize your notes into collections',
+    icon: '📚',
+    color: '#3b82f6'
+  },
+  '/app/favorites': {
+    name: 'Favorites',
+    preview: 'Your favorite notes and content',
+    icon: '⭐',
+    color: '#3b82f6'
+  },
+  '/app/recent': {
+    name: 'Recent Notes',
+    preview: 'Recently viewed and edited notes',
+    icon: '🕒',
+    color: '#3b82f6'
+  },
+  '/app/templates': {
+    name: 'Templates',
+    preview: 'Use templates for consistent note-taking',
+    icon: '📋',
+    color: '#3b82f6'
+  },
+  '/app/search': {
+    name: 'Search',
+    preview: 'Search through all your content',
+    icon: '🔍',
+    color: '#6b7280'
+  },
+  '/app/calendar': {
+    name: 'Calendar',
+    preview: 'Manage your schedule and events',
+    icon: '📅',
+    color: '#10b981'
+  },
+  '/app/tasks': {
+    name: 'Tasks',
+    preview: 'Track and manage your tasks',
+    icon: '✅',
+    color: '#10b981'
+  },
+  '/app/tags': {
+    name: 'Tags',
+    preview: 'Manage and organize your tags',
+    icon: '🏷️',
+    color: '#f59e0b'
+  },
+  '/app/archive': {
+    name: 'Archive',
+    preview: 'Access archived notes and content',
+    icon: '📦',
+    color: '#6b7280'
+  },
+  '/app/goals': {
+    name: 'Goals',
+    preview: 'Set and track your objectives',
+    icon: '🎯',
+    color: '#8b5cf6'
+  },
+  '/app/projects': {
+    name: 'Projects',
+    preview: 'Manage your projects and initiatives',
+    icon: '📁',
+    color: '#f59e0b'
+  },
+  '/app/habits': {
+    name: 'Habits',
+    preview: 'Build and maintain good habits',
+    icon: '🔥',
+    color: '#ef4444'
+  },
+  '/app/finance': {
+    name: 'Finance',
+    preview: 'Track income and expenses',
+    icon: '💰',
+    color: '#059669'
+  },
+  '/app/settings': {
+    name: 'Settings',
+    preview: 'Configure your account and preferences',
+    icon: '⚙️',
+    color: '#6b7280'
+  },
+  '/app/settings/profile': {
+    name: 'Profile Settings',
+    preview: 'Manage your profile information',
+    icon: '👤',
+    color: '#6b7280'
+  },
+  '/app/settings/account': {
+    name: 'Account Settings',
+    preview: 'Manage your account details',
+    icon: '🔐',
+    color: '#6b7280'
+  },
+  '/app/settings/security': {
+    name: 'Security Settings',
+    preview: 'Configure security and privacy',
+    icon: '🛡️',
+    color: '#6b7280'
+  },
+  '/app/settings/billing': {
+    name: 'Billing Settings',
+    preview: 'Manage your subscription and billing',
+    icon: '💳',
+    color: '#6b7280'
+  },
+  '/app/settings/appearance': {
+    name: 'Appearance Settings',
+    preview: 'Customize the look and feel',
+    icon: '🎨',
+    color: '#6b7280'
+  },
+  '/app/settings/display': {
+    name: 'Display Settings',
+    preview: 'Configure display preferences',
+    icon: '🖥️',
+    color: '#6b7280'
+  },
+  '/app/settings/notifications': {
+    name: 'Notification Settings',
+    preview: 'Manage notification preferences',
+    icon: '🔔',
+    color: '#6b7280'
+  },
+  '/app/settings/workspace': {
+    name: 'Workspace Settings',
+    preview: 'Configure workspace settings',
+    icon: '🏢',
+    color: '#6b7280'
+  },
+  '/app/data-tables': {
+    name: 'Data Tables',
+    preview: 'View and manage your data tables',
+    icon: '📊',
+    color: '#6366f1'
+  },
+  '/app/users': {
+    name: 'Users',
+    preview: 'Manage user accounts and permissions',
+    icon: '👥',
+    color: '#10b981'
+  },
+  '/app/notifications': {
+    name: 'Notifications',
+    preview: 'View your notifications and alerts',
+    icon: '🔔',
+    color: '#f59e0b'
+  }
+});
+
+const processPageVisits = (pageVisits: any[], pageMetadata: any) => {
+  const recentPages = new Map<string, Date>();
+
+  pageVisits.forEach(activity => {
+    const page = activity.metadata?.page as string;
+    if (page) {
+      const databaseMatch = page.match(/^\/app\/databases\/([^/]+)$/);
+      if (databaseMatch) {
+        const databaseId = databaseMatch[1];
+        const dynamicRoute = `/app/databases/${databaseId}`;
+        updateRecentPage(recentPages, dynamicRoute, activity.timestamp);
+      } else {
+        const matchedRoute = findMatchingRoute(page, pageMetadata);
+        if (matchedRoute) {
+          updateRecentPage(recentPages, matchedRoute, activity.timestamp);
+        }
+      }
+    }
+  });
+
+  return recentPages;
+};
+
+const findMatchingRoute = (page: string, pageMetadata: any): string | null => {
+  for (const route of Object.keys(pageMetadata)) {
+    if (page === route || page.startsWith(route + '/')) {
+      return route;
+    }
+  }
+  return null;
+};
+
+const updateRecentPage = (recentPages: Map<string, Date>, route: string, timestamp: Date) => {
+  if (!recentPages.has(route) || timestamp > recentPages.get(route)!) {
+    recentPages.set(route, timestamp);
+  }
+};
+
+const createRecentlyVisitedItems = async (
+  recentPages: Map<string, Date>,
+  limit: number
+): Promise<IRecentlyVisitedItem[]> => {
+  const promises = Array.from(recentPages.entries()).map(([page, lastVisitedAt]) =>
+    createRecentlyVisitedItem(page, lastVisitedAt)
+  );
+
+  const items = await Promise.all(promises);
+  return items
+    .sort((a, b) => b.lastVisitedAt.getTime() - a.lastVisitedAt.getTime())
+    .slice(0, limit);
+};
+
+const createRecentlyVisitedItem = async (
+  page: string,
+  lastVisitedAt: Date
+): Promise<IRecentlyVisitedItem> => {
+  const databaseMatch = page.match(/^\/app\/databases\/([^/]+)$/);
+  if (databaseMatch) {
+    const databaseId = databaseMatch[1];
+    try {
+      const database = await DatabaseModel.findById(databaseId).exec();
+      if (database) {
+        return {
+          id: `database-${databaseId}`,
+          name: database.name || `Database ${databaseId}`,
+          type: 'page' as const,
+          preview: `View and manage ${database.name || 'this database'}`,
+          route: page,
+          lastVisitedAt,
+          moduleType: 'database',
+          icon: '🗄️',
+          color: '#8b5cf6'
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching database for recently visited:', error);
+    }
     return {
-      totalDatabases: databases.length,
-      totalRecords,
-      totalViews,
-      storageUsed,
-      storageLimit: 1000000000, // 1GB default
-      activeMembers: activeMembers.length || 1,
-      lastActivityAt: databases.reduce(
-        (latest, db) =>
-          db.lastActivityAt && db.lastActivityAt > latest ? db.lastActivityAt : latest,
-        new Date(0)
-      )
+      id: `database-${databaseId}`,
+      name: `Database ${databaseId}`,
+      type: 'page' as const,
+      preview: 'View and manage this database',
+      route: page,
+      lastVisitedAt,
+      moduleType: 'database',
+      icon: '🗄️',
+      color: '#8b5cf6'
     };
   }
 
-  private extractTextPreview(content: any): string {
-    if (typeof content === 'string') {
-      return content.substring(0, 150) + (content.length > 150 ? '...' : '');
-    }
+  const pageMetadata = createPageMetadata();
+  const metadata = pageMetadata[page];
+  return {
+    id: page.replace(/\//g, ''),
+    name: metadata.name,
+    type: 'page' as const,
+    preview: metadata.preview,
+    route: page,
+    lastVisitedAt,
+    moduleType: page.replace(/\//g, ''),
+    icon: metadata.icon,
+    color: metadata.color
+  };
+};
 
-    if (Array.isArray(content)) {
-      const text = content
-        .map(block => block.content?.map((c: any) => c.plain_text).join('') || '')
-        .join(' ');
-      return text.substring(0, 150) + (text.length > 150 ? '...' : '');
-    }
+const getAvailableModules = (
+  databaseMap: Record<EDatabaseType, string | null>,
+  limit: number
+): IRecentlyVisitedItem[] => {
+  const availablePages: IRecentlyVisitedItem[] = [];
+  const now = new Date();
 
-    return '';
+  const pageDefinitions = createPageDefinitions();
+
+  for (const page of pageDefinitions) {
+    if (!page.databaseType || databaseMap[page.databaseType]) {
+      availablePages.push({
+        id: page.id,
+        name: page.name,
+        type: 'page' as const,
+        preview: page.preview,
+        route: page.route,
+        lastVisitedAt: now,
+        moduleType: page.moduleType,
+        icon: page.icon,
+        color: page.color
+      });
+    }
   }
 
-  private calculateWordCount(content: any): number {
-    const text = this.extractTextPreview(content);
-    return text.split(/\s+/).filter(word => word.length > 0).length;
+  return availablePages.slice(0, limit);
+};
+
+const createPageDefinitions = () => [
+  {
+    id: 'home',
+    name: 'Home',
+    preview: 'Your personal dashboard',
+    route: '/app',
+    moduleType: 'home',
+    icon: '🏠',
+    color: '#6366f1',
+    databaseType: null
+  },
+  {
+    id: 'second-brain',
+    name: 'Second Brain',
+    preview: 'Organize your knowledge and thoughts',
+    route: '/app/second-brain',
+    moduleType: 'second-brain',
+    icon: '🧠',
+    color: '#6366f1',
+    databaseType: null
+  },
+  {
+    id: 'databases',
+    name: 'Databases',
+    preview: 'Manage your data tables and records',
+    route: '/app/databases',
+    moduleType: 'databases',
+    icon: '🗄️',
+    color: '#8b5cf6',
+    databaseType: null
+  },
+  {
+    id: 'ai-assistant',
+    name: 'AI Assistant',
+    preview: 'Get help with AI-powered features',
+    route: '/app/ai-assistant',
+    moduleType: 'ai-assistant',
+    icon: '🤖',
+    color: '#f59e0b',
+    databaseType: null
+  },
+  {
+    id: 'notes',
+    name: 'Notes',
+    preview: 'View and manage your knowledge base',
+    route: '/app/notes',
+    moduleType: 'notes',
+    icon: '📝',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'ideas',
+    name: 'Ideas',
+    preview: 'Capture and organize your ideas',
+    route: '/app/ideas',
+    moduleType: 'ideas',
+    icon: '💡',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'capture',
+    name: 'Quick Capture',
+    preview: 'Quickly capture thoughts and notes',
+    route: '/app/capture',
+    moduleType: 'capture',
+    icon: '⚡',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'collections',
+    name: 'Collections',
+    preview: 'Organize your notes into collections',
+    route: '/app/collections',
+    moduleType: 'collections',
+    icon: '📚',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'favorites',
+    name: 'Favorites',
+    preview: 'Your favorite notes and content',
+    route: '/app/favorites',
+    moduleType: 'favorites',
+    icon: '⭐',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'recent',
+    name: 'Recent Notes',
+    preview: 'Recently viewed and edited notes',
+    route: '/app/recent',
+    moduleType: 'recent',
+    icon: '🕒',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'templates',
+    name: 'Templates',
+    preview: 'Use templates for consistent note-taking',
+    route: '/app/templates',
+    moduleType: 'templates',
+    icon: '📋',
+    color: '#3b82f6',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'search',
+    name: 'Search',
+    preview: 'Search through all your content',
+    route: '/app/search',
+    moduleType: 'search',
+    icon: '🔍',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'calendar',
+    name: 'Calendar',
+    preview: 'Manage your schedule and events',
+    route: '/app/calendar',
+    moduleType: 'calendar',
+    icon: '📅',
+    color: '#10b981',
+    databaseType: null
+  },
+  {
+    id: 'tasks',
+    name: 'Tasks',
+    preview: 'Track and manage your tasks',
+    route: '/app/tasks',
+    moduleType: 'tasks',
+    icon: '✅',
+    color: '#10b981',
+    databaseType: EDatabaseType.TASKS
+  },
+  {
+    id: 'tags',
+    name: 'Tags',
+    preview: 'Manage and organize your tags',
+    route: '/app/tags',
+    moduleType: 'tags',
+    icon: '🏷️',
+    color: '#f59e0b',
+    databaseType: null
+  },
+  {
+    id: 'archive',
+    name: 'Archive',
+    preview: 'Access archived notes and content',
+    route: '/app/archive',
+    moduleType: 'archive',
+    icon: '📦',
+    color: '#6b7280',
+    databaseType: EDatabaseType.NOTES
+  },
+  {
+    id: 'goals',
+    name: 'Goals',
+    preview: 'Set and track your objectives',
+    route: '/app/goals',
+    moduleType: 'goals',
+    icon: '🎯',
+    color: '#8b5cf6',
+    databaseType: EDatabaseType.GOALS
+  },
+  {
+    id: 'projects',
+    name: 'Projects',
+    preview: 'Manage your projects and initiatives',
+    route: '/app/projects',
+    moduleType: 'projects',
+    icon: '📁',
+    color: '#f59e0b',
+    databaseType: EDatabaseType.PROJECTS
+  },
+  {
+    id: 'habits',
+    name: 'Habits',
+    preview: 'Build and maintain good habits',
+    route: '/app/habits',
+    moduleType: 'habits',
+    icon: '🔥',
+    color: '#ef4444',
+    databaseType: EDatabaseType.HABITS
+  },
+  {
+    id: 'finance',
+    name: 'Finance',
+    preview: 'Track income and expenses',
+    route: '/app/finance',
+    moduleType: 'finance',
+    icon: '💰',
+    color: '#059669',
+    databaseType: EDatabaseType.FINANCE
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    preview: 'Configure your account and preferences',
+    route: '/app/settings',
+    moduleType: 'settings',
+    icon: '⚙️',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-profile',
+    name: 'Profile Settings',
+    preview: 'Manage your profile information',
+    route: '/app/settings/profile',
+    moduleType: 'settings-profile',
+    icon: '👤',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-account',
+    name: 'Account Settings',
+    preview: 'Manage your account details',
+    route: '/app/settings/account',
+    moduleType: 'settings-account',
+    icon: '🔐',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-security',
+    name: 'Security Settings',
+    preview: 'Configure security and privacy',
+    route: '/app/settings/security',
+    moduleType: 'settings-security',
+    icon: '🛡️',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-billing',
+    name: 'Billing Settings',
+    preview: 'Manage your subscription and billing',
+    route: '/app/settings/billing',
+    moduleType: 'settings-billing',
+    icon: '💳',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-appearance',
+    name: 'Appearance Settings',
+    preview: 'Customize the look and feel',
+    route: '/app/settings/appearance',
+    moduleType: 'settings-appearance',
+    icon: '🎨',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-display',
+    name: 'Display Settings',
+    preview: 'Configure display preferences',
+    route: '/app/settings/display',
+    moduleType: 'settings-display',
+    icon: '🖥️',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-notifications',
+    name: 'Notification Settings',
+    preview: 'Manage notification preferences',
+    route: '/app/settings/notifications',
+    moduleType: 'settings-notifications',
+    icon: '🔔',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'settings-workspace',
+    name: 'Workspace Settings',
+    preview: 'Configure workspace settings',
+    route: '/app/settings/workspace',
+    moduleType: 'settings-workspace',
+    icon: '🏢',
+    color: '#6b7280',
+    databaseType: null
+  },
+  {
+    id: 'data-tables',
+    name: 'Data Tables',
+    preview: 'View and manage your data tables',
+    route: '/app/data-tables',
+    moduleType: 'data-tables',
+    icon: '📊',
+    color: '#6366f1',
+    databaseType: null
+  },
+  {
+    id: 'users',
+    name: 'Users',
+    preview: 'Manage user accounts and permissions',
+    route: '/app/users',
+    moduleType: 'users',
+    icon: '👥',
+    color: '#10b981',
+    databaseType: null
+  },
+  {
+    id: 'notifications',
+    name: 'Notifications',
+    preview: 'View your notifications and alerts',
+    route: '/app/notifications',
+    moduleType: 'notifications',
+    icon: '🔔',
+    color: '#f59e0b',
+    databaseType: null
   }
-}
+];
 
-// Service instance
-export const dashboardService = new DashboardService();
+const getWorkspaceStats = async (
+  workspaceId: string | undefined,
+  userId: string
+): Promise<IWorkspaceStats> => {
+  const query: any = {
+    isDeleted: { $ne: true },
+    $or: [{ createdBy: userId }, { isPublic: true }]
+  };
 
-// Service functions for backward compatibility
-export const getDashboardOverview = dashboardService.getDashboardOverview.bind(dashboardService);
-export const calculateQuickStats = dashboardService.calculateQuickStats.bind(dashboardService);
-export const getRecentActivityFeed = dashboardService.getRecentActivityFeed.bind(dashboardService);
-export const getUpcomingTasksService = dashboardService.getUpcomingTasks.bind(dashboardService);
-export const getRecentNotesService = dashboardService.getRecentNotes.bind(dashboardService);
-export const getGoalProgressService = dashboardService.getGoalProgress.bind(dashboardService);
-export const getHabitStreaksService = dashboardService.getHabitStreaks.bind(dashboardService);
-export const getFinanceSummaryService = dashboardService.getFinanceSummary.bind(dashboardService);
+  if (workspaceId) {
+    query.workspaceId = workspaceId;
+  }
+
+  const [databases, totalRecords] = await Promise.all([
+    DatabaseModel.find(query).exec(),
+    RecordModel.countDocuments({
+      databaseId: { $in: await DatabaseModel.find(query).distinct('_id') },
+      isDeleted: { $ne: true }
+    })
+  ]);
+
+  const totalViews = databases.reduce((sum, db) => sum + (db.views?.length || 0), 0);
+
+  let storageUsed = 0;
+  for (const db of databases) {
+    const recordSize = 1024; // 1KB base per record
+    storageUsed += db.recordCount * recordSize;
+  }
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const activeMembers = await DatabaseModel.distinct('updatedBy', {
+    workspaceId: databases[0]?.workspaceId,
+    lastActivityAt: { $gte: thirtyDaysAgo }
+  }).exec();
+
+  return {
+    totalDatabases: databases.length,
+    totalRecords,
+    totalViews,
+    storageUsed,
+    storageLimit: 1000000000, // 1GB default
+    activeMembers: activeMembers.length || 1,
+    lastActivityAt: databases.reduce(
+      (latest, db) =>
+        db.lastActivityAt && db.lastActivityAt > latest ? db.lastActivityAt : latest,
+      new Date(0)
+    )
+  };
+};
+
+const extractTextPreview = (content: any): string => {
+  if (typeof content === 'string') {
+    return content.substring(0, 150) + (content.length > 150 ? '...' : '');
+  }
+
+  if (Array.isArray(content)) {
+    const text = content
+      .map(block => block.content?.map((c: any) => c.plain_text).join('') || '')
+      .join(' ');
+    return text.substring(0, 150) + (text.length > 150 ? '...' : '');
+  }
+
+  return '';
+};
+
+const calculateWordCount = (content: any): number => {
+  const text = extractTextPreview(content);
+  return text.split(/\s+/).filter(word => word.length > 0).length;
+};
+
+// Main service object
+const dashboardService = {
+  getDashboardOverview,
+  calculateQuickStats,
+  getRecentActivityFeed,
+  getUpcomingTasks,
+  getRecentNotes,
+  getGoalProgress,
+  getHabitStreaks,
+  getFinanceSummary,
+  getWorkspaceStats,
+  getRecentlyVisited,
+  getDatabaseMapping
+};
+
+// Export the service object and individual functions for backward compatibility
+export default dashboardService;
+export {
+  dashboardService,
+  getDashboardOverview,
+  calculateQuickStats,
+  getRecentActivityFeed,
+  getUpcomingTasks,
+  getRecentNotes,
+  getGoalProgress,
+  getHabitStreaks,
+  getFinanceSummary,
+  getWorkspaceStats,
+  getRecentlyVisited,
+  getDatabaseMapping
+};

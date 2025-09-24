@@ -9,6 +9,9 @@ export * from './services/notifications.service';
 export * from './services/activity.service';
 export * from './services/analytics.service';
 
+// Models
+export { ActivityModel } from './models/activity.model';
+
 // Controllers
 export * from './controllers/notifications.controller';
 export * from './controllers/activity.controller';
