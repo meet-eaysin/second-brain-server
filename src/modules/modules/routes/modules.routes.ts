@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
-import { resolveWorkspaceContext } from '@/modules/workspace/middleware/workspace.middleware';
+import {ensureDefaultWorkspace, resolveWorkspaceContext} from '@/modules/workspace/middleware/workspace.middleware';
 import {
   initializeModules,
   initializeCoreWorkspaceModules,
@@ -34,7 +34,8 @@ import { z } from 'zod';
 const router = Router();
 
 router.use(authenticateToken);
-router.use(resolveWorkspaceContext);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 router.get('/available', getAvailableModuleConfigs);
 router.get('/core', getCoreModuleConfigs);
@@ -78,7 +79,6 @@ router.post(
 );
 router.post(
   '/workspace/initialize/specific',
-  resolveWorkspaceContext({ required: true }),
   validateBody(initializeSpecificModulesSchema),
   initializeSpecificWorkspaceModules
 );

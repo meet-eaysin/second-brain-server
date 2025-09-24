@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import {TAppError} from '@/types';
-import {createAppError} from '@/utils';
-import {logger} from '@/config';
+import { TAppError } from '@/types';
+import { createAppError } from '@/utils';
+import { logger } from '@/config';
 
 interface IMongoCastError {
   name: 'CastError';

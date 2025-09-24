@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { TJwtPayload, TUserRole } from '../modules/users/types/user.types';
-import { extractTokenFromHeader, verifyAccessToken } from '../modules/auth/utils/auth.utils';
-import { createForbiddenError, createUnauthorizedError } from '../utils/error.utils';
-import { getUserById } from '../modules/users/services/users.services';
+import { TJwtPayload, TUserRole } from '@/users/types/user.types';
+import { extractTokenFromHeader, verifyAccessToken } from '@/auth/utils/auth.utils';
+import { createForbiddenError, createUnauthorizedError } from '@/utils/response.utils';
+import { getUserById } from '@/modules/users';
 
 export interface AuthenticatedRequest extends Request {
   user: TJwtPayload & { userId: string };
