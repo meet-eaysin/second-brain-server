@@ -31,17 +31,6 @@ import {
   deleteTimeEntry
 } from '../controllers/time-tracking.controllers';
 import {
-  addComment,
-  getComments,
-  getCommentById,
-  updateComment,
-  deleteComment,
-  addReaction,
-  removeReaction,
-  resolveComment,
-  unresolveComment
-} from '../controllers/comments.controllers';
-import {
   createTaskSchema,
   updateTaskSchema,
   getTasksQuerySchema,
@@ -117,24 +106,5 @@ router.get('/:id/time-entries', validateParams(taskIdSchema), getTimeEntries);
 router.put('/:id/time-entries/:entryId', validateParams(taskIdSchema), updateTimeEntry);
 
 router.delete('/:id/time-entries/:entryId', validateParams(taskIdSchema), deleteTimeEntry);
-
-// Comments routes
-router.post('/:id/comments', validateParams(taskIdSchema), addComment);
-
-router.get('/:id/comments', validateParams(taskIdSchema), getComments);
-
-router.get('/:id/comments/:commentId', validateParams(taskIdSchema), getCommentById);
-
-router.put('/:id/comments/:commentId', validateParams(taskIdSchema), updateComment);
-
-router.delete('/:id/comments/:commentId', validateParams(taskIdSchema), deleteComment);
-
-router.post('/:id/comments/:commentId/reactions', validateParams(taskIdSchema), addReaction);
-
-router.delete('/:id/comments/:commentId/reactions', validateParams(taskIdSchema), removeReaction);
-
-router.put('/:id/comments/:commentId/resolve', validateParams(taskIdSchema), resolveComment);
-
-router.put('/:id/comments/:commentId/unresolve', validateParams(taskIdSchema), unresolveComment);
 
 export default router;

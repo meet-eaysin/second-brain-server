@@ -54,8 +54,9 @@ export const resolveWorkspaceContext = (options?: {
         if (primaryWorkspace) workspaceId = primaryWorkspace.id;
       }
 
-      if (options?.required && !workspaceId)
+      if (options?.required && !workspaceId) {
         return next(createForbiddenError('Workspace ID is required'));
+      }
 
       if (workspaceId) {
         try {

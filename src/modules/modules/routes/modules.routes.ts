@@ -78,6 +78,7 @@ router.post(
 );
 router.post(
   '/workspace/initialize/specific',
+  resolveWorkspaceContext({ required: true }),
   validateBody(initializeSpecificModulesSchema),
   initializeSpecificWorkspaceModules
 );

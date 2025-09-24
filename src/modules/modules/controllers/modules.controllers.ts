@@ -272,21 +272,33 @@ export const getWorkspaceModuleStatus = catchAsync(
 
 export const initializeSpecificWorkspaceModules = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId } = req.params;
+    console.log('🔧 initializeSpecificWorkspaceModules called');
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+
+    const workspaceId = getWorkspaceId(req);
     const { modules, createSampleData = false } = req.body;
     const userId = req.user?.userId;
 
+    console.log('Workspace ID:', workspaceId);
+    console.log('User ID:', userId);
+    console.log('Modules:', modules);
+
     if (!userId) {
+      console.log('❌ User not authenticated');
       res.status(401).json({ success: false, message: 'User not authenticated' });
       return;
     }
 
     if (!modules || !Array.isArray(modules)) {
+      console.log('❌ Modules array is required');
       res.status(400).json({ success: false, message: 'Modules array is required' });
       return;
     }
 
+    console.log('✅ Calling initializeSpecificModules service');
     const result = await initializeSpecificModules(workspaceId, userId, modules, createSampleData);
+    console.log('✅ Service call completed, result:', result);
 
     sendSuccessResponse(res, 'Specific modules initialized successfully', result, 201);
   }
