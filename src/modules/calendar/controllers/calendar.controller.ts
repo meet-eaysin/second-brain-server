@@ -15,7 +15,9 @@ import {
   deleteEvent,
   getCalendarStats,
   getCalendarView,
-  syncTimeRelatedModules
+  syncTimeRelatedModules,
+  getCalendarPreferences,
+  updateCalendarPreferences
 } from '../services/calendar.service';
 import {
   ICreateCalendarRequest,
@@ -24,7 +26,8 @@ import {
   IUpdateEventRequest,
   ICalendarEventQuery,
   ICalendarView,
-  EEventStatus
+  EEventStatus,
+  IUpdateCalendarPreferencesRequest
 } from '../types/calendar.types';
 import { AuthenticatedRequest } from '@/middlewares';
 import { getUserId } from '@/auth/index';
@@ -125,8 +128,10 @@ export const getEventsController = catchAsync(
       calendarIds: req.query.calendarIds ? (req.query.calendarIds as string).split(',') : undefined,
       startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
       endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
-      eventTypes: req.query.eventTypes ? (req.query.eventTypes as string).split(',') as any : undefined,
-      statuses: req.query.statuses ? (req.query.statuses as string).split(',') as any : undefined,
+      eventTypes: req.query.eventTypes
+        ? ((req.query.eventTypes as string).split(',') as any)
+        : undefined,
+      statuses: req.query.statuses ? ((req.query.statuses as string).split(',') as any) : undefined,
       searchQuery: req.query.search as string,
       relatedEntityType: req.query.relatedEntityType as string,
       relatedEntityId: req.query.relatedEntityId as string,
@@ -214,8 +219,10 @@ export const getCalendarViewController = catchAsync(
       endDate: new Date(req.query.endDate as string),
       timeZone: (req.query.timeZone as string) || 'UTC',
       calendarIds: req.query.calendarIds ? (req.query.calendarIds as string).split(',') : undefined,
-      eventTypes: req.query.eventTypes ? (req.query.eventTypes as string).split(',') as any : undefined,
-      statuses: req.query.statuses ? (req.query.statuses as string).split(',') as any : undefined,
+      eventTypes: req.query.eventTypes
+        ? ((req.query.eventTypes as string).split(',') as any)
+        : undefined,
+      statuses: req.query.statuses ? ((req.query.statuses as string).split(',') as any) : undefined,
       showWeekends: req.query.showWeekends !== 'false',
       showAllDay: req.query.showAllDay !== 'false',
       showDeclined: req.query.showDeclined === 'true',
@@ -355,7 +362,9 @@ export const getCalendarBusyTimesController = catchAsync(
     const userId = getUserId(req);
     const startDate = new Date(req.query.startDate as string);
     const endDate = new Date(req.query.endDate as string);
-    const calendarIds = req.query.calendarIds ? (req.query.calendarIds as string).split(',') : undefined;
+    const calendarIds = req.query.calendarIds
+      ? (req.query.calendarIds as string).split(',')
+      : undefined;
 
     const events = await getEvents(userId, {
       startDate,
@@ -381,5 +390,93 @@ export const getCalendarBusyTimesController = catchAsync(
       },
       count: busyTimes.length
     });
+  }
+);
+
+/**
+ * Get calendar configuration data
+ */
+export const getCalendarConfigController = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const config = {
+      timeZones: [
+        'UTC',
+        'America/New_York',
+        'America/Chicago',
+        'America/Denver',
+        'America/Los_Angeles',
+        'Europe/London',
+        'Europe/Paris',
+        'Europe/Berlin',
+        'Asia/Tokyo',
+        'Asia/Shanghai',
+        'Asia/Kolkata',
+        'Asia/Dhaka',
+        'Australia/Sydney',
+        'Pacific/Auckland'
+      ],
+      presetColors: [
+        '#3B82F6', // Blue
+        '#EF4444', // Red
+        '#10B981', // Green
+        '#F59E0B', // Yellow
+        '#8B5CF6', // Purple
+        '#EC4899', // Pink
+        '#6B7280', // Gray
+        '#F97316' // Orange
+      ],
+      eventTypes: [
+        { value: 'event', label: 'Event', icon: '📅' },
+        { value: 'meeting', label: 'Meeting', icon: '👥' },
+        { value: 'task', label: 'Task', icon: '📋' },
+        { value: 'reminder', label: 'Reminder', icon: '🔔' },
+        { value: 'deadline', label: 'Deadline', icon: '⏰' },
+        { value: 'appointment', label: 'Appointment', icon: '📆' },
+        { value: 'focus_time', label: 'Focus Time', icon: '🎯' },
+        { value: 'break', label: 'Break', icon: '☕' },
+        { value: 'habit', label: 'Habit', icon: '🔄' },
+        { value: 'goal_review', label: 'Goal Review', icon: '🎯' },
+        { value: 'travel', label: 'Travel', icon: '✈️' },
+        { value: 'milestone', label: 'Milestone', icon: '🏆' }
+      ],
+      calendarTypes: [
+        { value: 'personal', label: 'Personal' },
+        { value: 'work', label: 'Work' },
+        { value: 'shared', label: 'Shared' },
+        { value: 'project', label: 'Project' },
+        { value: 'team', label: 'Team' },
+        { value: 'holiday', label: 'Holiday' },
+        { value: 'birthday', label: 'Birthday' }
+      ]
+    };
+
+    sendSuccessResponse(res, 'Calendar configuration retrieved successfully', config);
+  }
+);
+
+/**
+ * Get user calendar preferences
+ */
+export const getCalendarPreferencesController = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+
+    const preferences = await getCalendarPreferences(userId);
+
+    sendSuccessResponse(res, 'Calendar preferences retrieved successfully', preferences);
+  }
+);
+
+/**
+ * Update user calendar preferences
+ */
+export const updateCalendarPreferencesController = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = getUserId(req);
+    const request: IUpdateCalendarPreferencesRequest = req.body;
+
+    const preferences = await updateCalendarPreferences(userId, request);
+
+    sendSuccessResponse(res, 'Calendar preferences updated successfully', preferences);
   }
 );

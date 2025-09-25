@@ -10,10 +10,13 @@ import {
   ICalendarStats,
   ECalendarProvider,
   EEventType,
-  EEventStatus
+  EEventStatus,
+  ICalendarPreferences,
+  IUpdateCalendarPreferencesRequest
 } from '../types/calendar.types';
 import { CalendarModel, ICalendarDocument } from '../models/calendar.model';
 import { CalendarEventModel } from '../models/event.model';
+import { CalendarPreferencesModel } from '../models/calendar-preferences.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { createAppError } from '@/utils/error.utils';
@@ -787,6 +790,61 @@ export const getCalendarView = async (
     return { events, calendars };
   } catch (error) {
     throw createAppError('Failed to get calendar view', 500);
+  }
+};
+
+/**
+ * Get user calendar preferences
+ */
+export const getCalendarPreferences = async (userId: string): Promise<ICalendarPreferences> => {
+  try {
+    const preferences = await CalendarPreferencesModel.findByUserId(userId);
+
+    if (!preferences) {
+      // Return default preferences if none exist
+      return {
+        userId,
+        timeZone: 'UTC',
+        displayPreferences: {
+          showWeekends: true,
+          showDeclinedEvents: false,
+          use24HourFormat: false
+        },
+        syncSettings: {
+          autoSyncEnabled: true,
+          syncFrequency: 15,
+          conflictResolution: 'manual'
+        },
+        notificationSettings: {
+          emailNotifications: true,
+          pushNotifications: true,
+          smsNotifications: false,
+          defaultEmailReminder: 15,
+          defaultPopupReminder: 15
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    }
+
+    return preferences.toJSON();
+  } catch (error) {
+    throw createAppError('Failed to get calendar preferences', 500);
+  }
+};
+
+/**
+ * Update user calendar preferences
+ */
+export const updateCalendarPreferences = async (
+  userId: string,
+  request: IUpdateCalendarPreferencesRequest
+): Promise<ICalendarPreferences> => {
+  try {
+    const preferences = await CalendarPreferencesModel.upsertByUserId(userId, request);
+    return preferences.toJSON();
+  } catch (error) {
+    throw createAppError('Failed to update calendar preferences', 500);
   }
 };
 

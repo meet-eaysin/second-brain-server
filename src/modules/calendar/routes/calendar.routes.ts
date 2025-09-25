@@ -18,7 +18,10 @@ import {
   getTodayEventsController,
   searchEventsController,
   getEventsByEntityController,
-  getCalendarBusyTimesController
+  getCalendarBusyTimesController,
+  getCalendarConfigController,
+  getCalendarPreferencesController,
+  updateCalendarPreferencesController
 } from '../controllers/calendar.controller';
 import {
   connectCalendarController,
@@ -140,6 +143,12 @@ const entityParamsSchema = z.object({
 });
 
 // Calendar view and utility routes (must come before parameterized routes)
+router.get('/config', getCalendarConfigController);
+
+router.get('/preferences', getCalendarPreferencesController);
+
+router.put('/preferences', updateCalendarPreferencesController);
+
 router.get('/stats', getCalendarStatsController);
 
 router.get('/view/calendar', getCalendarViewController);
