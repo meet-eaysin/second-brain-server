@@ -18,6 +18,7 @@ import {
   IFilterCondition,
   EFilterOperator as CoreEFilterOperator
 } from '@/modules/core/types/view.types';
+import { EPropertyType } from '@/modules/core/types/property.types';
 import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
 import { createNotFoundError } from '@/utils/response.utils';
@@ -59,6 +60,66 @@ function convertToEViewType(type: string): EViewType {
   return EViewType.TABLE;
 }
 
+// Auto-create properties for Gantt view
+async function createGanttProperties(databaseId: string, viewId: string, userId: string): Promise<void> {
+  const { propertiesService } = await import('./properties.services');
+
+  // Check if DATE_RANGE property already exists
+  const existingProperties = await propertiesService.getProperties(databaseId, userId, true);
+  const hasDateRange = existingProperties.some(p => p.type === EPropertyType.DATE_RANGE);
+
+  if (!hasDateRange) {
+    try {
+      await propertiesService.createProperty(databaseId, {
+        name: 'Timeline',
+        type: EPropertyType.DATE_RANGE,
+        config: {
+          includeTime: false,
+          required: false
+        },
+        description: 'Date range for Gantt timeline',
+        order: existingProperties.length,
+        viewId
+      }, userId);
+    } catch (error) {
+      console.warn('Failed to create DATE_RANGE property for Gantt view:', error);
+    }
+  }
+}
+
+// Auto-create properties for Board view
+async function createBoardProperties(databaseId: string, viewId: string, userId: string) {
+  const { propertiesService } = await import('./properties.services');
+
+  // Check if SELECT property already exists
+  const existingProperties = await propertiesService.getProperties(databaseId, userId, true);
+  const hasSelect = existingProperties.some(p => p.type === EPropertyType.SELECT);
+
+  if (!hasSelect) {
+    try {
+      const createdProperty = await propertiesService.createProperty(databaseId, {
+        name: 'Status',
+        type: EPropertyType.SELECT,
+        config: {
+          options: [
+            { id: 'todo', label: 'To Do', color: '#ef4444', value: 'todo' },
+            { id: 'in-progress', label: 'In Progress', color: '#f59e0b', value: 'in-progress' },
+            { id: 'done', label: 'Done', color: '#10b981', value: 'done' }
+          ],
+          required: false
+        },
+        description: 'Task status for board view',
+        order: existingProperties.length,
+        viewId
+      }, userId);
+      return createdProperty;
+    } catch (error) {
+      console.warn('Failed to create SELECT property for Board view:', error);
+    }
+  }
+  return null;
+}
+
 function formatViewResponse(view: TViewDocument): IDatabaseView {
   return {
     id: (view._id as Types.ObjectId).toString(),
@@ -88,7 +149,8 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
       visibleProperties: view.config?.visibleProperties || [],
       hiddenProperties: view.config?.hiddenProperties || [],
       frozenColumns: view.config?.frozenColumns || [],
-      pageSize: view.config?.pageSize || 25
+      pageSize: view.config?.pageSize || 25,
+      groupBy: view.config?.group?.propertyId
     },
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
@@ -155,6 +217,21 @@ async function createView(
       $set: { updatedAt: new Date() }
     }
   );
+
+  // Auto-create properties based on view type
+  if (data.type === EViewType.GANTT) {
+    await createGanttProperties(databaseId, view._id.toString(), userId);
+  } else if (data.type === EViewType.BOARD) {
+    const statusProperty = await createBoardProperties(databaseId, view._id.toString(), userId);
+
+    // Set up automatic grouping by the Status property
+    if (statusProperty) {
+      view.config.group = {
+        propertyId: statusProperty.id
+      };
+      await view.save();
+    }
+  }
 
   return formatViewResponse(view);
 }

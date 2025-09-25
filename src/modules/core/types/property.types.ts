@@ -8,6 +8,7 @@ export enum EPropertyType {
   RICH_TEXT = 'rich_text',
   NUMBER = 'number',
   DATE = 'date',
+  DATE_RANGE = 'date_range',
   CHECKBOX = 'checkbox',
   URL = 'url',
   EMAIL = 'email',
