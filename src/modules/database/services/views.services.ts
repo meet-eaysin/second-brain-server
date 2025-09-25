@@ -61,7 +61,11 @@ function convertToEViewType(type: string): EViewType {
 }
 
 // Auto-create properties for Gantt view
-async function createGanttProperties(databaseId: string, viewId: string, userId: string): Promise<void> {
+async function createGanttProperties(
+  databaseId: string,
+  viewId: string,
+  userId: string
+): Promise<void> {
   const { propertiesService } = await import('./properties.services');
 
   // Check if DATE_RANGE property already exists
@@ -70,17 +74,21 @@ async function createGanttProperties(databaseId: string, viewId: string, userId:
 
   if (!hasDateRange) {
     try {
-      await propertiesService.createProperty(databaseId, {
-        name: 'Timeline',
-        type: EPropertyType.DATE_RANGE,
-        config: {
-          includeTime: false,
-          required: false
+      await propertiesService.createProperty(
+        databaseId,
+        {
+          name: 'Timeline',
+          type: EPropertyType.DATE_RANGE,
+          config: {
+            includeTime: false,
+            required: false
+          },
+          description: 'Date range for Gantt timeline',
+          order: existingProperties.length,
+          viewId
         },
-        description: 'Date range for Gantt timeline',
-        order: existingProperties.length,
-        viewId
-      }, userId);
+        userId
+      );
     } catch (error) {
       console.warn('Failed to create DATE_RANGE property for Gantt view:', error);
     }
@@ -97,21 +105,25 @@ async function createBoardProperties(databaseId: string, viewId: string, userId:
 
   if (!hasSelect) {
     try {
-      const createdProperty = await propertiesService.createProperty(databaseId, {
-        name: 'Status',
-        type: EPropertyType.SELECT,
-        config: {
-          options: [
-            { id: 'todo', label: 'To Do', color: '#ef4444', value: 'todo' },
-            { id: 'in-progress', label: 'In Progress', color: '#f59e0b', value: 'in-progress' },
-            { id: 'done', label: 'Done', color: '#10b981', value: 'done' }
-          ],
-          required: false
+      const createdProperty = await propertiesService.createProperty(
+        databaseId,
+        {
+          name: 'Status',
+          type: EPropertyType.SELECT,
+          config: {
+            options: [
+              { id: 'todo', label: 'To Do', color: '#ef4444', value: 'todo' },
+              { id: 'in-progress', label: 'In Progress', color: '#f59e0b', value: 'in-progress' },
+              { id: 'done', label: 'Done', color: '#10b981', value: 'done' }
+            ],
+            required: false
+          },
+          description: 'Task status for board view',
+          order: existingProperties.length,
+          viewId
         },
-        description: 'Task status for board view',
-        order: existingProperties.length,
-        viewId
-      }, userId);
+        userId
+      );
       return createdProperty;
     } catch (error) {
       console.warn('Failed to create SELECT property for Board view:', error);
@@ -150,10 +162,12 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
       hiddenProperties: view.config?.hiddenProperties || [],
       frozenColumns: view.config?.frozenColumns || [],
       pageSize: view.config?.pageSize || 25,
-      groupBy: view.config?.group ? {
-        property: view.config.group.propertyId,
-        direction: ESortDirection.ASCENDING
-      } : undefined
+      groupBy: view.config?.group
+        ? {
+            property: view.config.group.propertyId,
+            direction: ESortDirection.ASCENDING
+          }
+        : undefined
     },
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
@@ -177,6 +191,11 @@ async function createView(
 
   const viewCount = await ViewModel.countDocuments({ databaseId });
   const order = viewCount;
+
+  // If setting this view as default, unset isDefault for all other views
+  if (data.isDefault) {
+    await ViewModel.updateMany({ databaseId }, { $set: { isDefault: false } });
+  }
 
   const view = new ViewModel({
     databaseId,
@@ -225,7 +244,11 @@ async function createView(
   if (data.type === EViewType.GANTT) {
     await createGanttProperties(databaseId, (view._id as Types.ObjectId).toString(), userId);
   } else if (data.type === EViewType.BOARD) {
-    const statusProperty = await createBoardProperties(databaseId, (view._id as Types.ObjectId).toString(), userId);
+    const statusProperty = await createBoardProperties(
+      databaseId,
+      (view._id as Types.ObjectId).toString(),
+      userId
+    );
 
     // Set up automatic grouping by the Status property
     if (statusProperty) {
@@ -326,6 +349,17 @@ async function updateView(
   if (data.name !== undefined) view.name = data.name;
   if (data.description !== undefined) view.description = data.description;
   if (data.isPublic !== undefined) view.isPublic = data.isPublic;
+  if (data.isDefault !== undefined) {
+    if (data.isDefault) {
+      // Unset isDefault for all other views in this database
+      await ViewModel.updateMany(
+        { databaseId, _id: { $ne: view._id } },
+        { $set: { isDefault: false } }
+      );
+    }
+    view.isDefault = data.isDefault;
+  }
+  if (data.type !== undefined) view.type = data.type;
 
   if (data.settings) {
     if (data.settings.pageSize !== undefined) {
@@ -399,6 +433,24 @@ async function deleteView(databaseId: string, viewId: string, userId: string): P
 
   if (view.isDefault && viewCount === 1) {
     throw createAppError('Cannot delete the only view in the database', 400);
+  }
+
+  // If deleting the default view, set another view as default
+  if (view.isDefault) {
+    const otherViews = await ViewModel.find({
+      databaseId,
+      isDeleted: { $ne: true },
+      _id: { $ne: view._id }
+    })
+      .sort({ order: 1 })
+      .limit(1);
+
+    if (otherViews.length > 0) {
+      await ViewModel.updateOne(
+        { _id: otherViews[0]._id },
+        { $set: { isDefault: true, updatedAt: new Date() } }
+      );
+    }
   }
 
   await ViewModel.deleteOne({ _id: view._id });
