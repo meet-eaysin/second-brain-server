@@ -258,7 +258,7 @@ class SearchController {
         return;
       }
 
-      const { q: query, scope, workspaceId, limit } = validation.data;
+      const { q: query, scope, limit } = validation.data;
 
       // Get suggestions
       const suggestions = await searchService.getSearchSuggestions(
@@ -321,6 +321,58 @@ class SearchController {
       sendErrorResponse(
         res,
         'Failed to get recent searches',
+        500,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+    }
+  }
+
+  /**
+   * Get URL glimpse data
+   * GET /api/v1/search/glimpse
+   */
+  async getGlimpse(req: Request, res: Response): Promise<void> {
+    try {
+      const { url } = req.query;
+
+      if (!url || typeof url !== 'string') {
+        sendErrorResponse(res, 'URL parameter is required', 400);
+        return;
+      }
+
+      // Fetch the URL and extract metadata
+      const response = await fetch(url as string, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; GlimpseBot/1.0)'
+        }
+      });
+
+      if (!response.ok) {
+        sendErrorResponse(res, 'Failed to fetch URL', 400);
+        return;
+      }
+
+      const html = await response.text();
+
+      // Extract metadata
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const ogTitleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
+      const descriptionMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
+      const ogDescriptionMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
+      const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
+
+      const data = {
+        title: ogTitleMatch?.[1] || titleMatch?.[1] || null,
+        description: ogDescriptionMatch?.[1] || descriptionMatch?.[1] || null,
+        image: imageMatch?.[1] || null
+      };
+
+      sendSuccessResponse(res, 'Glimpse data retrieved successfully', data);
+    } catch (error) {
+      console.error('Glimpse error:', error);
+      sendErrorResponse(
+        res,
+        'Failed to get glimpse data',
         500,
         error instanceof Error ? error.message : 'Unknown error'
       );

@@ -17,5 +17,6 @@ router.get('/databases', searchController.searchDatabases);
 router.get('/records', searchController.searchRecords);
 router.get('/suggestions', searchController.getSearchSuggestions);
 router.get('/recent', searchController.getRecentSearches);
+router.get('/glimpse', searchController.getGlimpse);
 
 export default router;
