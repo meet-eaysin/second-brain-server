@@ -11,6 +11,7 @@ import { createAppError } from './utils';
 import { validateGoogleConfig } from './config/google/google';
 import './modules/second-brain'; // Auto-register Second Brain tables
 import './modules/users'; // Auto-register Users tables
+import './modules/calendar'; // Auto-register Calendar tables
 
 dotenv.config();
 

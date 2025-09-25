@@ -17,7 +17,7 @@ import {
   moodRoutes,
   contentRoutes
 } from '../modules/second-brain';
-import calendarRoutes from '@/modules/calendar/routes/calendar.routes';
+import { calendarRoutes } from '@/modules/calendar';
 import searchRoutes from '@/modules/search/routes/search.routes';
 import workspaceRoutes from '@/modules/workspace/routes/workspace.routes';
 import permissionRoutes from '../modules/permissions/routes';
@@ -51,7 +51,7 @@ router.use('/resources', resourcesRoutes);
 router.use('/para', paraRoutes);
 router.use('/mood', moodRoutes);
 router.use('/content', contentRoutes);
-router.use('/calendars', calendarRoutes);
+router.use('/calendar', calendarRoutes);
 router.use('/search', searchRoutes);
 
 export default router;
