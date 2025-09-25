@@ -150,7 +150,10 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
       hiddenProperties: view.config?.hiddenProperties || [],
       frozenColumns: view.config?.frozenColumns || [],
       pageSize: view.config?.pageSize || 25,
-      groupBy: view.config?.group?.propertyId
+      groupBy: view.config?.group ? {
+        property: view.config.group.propertyId,
+        direction: ESortDirection.ASCENDING
+      } : undefined
     },
     createdAt: view.createdAt,
     updatedAt: view.updatedAt,
@@ -220,9 +223,9 @@ async function createView(
 
   // Auto-create properties based on view type
   if (data.type === EViewType.GANTT) {
-    await createGanttProperties(databaseId, view._id.toString(), userId);
+    await createGanttProperties(databaseId, (view._id as Types.ObjectId).toString(), userId);
   } else if (data.type === EViewType.BOARD) {
-    const statusProperty = await createBoardProperties(databaseId, view._id.toString(), userId);
+    const statusProperty = await createBoardProperties(databaseId, (view._id as Types.ObjectId).toString(), userId);
 
     // Set up automatic grouping by the Status property
     if (statusProperty) {

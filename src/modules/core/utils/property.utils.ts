@@ -349,6 +349,7 @@ export const getPropertyTypeDisplayName = (type: EPropertyType): string => {
     [EPropertyType.PERCENT]: "Percent",
     [EPropertyType.NUMBER]: 'Number',
     [EPropertyType.DATE]: 'Date',
+    [EPropertyType.DATE_RANGE]: 'Date Range',
     [EPropertyType.CHECKBOX]: 'Checkbox',
     [EPropertyType.URL]: 'URL',
     [EPropertyType.EMAIL]: 'Email',

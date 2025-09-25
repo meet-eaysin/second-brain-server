@@ -7,18 +7,13 @@ import {
   IActivitySummary,
   IActivityFeedItem,
   IVersionHistoryEntry,
-  IAuditLogEntry,
   IActivityAnalytics,
   EActivityType,
   EActivityContext
 } from '../types/activity.types';
 import { createAppError } from '@/utils/error.utils';
-import { generateId } from '@/utils/id-generator';
 import { ActivityModel } from '../models/activity.model';
-
-// In-memory storage for version history and audit log (activities now use MongoDB)
-const versionHistory = new Map<string, IVersionHistoryEntry[]>();
-const auditLog = new Map<string, IAuditLogEntry>();
+import { VersionHistoryModel } from '../models/version-history.model';
 
 /**
  * Create a new activity record
@@ -210,8 +205,14 @@ export const getVersionHistory = async (
   entityId: string,
   entityType: string
 ): Promise<IVersionHistoryEntry[]> => {
-  const key = `${entityType}-${entityId}`;
-  return versionHistory.get(key) || [];
+  const history = await VersionHistoryModel.find({
+    entityId,
+    entityType
+  })
+    .sort({ version: 1 })
+    .exec();
+
+  return history.map(doc => doc.toObject() as unknown as IVersionHistoryEntry);
 };
 
 /**
@@ -333,22 +334,23 @@ const createVersionHistoryEntry = async (activity: IActivity): Promise<void> => 
     return;
   }
 
-  const key = `${activity.entityType}-${activity.entityId}`;
-  const existingHistory = versionHistory.get(key) || [];
+  // Get the next version number
+  const existingCount = await VersionHistoryModel.countDocuments({
+    entityId: activity.entityId,
+    entityType: activity.entityType
+  }).exec();
 
-  const entry: IVersionHistoryEntry = {
-    id: generateId(),
+  const entry = {
     entityId: activity.entityId,
     entityType: activity.entityType,
-    version: existingHistory.length + 1,
+    version: existingCount + 1,
     changes: activity.changes,
     userId: activity.userId,
     userName: activity.userName,
     timestamp: activity.timestamp
   };
 
-  existingHistory.push(entry);
-  versionHistory.set(key, existingHistory);
+  await VersionHistoryModel.create(entry);
 };
 
 /**
