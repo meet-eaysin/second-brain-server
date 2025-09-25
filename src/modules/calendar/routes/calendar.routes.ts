@@ -75,8 +75,8 @@ const updateEventSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional(),
   location: z.string().max(200).optional(),
-  startTime: z.date().optional(),
-  endTime: z.date().optional(),
+  startTime: z.coerce.date().optional(),
+  endTime: z.coerce.date().optional(),
   isAllDay: z.boolean().optional(),
   status: z.enum(EEventStatus).optional(),
   visibility: z.enum(EEventVisibility).optional(),
@@ -139,70 +139,16 @@ const entityParamsSchema = z.object({
   entityId: z.string().min(1)
 });
 
-// Calendar CRUD routes
-router.post(
-  '/',
-  validateBody(createCalendarSchema),
-  injectWorkspaceContext,
-  createCalendarController
-);
+// Calendar view and utility routes (must come before parameterized routes)
+router.get('/stats', getCalendarStatsController);
 
-router.get('/', getCalendarsController);
-
-router.get('/:calendarId', validateParams(calendarIdSchema), getCalendarByIdController);
-
-router.put(
-  '/:calendarId',
-  validateParams(calendarIdSchema),
-  validateBody(updateCalendarSchema),
-  updateCalendarController
-);
-
-router.delete('/:calendarId', validateParams(calendarIdSchema), deleteCalendarController);
-
-// Event CRUD routes
-router.post(
-  '/events',
-  validateBody(createEventSchema),
-  injectWorkspaceContext,
-  createEventController
-);
-
-router.get('/events', getEventsController);
-
-router.get('/events/upcoming', getUpcomingEventsController);
-
-router.get('/events/today', getTodayEventsController);
-
-router.get('/events/search', searchEventsController);
-
-router.get(
-  '/events/entity/:entityType/:entityId',
-  validateParams(entityParamsSchema),
-  getEventsByEntityController
-);
-
-router.get('/events/:eventId', validateParams(eventIdSchema), getEventByIdController);
-
-router.put(
-  '/events/:eventId',
-  validateParams(eventIdSchema),
-  validateBody(updateEventSchema),
-  updateEventController
-);
-
-router.delete('/events/:eventId', validateParams(eventIdSchema), deleteEventController);
-
-// Calendar view and utility routes
 router.get('/view/calendar', getCalendarViewController);
 
 router.get('/view/busy-times', getCalendarBusyTimesController);
 
-router.get('/stats', getCalendarStatsController);
-
 router.post('/sync/time-related', syncTimeRelatedModulesController);
 
-// External calendar connection routes
+// External calendar connection routes (must come before parameterized routes)
 router.get('/connections/providers', getCalendarProvidersController);
 
 router.post('/connections', validateBody(connectCalendarSchema), connectCalendarController);
@@ -253,5 +199,59 @@ router.get(
   validateParams(connectionIdSchema),
   getCalendarSyncLogsController
 );
+
+// Event CRUD routes (must come before parameterized routes)
+router.post(
+  '/events',
+  validateBody(createEventSchema),
+  injectWorkspaceContext,
+  createEventController
+);
+
+router.get('/events', getEventsController);
+
+router.get('/events/upcoming', getUpcomingEventsController);
+
+router.get('/events/today', getTodayEventsController);
+
+router.get('/events/search', searchEventsController);
+
+router.get(
+  '/events/entity/:entityType/:entityId',
+  validateParams(entityParamsSchema),
+  getEventsByEntityController
+);
+
+router.get('/events/:eventId', validateParams(eventIdSchema), getEventByIdController);
+
+router.put(
+  '/events/:eventId',
+  validateParams(eventIdSchema),
+  validateBody(updateEventSchema),
+  updateEventController
+);
+
+router.delete('/events/:eventId', validateParams(eventIdSchema), deleteEventController);
+
+// Calendar CRUD routes
+router.post(
+  '/',
+  validateBody(createCalendarSchema),
+  injectWorkspaceContext,
+  createCalendarController
+);
+
+router.get('/', getCalendarsController);
+
+router.get('/:calendarId', validateParams(calendarIdSchema), getCalendarByIdController);
+
+router.put(
+  '/:calendarId',
+  validateParams(calendarIdSchema),
+  validateBody(updateCalendarSchema),
+  updateCalendarController
+);
+
+router.delete('/:calendarId', validateParams(calendarIdSchema), deleteCalendarController);
 
 export default router;

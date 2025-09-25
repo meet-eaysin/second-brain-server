@@ -19,7 +19,11 @@ import { DatabaseModel } from '@/modules/database/models/database.model';
 import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
 import { createNotification } from '@/modules/system/services/notifications.service';
-import { ENotificationType, ENotificationPriority, ENotificationMethod } from '@/modules/system/types/notifications.types';
+import {
+  ENotificationType,
+  ENotificationPriority,
+  ENotificationMethod
+} from '@/modules/system/types/notifications.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { EStatus } from '@/modules/core/types/common.types';
 
@@ -44,10 +48,7 @@ export const createCalendar = async (
   try {
     // Check if this should be the default calendar
     if (request.isDefault) {
-      await CalendarModel.updateMany(
-        { ownerId: userId },
-        { isDefault: false }
-      );
+      await CalendarModel.updateMany({ ownerId: userId }, { isDefault: false });
     }
 
     const calendar = new CalendarModel({
@@ -68,10 +69,7 @@ export const createCalendar = async (
 /**
  * Get calendars for a user
  */
-export const getCalendars = async (
-  userId: string,
-  includeHidden = false
-): Promise<ICalendar[]> => {
+export const getCalendars = async (userId: string, includeHidden = false): Promise<ICalendar[]> => {
   try {
     const calendars = await CalendarModel.findByOwner(userId, includeHidden);
     return calendars.map(cal => transformCalendarDocument(cal));
@@ -83,10 +81,7 @@ export const getCalendars = async (
 /**
  * Get calendar by ID
  */
-export const getCalendarById = async (
-  calendarId: string,
-  userId: string
-): Promise<ICalendar> => {
+export const getCalendarById = async (calendarId: string, userId: string): Promise<ICalendar> => {
   try {
     const calendar = await CalendarModel.findOne({
       _id: calendarId,
@@ -134,10 +129,7 @@ export const updateCalendar = async (
 /**
  * Delete calendar
  */
-export const deleteCalendar = async (
-  calendarId: string,
-  userId: string
-): Promise<void> => {
+export const deleteCalendar = async (calendarId: string, userId: string): Promise<void> => {
   try {
     const calendar = await CalendarModel.findOne({
       _id: calendarId,
@@ -275,10 +267,7 @@ export const getEvents = async (
 /**
  * Get event by ID
  */
-export const getEventById = async (
-  eventId: string,
-  userId: string
-): Promise<ICalendarEvent> => {
+export const getEventById = async (eventId: string, userId: string): Promise<ICalendarEvent> => {
   try {
     const event = await CalendarEventModel.findById(eventId).populate('calendarId');
 
@@ -340,10 +329,7 @@ export const updateEvent = async (
 /**
  * Delete event
  */
-export const deleteEvent = async (
-  eventId: string,
-  userId: string
-): Promise<void> => {
+export const deleteEvent = async (eventId: string, userId: string): Promise<void> => {
   try {
     const event = await CalendarEventModel.findById(eventId);
 
@@ -553,11 +539,16 @@ const syncHabitsToCalendar = async (userId: string, calendarId: string): Promise
           const existingEvent = await CalendarEventModel.findOne({
             relatedEntityType: 'habit',
             relatedEntityId: habit.id.toString(),
-            startTime: { $gte: startOfDay, $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000) }
+            startTime: {
+              $gte: startOfDay,
+              $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+            }
           });
 
           if (!existingEvent) {
-            const habitTime = schedule.time ? new Date(`${startOfDay.toDateString()} ${schedule.time}`) : startOfDay;
+            const habitTime = schedule.time
+              ? new Date(`${startOfDay.toDateString()} ${schedule.time}`)
+              : startOfDay;
 
             await CalendarEventModel.create({
               id: generateId(),
@@ -683,7 +674,7 @@ const createEventReminders = async (event: ICalendarEvent, userId: string): Prom
 export const getCalendarStats = async (userId: string): Promise<ICalendarStats> => {
   try {
     const userCalendars = await CalendarModel.find({ ownerId: userId });
-    const calendarIds = userCalendars.map(cal => cal.id.toString());
+    const calendarIds = userCalendars.map(cal => cal._id.toString());
 
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -691,13 +682,7 @@ export const getCalendarStats = async (userId: string): Promise<ICalendarStats> 
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     // Get event counts
-    const [
-      totalEvents,
-      upcomingEvents,
-      todayEvents,
-      weekEvents,
-      monthEvents
-    ] = await Promise.all([
+    const [totalEvents, upcomingEvents, todayEvents, weekEvents, monthEvents] = await Promise.all([
       CalendarEventModel.countDocuments({ calendarId: { $in: calendarIds } }),
       CalendarEventModel.countDocuments({
         calendarId: { $in: calendarIds },
@@ -742,21 +727,30 @@ export const getCalendarStats = async (userId: string): Promise<ICalendarStats> 
       todayEvents,
       weekEvents,
       monthEvents,
-      byType: eventsByType.reduce((acc, item) => {
-        acc[item._id as EEventType] = item.count;
-        return acc;
-      }, {} as Record<EEventType, number>),
-      byStatus: eventsByStatus.reduce((acc, item) => {
-        acc[item._id as EEventStatus] = item.count;
-        return acc;
-      }, {} as Record<EEventStatus, number>),
-      byCalendar: eventsByCalendar.reduce((acc, item) => {
-        const calendar = userCalendars.find(cal => cal.id.toString() === item._id);
-        if (calendar) {
-          acc[calendar.name] = item.count;
-        }
-        return acc;
-      }, {} as Record<string, number>),
+      byType: eventsByType.reduce(
+        (acc, item) => {
+          acc[item._id as EEventType] = item.count;
+          return acc;
+        },
+        {} as Record<EEventType, number>
+      ),
+      byStatus: eventsByStatus.reduce(
+        (acc, item) => {
+          acc[item._id as EEventStatus] = item.count;
+          return acc;
+        },
+        {} as Record<EEventStatus, number>
+      ),
+      byCalendar: eventsByCalendar.reduce(
+        (acc, item) => {
+          const calendar = userCalendars.find(cal => cal.id.toString() === item._id);
+          if (calendar) {
+            acc[calendar.name] = item.count;
+          }
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
       busyHours: [], // Would need more complex aggregation
       productivity: {
         focusTime: 0,
@@ -796,9 +790,4 @@ export const getCalendarView = async (
   }
 };
 
-export {
-  syncTasksToCalendar,
-  syncProjectsToCalendar,
-  syncHabitsToCalendar,
-  syncGoalsToCalendar
-};
+export { syncTasksToCalendar, syncProjectsToCalendar, syncHabitsToCalendar, syncGoalsToCalendar };
