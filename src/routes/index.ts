@@ -18,6 +18,7 @@ import {
   contentRoutes
 } from '../modules/second-brain';
 import { calendarRoutes } from '@/modules/calendar';
+import { helpCenterRoutes } from '@/modules/help-center/routes/help-center.routes';
 import searchRoutes from '@/modules/search/routes/search.routes';
 import workspaceRoutes from '@/modules/workspace/routes/workspace.routes';
 import permissionRoutes from '../modules/permissions/routes';
@@ -52,6 +53,7 @@ router.use('/para', paraRoutes);
 router.use('/mood', moodRoutes);
 router.use('/content', contentRoutes);
 router.use('/calendar', calendarRoutes);
+router.use('/help', helpCenterRoutes);
 router.use('/search', searchRoutes);
 
 export default router;
