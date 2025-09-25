@@ -106,7 +106,20 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
     passwordResetExpires: {
       type: Date,
       select: false
-    }
+    },
+    recentlyVisited: [
+      {
+        id: String,
+        name: String,
+        type: { type: String, enum: ['page'] },
+        preview: String,
+        route: String,
+        lastVisitedAt: Date,
+        icon: String,
+        color: String,
+        moduleType: String
+      }
+    ]
   },
   {
     timestamps: true,

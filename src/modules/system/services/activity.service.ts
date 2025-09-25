@@ -51,10 +51,10 @@ export const createActivity = async (
 
   // Create version history entry if changes are provided
   if (request.changes && request.changes.length > 0) {
-    await createVersionHistoryEntry(activity.toObject());
+    await createVersionHistoryEntry(activity.toObject() as unknown as IActivity);
   }
 
-  return formatActivityResponse(activity.toObject());
+  return formatActivityResponse(activity.toObject() as unknown as IActivity);
 };
 
 /**
@@ -130,7 +130,7 @@ export const getActivities = async (
   const total = await ActivityModel.countDocuments(query).exec();
 
   // Convert to IActivity objects for permission checking
-  let filteredActivities = activities.map(doc => doc.toObject());
+  let filteredActivities = activities.map(doc => doc.toObject() as unknown as IActivity);
 
   // Filter activities based on permissions (simplified for now - can be enhanced later)
   if (requestingUserId) {
@@ -172,7 +172,7 @@ export const getActivityById = async (
     throw createAppError('Activity not found', 404);
   }
 
-  const activityObj = activity.toObject();
+  const activityObj = activity.toObject() as unknown as IActivity;
 
   if (workspaceId && activityObj.workspaceId !== workspaceId) {
     throw createAppError('Access denied', 403);
@@ -200,7 +200,7 @@ export const getRecentActivityFeed = async (
 
   const activities = await ActivityModel.find(query).sort({ timestamp: -1 }).limit(limit).exec();
 
-  return activities.map(doc => formatActivityFeedItem(doc.toObject()));
+  return activities.map(doc => formatActivityFeedItem(doc.toObject() as unknown as IActivity));
 };
 
 /**
@@ -245,7 +245,7 @@ export const getActivityAnalytics = async (
     isDeleted: { $ne: true }
   }).exec();
 
-  const activities = periodActivities.map(doc => doc.toObject());
+  const activities = periodActivities.map(doc => doc.toObject() as unknown as IActivity);
 
   // Calculate analytics
   const uniqueUsers = new Set(activities.map(a => a.userId)).size;

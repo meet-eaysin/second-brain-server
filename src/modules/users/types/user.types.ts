@@ -1,3 +1,5 @@
+import { IRecentlyVisitedItem } from '../../dashboard/types/dashboard.types';
+
 export enum EAuthProvider {
   LOCAL = 'local',
   GOOGLE = 'google'
@@ -28,6 +30,8 @@ export type TUser = {
   // Optional password reset fields (not exposed in API responses)
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  // Recently visited items
+  recentlyVisited?: IRecentlyVisitedItem[];
   // Workspace information
   workspaces?: TUserWorkspace[];
 };

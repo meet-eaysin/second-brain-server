@@ -1,6 +1,7 @@
 import { ActivityModel } from '../models/activity.model';
 import { UserModel } from '../../users/models/users.model';
-import { IActivity, IRecentlyVisitedItem } from '../types/activity.types';
+import { IActivity } from '../types/activity.types';
+import { IRecentlyVisitedItem } from '../../dashboard/types/dashboard.types';
 
 export const systemApi = {
   // Create a new activity
@@ -20,7 +21,7 @@ export const systemApi = {
       });
 
       await activity.save();
-      return activity.toObject();
+      return activity.toObject() as unknown as IActivity;
     } catch (error: any) {
       throw new Error(`Failed to create activity: ${error.message}`);
     }
@@ -62,7 +63,7 @@ export const systemApi = {
         .exec();
 
       return {
-        activities: activities.map(activity => activity.toObject()),
+        activities: activities.map(activity => activity.toObject() as unknown as IActivity),
         total
       };
     } catch (error: any) {
@@ -154,7 +155,9 @@ export const systemApi = {
       // Get user name from UserModel
       const { UserModel } = await import('../../users/models/users.model');
       const user = await UserModel.findById(userId).exec();
-      const userName = user?.name || user?.email || 'Unknown User';
+      const userName = user
+        ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User'
+        : 'Unknown User';
 
       await createActivity({
         type: EActivityType.PAGE_VISITED,
@@ -205,7 +208,7 @@ const formatActivityTitle = (activity: IActivity): string => {
     DATABASE_NAVIGATED: 'Database Navigated'
   };
 
-  return actionTitles[activity.action] || `${activity.action.replace('_', ' ')}`;
+  return actionTitles[activity.type] || `${activity.type.replace('_', ' ')}`;
 };
 
 const formatActivityDescription = (activity: IActivity): string => {
@@ -220,14 +223,14 @@ const formatActivityDescription = (activity: IActivity): string => {
   };
 
   const entityName = entityNames[activity.entityType] || activity.entityType;
-  const action = activity.action.toLowerCase().replace('_', ' ');
+  const action = activity.type.toLowerCase().replace('_', ' ');
 
   if (activity.metadata?.page) {
     return `Visited ${activity.metadata.page}`;
   }
 
   if (activity.metadata?.databaseName) {
-    return `${activity.action === 'DATABASE_OPENED' ? 'Opened' : 'Navigated to'} database "${activity.metadata.databaseName}"`;
+    return `Navigated to database "${activity.metadata.databaseName}"`;
   }
 
   return `${action} a ${entityName}`;

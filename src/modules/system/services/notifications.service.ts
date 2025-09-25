@@ -1,4 +1,3 @@
-import { ObjectId } from 'mongodb';
 import {
   INotification,
   ICreateNotificationRequest,
@@ -8,7 +7,6 @@ import {
   INotificationListResponse,
   INotificationStats,
   INotificationPreferences,
-  IReminderConfig,
   IMentionNotificationData,
   IDueTaskNotificationData,
   ENotificationType,
@@ -16,10 +14,11 @@ import {
   ENotificationMethod,
   ENotificationStatus
 } from '../types/notifications.types';
+import { NotificationModel, TNotificationDocument } from '../models/notification.model';
+import { NotificationPreferencesModel } from '../models/notification-preferences.model';
+import { DeviceTokenModel, TDeviceTokenDocument } from '../models/device-token.model';
 import { createAppError } from '@/utils/error.utils';
-import { generateId } from '@/utils/id-generator';
 import { sendEmail } from '@/config/mailer';
-import { sendSMS } from '@/config/sms';
 import {
   sendWebPushNotification,
   sendFCMNotification,
@@ -29,54 +28,45 @@ import {
 import { compileEmailTemplate, ITemplateVariables } from '@/config/email-templates';
 import { sendRealtimeNotification } from './realtime-notifications.service';
 
-// In-memory storage for notifications (in production, use MongoDB)
-const notifications = new Map<string, INotification>();
-const preferences = new Map<string, INotificationPreferences>();
-const deviceTokens = new Map<string, {
-  fcm: string[];
-  webPush: IWebPushSubscription[];
-}>(); // userId -> device tokens
-
 /**
  * Create a new notification
  */
 export const createNotification = async (
   request: ICreateNotificationRequest
 ): Promise<INotificationResponse> => {
-  const now = new Date();
-  const id = generateId();
+  try {
+    const notification = new NotificationModel({
+      type: request.type,
+      priority: request.priority,
+      title: request.title,
+      message: request.message,
+      userId: request.userId,
+      workspaceId: request.workspaceId,
+      entityId: request.entityId,
+      entityType: request.entityType,
+      metadata: request.metadata || {},
+      methods: request.methods || [ENotificationMethod.IN_APP],
+      status: ENotificationStatus.PENDING,
+      scheduledFor: request.scheduledFor,
+      createdBy: request.userId
+    });
 
-  const notification: INotification = {
-    id,
-    type: request.type,
-    priority: request.priority,
-    title: request.title,
-    message: request.message,
-    userId: request.userId,
-    workspaceId: request.workspaceId,
-    entityId: request.entityId,
-    entityType: request.entityType,
-    metadata: request.metadata || {},
-    methods: request.methods || [ENotificationMethod.IN_APP],
-    status: ENotificationStatus.PENDING,
-    scheduledFor: request.scheduledFor,
-    createdAt: now,
-    updatedAt: now,
-    createdBy: request.userId
-  };
+    const savedNotification = await notification.save();
 
-  notifications.set(id, notification);
+    // Send notification immediately if not scheduled
+    if (!request.scheduledFor || request.scheduledFor <= new Date()) {
+      await sendNotificationNow(savedNotification);
+    }
 
-  // Send notification immediately if not scheduled
-  if (!request.scheduledFor || request.scheduledFor <= now) {
-    await sendNotificationNow(notification);
+    // Send real-time notification
+    const response = formatNotificationResponse(savedNotification);
+    await sendRealtimeNotification(response);
+
+    return response;
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to create notification: ${error.message}`, 500);
   }
-
-  // Send real-time notification
-  const response = formatNotificationResponse(notification);
-  await sendRealtimeNotification(response);
-
-  return response;
 };
 
 /**
@@ -85,95 +75,97 @@ export const createNotification = async (
 export const getNotifications = async (
   options: INotificationQueryOptions
 ): Promise<INotificationListResponse> => {
-  let filteredNotifications = Array.from(notifications.values());
+  try {
+    // Build query
+    const query: any = {};
 
-  // Apply filters
-  if (options.userId) {
-    filteredNotifications = filteredNotifications.filter(n => n.userId === options.userId);
-  }
-
-  if (options.workspaceId) {
-    filteredNotifications = filteredNotifications.filter(n => n.workspaceId === options.workspaceId);
-  }
-
-  if (options.type) {
-    filteredNotifications = filteredNotifications.filter(n => n.type === options.type);
-  }
-
-  if (options.status) {
-    filteredNotifications = filteredNotifications.filter(n => n.status === options.status);
-  }
-
-  if (options.priority) {
-    filteredNotifications = filteredNotifications.filter(n => n.priority === options.priority);
-  }
-
-  if (options.unreadOnly) {
-    filteredNotifications = filteredNotifications.filter(n => !n.readAt);
-  }
-
-  if (options.entityId) {
-    filteredNotifications = filteredNotifications.filter(n => n.entityId === options.entityId);
-  }
-
-  if (options.entityType) {
-    filteredNotifications = filteredNotifications.filter(n => n.entityType === options.entityType);
-  }
-
-  if (options.dateRange) {
-    filteredNotifications = filteredNotifications.filter(n => 
-      n.createdAt >= options.dateRange!.start && n.createdAt <= options.dateRange!.end
-    );
-  }
-
-  // Sort notifications
-  const sortBy = options.sortBy || 'createdAt';
-  const sortOrder = options.sortOrder || 'desc';
-  
-  filteredNotifications.sort((a, b) => {
-    let aValue: Date | string | number;
-    let bValue: Date | string | number;
-
-    switch (sortBy) {
-      case 'priority':
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        aValue = priorityOrder[a.priority];
-        bValue = priorityOrder[b.priority];
-        break;
-      case 'scheduledFor':
-        aValue = a.scheduledFor || a.createdAt;
-        bValue = b.scheduledFor || b.createdAt;
-        break;
-      default:
-        aValue = a.createdAt;
-        bValue = b.createdAt;
+    if (options.userId) {
+      query.userId = options.userId;
     }
 
-    if (sortOrder === 'asc') {
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+    if (options.workspaceId) {
+      query.workspaceId = options.workspaceId;
+    }
+
+    if (options.type) {
+      query.type = options.type;
+    }
+
+    if (options.status) {
+      query.status = options.status;
+    }
+
+    if (options.priority) {
+      query.priority = options.priority;
+    }
+
+    if (options.unreadOnly) {
+      query.readAt = null;
+    }
+
+    if (options.entityId) {
+      query.entityId = options.entityId;
+    }
+
+    if (options.entityType) {
+      query.entityType = options.entityType;
+    }
+
+    if (options.dateRange) {
+      query.createdAt = {
+        $gte: options.dateRange.start,
+        $lte: options.dateRange.end
+      };
+    }
+
+    // Build sort
+    const sortBy = options.sortBy || 'createdAt';
+    const sortOrder = options.sortOrder === 'asc' ? 1 : -1;
+    const sort: any = {};
+
+    if (sortBy === 'priority') {
+      // Custom priority sorting
+      sort.priority = sortOrder;
+    } else if (sortBy === 'scheduledFor') {
+      sort.scheduledFor = sortOrder;
     } else {
-      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      sort.createdAt = sortOrder;
     }
-  });
 
-  // Pagination
-  const limit = options.limit || 20;
-  const offset = options.offset || 0;
-  const total = filteredNotifications.length;
-  const paginatedNotifications = filteredNotifications.slice(offset, offset + limit);
+    // Pagination
+    const limit = options.limit || 20;
+    const offset = options.offset || 0;
 
-  // Count unread notifications
-  const unreadCount = filteredNotifications.filter(n => !n.readAt).length;
+    // Get total count
+    const countQuery = { ...query, isDeleted: { $ne: true }, isArchived: { $ne: true } };
+    const total = await NotificationModel.countDocuments(countQuery).exec();
 
-  return {
-    notifications: paginatedNotifications.map(formatNotificationResponse),
-    total,
-    unreadCount,
-    page: Math.floor(offset / limit) + 1,
-    limit,
-    hasNext: offset + limit < total,
-    hasPrev: offset > 0
-  };
+    // Get notifications
+    const findQuery = { ...query, isDeleted: { $ne: true }, isArchived: { $ne: true } };
+    const notifications = await NotificationModel.find(findQuery)
+      .sort(sort)
+      .skip(offset)
+      .limit(limit)
+      .exec();
+
+    // Count unread notifications for the user
+    const unreadCount = options.userId
+      ? await NotificationModel.countUnread(options.userId, options.workspaceId)
+      : 0;
+
+    return {
+      notifications: notifications.map(formatNotificationResponse),
+      total,
+      unreadCount,
+      page: Math.floor(offset / limit) + 1,
+      limit,
+      hasNext: offset + limit < total,
+      hasPrev: offset > 0
+    };
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to get notifications: ${error.message}`, 500);
+  }
 };
 
 /**
@@ -183,17 +175,26 @@ export const getNotificationById = async (
   id: string,
   userId: string
 ): Promise<INotificationResponse> => {
-  const notification = notifications.get(id);
-  
-  if (!notification) {
-    throw createAppError('Notification not found', 404);
-  }
+  try {
+    const notification = await NotificationModel.findOne({
+      _id: id,
+      isDeleted: { $ne: true },
+      isArchived: { $ne: true }
+    }).exec();
 
-  if (notification.userId !== userId) {
-    throw createAppError('Access denied', 403);
-  }
+    if (!notification) {
+      throw createAppError('Notification not found', 404);
+    }
 
-  return formatNotificationResponse(notification);
+    if (notification.userId !== userId) {
+      throw createAppError('Access denied', 403);
+    }
+
+    return formatNotificationResponse(notification);
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to get notification: ${error.message}`, 500);
+  }
 };
 
 /**
@@ -204,40 +205,47 @@ export const updateNotification = async (
   request: IUpdateNotificationRequest,
   userId: string
 ): Promise<INotificationResponse> => {
-  const notification = notifications.get(id);
-  
-  if (!notification) {
-    throw createAppError('Notification not found', 404);
+  try {
+    const notification = await NotificationModel.findOne({
+      _id: id,
+      userId,
+      isDeleted: { $ne: true },
+      isArchived: { $ne: true }
+    }).exec();
+
+    if (!notification) {
+      throw createAppError('Notification not found', 404);
+    }
+
+    // Update fields
+    if (request.status) (notification as any).status = request.status;
+    if (request.readAt) (notification as any).readAt = request.readAt;
+    if (request.metadata) {
+      (notification as any).metadata = { ...notification.metadata, ...request.metadata };
+    }
+    (notification as any).updatedAt = new Date();
+
+    const updatedNotification = await notification.save();
+
+    return formatNotificationResponse(updatedNotification);
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to update notification: ${error.message}`, 500);
   }
-
-  if (notification.userId !== userId) {
-    throw createAppError('Access denied', 403);
-  }
-
-  const updatedNotification: INotification = {
-    ...notification,
-    status: request.status || notification.status,
-    readAt: request.readAt || notification.readAt,
-    metadata: { ...notification.metadata, ...request.metadata },
-    updatedAt: new Date()
-  };
-
-  notifications.set(id, updatedNotification);
-
-  return formatNotificationResponse(updatedNotification);
 };
 
 /**
  * Mark notification as read
  */
-export const markAsRead = async (
-  id: string,
-  userId: string
-): Promise<INotificationResponse> => {
-  return updateNotification(id, {
-    status: ENotificationStatus.READ,
-    readAt: new Date()
-  }, userId);
+export const markAsRead = async (id: string, userId: string): Promise<INotificationResponse> => {
+  return updateNotification(
+    id,
+    {
+      status: ENotificationStatus.READ,
+      readAt: new Date()
+    },
+    userId
+  );
 };
 
 /**
@@ -247,47 +255,36 @@ export const markAllAsRead = async (
   userId: string,
   workspaceId?: string
 ): Promise<{ updated: number }> => {
-  let updated = 0;
-  const now = new Date();
-
-  for (const [id, notification] of notifications) {
-    if (notification.userId === userId && 
-        (!workspaceId || notification.workspaceId === workspaceId) &&
-        !notification.readAt) {
-      
-      const updatedNotification: INotification = {
-        ...notification,
-        status: ENotificationStatus.READ,
-        readAt: now,
-        updatedAt: now
-      };
-
-      notifications.set(id, updatedNotification);
-      updated++;
-    }
+  try {
+    const result = await NotificationModel.markAllAsRead(userId, workspaceId);
+    return { updated: result.modifiedCount };
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to mark all notifications as read: ${error.message}`, 500);
   }
-
-  return { updated };
 };
 
 /**
  * Delete notification
  */
-export const deleteNotification = async (
-  id: string,
-  userId: string
-): Promise<void> => {
-  const notification = notifications.get(id);
-  
-  if (!notification) {
-    throw createAppError('Notification not found', 404);
-  }
+export const deleteNotification = async (id: string, userId: string): Promise<void> => {
+  try {
+    const notification = await NotificationModel.findOne({
+      _id: id,
+      userId,
+      isDeleted: { $ne: true },
+      isArchived: { $ne: true }
+    }).exec();
 
-  if (notification.userId !== userId) {
-    throw createAppError('Access denied', 403);
-  }
+    if (!notification) {
+      throw createAppError('Notification not found', 404);
+    }
 
-  notifications.delete(id);
+    await notification.softDelete(userId);
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to delete notification: ${error.message}`, 500);
+  }
 };
 
 /**
@@ -297,47 +294,68 @@ export const getNotificationStats = async (
   userId: string,
   workspaceId?: string
 ): Promise<INotificationStats> => {
-  const userNotifications = Array.from(notifications.values())
-    .filter(n => n.userId === userId && (!workspaceId || n.workspaceId === workspaceId));
+  try {
+    const query: any = { userId };
+    if (workspaceId) {
+      query.workspaceId = workspaceId;
+    }
 
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const findQuery = { ...query, isDeleted: { $ne: true }, isArchived: { $ne: true } };
+    const userNotifications = await NotificationModel.find(findQuery).exec();
 
-  const stats: INotificationStats = {
-    total: userNotifications.length,
-    unread: userNotifications.filter(n => !n.readAt).length,
-    byType: {} as Record<ENotificationType, number>,
-    byPriority: {} as Record<ENotificationPriority, number>,
-    byStatus: {} as Record<ENotificationStatus, number>,
-    todayCount: userNotifications.filter(n => n.createdAt >= today).length,
-    weekCount: userNotifications.filter(n => n.createdAt >= weekAgo).length
-  };
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Count by type
-  for (const type of Object.values(ENotificationType)) {
-    stats.byType[type] = userNotifications.filter(n => n.type === type).length;
+    const stats: INotificationStats = {
+      total: userNotifications.length,
+      unread: userNotifications.filter((n: TNotificationDocument) => !n.readAt).length,
+      byType: {} as Record<ENotificationType, number>,
+      byPriority: {} as Record<ENotificationPriority, number>,
+      byStatus: {} as Record<ENotificationStatus, number>,
+      todayCount: userNotifications.filter((n: TNotificationDocument) => n.createdAt >= today)
+        .length,
+      weekCount: userNotifications.filter((n: TNotificationDocument) => n.createdAt >= weekAgo)
+        .length
+    };
+
+    // Count by type
+    for (const type of Object.values(ENotificationType)) {
+      stats.byType[type] = userNotifications.filter(
+        (n: TNotificationDocument) => n.type === type
+      ).length;
+    }
+
+    // Count by priority
+    for (const priority of Object.values(ENotificationPriority)) {
+      stats.byPriority[priority] = userNotifications.filter(
+        (n: TNotificationDocument) => n.priority === priority
+      ).length;
+    }
+
+    // Count by status
+    for (const status of Object.values(ENotificationStatus)) {
+      stats.byStatus[status] = userNotifications.filter(
+        (n: TNotificationDocument) => n.status === status
+      ).length;
+    }
+
+    return stats;
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to get notification stats: ${error.message}`, 500);
   }
-
-  // Count by priority
-  for (const priority of Object.values(ENotificationPriority)) {
-    stats.byPriority[priority] = userNotifications.filter(n => n.priority === priority).length;
-  }
-
-  // Count by status
-  for (const status of Object.values(ENotificationStatus)) {
-    stats.byStatus[status] = userNotifications.filter(n => n.status === status).length;
-  }
-
-  return stats;
 };
 
 /**
  * Send notification immediately
  */
 const sendNotificationNow = async (notification: INotification): Promise<void> => {
-  const userPrefs = await getUserNotificationPreferences(notification.userId, notification.workspaceId);
-  
+  const userPrefs = await getUserNotificationPreferences(
+    notification.userId,
+    notification.workspaceId
+  );
+
   // Check if notifications are enabled for this type
   const typePrefs = userPrefs?.preferences[notification.type];
   if (!typePrefs?.enabled) {
@@ -351,7 +369,7 @@ const sendNotificationNow = async (notification: INotification): Promise<void> =
 
   // Send via enabled methods
   const methods = typePrefs.methods || notification.methods;
-  
+
   for (const method of methods) {
     try {
       switch (method) {
@@ -373,15 +391,11 @@ const sendNotificationNow = async (notification: INotification): Promise<void> =
     }
   }
 
-  // Update notification status
-  const updatedNotification: INotification = {
-    ...notification,
-    status: ENotificationStatus.SENT,
-    sentAt: new Date(),
-    updatedAt: new Date()
-  };
-
-  notifications.set(notification.id, updatedNotification);
+  // Update notification status using the document instance
+  const notificationDoc = await NotificationModel.findById(notification.id);
+  if (notificationDoc) {
+    await notificationDoc.markAsSent();
+  }
 };
 
 /**
@@ -391,18 +405,18 @@ const sendEmailNotification = async (notification: INotification): Promise<void>
   try {
     // Prepare template variables
     const templateVars: ITemplateVariables = {
-      userName: notification.metadata.userName as string || 'User',
+      userName: (notification.metadata.userName as string) || 'User',
       taskName: notification.metadata.taskName as string,
       taskDueDate: notification.metadata.dueDate as string,
       taskPriority: notification.metadata.priority as string,
       projectName: notification.metadata.projectName as string,
       mentionedBy: notification.metadata.mentionedBy as string,
-      entityName: notification.metadata.entityName as string || notification.title,
+      entityName: (notification.metadata.entityName as string) || notification.title,
       entityType: notification.entityType || 'item',
       dueDate: notification.metadata.dueDate as string,
       overdueDays: notification.metadata.overdueDays as number,
-      workspaceName: notification.metadata.workspaceName as string || 'Second Brain',
-      actionUrl: `${process.env.APP_URL}/notifications/${notification.id}`,
+      workspaceName: (notification.metadata.workspaceName as string) || 'Second Brain',
+      actionUrl: `${process.env.APP_URL}/notifications/${notification.id}`
     };
 
     // Compile email template
@@ -410,7 +424,7 @@ const sendEmailNotification = async (notification: INotification): Promise<void>
 
     // Send email
     await sendEmail({
-      to: notification.metadata.userEmail as string || 'user@example.com',
+      to: (notification.metadata.userEmail as string) || 'user@example.com',
       subject,
       html,
       text
@@ -436,8 +450,8 @@ const sendSMSNotification = async (notification: INotification): Promise<void> =
  */
 const sendPushNotification = async (notification: INotification): Promise<void> => {
   try {
-    const userTokens = deviceTokens.get(notification.userId);
-    if (!userTokens) {
+    const userTokens = await DeviceTokenModel.findActiveByUser(notification.userId);
+    if (!userTokens || userTokens.length === 0) {
       console.log(`No device tokens found for user ${notification.userId}`);
       return;
     }
@@ -473,9 +487,10 @@ const sendPushNotification = async (notification: INotification): Promise<void> 
     };
 
     // Send to FCM tokens
-    for (const fcmToken of userTokens.fcm) {
+    const fcmTokens = userTokens.filter(token => token.type === 'fcm' && token.token);
+    for (const tokenDoc of fcmTokens) {
       await sendFCMNotification({
-        token: fcmToken,
+        token: tokenDoc.token!,
         notification: {
           title: payload.title,
           body: payload.body,
@@ -507,11 +522,22 @@ const sendPushNotification = async (notification: INotification): Promise<void> 
           }
         }
       });
+
+      // Mark token as used
+      await tokenDoc.markAsUsed();
     }
 
     // Send to Web Push subscriptions
-    for (const webPushSub of userTokens.webPush) {
-      await sendWebPushNotification(webPushSub, payload);
+    const webPushTokens = userTokens.filter(token => token.type === 'webpush' && token.endpoint);
+    for (const tokenDoc of webPushTokens) {
+      const subscription: IWebPushSubscription = {
+        endpoint: tokenDoc.endpoint!,
+        keys: tokenDoc.keys!
+      };
+      await sendWebPushNotification(subscription, payload);
+
+      // Mark token as used
+      await tokenDoc.markAsUsed();
     }
 
     console.log(`📱 Sent push notification: ${notification.title}`);
@@ -528,7 +554,13 @@ const getUserNotificationPreferences = async (
   userId: string,
   workspaceId: string
 ): Promise<INotificationPreferences | undefined> => {
-  return preferences.get(`${userId}-${workspaceId}`);
+  try {
+    const prefs = await NotificationPreferencesModel.findByUserAndWorkspace(userId, workspaceId);
+    return prefs ? prefs.toObject() : undefined;
+  } catch (error) {
+    console.error('Error getting user notification preferences:', error);
+    return undefined;
+  }
 };
 
 /**
@@ -541,9 +573,9 @@ const isInQuietHours = (prefs?: INotificationPreferences): boolean => {
 
   const now = new Date();
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  
+
   const { start, end } = prefs.globalSettings.quietHours;
-  
+
   // Simple time comparison (doesn't handle timezone properly - would need proper implementation)
   return currentTime >= start && currentTime <= end;
 };
@@ -554,7 +586,7 @@ const isInQuietHours = (prefs?: INotificationPreferences): boolean => {
 const formatNotificationResponse = (notification: INotification): INotificationResponse => {
   const now = new Date();
   const timeDiff = now.getTime() - notification.createdAt.getTime();
-  
+
   return {
     id: notification.id,
     type: notification.type,
@@ -637,30 +669,44 @@ export const registerDeviceToken = async (
   subscription?: IWebPushSubscription
 ): Promise<void> => {
   try {
-    if (!deviceTokens.has(userId)) {
-      deviceTokens.set(userId, { fcm: [], webPush: [] });
-    }
-
-    const userTokens = deviceTokens.get(userId)!;
-
     if (type === 'fcm' && token) {
-      // Remove existing token if present
-      const index = userTokens.fcm.indexOf(token);
-      if (index > -1) {
-        userTokens.fcm.splice(index, 1);
+      // Check if token already exists
+      const existingToken = await DeviceTokenModel.findByToken(token);
+      if (existingToken) {
+        // Update existing token
+        existingToken.isActive = true;
+        existingToken.lastUsedAt = new Date();
+        await existingToken.save();
+      } else {
+        // Create new token
+        await DeviceTokenModel.create({
+          userId,
+          type,
+          token,
+          isActive: true,
+          lastUsedAt: new Date()
+        });
       }
-      // Add new token
-      userTokens.fcm.push(token);
     } else if (type === 'webpush' && subscription) {
-      // Remove existing subscription if present
-      const index = userTokens.webPush.findIndex(
-        sub => sub.endpoint === subscription.endpoint
-      );
-      if (index > -1) {
-        userTokens.webPush.splice(index, 1);
+      // Check if subscription already exists
+      const existingToken = await DeviceTokenModel.findByEndpoint(subscription.endpoint);
+      if (existingToken) {
+        // Update existing subscription
+        existingToken.keys = subscription.keys;
+        existingToken.isActive = true;
+        existingToken.lastUsedAt = new Date();
+        await existingToken.save();
+      } else {
+        // Create new subscription
+        await DeviceTokenModel.create({
+          userId,
+          type,
+          endpoint: subscription.endpoint,
+          keys: subscription.keys,
+          isActive: true,
+          lastUsedAt: new Date()
+        });
       }
-      // Add new subscription
-      userTokens.webPush.push(subscription);
     }
 
     console.log(`📱 Registered ${type} token for user ${userId}`);
@@ -680,19 +726,10 @@ export const unregisterDeviceToken = async (
   endpoint?: string
 ): Promise<void> => {
   try {
-    const userTokens = deviceTokens.get(userId);
-    if (!userTokens) return;
-
     if (type === 'fcm' && token) {
-      const index = userTokens.fcm.indexOf(token);
-      if (index > -1) {
-        userTokens.fcm.splice(index, 1);
-      }
+      await DeviceTokenModel.deactivateToken(token);
     } else if (type === 'webpush' && endpoint) {
-      const index = userTokens.webPush.findIndex(sub => sub.endpoint === endpoint);
-      if (index > -1) {
-        userTokens.webPush.splice(index, 1);
-      }
+      await DeviceTokenModel.deactivateEndpoint(endpoint);
     }
 
     console.log(`📱 Unregistered ${type} token for user ${userId}`);
@@ -705,8 +742,29 @@ export const unregisterDeviceToken = async (
 /**
  * Get user device tokens
  */
-export const getUserDeviceTokens = (userId: string) => {
-  return deviceTokens.get(userId) || { fcm: [], webPush: [] };
+export const getUserDeviceTokens = async (
+  userId: string
+): Promise<{ fcm: string[]; webPush: IWebPushSubscription[] }> => {
+  try {
+    const tokens = await DeviceTokenModel.findActiveByUser(userId);
+    const result = { fcm: [] as string[], webPush: [] as IWebPushSubscription[] };
+
+    tokens.forEach((token: TDeviceTokenDocument) => {
+      if (token.type === 'fcm' && token.token) {
+        result.fcm.push(token.token);
+      } else if (token.type === 'webpush' && token.endpoint && token.keys) {
+        result.webPush.push({
+          endpoint: token.endpoint,
+          keys: token.keys
+        });
+      }
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error getting user device tokens:', error);
+    return { fcm: [], webPush: [] };
+  }
 };
 
 /**

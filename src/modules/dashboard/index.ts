@@ -16,19 +16,7 @@ export {
   getFinanceSummary
 } from './controllers/dashboard.controllers';
 
-// Services
-export {
-  DashboardService,
-  dashboardService,
-  getDashboardOverview,
-  calculateQuickStats,
-  getRecentActivityFeed,
-  getUpcomingTasksService,
-  getRecentNotesService,
-  getGoalProgressService,
-  getHabitStreaksService,
-  getFinanceSummaryService
-} from './services/dashboard.services';
+// Services (internal - not exported)
 
 // Types
 export type {

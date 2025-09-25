@@ -57,10 +57,13 @@ export const getNotificationsController = catchAsync(
       limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
       unreadOnly: req.query.unreadOnly === 'true',
-      dateRange: req.query.startDate && req.query.endDate ? {
-        start: new Date(req.query.startDate as string),
-        end: new Date(req.query.endDate as string)
-      } : undefined
+      dateRange:
+        req.query.startDate && req.query.endDate
+          ? {
+              start: new Date(req.query.startDate as string),
+              end: new Date(req.query.endDate as string)
+            }
+          : undefined
     };
 
     const result = await getNotifications(options);
@@ -367,7 +370,7 @@ export const getUserDeviceTokensController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
 
-    const tokens = getUserDeviceTokens(userId);
+    const tokens = await getUserDeviceTokens(userId);
 
     sendSuccessResponse(res, 'Device tokens retrieved successfully', {
       fcmTokens: tokens.fcm.length,

@@ -208,7 +208,7 @@ const calculateQuickStats = async (
   const results = await Promise.all(statPromises);
 
   // Merge all results into stats
-  return results.reduce((acc, result) => ({ ...acc, ...result }), stats);
+  return results.reduce((acc: IQuickStats, result) => ({ ...acc, ...result }), stats);
 };
 
 // Helper functions for calculating individual stats
@@ -352,7 +352,9 @@ const recordToActivityItem = (record: any, dbType: EDatabaseType): IActivityFeed
     metadata: {}
   };
 
-  const activityTypeMap = {
+  const activityTypeMap: Partial<
+    Record<EDatabaseType, { type: IActivityFeedItem['type']; title: string; description: string }>
+  > = {
     [EDatabaseType.TASKS]: {
       type: 'task_created' as const,
       title: 'Task Created',
@@ -640,7 +642,7 @@ const getFinanceSummary = async (
 const getRecentlyVisited = async (
   databaseMap: Record<EDatabaseType, string | null>,
   userId: string,
-  workspaceId: string,
+  workspaceId: string | undefined,
   limit: number = 15
 ): Promise<IRecentlyVisitedItem[]> => {
   try {
@@ -667,7 +669,10 @@ const getRecentlyVisited = async (
 };
 
 // Helper functions for recently visited
-const createPageMetadata = () => ({
+const createPageMetadata = (): Record<
+  string,
+  { name: string; preview: string; icon: string; color: string }
+> => ({
   '/app': { name: 'Home', preview: 'Your personal dashboard', icon: '🏠', color: '#6366f1' },
   '/app/second-brain': {
     name: 'Second Brain',
@@ -857,7 +862,7 @@ const createPageMetadata = () => ({
   }
 });
 
-const processPageVisits = (pageVisits: any[], pageMetadata: any) => {
+const processPageVisits = (pageVisits: readonly any[], pageMetadata: any) => {
   const recentPages = new Map<string, Date>();
 
   pageVisits.forEach(activity => {

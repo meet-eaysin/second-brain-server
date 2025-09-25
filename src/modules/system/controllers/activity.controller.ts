@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { systemApi } from '../services/system-api';
 import { createAppError } from '@/utils/error.utils';
-import { AuthenticatedRequest } from '@/types/express';
 
 export class ActivityController {
   // Get activities with filtering
-  async getActivities(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getActivities(req: Request, res: Response, next: NextFunction) {
     try {
       const {
         userId,
@@ -20,7 +19,7 @@ export class ActivityController {
       } = req.query;
 
       const filters = {
-        userId: (userId as string) || req.user?.id,
+        userId: (userId as string) || req.user?.userId,
         workspaceId: workspaceId as string,
         action: action as string,
         entityType: entityType as string,
@@ -48,10 +47,10 @@ export class ActivityController {
   }
 
   // Get activity feed for dashboard
-  async getActivityFeed(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getActivityFeed(req: Request, res: Response, next: NextFunction) {
     try {
       const { workspaceId, limit = 10 } = req.query;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         return next(createAppError('User not authenticated', 401));
@@ -73,10 +72,10 @@ export class ActivityController {
   }
 
   // Record page visit (legacy endpoint)
-  async recordPageVisit(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async recordPageVisit(req: Request, res: Response, next: NextFunction) {
     try {
       const { page, workspaceId } = req.body;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         return next(createAppError('User not authenticated', 401));
@@ -98,10 +97,10 @@ export class ActivityController {
   }
 
   // Get recently visited items
-  async getRecentlyVisited(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async getRecentlyVisited(req: Request, res: Response, next: NextFunction) {
     try {
       const { limit = 15 } = req.query;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         return next(createAppError('User not authenticated', 401));
@@ -122,11 +121,11 @@ export class ActivityController {
   }
 
   // Create manual activity (for testing or admin purposes)
-  async createActivity(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  async createActivity(req: Request, res: Response, next: NextFunction) {
     try {
       const { action, entityType, entityId, workspaceId, metadata } = req.body;
 
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         return next(createAppError('User not authenticated', 401));

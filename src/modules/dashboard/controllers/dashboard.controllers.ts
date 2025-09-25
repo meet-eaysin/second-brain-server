@@ -450,6 +450,7 @@ export const getRecentlyVisited = catchAsync(
     const recentlyVisited = await dashboardService.getRecentlyVisited(
       databaseMap,
       userId,
+      workspaceId,
       Number(limit)
     );
 
