@@ -5,11 +5,10 @@ import {
   passwordResetLimiter,
   refreshTokenLimiter,
   registerLimiter
-} from '../../../config/rate-limiter/auth-rate-limiter';
+} from '@/config/rate-limiter/auth-rate-limiter';
 import * as authMiddleware from '../../../middlewares/auth';
-
 const { authenticateToken } = authMiddleware;
-import { validateBody, validateQuery } from '../../../middlewares/validation';
+import { validateBody, validateQuery } from '@/middlewares/validation';
 import {
   register,
   login,
@@ -23,8 +22,7 @@ import {
   googleLogin,
   googleCallback,
   googleLoginSuccess,
-  testGoogleConfig
-} from '../controllers/auth.controller';
+} from '@/modules/auth/controllers/auth.controller';
 import {
   registerSchema,
   loginSchema,
@@ -34,7 +32,7 @@ import {
   resetPasswordSchema,
   googleCallbackQuerySchema,
   googleCallbackSchema
-} from '../validators/auth.validaations';
+} from '@/modules/auth/validators/auth.validaations';
 
 const router = Router();
 
@@ -82,8 +80,5 @@ router.post(
   validateBody(googleCallbackSchema),
   googleLoginSuccess
 );
-
-// TEST ROUTES (remove in production)
-router.get('/google/test-config', testGoogleConfig);
 
 export default router;

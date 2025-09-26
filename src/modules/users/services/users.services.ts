@@ -4,14 +4,14 @@ import {
   TUserUpdateRequest,
   EAuthProvider,
   TUserRole
-} from '../types/user.types';
+} from '@/modules/users/types/user.types';
 import {
   generateUsernameFromEmail,
   validateEmail,
   validatePassword,
   validateUsername
-} from '../../auth/utils/auth.utils';
-import { UserModel } from '../models/users.model';
+} from '@/modules/auth/utils/auth.utils';
+import { UserModel } from '@/modules/users/models/users.model';
 import { TGoogleUserProfile } from '../../auth/types/auth.types';
 import { transformUserDocument } from '../utils';
 import { findById, findByIdAndUpdate, deleteOne } from '../../../utils/mongoose-helpers';
@@ -61,16 +61,14 @@ export const createUser = async (userData: TUserCreateRequest): Promise<TUser> =
       isEmailVerified: userData.isEmailVerified || false
     });
 
-    // Create default workspace for the new user
-    try {
-      await workspaceService.createDefaultWorkspace(newUser.id, {
-        firstName: userData.firstName,
-        lastName: userData.lastName
-      });
-    } catch (error) {
-      // Log error but don't fail user creation
-      console.error('Failed to create default workspace for user:', newUser.id, error);
-    }
+    // try {
+    //   await workspaceService.createDefaultWorkspace(newUser.id, {
+    //     firstName: userData.firstName,
+    //     lastName: userData.lastName
+    //   });
+    // } catch (error) {
+    //   console.error('Failed to create default workspace for user:', newUser.id, error);
+    // }
 
     return newUser.toJSON();
   } catch (error: any) {

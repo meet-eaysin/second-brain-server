@@ -187,16 +187,3 @@ export const googleLoginSuccess = catchAsync(
     }
   }
 );
-
-export const testGoogleConfig = catchAsync(
-  async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
-    const config = {
-      hasClientId: !!googleConfig.clientId,
-      hasClientSecret: !!googleConfig.clientSecret,
-      redirectUri: googleConfig.redirectUri,
-      frontendUrl: appConfig.clientUrl
-    };
-
-    sendSuccessResponse(res, 'Google OAuth configuration status', config);
-  }
-);

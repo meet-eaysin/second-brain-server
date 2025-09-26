@@ -53,6 +53,7 @@ export const requireRoles = (...roles: TUserRole[]) => {
 
 export const requireAdmin = requireRoles(TUserRole.ADMIN);
 export const requireModerator = requireRoles(TUserRole.ADMIN, TUserRole.MODERATOR);
+export const requireSuperAdmin = requireRoles(TUserRole.SUPER_ADMIN);
 
 export const optionalAuth = async (
   req: Request,

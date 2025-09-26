@@ -7,8 +7,9 @@ export enum EAuthProvider {
 
 export enum TUserRole {
   USER = 'user',
+  MODERATOR = 'moderator',
   ADMIN = 'admin',
-  MODERATOR = 'moderator'
+  SUPER_ADMIN = 'super_admin'
 }
 
 export type TUser = {

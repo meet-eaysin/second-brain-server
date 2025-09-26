@@ -129,7 +129,7 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_-])[A-Za-z\d@$!%*?&_-]{8,}$/;
   return passwordRegex.test(password);
 };
 
@@ -152,7 +152,8 @@ export const verifyStateToken = (state: string) => {
     const stateTime = decoded.timestamp;
     const timeDiff = now - stateTime;
 
-    if (timeDiff > 10 * 60 * 1000) { // 10 minutes
+    if (timeDiff > 10 * 60 * 1000) {
+      // 10 minutes
       throw new Error('State token expired');
     }
 
