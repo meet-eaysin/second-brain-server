@@ -172,7 +172,8 @@ export const deleteCalendar = async (calendarId: string, userId: string): Promis
  */
 export const createEvent = async (
   userId: string,
-  request: ICreateEventRequest
+  request: ICreateEventRequest,
+  workspaceId?: string
 ): Promise<ICalendarEvent> => {
   try {
     // Verify calendar ownership
@@ -189,7 +190,11 @@ export const createEvent = async (
       ...request,
       id: generateId(),
       createdBy: userId,
-      timeZone: request.timeZone || calendar.timeZone
+      timeZone: request.timeZone || calendar.timeZone,
+      metadata: {
+        ...request.metadata,
+        workspaceId: workspaceId
+      }
     });
 
     await event.save();
@@ -273,6 +278,7 @@ export const getEvents = async (
     }
 
     const events = await eventsQuery.exec();
+
     return events.map(event => event.toJSON());
   } catch (error) {
     throw createAppError('Failed to get events', 500);

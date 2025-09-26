@@ -111,9 +111,10 @@ export const deleteCalendarController = catchAsync(
 export const createEventController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const request: ICreateEventRequest = req.body;
 
-    const event = await createEvent(userId, request);
+    const event = await createEvent(userId, request, workspaceId);
 
     sendSuccessResponse(res, 'Event created successfully', event, 201);
   }
