@@ -348,6 +348,7 @@ async function updateView(
 
   if (data.name !== undefined) view.name = data.name;
   if (data.description !== undefined) view.description = data.description;
+  if (data.type !== undefined) view.type = data.type;
   if (data.isPublic !== undefined) view.isPublic = data.isPublic;
   if (data.isDefault !== undefined) {
     if (data.isDefault) {

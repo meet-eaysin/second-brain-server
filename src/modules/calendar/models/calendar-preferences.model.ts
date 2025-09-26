@@ -2,6 +2,7 @@ import mongoose, { Document, Schema, Model } from 'mongoose';
 import { TUserId } from '@/modules/core/types/common.types';
 
 export interface ICalendarPreferences {
+  id?: string;
   userId: TUserId;
 
   // General Settings
@@ -30,19 +31,24 @@ export interface ICalendarPreferences {
   };
 
   // Metadata
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export type ICalendarPreferencesDocument = ICalendarPreferences & Document;
 
-export type ICalendarPreferencesModel = Model<ICalendarPreferencesDocument>;
+export type ICalendarPreferencesModel = Model<ICalendarPreferencesDocument> & {
+  findByUserId(userId: TUserId): Promise<ICalendarPreferencesDocument | null>;
+  upsertByUserId(
+    userId: TUserId,
+    preferences: Partial<ICalendarPreferences>
+  ): Promise<ICalendarPreferencesDocument>;
+};
 
 const CalendarPreferencesSchema = new Schema<ICalendarPreferencesDocument>(
   {
     userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: true,
       unique: true,
       index: true

@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateQuery } from '@/middlewares/validation';
 import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace
+} from '@/modules/workspace/middleware/workspace.middleware';
+import {
   getAnalyticsDashboardController,
   getProductivityAnalyticsController,
   getTaskAnalyticsController,
@@ -19,6 +23,8 @@ import { z } from 'zod';
 const router = Router();
 
 router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 // Validation schemas
 const analyticsQuerySchema = z.object({

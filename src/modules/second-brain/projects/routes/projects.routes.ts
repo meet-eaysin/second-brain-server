@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
+import {
+  resolveWorkspaceContext,
+  ensureDefaultWorkspace
+} from '@/modules/workspace/middleware/workspace.middleware';
 
 // Project controllers
 import {
@@ -10,7 +14,7 @@ import {
   getProjectById,
   updateProject,
   deleteProject,
-  
+
   // Project analytics
   getActiveProjects,
   getCompletedProjects,
@@ -21,7 +25,7 @@ import {
   getProjectsImInvolvedIn,
   getProjectTemplates,
   searchProjects,
-  
+
   // Project actions
   startProject,
   completeProject,
@@ -30,7 +34,7 @@ import {
   duplicateProject,
   bulkUpdateProjects,
   bulkDeleteProjects,
-  
+
   // Statistics
   getProjectStats
 } from '../controllers/projects.controller';
@@ -55,62 +59,28 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+router.use(resolveWorkspaceContext({ allowFromBody: true }));
+router.use(ensureDefaultWorkspace);
 
 // ===== PROJECT CRUD OPERATIONS =====
 
-router.post(
-  '/',
-  validateBody(createProjectSchema),
-  createProject
-);
+router.post('/', validateBody(createProjectSchema), createProject);
 
-router.get(
-  '/',
-  validateQuery(getProjectsQuerySchema),
-  getProjects
-);
+router.get('/', validateQuery(getProjectsQuerySchema), getProjects);
 
-router.get(
-  '/stats',
-  validateQuery(projectStatsQuerySchema),
-  getProjectStats
-);
+router.get('/stats', validateQuery(projectStatsQuerySchema), getProjectStats);
 
-router.get(
-  '/active',
-  validateQuery(getProjectsQuerySchema),
-  getActiveProjects
-);
+router.get('/active', validateQuery(getProjectsQuerySchema), getActiveProjects);
 
-router.get(
-  '/completed',
-  validateQuery(getProjectsQuerySchema),
-  getCompletedProjects
-);
+router.get('/completed', validateQuery(getProjectsQuerySchema), getCompletedProjects);
 
-router.get(
-  '/my-projects',
-  validateQuery(getProjectsQuerySchema),
-  getMyProjects
-);
+router.get('/my-projects', validateQuery(getProjectsQuerySchema), getMyProjects);
 
-router.get(
-  '/involved-in',
-  validateQuery(getProjectsQuerySchema),
-  getProjectsImInvolvedIn
-);
+router.get('/involved-in', validateQuery(getProjectsQuerySchema), getProjectsImInvolvedIn);
 
-router.get(
-  '/templates',
-  validateQuery(getProjectsQuerySchema),
-  getProjectTemplates
-);
+router.get('/templates', validateQuery(getProjectsQuerySchema), getProjectTemplates);
 
-router.get(
-  '/search',
-  validateQuery(searchProjectsSchema),
-  searchProjects
-);
+router.get('/search', validateQuery(searchProjectsSchema), searchProjects);
 
 router.get(
   '/status/:status',
@@ -133,11 +103,7 @@ router.get(
   getProjectsByPriority
 );
 
-router.get(
-  '/:id',
-  validateParams(projectIdSchema),
-  getProjectById
-);
+router.get('/:id', validateParams(projectIdSchema), getProjectById);
 
 router.put(
   '/:id',
@@ -146,37 +112,17 @@ router.put(
   updateProject
 );
 
-router.delete(
-  '/:id',
-  validateParams(projectIdSchema),
-  deleteProject
-);
+router.delete('/:id', validateParams(projectIdSchema), deleteProject);
 
 // ===== PROJECT ACTIONS =====
 
-router.post(
-  '/:id/start',
-  validateParams(projectIdSchema),
-  startProject
-);
+router.post('/:id/start', validateParams(projectIdSchema), startProject);
 
-router.post(
-  '/:id/complete',
-  validateParams(projectIdSchema),
-  completeProject
-);
+router.post('/:id/complete', validateParams(projectIdSchema), completeProject);
 
-router.post(
-  '/:id/pause',
-  validateParams(projectIdSchema),
-  pauseProject
-);
+router.post('/:id/pause', validateParams(projectIdSchema), pauseProject);
 
-router.post(
-  '/:id/archive',
-  validateParams(projectIdSchema),
-  archiveProject
-);
+router.post('/:id/archive', validateParams(projectIdSchema), archiveProject);
 
 router.post(
   '/:id/duplicate',
@@ -187,16 +133,8 @@ router.post(
 
 // ===== BULK OPERATIONS =====
 
-router.post(
-  '/bulk/update',
-  validateBody(bulkUpdateProjectsSchema),
-  bulkUpdateProjects
-);
+router.post('/bulk/update', validateBody(bulkUpdateProjectsSchema), bulkUpdateProjects);
 
-router.post(
-  '/bulk/delete',
-  validateBody(bulkDeleteProjectsSchema),
-  bulkDeleteProjects
-);
+router.post('/bulk/delete', validateBody(bulkDeleteProjectsSchema), bulkDeleteProjects);
 
 export default router;

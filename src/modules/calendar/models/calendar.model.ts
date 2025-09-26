@@ -1,9 +1,5 @@
 import { Schema, model, Document, Model } from 'mongoose';
-import {
-  ECalendarProvider,
-  ECalendarType,
-  ECalendarAccessLevel
-} from '../types/calendar.types';
+import { ECalendarProvider, ECalendarType, ECalendarAccessLevel } from '../types/calendar.types';
 
 // Calendar Document Interface with instance methods
 export interface ICalendarDocument extends Document {
@@ -20,6 +16,7 @@ export interface ICalendarDocument extends Document {
 
   // Access and sharing
   ownerId: string;
+  workspaceId: string;
   isDefault: boolean;
   isVisible: boolean;
   accessLevel: ECalendarAccessLevel;
@@ -55,105 +52,120 @@ export interface ICalendarDocument extends Document {
 
 // Static methods interface
 export interface ICalendarModel extends Model<ICalendarDocument> {
-  findByOwner(ownerId: string, includeHidden?: boolean): Promise<ICalendarDocument[]>;
-  findDefault(ownerId: string): Promise<ICalendarDocument | null>;
+  findByOwner(
+    ownerId: string,
+    includeHidden?: boolean,
+    workspaceId?: string
+  ): Promise<ICalendarDocument[]>;
+  findDefault(ownerId: string, workspaceId?: string): Promise<ICalendarDocument | null>;
   findByProvider(ownerId: string, provider: ECalendarProvider): Promise<ICalendarDocument[]>;
-  findByExternalId(provider: ECalendarProvider, externalId: string): Promise<ICalendarDocument | null>;
+  findByExternalId(
+    provider: ECalendarProvider,
+    externalId: string
+  ): Promise<ICalendarDocument | null>;
 }
 
 // Calendar Schema
-const CalendarSchema = new Schema<ICalendarDocument>({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100
+const CalendarSchema = new Schema<ICalendarDocument>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    color: {
+      type: String,
+      required: true,
+      match: /^#[0-9A-F]{6}$/i,
+      default: '#3B82F6'
+    },
+    provider: {
+      type: String,
+      enum: Object.values(ECalendarProvider),
+      required: true,
+      default: ECalendarProvider.INTERNAL
+    },
+    type: {
+      type: String,
+      enum: Object.values(ECalendarType),
+      required: true,
+      default: ECalendarType.PERSONAL
+    },
+
+    // External calendar data
+    externalId: {
+      type: String,
+      sparse: true
+    },
+    externalData: {
+      type: Schema.Types.Mixed,
+      default: {}
+    },
+
+    // Access and sharing
+    ownerId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    workspaceId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
+    isVisible: {
+      type: Boolean,
+      default: true
+    },
+    accessLevel: {
+      type: String,
+      enum: Object.values(ECalendarAccessLevel),
+      default: ECalendarAccessLevel.OWNER
+    },
+
+    // Sync settings
+    syncEnabled: {
+      type: Boolean,
+      default: true
+    },
+    lastSyncAt: {
+      type: Date
+    },
+    syncToken: {
+      type: String
+    },
+
+    // Time zone
+    timeZone: {
+      type: String,
+      required: true,
+      default: 'UTC'
+    },
+
+    // Metadata
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {}
+    }
   },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: 500
-  },
-  color: {
-    type: String,
-    required: true,
-    match: /^#[0-9A-F]{6}$/i,
-    default: '#3B82F6'
-  },
-  provider: {
-    type: String,
-    enum: Object.values(ECalendarProvider),
-    required: true,
-    default: ECalendarProvider.INTERNAL
-  },
-  type: {
-    type: String,
-    enum: Object.values(ECalendarType),
-    required: true,
-    default: ECalendarType.PERSONAL
-  },
-  
-  // External calendar data
-  externalId: {
-    type: String,
-    sparse: true
-  },
-  externalData: {
-    type: Schema.Types.Mixed,
-    default: {}
-  },
-  
-  // Access and sharing
-  ownerId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  isDefault: {
-    type: Boolean,
-    default: false
-  },
-  isVisible: {
-    type: Boolean,
-    default: true
-  },
-  accessLevel: {
-    type: String,
-    enum: Object.values(ECalendarAccessLevel),
-    default: ECalendarAccessLevel.OWNER
-  },
-  
-  // Sync settings
-  syncEnabled: {
-    type: Boolean,
-    default: true
-  },
-  lastSyncAt: {
-    type: Date
-  },
-  syncToken: {
-    type: String
-  },
-  
-  // Time zone
-  timeZone: {
-    type: String,
-    required: true,
-    default: 'UTC'
-  },
-  
-  // Metadata
-  metadata: {
-    type: Schema.Types.Mixed,
-    default: {}
+  {
+    timestamps: {
+      createdAt: 'createdAt',
+      updatedAt: 'updatedAt'
+    },
+    collection: 'calendars'
   }
-}, {
-  timestamps: {
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
-  },
-  collection: 'calendars'
-});
+);
 
 // Indexes
 CalendarSchema.index({ ownerId: 1, isVisible: 1 });
@@ -163,22 +175,22 @@ CalendarSchema.index({ type: 1, ownerId: 1 });
 
 // Ensure only one default calendar per user
 CalendarSchema.index(
-  { ownerId: 1, isDefault: 1 }, 
-  { 
-    unique: true, 
-    partialFilterExpression: { isDefault: true } 
+  { ownerId: 1, isDefault: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isDefault: true }
   }
 );
 
 // Virtual for ID
-CalendarSchema.virtual('id').get(function() {
+CalendarSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
 // Transform output
 CalendarSchema.set('toJSON', {
   virtuals: true,
-  transform: function(_doc, ret) {
+  transform: function (_doc, ret) {
     const result = { ...ret };
     if ('_id' in result) {
       delete (result as Record<string, unknown>)._id;
@@ -191,7 +203,7 @@ CalendarSchema.set('toJSON', {
 });
 
 // Pre-save middleware
-CalendarSchema.pre('save', function(next) {
+CalendarSchema.pre('save', function (next) {
   if (this.isModified() && !this.isNew) {
     this.updatedBy = this.ownerId;
   }
@@ -199,28 +211,42 @@ CalendarSchema.pre('save', function(next) {
 });
 
 // Static methods
-CalendarSchema.statics.findByOwner = function(ownerId: string, includeHidden = false) {
+CalendarSchema.statics.findByOwner = function (
+  ownerId: string,
+  includeHidden = false,
+  workspaceId?: string
+) {
   const query: any = { ownerId };
   if (!includeHidden) {
     query.isVisible = true;
   }
+  if (workspaceId) {
+    query.workspaceId = workspaceId;
+  }
   return this.find(query).sort({ isDefault: -1, name: 1 });
 };
 
-CalendarSchema.statics.findDefault = function(ownerId: string) {
-  return this.findOne({ ownerId, isDefault: true });
+CalendarSchema.statics.findDefault = function (ownerId: string, workspaceId?: string) {
+  const query: any = { ownerId, isDefault: true };
+  if (workspaceId) {
+    query.workspaceId = workspaceId;
+  }
+  return this.findOne(query);
 };
 
-CalendarSchema.statics.findByProvider = function(ownerId: string, provider: ECalendarProvider) {
+CalendarSchema.statics.findByProvider = function (ownerId: string, provider: ECalendarProvider) {
   return this.find({ ownerId, provider });
 };
 
-CalendarSchema.statics.findByExternalId = function(provider: ECalendarProvider, externalId: string) {
+CalendarSchema.statics.findByExternalId = function (
+  provider: ECalendarProvider,
+  externalId: string
+) {
   return this.findOne({ provider, externalId });
 };
 
 // Instance methods
-CalendarSchema.methods.updateSyncStatus = function(syncToken?: string, error?: string) {
+CalendarSchema.methods.updateSyncStatus = function (syncToken?: string, error?: string) {
   this.lastSyncAt = new Date();
   if (syncToken) {
     this.syncToken = syncToken;
@@ -231,12 +257,12 @@ CalendarSchema.methods.updateSyncStatus = function(syncToken?: string, error?: s
   return this.save();
 };
 
-CalendarSchema.methods.setAsDefault = async function() {
+CalendarSchema.methods.setAsDefault = async function () {
   await this.model('Calendar').updateMany(
     { ownerId: this.ownerId, _id: { $ne: this._id } },
     { isDefault: false }
   );
-  
+
   // Set this as default
   this.isDefault = true;
   return this.save();
@@ -257,47 +283,50 @@ export interface ICalendarShare extends Document {
   _id: string;
 }
 
-const CalendarShareSchema = new Schema<ICalendarShare>({
-  calendarId: {
-    type: String,
-    required: true,
-    ref: 'Calendar'
+const CalendarShareSchema = new Schema<ICalendarShare>(
+  {
+    calendarId: {
+      type: String,
+      required: true,
+      ref: 'Calendar'
+    },
+    sharedWithUserId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    accessLevel: {
+      type: String,
+      enum: Object.values(ECalendarAccessLevel),
+      required: true,
+      default: ECalendarAccessLevel.VIEWER
+    },
+    sharedBy: {
+      type: String,
+      required: true
+    },
+    acceptedAt: {
+      type: Date
+    }
   },
-  sharedWithUserId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  accessLevel: {
-    type: String,
-    enum: Object.values(ECalendarAccessLevel),
-    required: true,
-    default: ECalendarAccessLevel.VIEWER
-  },
-  sharedBy: {
-    type: String,
-    required: true
-  },
-  acceptedAt: {
-    type: Date
+  {
+    timestamps: true,
+    collection: 'calendar_shares'
   }
-}, {
-  timestamps: true,
-  collection: 'calendar_shares'
-});
+);
 
 // Unique constraint for calendar sharing
 CalendarShareSchema.index({ calendarId: 1, sharedWithUserId: 1 }, { unique: true });
 
 // Virtual for ID
-CalendarShareSchema.virtual('id').get(function() {
+CalendarShareSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
 // Transform output
 CalendarShareSchema.set('toJSON', {
   virtuals: true,
-  transform: function(_doc, ret) {
+  transform: function (_doc, ret) {
     const result = { ...ret };
     if ('_id' in result) {
       delete (result as Record<string, unknown>)._id;
@@ -310,16 +339,16 @@ CalendarShareSchema.set('toJSON', {
 });
 
 // Static methods
-CalendarShareSchema.statics.findByUser = function(userId: string) {
+CalendarShareSchema.statics.findByUser = function (userId: string) {
   return this.find({ sharedWithUserId: userId }).populate('calendarId');
 };
 
-CalendarShareSchema.statics.findByCalendar = function(calendarId: string) {
+CalendarShareSchema.statics.findByCalendar = function (calendarId: string) {
   return this.find({ calendarId });
 };
 
 // Instance methods
-CalendarShareSchema.methods.accept = function() {
+CalendarShareSchema.methods.accept = function () {
   this.acceptedAt = new Date();
   return this.save();
 };
@@ -342,74 +371,77 @@ export interface ICalendarSubscription extends Document {
   _id: string;
 }
 
-const CalendarSubscriptionSchema = new Schema<ICalendarSubscription>({
-  userId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100
-  },
-  url: {
-    type: String,
-    required: true,
-    validate: {
-      validator: function(v: string) {
-        return /^https?:\/\/.+/.test(v);
-      },
-      message: 'Invalid URL format'
+const CalendarSubscriptionSchema = new Schema<ICalendarSubscription>(
+  {
+    userId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    url: {
+      type: String,
+      required: true,
+      validate: {
+        validator: function (v: string) {
+          return /^https?:\/\/.+/.test(v);
+        },
+        message: 'Invalid URL format'
+      }
+    },
+    provider: {
+      type: String,
+      enum: Object.values(ECalendarProvider),
+      required: true
+    },
+    color: {
+      type: String,
+      required: true,
+      match: /^#[0-9A-F]{6}$/i,
+      default: '#6B7280'
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    lastSyncAt: {
+      type: Date
+    },
+    syncFrequency: {
+      type: Number,
+      default: 60, // 1 hour
+      min: 15, // minimum 15 minutes
+      max: 1440 // maximum 24 hours
+    },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {}
     }
   },
-  provider: {
-    type: String,
-    enum: Object.values(ECalendarProvider),
-    required: true
-  },
-  color: {
-    type: String,
-    required: true,
-    match: /^#[0-9A-F]{6}$/i,
-    default: '#6B7280'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastSyncAt: {
-    type: Date
-  },
-  syncFrequency: {
-    type: Number,
-    default: 60, // 1 hour
-    min: 15,     // minimum 15 minutes
-    max: 1440    // maximum 24 hours
-  },
-  metadata: {
-    type: Schema.Types.Mixed,
-    default: {}
+  {
+    timestamps: true,
+    collection: 'calendar_subscriptions'
   }
-}, {
-  timestamps: true,
-  collection: 'calendar_subscriptions'
-});
+);
 
 // Indexes
 CalendarSubscriptionSchema.index({ userId: 1, isActive: 1 });
 CalendarSubscriptionSchema.index({ url: 1 }, { unique: true });
 
 // Virtual for ID
-CalendarSubscriptionSchema.virtual('id').get(function() {
+CalendarSubscriptionSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
 // Transform output
 CalendarSubscriptionSchema.set('toJSON', {
   virtuals: true,
-  transform: function(_doc, ret) {
+  transform: function (_doc, ret) {
     const result = { ...ret };
     if ('_id' in result) {
       delete (result as Record<string, unknown>)._id;
@@ -422,25 +454,28 @@ CalendarSubscriptionSchema.set('toJSON', {
 });
 
 // Static methods
-CalendarSubscriptionSchema.statics.findByUser = function(userId: string) {
+CalendarSubscriptionSchema.statics.findByUser = function (userId: string) {
   return this.find({ userId, isActive: true });
 };
 
 const DEFAULT_SYNC_FREQUENCY = 60; // 1 hour
 
-CalendarSubscriptionSchema.statics.findDueForSync = function() {
+CalendarSubscriptionSchema.statics.findDueForSync = function () {
   const now = new Date();
   return this.find({
     isActive: true,
     $or: [
       { lastSyncAt: { $exists: false } },
-      { 
-        lastSyncAt: { 
-          $lt: new Date(now.getTime() - DEFAULT_SYNC_FREQUENCY * 60 * 1000) 
-        } 
+      {
+        lastSyncAt: {
+          $lt: new Date(now.getTime() - DEFAULT_SYNC_FREQUENCY * 60 * 1000)
+        }
       }
     ]
   });
 };
 
-export const CalendarSubscriptionModel = model<ICalendarSubscription>('CalendarSubscription', CalendarSubscriptionSchema);
+export const CalendarSubscriptionModel = model<ICalendarSubscription>(
+  'CalendarSubscription',
+  CalendarSubscriptionSchema
+);

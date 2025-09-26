@@ -46,18 +46,20 @@ const transformCalendarDocument = (doc: ICalendarDocument): ICalendar => {
  */
 export const createCalendar = async (
   userId: string,
-  request: ICreateCalendarRequest
+  request: ICreateCalendarRequest,
+  workspaceId?: string
 ): Promise<ICalendar> => {
   try {
     // Check if this should be the default calendar
     if (request.isDefault) {
-      await CalendarModel.updateMany({ ownerId: userId }, { isDefault: false });
+      await CalendarModel.updateMany({ ownerId: userId, workspaceId }, { isDefault: false });
     }
 
     const calendar = new CalendarModel({
       ...request,
       id: generateId(),
       ownerId: userId,
+      workspaceId: workspaceId || 'default',
       createdBy: userId,
       provider: ECalendarProvider.INTERNAL
     });
@@ -72,9 +74,13 @@ export const createCalendar = async (
 /**
  * Get calendars for a user
  */
-export const getCalendars = async (userId: string, includeHidden = false): Promise<ICalendar[]> => {
+export const getCalendars = async (
+  userId: string,
+  includeHidden = false,
+  workspaceId?: string
+): Promise<ICalendar[]> => {
   try {
-    const calendars = await CalendarModel.findByOwner(userId, includeHidden);
+    const calendars = await CalendarModel.findByOwner(userId, includeHidden, workspaceId);
     return calendars.map(cal => transformCalendarDocument(cal));
   } catch (error) {
     throw createAppError('Failed to get calendars', 500);
@@ -204,7 +210,8 @@ export const createEvent = async (
  */
 export const getEvents = async (
   userId: string,
-  query: ICalendarEventQuery
+  query: ICalendarEventQuery,
+  workspaceId?: string
 ): Promise<ICalendarEvent[]> => {
   try {
     // Get user's calendars
@@ -217,6 +224,11 @@ export const getEvents = async (
       : userCalendarIds;
 
     const mongoQuery: any = { calendarId: { $in: calendarIds } };
+
+    // Workspace filter - filter events by workspace if specified
+    if (workspaceId) {
+      mongoQuery['metadata.workspaceId'] = workspaceId;
+    }
 
     // Date range filter
     if (query.startDate || query.endDate) {
@@ -359,7 +371,10 @@ export const deleteEvent = async (eventId: string, userId: string): Promise<void
 /**
  * Sync events from time-related modules
  */
-export const syncTimeRelatedModules = async (userId: string): Promise<void> => {
+export const syncTimeRelatedModules = async (
+  userId: string,
+  workspaceId?: string
+): Promise<void> => {
   try {
     // Get user's default calendar
     let defaultCalendar = await CalendarModel.findDefault(userId);
@@ -373,6 +388,7 @@ export const syncTimeRelatedModules = async (userId: string): Promise<void> => {
         type: 'personal',
         provider: ECalendarProvider.INTERNAL,
         ownerId: userId,
+        workspaceId: workspaceId || 'default',
         createdBy: userId,
         isDefault: true,
         timeZone: 'UTC'
@@ -380,18 +396,20 @@ export const syncTimeRelatedModules = async (userId: string): Promise<void> => {
     }
 
     // Sync tasks with due dates
-    await syncTasksToCalendar(userId, defaultCalendar._id.toString());
+    await syncTasksToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 
     // Sync project milestones
-    await syncProjectsToCalendar(userId, defaultCalendar._id.toString());
+    await syncProjectsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 
     // Sync habit schedules
-    await syncHabitsToCalendar(userId, defaultCalendar._id.toString());
+    await syncHabitsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 
     // Sync goal deadlines
-    await syncGoalsToCalendar(userId, defaultCalendar._id.toString());
+    await syncGoalsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 
-    console.log(`✅ Synced time-related modules for user ${userId}`);
+    console.log(
+      `✅ Synced time-related modules for user ${userId}${workspaceId ? ` in workspace ${workspaceId}` : ''}`
+    );
   } catch (error) {
     console.error('Failed to sync time-related modules:', error);
     throw error;
@@ -401,13 +419,23 @@ export const syncTimeRelatedModules = async (userId: string): Promise<void> => {
 /**
  * Sync tasks to calendar
  */
-const syncTasksToCalendar = async (userId: string, calendarId: string): Promise<void> => {
+const syncTasksToCalendar = async (
+  userId: string,
+  calendarId: string,
+  workspaceId?: string
+): Promise<void> => {
   try {
-    // Get task databases
-    const taskDatabases = await DatabaseModel.find({
+    // Get task databases - filter by workspace if provided
+    const query: any = {
       type: EDatabaseType.TASKS,
       createdBy: userId
-    });
+    };
+
+    if (workspaceId) {
+      query.workspaceId = workspaceId;
+    }
+
+    const taskDatabases = await DatabaseModel.find(query);
 
     for (const database of taskDatabases) {
       // Get tasks with due dates
@@ -444,6 +472,7 @@ const syncTasksToCalendar = async (userId: string, calendarId: string): Promise<
             metadata: {
               priority: task.properties.priority,
               projectId: task.properties.project_id,
+              workspaceId: database.workspaceId,
               source: 'task_sync'
             }
           });
@@ -458,13 +487,23 @@ const syncTasksToCalendar = async (userId: string, calendarId: string): Promise<
 /**
  * Sync projects to calendar
  */
-const syncProjectsToCalendar = async (userId: string, calendarId: string): Promise<void> => {
+const syncProjectsToCalendar = async (
+  userId: string,
+  calendarId: string,
+  workspaceId?: string
+): Promise<void> => {
   try {
-    // Get project databases
-    const projectDatabases = await DatabaseModel.find({
+    // Get project databases - filter by workspace if provided
+    const query: any = {
       type: EDatabaseType.PROJECTS,
       createdBy: userId
-    });
+    };
+
+    if (workspaceId) {
+      query.workspaceId = workspaceId;
+    }
+
+    const projectDatabases = await DatabaseModel.find(query);
 
     for (const database of projectDatabases) {
       // Get projects with deadlines
@@ -500,6 +539,7 @@ const syncProjectsToCalendar = async (userId: string, calendarId: string): Promi
             timeZone: 'UTC',
             metadata: {
               priority: project.properties.priority,
+              workspaceId: database.workspaceId,
               source: 'project_sync'
             }
           });
@@ -514,13 +554,23 @@ const syncProjectsToCalendar = async (userId: string, calendarId: string): Promi
 /**
  * Sync habits to calendar
  */
-const syncHabitsToCalendar = async (userId: string, calendarId: string): Promise<void> => {
+const syncHabitsToCalendar = async (
+  userId: string,
+  calendarId: string,
+  workspaceId?: string
+): Promise<void> => {
   try {
-    // Get habit databases
-    const habitDatabases = await DatabaseModel.find({
+    // Get habit databases - filter by workspace if provided
+    const query: any = {
       type: EDatabaseType.HABITS,
       createdBy: userId
-    });
+    };
+
+    if (workspaceId) {
+      query.workspaceId = workspaceId;
+    }
+
+    const habitDatabases = await DatabaseModel.find(query);
 
     for (const database of habitDatabases) {
       // Get active habits with schedules
@@ -568,6 +618,7 @@ const syncHabitsToCalendar = async (userId: string, calendarId: string): Promise
               timeZone: 'UTC',
               metadata: {
                 frequency: schedule.frequency,
+                workspaceId: database.workspaceId,
                 source: 'habit_sync'
               }
             });
@@ -583,13 +634,23 @@ const syncHabitsToCalendar = async (userId: string, calendarId: string): Promise
 /**
  * Sync goals to calendar
  */
-const syncGoalsToCalendar = async (userId: string, calendarId: string): Promise<void> => {
+const syncGoalsToCalendar = async (
+  userId: string,
+  calendarId: string,
+  workspaceId?: string
+): Promise<void> => {
   try {
-    // Get goal databases
-    const goalDatabases = await DatabaseModel.find({
+    // Get goal databases - filter by workspace if provided
+    const query: any = {
       type: EDatabaseType.GOALS,
       createdBy: userId
-    });
+    };
+
+    if (workspaceId) {
+      query.workspaceId = workspaceId;
+    }
+
+    const goalDatabases = await DatabaseModel.find(query);
 
     for (const database of goalDatabases) {
       // Get goals with target dates
@@ -625,6 +686,7 @@ const syncGoalsToCalendar = async (userId: string, calendarId: string): Promise<
             timeZone: 'UTC',
             metadata: {
               category: goal.properties.category,
+              workspaceId: database.workspaceId,
               source: 'goal_sync'
             }
           });
@@ -674,7 +736,10 @@ const createEventReminders = async (event: ICalendarEvent, userId: string): Prom
 /**
  * Get calendar statistics
  */
-export const getCalendarStats = async (userId: string): Promise<ICalendarStats> => {
+export const getCalendarStats = async (
+  userId: string,
+  workspaceId?: string
+): Promise<ICalendarStats> => {
   try {
     const userCalendars = await CalendarModel.find({ ownerId: userId });
     const calendarIds = userCalendars.map(cal => cal._id.toString());
@@ -684,43 +749,49 @@ export const getCalendarStats = async (userId: string): Promise<ICalendarStats> 
     const startOfWeek = new Date(startOfDay.getTime() - startOfDay.getDay() * 24 * 60 * 60 * 1000);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Build base query for events
+    const baseQuery: any = { calendarId: { $in: calendarIds } };
+    if (workspaceId) {
+      baseQuery['metadata.workspaceId'] = workspaceId;
+    }
+
     // Get event counts
     const [totalEvents, upcomingEvents, todayEvents, weekEvents, monthEvents] = await Promise.all([
-      CalendarEventModel.countDocuments({ calendarId: { $in: calendarIds } }),
+      CalendarEventModel.countDocuments(baseQuery),
       CalendarEventModel.countDocuments({
-        calendarId: { $in: calendarIds },
+        ...baseQuery,
         startTime: { $gte: now },
         status: { $ne: EEventStatus.CANCELLED }
       }),
       CalendarEventModel.countDocuments({
-        calendarId: { $in: calendarIds },
+        ...baseQuery,
         startTime: { $gte: startOfDay, $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000) }
       }),
       CalendarEventModel.countDocuments({
-        calendarId: { $in: calendarIds },
+        ...baseQuery,
         startTime: { $gte: startOfWeek }
       }),
       CalendarEventModel.countDocuments({
-        calendarId: { $in: calendarIds },
+        ...baseQuery,
         startTime: { $gte: startOfMonth }
       })
     ]);
 
     // Get events by type
     const eventsByType = await CalendarEventModel.aggregate([
-      { $match: { calendarId: { $in: calendarIds } } },
+      { $match: baseQuery },
       { $group: { _id: '$type', count: { $sum: 1 } } }
     ]);
 
     // Get events by status
     const eventsByStatus = await CalendarEventModel.aggregate([
-      { $match: { calendarId: { $in: calendarIds } } },
+      { $match: baseQuery },
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
     // Get events by calendar
     const eventsByCalendar = await CalendarEventModel.aggregate([
-      { $match: { calendarId: { $in: calendarIds } } },
+      { $match: baseQuery },
       { $group: { _id: '$calendarId', count: { $sum: 1 } } }
     ]);
 
@@ -774,18 +845,23 @@ export const getCalendarStats = async (userId: string): Promise<ICalendarStats> 
  */
 export const getCalendarView = async (
   userId: string,
-  view: ICalendarView
+  view: ICalendarView,
+  workspaceId?: string
 ): Promise<{ events: ICalendarEvent[]; calendars: ICalendar[] }> => {
   try {
-    const events = await getEvents(userId, {
-      calendarIds: view.calendarIds,
-      startDate: view.startDate,
-      endDate: view.endDate,
-      eventTypes: view.eventTypes,
-      statuses: view.statuses
-    });
+    const events = await getEvents(
+      userId,
+      {
+        calendarIds: view.calendarIds,
+        startDate: view.startDate,
+        endDate: view.endDate,
+        eventTypes: view.eventTypes,
+        statuses: view.statuses
+      },
+      workspaceId
+    );
 
-    const calendars = await getCalendars(userId);
+    const calendars = await getCalendars(userId, false, workspaceId);
 
     return { events, calendars };
   } catch (error) {
@@ -821,13 +897,11 @@ export const getCalendarPreferences = async (userId: string): Promise<ICalendarP
           smsNotifications: false,
           defaultEmailReminder: 15,
           defaultPopupReminder: 15
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        }
+      } as ICalendarPreferences;
     }
 
-    return preferences.toJSON();
+    return preferences.toJSON() as ICalendarPreferences;
   } catch (error) {
     throw createAppError('Failed to get calendar preferences', 500);
   }
@@ -841,8 +915,11 @@ export const updateCalendarPreferences = async (
   request: IUpdateCalendarPreferencesRequest
 ): Promise<ICalendarPreferences> => {
   try {
-    const preferences = await CalendarPreferencesModel.upsertByUserId(userId, request);
-    return preferences.toJSON();
+    const preferences = await CalendarPreferencesModel.upsertByUserId(
+      userId,
+      request as Partial<ICalendarPreferences>
+    );
+    return preferences.toJSON() as ICalendarPreferences;
   } catch (error) {
     throw createAppError('Failed to update calendar preferences', 500);
   }

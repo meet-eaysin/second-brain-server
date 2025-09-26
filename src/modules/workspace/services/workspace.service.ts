@@ -5,6 +5,7 @@ import {
   EWorkspaceType,
   EWorkspaceMemberRole
 } from '../types/workspace.types';
+import { ECalendarType } from '@/modules/calendar/types/calendar.types';
 import { WorkspaceModel } from '../models/workspace.model';
 import { WorkspaceMemberModel } from '../models/workspace-member.model';
 import { createAppError, createNotFoundError, createForbiddenError } from '@/utils/error.utils';
@@ -57,7 +58,7 @@ export class WorkspaceService {
 
       await ownerMember.save();
 
-      // Initialize core database modules asynchronously (don't block workspace creation)
+      // Initialize core database modules and default calendar asynchronously (don't block workspace creation)
       setImmediate(async () => {
         try {
           const { initializeCoreModules } = await import('@/modules/modules');
@@ -65,6 +66,26 @@ export class WorkspaceService {
         } catch (moduleError: any) {
           // Log the error but don't fail workspace creation
           console.error('Failed to initialize core modules for workspace:', moduleError.message);
+        }
+
+        // Create default calendar for the workspace
+        try {
+          const { createCalendar } = await import('@/modules/calendar/services/calendar.service');
+          await createCalendar(
+            ownerId,
+            {
+              name: 'My Calendar',
+              description: 'Default calendar for this workspace',
+              color: '#3B82F6',
+              type: ECalendarType.PERSONAL,
+              timeZone: 'UTC',
+              isDefault: true
+            },
+            workspace.id.toString()
+          );
+        } catch (calendarError: any) {
+          // Log the error but don't fail workspace creation
+          console.error('Failed to create default calendar for workspace:', calendarError.message);
         }
       });
 

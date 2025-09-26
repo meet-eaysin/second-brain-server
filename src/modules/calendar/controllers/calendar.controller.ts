@@ -29,8 +29,8 @@ import {
   EEventStatus,
   IUpdateCalendarPreferencesRequest
 } from '../types/calendar.types';
-import { AuthenticatedRequest } from '@/middlewares';
 import { getUserId } from '@/auth/index';
+import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
 /**
  * Create a new calendar
@@ -38,9 +38,10 @@ import { getUserId } from '@/auth/index';
 export const createCalendarController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const request: ICreateCalendarRequest = req.body;
 
-    const calendar = await createCalendar(userId, request);
+    const calendar = await createCalendar(userId, request, workspaceId);
 
     sendSuccessResponse(res, 'Calendar created successfully', calendar, 201);
   }
@@ -52,9 +53,10 @@ export const createCalendarController = catchAsync(
 export const getCalendarsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const includeHidden = req.query.includeHidden === 'true';
 
-    const calendars = await getCalendars(userId, includeHidden);
+    const calendars = await getCalendars(userId, includeHidden, workspaceId);
 
     sendSuccessResponse(res, 'Calendars retrieved successfully', calendars);
   }
@@ -123,6 +125,7 @@ export const createEventController = catchAsync(
 export const getEventsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
 
     const query: ICalendarEventQuery = {
       calendarIds: req.query.calendarIds ? (req.query.calendarIds as string).split(',') : undefined,
@@ -140,7 +143,7 @@ export const getEventsController = catchAsync(
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined
     };
 
-    const events = await getEvents(userId, query);
+    const events = await getEvents(userId, query, workspaceId);
 
     sendSuccessResponse(res, 'Events retrieved successfully', {
       events,
@@ -199,8 +202,9 @@ export const deleteEventController = catchAsync(
 export const getCalendarStatsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
 
-    const stats = await getCalendarStats(userId);
+    const stats = await getCalendarStats(userId, workspaceId);
 
     sendSuccessResponse(res, 'Calendar statistics retrieved successfully', stats);
   }
@@ -212,6 +216,7 @@ export const getCalendarStatsController = catchAsync(
 export const getCalendarViewController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
 
     const view: ICalendarView = {
       type: (req.query.type as any) || 'month',
@@ -229,7 +234,7 @@ export const getCalendarViewController = catchAsync(
       groupBy: req.query.groupBy as any
     };
 
-    const data = await getCalendarView(userId, view);
+    const data = await getCalendarView(userId, view, workspaceId);
 
     sendSuccessResponse(res, 'Calendar view retrieved successfully', {
       ...data,
@@ -244,8 +249,9 @@ export const getCalendarViewController = catchAsync(
 export const syncTimeRelatedModulesController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
 
-    await syncTimeRelatedModules(userId);
+    await syncTimeRelatedModules(userId, workspaceId);
 
     sendSuccessResponse(res, 'Time-related modules synced successfully');
   }
@@ -257,18 +263,23 @@ export const syncTimeRelatedModulesController = catchAsync(
 export const getUpcomingEventsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
     const days = req.query.days ? parseInt(req.query.days as string) : 7;
 
     const startDate = new Date();
     const endDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
-    const events = await getEvents(userId, {
-      startDate,
-      endDate,
-      limit,
-      statuses: [EEventStatus.CONFIRMED, EEventStatus.TENTATIVE]
-    });
+    const events = await getEvents(
+      userId,
+      {
+        startDate,
+        endDate,
+        limit,
+        statuses: [EEventStatus.CONFIRMED, EEventStatus.TENTATIVE]
+      },
+      workspaceId
+    );
 
     sendSuccessResponse(res, 'Upcoming events retrieved successfully', {
       events,
@@ -287,15 +298,20 @@ export const getUpcomingEventsController = catchAsync(
 export const getTodayEventsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
 
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-    const events = await getEvents(userId, {
-      startDate: startOfDay,
-      endDate: endOfDay
-    });
+    const events = await getEvents(
+      userId,
+      {
+        startDate: startOfDay,
+        endDate: endOfDay
+      },
+      workspaceId
+    );
 
     sendSuccessResponse(res, "Today's events retrieved successfully", {
       events,
@@ -311,16 +327,21 @@ export const getTodayEventsController = catchAsync(
 export const searchEventsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const { q: searchQuery } = req.query;
 
     if (!searchQuery || typeof searchQuery !== 'string') {
       throw createAppError('Search query is required', 400);
     }
 
-    const events = await getEvents(userId, {
-      searchQuery,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 50
-    });
+    const events = await getEvents(
+      userId,
+      {
+        searchQuery,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 50
+      },
+      workspaceId
+    );
 
     sendSuccessResponse(res, 'Events search completed', {
       events,
@@ -336,12 +357,17 @@ export const searchEventsController = catchAsync(
 export const getEventsByEntityController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const { entityType, entityId } = req.params;
 
-    const events = await getEvents(userId, {
-      relatedEntityType: entityType,
-      relatedEntityId: entityId
-    });
+    const events = await getEvents(
+      userId,
+      {
+        relatedEntityType: entityType,
+        relatedEntityId: entityId
+      },
+      workspaceId
+    );
 
     sendSuccessResponse(res, 'Related events retrieved successfully', {
       events,
@@ -360,18 +386,23 @@ export const getEventsByEntityController = catchAsync(
 export const getCalendarBusyTimesController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
     const startDate = new Date(req.query.startDate as string);
     const endDate = new Date(req.query.endDate as string);
     const calendarIds = req.query.calendarIds
       ? (req.query.calendarIds as string).split(',')
       : undefined;
 
-    const events = await getEvents(userId, {
-      startDate,
-      endDate,
-      calendarIds,
-      statuses: [EEventStatus.CONFIRMED, EEventStatus.TENTATIVE]
-    });
+    const events = await getEvents(
+      userId,
+      {
+        startDate,
+        endDate,
+        calendarIds,
+        statuses: [EEventStatus.CONFIRMED, EEventStatus.TENTATIVE]
+      },
+      workspaceId
+    );
 
     // Convert events to busy time slots
     const busyTimes = events.map(event => ({

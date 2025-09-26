@@ -137,6 +137,7 @@ export interface ICreateViewRequest {
 export interface IUpdateViewRequest {
   name?: string;
   description?: string;
+  type?: EViewType;
   isDefault?: boolean;
   isPublic?: boolean;
   settings?: Partial<IViewSettings>;

@@ -32,16 +32,17 @@ export const getFAQsController = async (req: Request, res: Response) => {
 /**
  * Get a specific FAQ by ID
  */
-export const getFAQByIdController = async (req: Request, res: Response) => {
+export const getFAQByIdController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const faq = await getFAQById(id);
 
     if (!faq) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'FAQ not found'
       });
+      return;
     }
 
     // Increment view count
@@ -76,16 +77,17 @@ export const getGuidesController = async (req: Request, res: Response) => {
 /**
  * Get a specific guide by ID
  */
-export const getGuideByIdController = async (req: Request, res: Response) => {
+export const getGuideByIdController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const guide = await getGuideById(id);
 
     if (!guide) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         message: 'Guide not found'
       });
+      return;
     }
 
     // Increment view count
@@ -103,7 +105,7 @@ export const getGuideByIdController = async (req: Request, res: Response) => {
 /**
  * Search FAQs and guides
  */
-export const searchHelpController = async (req: Request, res: Response) => {
+export const searchHelpController = async (req: Request, res: Response): Promise<void> => {
   try {
     const searchQuery: IHelpSearchQuery = {
       query: (req.query.q as string) || '',
@@ -113,10 +115,11 @@ export const searchHelpController = async (req: Request, res: Response) => {
     };
 
     if (!searchQuery.query) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Search query is required'
       });
+      return;
     }
 
     const results = await searchHelp(searchQuery);
@@ -133,7 +136,10 @@ export const searchHelpController = async (req: Request, res: Response) => {
 /**
  * Submit a contact/support request
  */
-export const submitContactRequestController = async (req: Request, res: Response) => {
+export const submitContactRequestController = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const contactRequest: IContactRequest = req.body;
 
@@ -144,10 +150,11 @@ export const submitContactRequestController = async (req: Request, res: Response
       !contactRequest.subject ||
       !contactRequest.message
     ) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'All fields are required'
       });
+      return;
     }
 
     const result = await submitContactRequest(contactRequest);
