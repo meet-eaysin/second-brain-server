@@ -102,7 +102,6 @@ export const duplicateDatabaseSchema = z.object({
     .min(1, 'Database name is required')
     .max(100, 'Database name cannot exceed 100 characters')
     .trim(),
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   includeRecords: z.boolean().default(false),
   includeViews: z.boolean().default(true),
   includeTemplates: z.boolean().default(true)

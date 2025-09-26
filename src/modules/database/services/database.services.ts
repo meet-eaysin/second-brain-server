@@ -4,7 +4,8 @@ import {
   IUpdateDatabaseRequest,
   IDatabaseQueryParams,
   IDatabaseStats,
-  IDatabaseTemplate
+  IDatabaseTemplate,
+  EDatabaseType
 } from '@/modules/core/types/database.types';
 import {
   createAppError,
@@ -21,30 +22,14 @@ import {
 } from '../utils/database.utils';
 import { moduleConfigService } from '@/modules/modules/services/module-config.service';
 import { moduleInitializationService } from '@/modules/modules/services/module-initialization.service';
-import { EDatabaseType } from '@/modules/core/types/database.types';
 import { EViewType } from '@/modules/core/types/view.types';
 import { EPropertyType } from '@/modules/core/types/property.types';
 import { generateId } from '@/utils/id-generator';
 import { workspaceService } from '@/modules/workspace/services/workspace.service';
 import { DatabaseModel, PropertyModel, RecordModel, ViewModel } from '@/modules/database';
 
-// Types for internal use
-interface DatabaseWithPermissions {
-  database: any;
-  hasEditPermission: boolean;
-  hasDeletePermission: boolean;
-  hasExportPermission: boolean;
-}
-
-interface BulkOperationResult {
-  updated?: number;
-  deleted?: number;
-  failed: string[];
-}
-
 const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Promise<IDatabase> => {
   try {
-    // If no workspaceId provided, get or create user's default workspace
     let workspaceId = data.workspaceId;
     if (!workspaceId) {
       const defaultWorkspace = await workspaceService.getOrCreateDefaultWorkspace(userId);
@@ -342,7 +327,6 @@ const duplicateDatabase = async (
   id: string,
   data: {
     name: string;
-    workspaceId: string;
     includeRecords?: boolean;
     includeViews?: boolean;
     includeTemplates?: boolean;
@@ -360,8 +344,10 @@ const duplicateDatabase = async (
 
     if (!sourceDatabase) throw createNotFoundError('Database', id);
 
+    const workspaceId = sourceDatabase.workspaceId;
+
     const existingDatabase = await DatabaseModel.findOne({
-      workspaceId: data.workspaceId,
+      workspaceId,
       name: data.name,
       isDeleted: { $ne: true }
     });
@@ -372,7 +358,7 @@ const duplicateDatabase = async (
     }
 
     const newDatabase = new DatabaseModel({
-      workspaceId: data.workspaceId,
+      workspaceId,
       name: data.name,
       type: sourceDatabase.type,
       description: sourceDatabase.description,
