@@ -101,12 +101,10 @@ export const checkWorkspaceAccess = catchAsync(
 
     const hasAccess = await workspaceService.hasWorkspaceAccess(workspaceId, userId);
     const canManage = await workspaceService.canManageWorkspace(workspaceId, userId);
-    const canManageMembers = await workspaceService.canManageMembers(workspaceId, userId);
 
     sendSuccessResponse(res, 'Workspace access check completed', {
       hasAccess,
-      canManage,
-      canManageMembers
+      canManage
     });
   }
 );

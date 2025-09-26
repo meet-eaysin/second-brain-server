@@ -1,5 +1,6 @@
 import { createNotFoundError } from '@/utils/response.utils';
 import { DatabaseModel } from '@/modules/database/models/database.model';
+import { PropertyModel } from '@/modules/database/models/property.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { relationService } from '@/modules/database/services/relation.service';
 import { ERelationType } from '@/modules/database/models/relation.model';
@@ -101,10 +102,15 @@ export class CrossModuleRelationsService {
         createdBy: userId
       });
 
-      if (!targetModule) {
-        console.warn(`Target module ${relationConfig.targetModule} not found for user ${userId}`);
-        continue;
-      }
+      if (!targetModule) continue;
+
+      // Find source property by name
+      const sourceProperty = await PropertyModel.findOne({
+        databaseId: sourceModule.id.toString(),
+        name: relationConfig.sourceProperty
+      });
+
+      if (!sourceProperty) continue;
 
       // Create the relation (skip checking for existing relations for now)
       try {
@@ -127,17 +133,23 @@ export class CrossModuleRelationsService {
             relationType = ERelationType.MANY_TO_MANY;
         }
 
-        await relationService.createRelation({
-          sourcePropertyId: relationConfig.sourceProperty,
-          targetDatabaseId: targetModule.id.toString(),
-          type: relationType,
-          isSymmetric: relationConfig.type === 'many_to_many',
-          onSourceDelete: relationConfig.cascadeDelete ? 'cascade' : 'set_null',
-          onTargetDelete: relationConfig.cascadeDelete ? 'cascade' : 'set_null'
-        }, userId);
+        await relationService.createRelation(
+          {
+            sourcePropertyId: sourceProperty.id.toString(),
+            targetDatabaseId: targetModule.id.toString(),
+            type: relationType,
+            isSymmetric: relationConfig.type === 'many_to_many',
+            onSourceDelete: relationConfig.cascadeDelete ? 'cascade' : 'set_null',
+            onTargetDelete: relationConfig.cascadeDelete ? 'cascade' : 'set_null'
+          },
+          userId
+        );
       } catch (error) {
         // Relation might already exist, continue
-        console.warn(`Failed to create relation for ${sourceModule.type} -> ${relationConfig.targetModule}:`, error);
+        console.warn(
+          `Failed to create relation for ${sourceModule.type} -> ${relationConfig.targetModule}:`,
+          error
+        );
       }
     }
   }
@@ -173,19 +185,21 @@ export class CrossModuleRelationsService {
 
     // Get all relations for the source database to find the matching one
     const relations = await relationService.getDatabaseRelations(sourceDatabase.id.toString());
-    const relation = relations.find(r =>
-      r.targetDatabaseId === targetDatabase.id.toString()
-    );
+    const relation = relations.find(r => r.targetDatabaseId === targetDatabase.id.toString());
 
     if (!relation) {
       throw createNotFoundError('Relation not found between these modules');
     }
 
     // Create the connection
-    await relationService.createConnection(relation.id, {
-      sourceRecordId,
-      targetRecordId
-    }, userId);
+    await relationService.createConnection(
+      relation.id,
+      {
+        sourceRecordId,
+        targetRecordId
+      },
+      userId
+    );
 
     return {
       sourceRecordId,
@@ -227,9 +241,7 @@ export class CrossModuleRelationsService {
 
     // Get all relations for the source database to find the matching one
     const relations = await relationService.getDatabaseRelations(sourceDatabase.id.toString());
-    const relation = relations.find(r =>
-      r.targetDatabaseId === targetDatabase.id.toString()
-    );
+    const relation = relations.find(r => r.targetDatabaseId === targetDatabase.id.toString());
 
     if (!relation) {
       throw createNotFoundError('Relation not found between these modules');
@@ -247,13 +259,15 @@ export class CrossModuleRelationsService {
       limit?: number;
       includeMetadata?: boolean;
     } = {}
-  ): Promise<Array<{
-    record: any;
-    module: EDatabaseType;
-    relationType: string;
-    relationProperty: string;
-    metadata?: any;
-  }>> {
+  ): Promise<
+    Array<{
+      record: any;
+      module: EDatabaseType;
+      relationType: string;
+      relationProperty: string;
+      metadata?: any;
+    }>
+  > {
     const record = await RecordModel.findById(recordId);
     if (!record) {
       throw createNotFoundError('Record not found');
@@ -274,7 +288,10 @@ export class CrossModuleRelationsService {
       if (!targetDatabase) continue;
 
       // Skip if module type filter is specified and doesn't match
-      if (options.moduleTypes && !options.moduleTypes.includes(targetDatabase.type as EDatabaseType)) {
+      if (
+        options.moduleTypes &&
+        !options.moduleTypes.includes(targetDatabase.type as EDatabaseType)
+      ) {
         continue;
       }
 
@@ -284,7 +301,10 @@ export class CrossModuleRelationsService {
       }
 
       // Get related records for this relation
-      const connections = await relationService.getRelatedRecords(recordId, relation.sourcePropertyId);
+      const connections = await relationService.getRelatedRecords(
+        recordId,
+        relation.sourcePropertyId
+      );
 
       for (const connection of connections) {
         const targetRecord = await RecordModel.findById(connection.targetRecordId);
@@ -323,13 +343,16 @@ export class CrossModuleRelationsService {
     }
 
     // Get all relations for this module (only outgoing for now)
-    const outgoingRelations = await relationService.getDatabaseRelations(moduleDatabase.id.toString());
+    const outgoingRelations = await relationService.getDatabaseRelations(
+      moduleDatabase.id.toString()
+    );
     // TODO: Implement incoming relations when the method is available
     const incomingRelations: any[] = [];
 
     const totalRelations = outgoingRelations.length + incomingRelations.length;
-    const activeRelations = outgoingRelations.filter(r => r.isActive).length +
-                           incomingRelations.filter(r => r.isActive).length;
+    const activeRelations =
+      outgoingRelations.filter(r => r.isActive).length +
+      incomingRelations.filter(r => r.isActive).length;
 
     // Get most connected records
     const records = await RecordModel.find({
@@ -342,8 +365,12 @@ export class CrossModuleRelationsService {
       const relatedRecords = await this.getRelatedRecords(record.id.toString());
       const nameProperty = record.properties?.['Name'];
       const titleProperty = record.properties?.['Title'];
-      const recordTitle = typeof nameProperty === 'string' ? nameProperty :
-                         typeof titleProperty === 'string' ? titleProperty : 'Untitled';
+      const recordTitle =
+        typeof nameProperty === 'string'
+          ? nameProperty
+          : typeof titleProperty === 'string'
+            ? titleProperty
+            : 'Untitled';
 
       recordConnections.push({
         recordId: record.id.toString(),
@@ -391,7 +418,10 @@ export class CrossModuleRelationsService {
 
     for (const module of userModules) {
       const stats = await this.getModuleRelationStats(module.type, userId);
-      const connectionCount = stats.mostConnectedRecords.reduce((sum, record) => sum + record.connectionCount, 0);
+      const connectionCount = stats.mostConnectedRecords.reduce(
+        (sum, record) => sum + record.connectionCount,
+        0
+      );
 
       moduleStats.set(module.type, connectionCount);
       insights.totalCrossModuleConnections += connectionCount;
@@ -440,8 +470,12 @@ export class CrossModuleRelationsService {
         if (relatedRecords.length === 0) {
           const nameProperty = record.properties?.['Name'];
           const titleProperty = record.properties?.['Title'];
-          const recordTitle = typeof nameProperty === 'string' ? nameProperty :
-                             typeof titleProperty === 'string' ? titleProperty : 'Untitled';
+          const recordTitle =
+            typeof nameProperty === 'string'
+              ? nameProperty
+              : typeof titleProperty === 'string'
+                ? titleProperty
+                : 'Untitled';
 
           insights.orphanedRecords.push({
             module: module.type,
@@ -463,13 +497,15 @@ export class CrossModuleRelationsService {
       limit?: number;
       similarityThreshold?: number;
     } = {}
-  ): Promise<Array<{
-    targetRecord: any;
-    targetModule: EDatabaseType;
-    similarityScore: number;
-    suggestedRelationType: string;
-    reasoning: string;
-  }>> {
+  ): Promise<
+    Array<{
+      targetRecord: any;
+      targetModule: EDatabaseType;
+      similarityScore: number;
+      suggestedRelationType: string;
+      reasoning: string;
+    }>
+  > {
     const record = await RecordModel.findById(recordId);
     if (!record) {
       throw createNotFoundError('Record not found');
@@ -482,8 +518,9 @@ export class CrossModuleRelationsService {
     // Get record content for similarity comparison
     const recordText = this.extractRecordText(record);
     const tagsProperty = record.properties?.['Tags'];
-    const recordTags = Array.isArray(tagsProperty) ?
-      tagsProperty.filter(tag => typeof tag === 'string') : [];
+    const recordTags = Array.isArray(tagsProperty)
+      ? tagsProperty.filter(tag => typeof tag === 'string')
+      : [];
 
     // Search across specified modules or all modules
     const targetModules = options.moduleTypes || Object.values(EDatabaseType);
@@ -505,11 +542,17 @@ export class CrossModuleRelationsService {
       for (const targetRecord of targetRecords) {
         const targetText = this.extractRecordText(targetRecord);
         const targetTagsProperty = targetRecord.properties?.['Tags'];
-        const targetTags = Array.isArray(targetTagsProperty) ?
-          targetTagsProperty.filter(tag => typeof tag === 'string') : [];
+        const targetTags = Array.isArray(targetTagsProperty)
+          ? targetTagsProperty.filter(tag => typeof tag === 'string')
+          : [];
 
         // Calculate similarity score
-        const similarityScore = this.calculateSimilarity(recordText, targetText, recordTags, targetTags);
+        const similarityScore = this.calculateSimilarity(
+          recordText,
+          targetText,
+          recordTags,
+          targetTags
+        );
 
         if (similarityScore >= threshold) {
           suggestions.push({
@@ -524,9 +567,7 @@ export class CrossModuleRelationsService {
     }
 
     // Sort by similarity score and return top suggestions
-    return suggestions
-      .sort((a, b) => b.similarityScore - a.similarityScore)
-      .slice(0, limit);
+    return suggestions.sort((a, b) => b.similarityScore - a.similarityScore).slice(0, limit);
   }
 
   // Private helper methods
@@ -583,7 +624,7 @@ export class CrossModuleRelationsService {
     const tagSimilarity = commonTags.length / Math.max(tags1.length, tags2.length, 1);
 
     // Weighted combination
-    return (textSimilarity * 0.7) + (tagSimilarity * 0.3);
+    return textSimilarity * 0.7 + tagSimilarity * 0.3;
   }
 
   private suggestRelationType(record1: any, record2: any): string {
@@ -592,11 +633,7 @@ export class CrossModuleRelationsService {
     return 'many_to_many';
   }
 
-  private generateReasoningText(
-    similarityScore: number,
-    tags1: string[],
-    tags2: string[]
-  ): string {
+  private generateReasoningText(similarityScore: number, tags1: string[], tags2: string[]): string {
     const commonTags = tags1.filter(tag => tags2.includes(tag));
 
     let reasoning = `${Math.round(similarityScore * 100)}% content similarity`;

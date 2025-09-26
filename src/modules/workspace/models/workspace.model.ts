@@ -199,6 +199,13 @@ const WorkspaceSchema = createBaseSchema({
   }
 });
 
+// Override toJSON to exclude cover field
+WorkspaceSchema.methods.toJSON = function () {
+  const obj = this.toObject();
+  delete obj.cover;
+  return obj;
+};
+
 // Indexes for efficient queries
 WorkspaceSchema.index({ ownerId: 1, isDeleted: 1 });
 WorkspaceSchema.index({ type: 1, isPublic: 1, isDeleted: 1 });

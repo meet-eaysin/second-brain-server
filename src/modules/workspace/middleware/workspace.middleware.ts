@@ -8,7 +8,6 @@ export interface WorkspaceRequest extends AuthenticatedRequest {
     id: string;
     hasAccess: boolean;
     canManage: boolean;
-    canManageMembers: boolean;
   };
 }
 
@@ -65,17 +64,13 @@ export const resolveWorkspaceContext = (options?: {
           if (!hasAccess) return next(createForbiddenError('Access denied to this workspace'));
 
           // Get additional permissions
-          const [canManage, canManageMembers] = await Promise.all([
-            workspaceService.canManageWorkspace(workspaceId, userId),
-            workspaceService.canManageMembers(workspaceId, userId)
-          ]);
+          const canManage = await workspaceService.canManageWorkspace(workspaceId, userId);
 
           // Set workspace context on request
           (req as WorkspaceRequest).workspace = {
             id: workspaceId,
             hasAccess: true,
-            canManage,
-            canManageMembers
+            canManage
           };
         } catch (error) {
           if (options?.required) {
@@ -128,8 +123,7 @@ export const ensureDefaultWorkspace = async (
         workspaceReq.workspace = {
           id: defaultWorkspace.id,
           hasAccess: true,
-          canManage: true,
-          canManageMembers: true
+          canManage: true
         };
       } catch (error) {
         console.error('Failed to ensure default workspace for user:', userId, error);
@@ -155,11 +149,6 @@ export const canManageWorkspace = (req: Request): boolean => {
   return workspaceReq.workspace?.canManage || false;
 };
 
-export const canManageWorkspaceMembers = (req: Request): boolean => {
-  const workspaceReq = req as WorkspaceRequest;
-  return workspaceReq.workspace?.canManageMembers || false;
-};
-
 export const injectWorkspaceContext = (req: Request, res: Response, next: NextFunction): void => {
   const workspaceId = getWorkspaceId(req);
 
@@ -179,17 +168,6 @@ export const requireWorkspaceManagement = (
 
   if (!workspaceReq.workspace?.canManage) {
     return next(createForbiddenError('Workspace management permissions required'));
-  }
-
-  next();
-};
-
-// Middleware to require member management permissions
-export const requireMemberManagement = (req: Request, res: Response, next: NextFunction): void => {
-  const workspaceReq = req as WorkspaceRequest;
-
-  if (!workspaceReq.workspace?.canManageMembers) {
-    return next(createForbiddenError('Member management permissions required'));
   }
 
   next();

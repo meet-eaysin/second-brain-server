@@ -57,14 +57,16 @@ export class WorkspaceService {
 
       await ownerMember.save();
 
-      // Initialize core database modules for the new workspace
-      try {
-        const { initializeCoreModules } = await import('@/modules/modules');
-        await initializeCoreModules(workspace.id.toString(), ownerId, false);
-      } catch (moduleError: any) {
-        // Log the error but don't fail workspace creation
-        console.error('Failed to initialize core modules for workspace:', moduleError.message);
-      }
+      // Initialize core database modules asynchronously (don't block workspace creation)
+      setImmediate(async () => {
+        try {
+          const { initializeCoreModules } = await import('@/modules/modules');
+          await initializeCoreModules(workspace.id.toString(), ownerId, false);
+        } catch (moduleError: any) {
+          // Log the error but don't fail workspace creation
+          console.error('Failed to initialize core modules for workspace:', moduleError.message);
+        }
+      });
 
       return workspace.toJSON() as IWorkspace;
     } catch (error: any) {
@@ -331,22 +333,6 @@ export class WorkspaceService {
 
       // Check if user is admin
       return WorkspaceMemberModel.hasRole(workspaceId, userId, EWorkspaceMemberRole.ADMIN);
-    } catch (error: any) {
-      return false;
-    }
-  }
-
-  // Check if user can manage members
-  async canManageMembers(workspaceId: string, userId: string): Promise<boolean> {
-    try {
-      const workspace = await WorkspaceModel.findById(workspaceId);
-      if (!workspace || workspace.isDeleted) return false;
-
-      // Owner can always manage
-      if (workspace.ownerId === userId) return true;
-
-      // Check permission
-      return WorkspaceMemberModel.hasPermission(workspaceId, userId, 'canManageMembers');
     } catch (error: any) {
       return false;
     }
