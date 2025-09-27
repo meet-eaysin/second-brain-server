@@ -30,7 +30,7 @@ The Second Brain Server is a comprehensive backend API that powers a personal kn
 - **Task Management**: Complete task tracking with priorities, assignees, and time tracking
 - **Rich Note-Taking**: Full-featured notes with rich text editing and collaboration
 - **Project & Goal Management**: Organize work and track achievements
-- **Calendar Integration**: Sync with external calendar services (Google, Outlook)
+- **CalendarTypes Integration**: Sync with external calendar services (Google, Outlook)
 - **Advanced Search**: Global search across all content with semantic capabilities
 - **Real-time Notifications**: WebSocket-based notifications and updates
 - **User Authentication**: JWT-based auth with Google OAuth support
@@ -109,7 +109,7 @@ TWILIO_ACCOUNT_SID=<your-account-sid>
 TWILIO_AUTH_TOKEN=<your-auth-token>
 TWILIO_PHONE_NUMBER=<your-twilio-phone-number>
 
-# Calendar Integration (Optional)
+# CalendarTypes Integration (Optional)
 GOOGLE_CALENDAR_CLIENT_ID=<your-calendar-client-id>
 GOOGLE_CALENDAR_CLIENT_SECRET=<your-calendar-client-secret>
 CALENDAR_SYNC_ENABLED=true
@@ -232,12 +232,12 @@ yarn health              # Check server health endpoint
 ```
 src/
 ├── app.ts                    # Express application setup
-├── index.ts                  # Server entry point
+├── users.types.ts                  # Server entry point
 ├── config/                   # Configuration modules
 │   ├── default-config/       # Application configuration
 │   ├── db/                   # Database connection
 │   ├── email-templates.ts    # Email templates
-│   ├── index.ts              # Config exports
+│   ├── users.types.ts              # Config exports
 │   ├── jwt/                  # JWT configuration
 │   ├── logger/               # Logging configuration
 │   ├── mailer/               # Email service configuration
@@ -247,18 +247,18 @@ src/
 ├── middlewares/              # Express middlewares
 │   ├── auth.ts               # Authentication middleware
 │   ├── error-handler.ts      # Error handling middleware
-│   ├── index.ts              # Middleware exports
+│   ├── users.types.ts              # Middleware exports
 │   ├── not-found.ts          # 404 handler
 │   └── permission.middleware.ts # Permission middleware
 ├── modules/                  # Feature modules
 │   ├── auth/                 # Authentication & authorization
-│   ├── calendar/             # Calendar integration
+│   ├── calendar/             # CalendarTypes integration
 │   ├── core/                 # Core types and services
 │   ├── dashboard/            # Dashboard and analytics
 │   ├── editor/               # Rich text editor services
 │   ├── files/                # File upload and management
 │   ├── formulas/             # Formula engine
-│   ├── index.ts              # Module exports
+│   ├── users.types.ts              # Module exports
 │   ├── modules/              # Cross-module relations
 │   ├── permissions/          # Permission management
 │   ├── search/               # Global search functionality
@@ -267,7 +267,7 @@ src/
 │   │   ├── finance/          # Financial tracking
 │   │   ├── goals/            # Goal management
 │   │   ├── habits/           # Habit tracking
-│   │   ├── index.ts          # Second Brain exports
+│   │   ├── users.types.ts          # Second Brain exports
 │   │   ├── journal/          # Journaling system
 │   │   ├── mood/             # Mood tracking
 │   │   ├── notes/            # Note-taking system
@@ -278,19 +278,19 @@ src/
 │   ├── users/                # User management
 │   └── workspace/            # Workspace management
 ├── routes/                   # API route definitions
-│   ├── index.ts              # Main route aggregator
+│   ├── users.types.ts              # Main route aggregator
 │   └── swagger.route.ts      # Swagger documentation route
 ├── types/                    # TypeScript type definitions
 │   ├── error.types.ts        # Error types
 │   ├── express.d.ts          # Express extensions
-│   ├── index.ts              # Type exports
+│   ├── users.types.ts              # Type exports
 │   └── socket.io.d.ts        # Socket.IO types
 └── utils/                    # Utility functions
     ├── catch-async.ts        # Async error handling
     ├── email.utils.ts        # Email utilities
     ├── error.utils.ts        # Error utilities
     ├── id-generator.ts       # ID generation
-    ├── index.ts              # Utility exports
+    ├── users.types.ts              # Utility exports
     ├── mongoose-helpers.ts   # MongoDB helpers
     ├── response.utils.ts     # Response utilities
     └── validation-error-converter.ts # Validation helpers
@@ -374,7 +374,7 @@ The API is organized into the following main modules:
 - `GET /api/v1/goals` - List goals
 - `POST /api/v1/goals` - Create goal
 
-#### Calendar Integration (`/api/v1/calendars`)
+#### CalendarTypes Integration (`/api/v1/calendars`)
 - `GET /api/v1/calendars/events` - Get calendar events
 - `POST /api/v1/calendars/events` - Create calendar event
 - `PUT /api/v1/calendars/events/:id` - Update calendar event

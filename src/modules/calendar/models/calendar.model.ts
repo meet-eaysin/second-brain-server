@@ -1,9 +1,9 @@
 import { Schema, model, Document, Model } from 'mongoose';
 import { ECalendarProvider, ECalendarType, ECalendarAccessLevel } from '../types/calendar.types';
 
-// Calendar Document Interface with instance methods
+// CalendarTypes Document Interface with instance methods
 export interface ICalendarDocument extends Document {
-  // Calendar properties (from ICalendar but without id conflict)
+  // CalendarTypes properties (from ICalendar but without id conflict)
   name: string;
   description?: string;
   color: string;
@@ -65,7 +65,7 @@ export interface ICalendarModel extends Model<ICalendarDocument> {
   ): Promise<ICalendarDocument | null>;
 }
 
-// Calendar Schema
+// CalendarTypes Schema
 const CalendarSchema = new Schema<ICalendarDocument>(
   {
     name: {
@@ -271,7 +271,7 @@ CalendarSchema.methods.setAsDefault = async function () {
 // Export model
 export const CalendarModel = model<ICalendarDocument, ICalendarModel>('Calendar', CalendarSchema);
 
-// Calendar sharing schema (for core calendars)
+// CalendarTypes sharing schema (for core calendars)
 export interface ICalendarShare extends Document {
   calendarId: string;
   sharedWithUserId: string;
@@ -355,7 +355,7 @@ CalendarShareSchema.methods.accept = function () {
 
 export const CalendarShareModel = model<ICalendarShare>('CalendarShare', CalendarShareSchema);
 
-// Calendar subscription schema (for external calendar subscriptions)
+// CalendarTypes subscription schema (for external calendar subscriptions)
 export interface ICalendarSubscription extends Document {
   userId: string;
   name: string;

@@ -87,7 +87,7 @@ export interface IViewSettings {
   // Board view specific
   boardGroupProperty?: string;
 
-  // Calendar view specific
+  // CalendarTypes view specific
   calendarDateProperty?: string;
   calendarViewType?: 'month' | 'week' | 'day';
 

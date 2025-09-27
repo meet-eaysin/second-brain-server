@@ -13,7 +13,7 @@ import {
 
 // Event Document Interface
 export interface ICalendarEventDocument extends Document {
-  // Calendar event properties (from ICalendarEvent but without id conflict)
+  // CalendarTypes event properties (from ICalendarEvent but without id conflict)
   calendarId: string;
 
   // Basic event info
@@ -203,7 +203,7 @@ const EventReminderSchema = new Schema({
   }
 }, { _id: false });
 
-// Calendar Event Schema
+// CalendarTypes Event Schema
 const CalendarEventSchema = new Schema<ICalendarEventDocument>({
   calendarId: {
     type: String,

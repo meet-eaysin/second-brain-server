@@ -1,7 +1,7 @@
 import { Schema, model, Document, Model } from 'mongoose';
 import { ICalendarConnection, ECalendarProvider } from '../types/calendar.types';
 
-// Calendar Connection Document Interface with instance methods
+// CalendarTypes Connection Document Interface with instance methods
 export interface ICalendarConnectionDocument extends Document {
   // Connection properties (from ICalendarConnection but without id conflict)
   userId: string;
@@ -72,13 +72,13 @@ export interface ICalendarConnectionModel extends Model<ICalendarConnectionDocum
   findByUserAndProvider(userId: string, provider: ECalendarProvider): Promise<ICalendarConnectionDocument | null>;
 }
 
-// Calendar sync log static methods interface
+// CalendarTypes sync log static methods interface
 export interface ICalendarSyncLogModel extends Model<ICalendarSyncLog> {
   findByConnection(connectionId: string, limit?: number): Promise<ICalendarSyncLog[]>;
   findRecentErrors(hours?: number): Promise<ICalendarSyncLog[]>;
 }
 
-// Calendar Connection Schema
+// CalendarTypes Connection Schema
 const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>({
   userId: {
     type: String,
@@ -379,7 +379,7 @@ CalendarConnectionSchema.methods.shouldSync = function() {
 
 export const CalendarConnectionModel = model<ICalendarConnectionDocument, ICalendarConnectionModel>('CalendarConnection', CalendarConnectionSchema);
 
-// Calendar sync log schema for tracking sync history
+// CalendarTypes sync log schema for tracking sync history
 export interface ICalendarSyncLog extends Document {
   connectionId: string;
   syncType: 'full' | 'incremental' | 'manual';

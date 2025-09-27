@@ -23,7 +23,7 @@ export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => 
       isDeleted: { $ne: true }
     }).select('_id');
 
-    const journalDatabaseIds = journalDatabases.map(db => db._id.toString());
+    const journalDatabaseIds = journalDatabases.map(db => String(db._id));
     const totalNotes = await RecordModel.countDocuments({
       databaseId: { $in: journalDatabaseIds },
       isDeleted: { $ne: true }

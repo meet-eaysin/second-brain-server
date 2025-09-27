@@ -23,7 +23,6 @@ import {
   createValidationError,
   createForbiddenError
 } from '@/utils/error.utils';
-import { generateId } from '@/utils/id-generator';
 import { permissionService } from '../../../permissions/services/permission.service';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 
@@ -32,10 +31,12 @@ import { projectsService } from '../../projects/services/projects.service';
 import { resourcesService } from '../../resources/services/resources.service';
 
 export class ParaService {
-
   // ===== PARA ITEM OPERATIONS =====
 
-  async createParaItem(data: ICreateParaItemRequest, userId: string): Promise<IParaItem> {
+  async createParaItem(
+    data: ICreateParaItemRequest,
+    userId: string
+  ): Promise<IParaItem | IParaArea | IParaArchive> {
     try {
       // Verify the database exists and is a PARA database
       const database = await DatabaseModel.findOne({
@@ -67,14 +68,18 @@ export class ParaService {
       );
 
       if (!hasPermission) {
-        throw createForbiddenError('Insufficient permissions to create PARA items in this database');
+        throw createForbiddenError(
+          'Insufficient permissions to create PARA items in this database'
+        );
       }
 
       // Validate linked items exist (optional - could be async validation)
       await this.validateLinkedItems(data, userId);
 
       // Calculate next review date
-      const nextReviewDate = this.calculateNextReviewDate(data.reviewFrequency || EParaReviewFrequency.MONTHLY);
+      const nextReviewDate = this.calculateNextReviewDate(
+        data.reviewFrequency || EParaReviewFrequency.MONTHLY
+      );
 
       // Create PARA item record
       const paraRecord = new RecordModel({
@@ -116,8 +121,9 @@ export class ParaService {
           'Standards Of Excellence': data.standardsOfExcellence || [],
           'Current Challenges': [],
           'Key Metrics': [],
-          'Is Responsibility Area': data.isResponsibilityArea !== undefined ? data.isResponsibilityArea : true,
-          'Stakeholders': data.stakeholders || [],
+          'Is Responsibility Area':
+            data.isResponsibilityArea !== undefined ? data.isResponsibilityArea : true,
+          Stakeholders: data.stakeholders || [],
           'Maintenance Actions': [],
 
           // Archive-specific properties
@@ -145,13 +151,10 @@ export class ParaService {
       }
 
       // Update database record count and activity
-      await DatabaseModel.findByIdAndUpdate(
-        data.databaseId,
-        {
-          $inc: { recordCount: 1 },
-          lastActivityAt: new Date()
-        }
-      );
+      await DatabaseModel.findByIdAndUpdate(data.databaseId, {
+        $inc: { recordCount: 1 },
+        lastActivityAt: new Date()
+      });
 
       return this.formatParaItemResponse(savedRecord);
     } catch (error: any) {
@@ -160,7 +163,10 @@ export class ParaService {
     }
   }
 
-  async getParaItems(params: IParaQueryParams, userId: string): Promise<{
+  async getParaItems(
+    params: IParaQueryParams,
+    userId: string
+  ): Promise<{
     items: IParaItem[];
     total: number;
     page: number;
@@ -176,11 +182,7 @@ export class ParaService {
       const sortOptions: any = { [this.mapSortField(sortBy)]: sortOrder === 'desc' ? -1 : 1 };
 
       const [items, total] = await Promise.all([
-        RecordModel.find(query)
-          .sort(sortOptions)
-          .skip(skip)
-          .limit(limit)
-          .exec(),
+        RecordModel.find(query).sort(sortOptions).skip(skip).limit(limit).exec(),
         RecordModel.countDocuments(query)
       ]);
 
@@ -203,7 +205,7 @@ export class ParaService {
     }
   }
 
-  async getParaItemById(id: string, userId: string): Promise<IParaItem> {
+  async getParaItemById(id: string, userId: string): Promise<IParaItem | IParaArea | IParaArchive> {
     try {
       const item = await RecordModel.findOne({
         _id: id,
@@ -233,7 +235,11 @@ export class ParaService {
     }
   }
 
-  async updateParaItem(id: string, data: IUpdateParaItemRequest, userId: string): Promise<IParaItem> {
+  async updateParaItem(
+    id: string,
+    data: IUpdateParaItemRequest,
+    userId: string
+  ): Promise<IParaItem | IParaArea | IParaArchive> {
     try {
       const item = await RecordModel.findOne({
         _id: id,
@@ -267,51 +273,64 @@ export class ParaService {
       if (data.description !== undefined) updateData['properties.Description'] = data.description;
       if (data.status !== undefined) updateData['properties.Status'] = data.status;
       if (data.priority !== undefined) updateData['properties.Priority'] = data.priority;
-      if (data.linkedProjectIds !== undefined) updateData['properties.Linked Project IDs'] = data.linkedProjectIds;
-      if (data.linkedResourceIds !== undefined) updateData['properties.Linked Resource IDs'] = data.linkedResourceIds;
-      if (data.linkedTaskIds !== undefined) updateData['properties.Linked Task IDs'] = data.linkedTaskIds;
-      if (data.linkedNoteIds !== undefined) updateData['properties.Linked Note IDs'] = data.linkedNoteIds;
-      if (data.linkedGoalIds !== undefined) updateData['properties.Linked Goal IDs'] = data.linkedGoalIds;
-      if (data.linkedPeopleIds !== undefined) updateData['properties.Linked People IDs'] = data.linkedPeopleIds;
+      if (data.linkedProjectIds !== undefined)
+        updateData['properties.Linked Project IDs'] = data.linkedProjectIds;
+      if (data.linkedResourceIds !== undefined)
+        updateData['properties.Linked Resource IDs'] = data.linkedResourceIds;
+      if (data.linkedTaskIds !== undefined)
+        updateData['properties.Linked Task IDs'] = data.linkedTaskIds;
+      if (data.linkedNoteIds !== undefined)
+        updateData['properties.Linked Note IDs'] = data.linkedNoteIds;
+      if (data.linkedGoalIds !== undefined)
+        updateData['properties.Linked Goal IDs'] = data.linkedGoalIds;
+      if (data.linkedPeopleIds !== undefined)
+        updateData['properties.Linked People IDs'] = data.linkedPeopleIds;
       if (data.tags !== undefined) updateData['properties.Tags'] = data.tags;
-      if (data.parentAreaId !== undefined) updateData['properties.Parent Area ID'] = data.parentAreaId;
-      if (data.completionPercentage !== undefined) updateData['properties.Completion Percentage'] = data.completionPercentage;
-      if (data.customFields !== undefined) updateData['properties.Custom Fields'] = data.customFields;
+      if (data.parentAreaId !== undefined)
+        updateData['properties.Parent Area ID'] = data.parentAreaId;
+      if (data.completionPercentage !== undefined)
+        updateData['properties.Completion Percentage'] = data.completionPercentage;
+      if (data.customFields !== undefined)
+        updateData['properties.Custom Fields'] = data.customFields;
 
       // Update review frequency and calculate next review date
       if (data.reviewFrequency !== undefined) {
         updateData['properties.Review Frequency'] = data.reviewFrequency;
-        updateData['properties.Next Review Date'] = this.calculateNextReviewDate(data.reviewFrequency);
+        updateData['properties.Next Review Date'] = this.calculateNextReviewDate(
+          data.reviewFrequency
+        );
       }
 
       // Area-specific updates
       if (data.areaType !== undefined) updateData['properties.Area Type'] = data.areaType;
-      if (data.maintenanceLevel !== undefined) updateData['properties.Maintenance Level'] = data.maintenanceLevel;
-      if (data.standardsOfExcellence !== undefined) updateData['properties.Standards Of Excellence'] = data.standardsOfExcellence;
-      if (data.currentChallenges !== undefined) updateData['properties.Current Challenges'] = data.currentChallenges;
-      if (data.isResponsibilityArea !== undefined) updateData['properties.Is Responsibility Area'] = data.isResponsibilityArea;
-      if (data.stakeholders !== undefined) updateData['properties.Stakeholders'] = data.stakeholders;
+      if (data.maintenanceLevel !== undefined)
+        updateData['properties.Maintenance Level'] = data.maintenanceLevel;
+      if (data.standardsOfExcellence !== undefined)
+        updateData['properties.Standards Of Excellence'] = data.standardsOfExcellence;
+      if (data.currentChallenges !== undefined)
+        updateData['properties.Current Challenges'] = data.currentChallenges;
+      if (data.isResponsibilityArea !== undefined)
+        updateData['properties.Is Responsibility Area'] = data.isResponsibilityArea;
+      if (data.stakeholders !== undefined)
+        updateData['properties.Stakeholders'] = data.stakeholders;
 
       // Settings updates
       if (data.isTemplate !== undefined) updateData['properties.Is Template'] = data.isTemplate;
       if (data.isPublic !== undefined) updateData['properties.Is Public'] = data.isPublic;
-      if (data.notificationSettings !== undefined) updateData['properties.Notification Settings'] = data.notificationSettings;
+      if (data.notificationSettings !== undefined)
+        updateData['properties.Notification Settings'] = data.notificationSettings;
 
-      const updatedItem = await RecordModel.findByIdAndUpdate(
-        id,
-        updateData,
-        { new: true, runValidators: true }
-      ).exec();
+      const updatedItem = await RecordModel.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true
+      }).exec();
 
       if (!updatedItem) {
         throw createNotFoundError('PARA item', id);
       }
 
       // Update database activity
-      await DatabaseModel.findByIdAndUpdate(
-        updatedItem.databaseId,
-        { lastActivityAt: new Date() }
-      );
+      await DatabaseModel.findByIdAndUpdate(updatedItem.databaseId, { lastActivityAt: new Date() });
 
       return this.formatParaItemResponse(updatedItem);
     } catch (error: any) {
@@ -354,13 +373,10 @@ export class ParaService {
       }
 
       // Update database record count
-      await DatabaseModel.findByIdAndUpdate(
-        item.databaseId,
-        {
-          $inc: { recordCount: -1 },
-          lastActivityAt: new Date()
-        }
-      );
+      await DatabaseModel.findByIdAndUpdate(item.databaseId, {
+        $inc: { recordCount: -1 },
+        lastActivityAt: new Date()
+      });
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to delete PARA item: ${error.message}`, 500);
@@ -372,7 +388,7 @@ export class ParaService {
   async moveToArchive(data: IMoveToArchiveRequest, userId: string): Promise<void> {
     try {
       const results = await Promise.allSettled(
-        data.itemIds.map(async (itemId) => {
+        data.itemIds.map(async itemId => {
           const item = await RecordModel.findById(itemId).exec();
           if (!item) return;
 
@@ -406,7 +422,7 @@ export class ParaService {
   async restoreFromArchive(data: IRestoreFromArchiveRequest, userId: string): Promise<void> {
     try {
       const results = await Promise.allSettled(
-        data.itemIds.map(async (itemId) => {
+        data.itemIds.map(async itemId => {
           await RecordModel.findByIdAndUpdate(itemId, {
             'properties.Category': data.targetCategory,
             'properties.Status': EParaStatus.ACTIVE,
@@ -428,7 +444,10 @@ export class ParaService {
     }
   }
 
-  async categorizeExistingItem(data: IParaCategorizeRequest, userId: string): Promise<IParaItem | null> {
+  async categorizeExistingItem(
+    data: IParaCategorizeRequest,
+    userId: string
+  ): Promise<IParaItem | IParaArea | IParaArchive | null> {
     try {
       // Validate the existing item exists
       let existingItem;
@@ -453,12 +472,17 @@ export class ParaService {
         const paraItem = await this.getParaItemById(data.paraItemId, userId);
 
         // Update the PARA item to include this linked item
-        const linkedField = `linked${data.itemType.charAt(0).toUpperCase() + data.itemType.slice(1)}Ids` as keyof IUpdateParaItemRequest;
+        const linkedField =
+          `linked${data.itemType.charAt(0).toUpperCase() + data.itemType.slice(1)}Ids` as keyof IUpdateParaItemRequest;
         const currentLinked = (paraItem as any)[linkedField] || [];
 
-        await this.updateParaItem(data.paraItemId, {
-          [linkedField]: [...currentLinked, data.itemId]
-        } as IUpdateParaItemRequest, userId);
+        await this.updateParaItem(
+          data.paraItemId,
+          {
+            [linkedField]: [...currentLinked, data.itemId]
+          } as IUpdateParaItemRequest,
+          userId
+        );
 
         return await this.getParaItemById(data.paraItemId, userId);
       }
@@ -586,20 +610,22 @@ export class ParaService {
 
   private mapSortField(sortBy: string): string {
     const fieldMap: Record<string, string> = {
-      'title': 'properties.Title',
-      'createdAt': 'createdAt',
-      'updatedAt': 'updatedAt',
-      'priority': 'properties.Priority',
-      'nextReviewDate': 'properties.Next Review Date'
+      title: 'properties.Title',
+      createdAt: 'createdAt',
+      updatedAt: 'updatedAt',
+      priority: 'properties.Priority',
+      nextReviewDate: 'properties.Next Review Date'
     };
     return fieldMap[sortBy] || 'updatedAt';
   }
 
-  private formatParaItemResponse(record: any): IParaItem {
+  private formatParaItemResponse(record: any): IParaItem | IParaArea | IParaArchive {
+    const category = record.properties.Category || EParaCategory.AREAS;
+
     const baseItem: IParaItem = {
       id: record._id.toString(),
       databaseId: record.databaseId,
-      category: record.properties.Category || EParaCategory.AREAS,
+      category,
       title: record.properties.Title || '',
       description: record.properties.Description,
       status: record.properties.Status || EParaStatus.ACTIVE,
@@ -635,6 +661,42 @@ export class ParaService {
       updatedBy: record.updatedBy
     };
 
+    // Return area-specific data for areas
+    if (category === EParaCategory.AREAS) {
+      return {
+        ...baseItem,
+        category: EParaCategory.AREAS,
+        areaType: record.properties['Area Type'] || 'personal',
+        maintenanceLevel: record.properties['Maintenance Level'] || 'medium',
+        standardsOfExcellence: record.properties['Standards Of Excellence'] || [],
+        currentChallenges: record.properties['Current Challenges'] || [],
+        keyMetrics: record.properties['Key Metrics'] || [],
+        isResponsibilityArea:
+          record.properties['Is Responsibility Area'] !== undefined
+            ? record.properties['Is Responsibility Area']
+            : true,
+        stakeholders: record.properties['Stakeholders'] || [],
+        maintenanceActions: record.properties['Maintenance Actions'] || []
+      } as IParaArea;
+    }
+
+    // Return archive-specific data for archives
+    if (category === EParaCategory.ARCHIVE) {
+      return {
+        ...baseItem,
+        category: EParaCategory.ARCHIVE,
+        originalCategory: record.properties['Original Category'] || EParaCategory.PROJECTS,
+        archivedAt: record.properties['Archived At'],
+        archivedBy: record.properties['Archived By'] || '',
+        archiveReason: record.properties['Archive Reason'] || 'completed',
+        archiveNotes: record.properties['Archive Notes'],
+        retentionPolicy: record.properties['Retention Policy'] || 'permanent',
+        deleteAfterDate: record.properties['Delete After Date'],
+        originalData: record.properties['Original Data'] || {},
+        relatedArchiveIds: record.properties['Related Archive IDs'] || []
+      } as IParaArchive;
+    }
+
     return baseItem;
   }
 
@@ -642,20 +704,19 @@ export class ParaService {
     const lastRecord = await RecordModel.findOne(
       { databaseId, isDeleted: { $ne: true } },
       { order: 1 }
-    ).sort({ order: -1 }).exec();
+    )
+      .sort({ order: -1 })
+      .exec();
 
     return (lastRecord?.order || 0) + 1;
   }
 
   private async addChildArea(parentId: string, childId: string, userId: string): Promise<void> {
-    await RecordModel.findByIdAndUpdate(
-      parentId,
-      {
-        $addToSet: { 'properties.Child Area IDs': childId },
-        updatedBy: userId,
-        updatedAt: new Date()
-      }
-    );
+    await RecordModel.findByIdAndUpdate(parentId, {
+      $addToSet: { 'properties.Child Area IDs': childId },
+      updatedBy: userId,
+      updatedAt: new Date()
+    });
   }
 }
 

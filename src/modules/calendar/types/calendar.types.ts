@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { IBaseEntity, TId, TUserId } from '@/modules/core/types/common.types';
 
-// Calendar Provider Types
+// CalendarTypes Provider Types
 export enum ECalendarProvider {
   INTERNAL = 'internal',
   GOOGLE = 'google',
@@ -12,7 +12,7 @@ export enum ECalendarProvider {
   ICAL = 'ical'
 }
 
-// Calendar Types
+// CalendarTypes Types
 export enum ECalendarType {
   PERSONAL = 'personal',
   WORK = 'work',
@@ -65,7 +65,7 @@ export enum ERecurrenceFrequency {
   HOURLY = 'hourly'
 }
 
-// Calendar Access Level
+// CalendarTypes Access Level
 export enum ECalendarAccessLevel {
   OWNER = 'owner',
   EDITOR = 'editor',
@@ -73,7 +73,7 @@ export enum ECalendarAccessLevel {
   FREE_BUSY = 'free_busy'
 }
 
-// Calendar Interface
+// CalendarTypes Interface
 export interface ICalendar extends IBaseEntity {
   name: string;
   description?: string;
@@ -107,7 +107,7 @@ export interface ICalendar extends IBaseEntity {
   };
 }
 
-// Calendar Event Interface
+// CalendarTypes Event Interface
 export interface ICalendarEvent extends IBaseEntity {
   calendarId: TId;
 
@@ -202,7 +202,7 @@ export interface IEventAttachment {
   size?: number;
 }
 
-// Calendar Connection (External)
+// CalendarTypes Connection (External)
 export interface ICalendarConnection extends IBaseEntity {
   userId: TUserId;
   provider: ECalendarProvider;
@@ -240,7 +240,7 @@ export interface ICalendarConnection extends IBaseEntity {
   metadata?: Record<string, unknown>;
 }
 
-// Calendar View Configuration
+// CalendarTypes View Configuration
 export interface ICalendarView {
   type: 'month' | 'week' | 'day' | 'agenda' | 'year';
   startDate: Date;
@@ -259,7 +259,7 @@ export interface ICalendarView {
   groupBy?: 'calendar' | 'type' | 'status';
 }
 
-// Calendar Event Query Options
+// CalendarTypes Event Query Options
 export interface ICalendarEventQuery {
   calendarIds?: TId[];
   startDate?: Date;
@@ -274,7 +274,7 @@ export interface ICalendarEventQuery {
   offset?: number;
 }
 
-// Calendar Statistics
+// CalendarTypes Statistics
 export interface ICalendarStats {
   totalEvents: number;
   upcomingEvents: number;
@@ -414,7 +414,7 @@ export const CalendarConnectionSchema = z.object({
     .optional()
 });
 
-// Calendar Preferences Types
+// CalendarTypes Preferences Types
 export interface ICalendarPreferences {
   userId: TUserId;
 

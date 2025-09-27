@@ -43,7 +43,7 @@ export const createCalendarController = catchAsync(
 
     const calendar = await createCalendar(userId, request, workspaceId);
 
-    sendSuccessResponse(res, 'Calendar created successfully', calendar, 201);
+    sendSuccessResponse(res, 'CalendarTypes created successfully', calendar, 201);
   }
 );
 
@@ -72,7 +72,7 @@ export const getCalendarByIdController = catchAsync(
 
     const calendar = await getCalendarById(calendarId, userId);
 
-    sendSuccessResponse(res, 'Calendar retrieved successfully', calendar);
+    sendSuccessResponse(res, 'CalendarTypes retrieved successfully', calendar);
   }
 );
 
@@ -87,7 +87,7 @@ export const updateCalendarController = catchAsync(
 
     const calendar = await updateCalendar(calendarId, userId, request);
 
-    sendSuccessResponse(res, 'Calendar updated successfully', calendar);
+    sendSuccessResponse(res, 'CalendarTypes updated successfully', calendar);
   }
 );
 
@@ -101,7 +101,7 @@ export const deleteCalendarController = catchAsync(
 
     await deleteCalendar(calendarId, userId);
 
-    sendSuccessResponse(res, 'Calendar deleted successfully');
+    sendSuccessResponse(res, 'CalendarTypes deleted successfully');
   }
 );
 
@@ -207,7 +207,7 @@ export const getCalendarStatsController = catchAsync(
 
     const stats = await getCalendarStats(userId, workspaceId);
 
-    sendSuccessResponse(res, 'Calendar statistics retrieved successfully', stats);
+    sendSuccessResponse(res, 'CalendarTypes statistics retrieved successfully', stats);
   }
 );
 
@@ -237,7 +237,7 @@ export const getCalendarViewController = catchAsync(
 
     const data = await getCalendarView(userId, view, workspaceId);
 
-    sendSuccessResponse(res, 'Calendar view retrieved successfully', {
+    sendSuccessResponse(res, 'CalendarTypes view retrieved successfully', {
       ...data,
       view
     });
@@ -482,7 +482,7 @@ export const getCalendarConfigController = catchAsync(
       ]
     };
 
-    sendSuccessResponse(res, 'Calendar configuration retrieved successfully', config);
+    sendSuccessResponse(res, 'CalendarTypes configuration retrieved successfully', config);
   }
 );
 
@@ -495,7 +495,7 @@ export const getCalendarPreferencesController = catchAsync(
 
     const preferences = await getCalendarPreferences(userId);
 
-    sendSuccessResponse(res, 'Calendar preferences retrieved successfully', preferences);
+    sendSuccessResponse(res, 'CalendarTypes preferences retrieved successfully', preferences);
   }
 );
 
@@ -509,6 +509,6 @@ export const updateCalendarPreferencesController = catchAsync(
 
     const preferences = await updateCalendarPreferences(userId, request);
 
-    sendSuccessResponse(res, 'Calendar preferences updated successfully', preferences);
+    sendSuccessResponse(res, 'CalendarTypes preferences updated successfully', preferences);
   }
 );

@@ -154,7 +154,7 @@ export interface IParaArchive extends IParaItem {
 export interface IParaStats {
   totalItems: number;
   byCategory: Record<EParaCategory, number>;
-  byStatus: Record<EParaStatus, number>;
+  byStatus: Record<EParaStatus, Record<EParaCategory, number>>;
   byPriority: Record<EParaPriority, number>;
 
   // Category-specific stats

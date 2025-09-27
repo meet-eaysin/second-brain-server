@@ -74,7 +74,7 @@ export class WorkspaceService {
           await createCalendar(
             ownerId,
             {
-              name: 'My Calendar',
+              name: 'My CalendarTypes',
               description: 'Default calendar for this workspace',
               color: '#3B82F6',
               type: ECalendarType.PERSONAL,

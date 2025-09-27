@@ -142,7 +142,7 @@ const entityParamsSchema = z.object({
   entityId: z.string().min(1)
 });
 
-// Calendar view and utility routes (must come before parameterized routes)
+// CalendarTypes view and utility routes (must come before parameterized routes)
 router.get('/config', getCalendarConfigController);
 
 router.get('/preferences', getCalendarPreferencesController);
@@ -242,7 +242,7 @@ router.put(
 
 router.delete('/events/:eventId', validateParams(eventIdSchema), deleteEventController);
 
-// Calendar CRUD routes
+// CalendarTypes CRUD routes
 router.post(
   '/',
   validateBody(createCalendarSchema),

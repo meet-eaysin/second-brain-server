@@ -12,7 +12,7 @@ import {
 } from '../types/calendar.types';
 import { createAppError } from '@/utils/error.utils';
 
-// External Calendar Provider Interface
+// External CalendarTypes Provider Interface
 export interface IExternalCalendarProvider {
   getCalendars(connection: ICalendarConnection): Promise<any[]>;
   getEvents(connection: ICalendarConnection, calendarId: string, startDate?: Date, endDate?: Date): Promise<any[]>;
@@ -22,7 +22,7 @@ export interface IExternalCalendarProvider {
   refreshToken(connection: ICalendarConnection): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }>;
 }
 
-// Google Calendar Provider
+// Google CalendarTypes Provider
 class GoogleCalendarProvider implements IExternalCalendarProvider {
   private getAuth(connection: ICalendarConnection) {
     const oauth2Client = new google.auth.OAuth2(
@@ -332,7 +332,7 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
   }
 }
 
-// CalDAV Provider (for Apple Calendar, etc.)
+// CalDAV Provider (for Apple CalendarTypes, etc.)
 class CalDAVProvider implements IExternalCalendarProvider {
   async getCalendars(connection: ICalendarConnection): Promise<any[]> {
     // CalDAV implementation would go here

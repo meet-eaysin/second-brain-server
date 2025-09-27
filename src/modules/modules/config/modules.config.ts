@@ -259,7 +259,7 @@ export const TASKS_MODULE: IModuleConfig = {
     {
       name: 'Calendar',
       type: EViewType.CALENDAR,
-      description: 'Calendar view of tasks by due date',
+      description: 'CalendarTypes view of tasks by due date',
       isDefault: false,
       order: 3,
       settings: {
@@ -1378,9 +1378,9 @@ export const JOURNAL_MODULE: IModuleConfig = {
       }
     },
     {
-      name: 'Calendar View',
+      name: 'CalendarTypes View',
       type: EViewType.CALENDAR,
-      description: 'Calendar view of journal entries',
+      description: 'CalendarTypes view of journal entries',
       isDefault: false,
       order: 1,
       settings: {
@@ -1556,9 +1556,9 @@ export const MOOD_TRACKER_MODULE: IModuleConfig = {
       }
     },
     {
-      name: 'Mood Calendar',
+      name: 'Mood CalendarTypes',
       type: EViewType.CALENDAR,
-      description: 'Calendar view of mood entries',
+      description: 'CalendarTypes view of mood entries',
       isDefault: false,
       order: 1,
       settings: {

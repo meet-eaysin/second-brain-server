@@ -28,7 +28,7 @@ export const connectCalendarController = catchAsync(
     });
 
     if (existingConnection) {
-      throw createAppError('Calendar connection already exists for this account', 409);
+      throw createAppError('CalendarTypes connection already exists for this account', 409);
     }
 
     // Validate provider
@@ -70,7 +70,7 @@ export const connectCalendarController = catchAsync(
       console.warn('Initial sync failed, but connection was created:', errorMessage);
     }
 
-    sendSuccessResponse(res, 'Calendar connected successfully', {
+    sendSuccessResponse(res, 'CalendarTypes connected successfully', {
       id: connection.id,
       provider: connection.provider,
       accountEmail: connection.accountEmail,
@@ -107,7 +107,7 @@ export const getCalendarConnectionsController = catchAsync(
       updatedAt: conn.updatedAt
     }));
 
-    sendSuccessResponse(res, 'Calendar connections retrieved successfully', connectionsData);
+    sendSuccessResponse(res, 'CalendarTypes connections retrieved successfully', connectionsData);
   }
 );
 
@@ -125,10 +125,10 @@ export const getCalendarConnectionByIdController = catchAsync(
     });
 
     if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
+      throw createAppError('CalendarTypes connection not found', 404);
     }
 
-    sendSuccessResponse(res, 'Calendar connection retrieved successfully', {
+    sendSuccessResponse(res, 'CalendarTypes connection retrieved successfully', {
       id: connection.id,
       provider: connection.provider,
       accountEmail: connection.accountEmail,
@@ -162,7 +162,7 @@ export const updateCalendarConnectionController = catchAsync(
     });
 
     if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
+      throw createAppError('CalendarTypes connection not found', 404);
     }
 
     // Update allowed fields
@@ -178,7 +178,7 @@ export const updateCalendarConnectionController = catchAsync(
 
     await connection.save();
 
-    sendSuccessResponse(res, 'Calendar connection updated successfully', {
+    sendSuccessResponse(res, 'CalendarTypes connection updated successfully', {
       id: connection.id,
       syncEnabled: connection.syncEnabled,
       syncFrequency: connection.syncFrequency,
@@ -201,12 +201,12 @@ export const disconnectCalendarController = catchAsync(
     });
 
     if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
+      throw createAppError('CalendarTypes connection not found', 404);
     }
 
     await connection.disconnect();
 
-    sendSuccessResponse(res, 'Calendar disconnected successfully');
+    sendSuccessResponse(res, 'CalendarTypes disconnected successfully');
   }
 );
 
@@ -220,7 +220,7 @@ export const syncCalendarConnectionController = catchAsync(
 
     await manualSyncConnection(connectionId, userId);
 
-    sendSuccessResponse(res, 'Calendar sync initiated successfully');
+    sendSuccessResponse(res, 'CalendarTypes sync initiated successfully');
   }
 );
 
@@ -240,7 +240,7 @@ export const getCalendarSyncLogsController = catchAsync(
     });
 
     if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
+      throw createAppError('CalendarTypes connection not found', 404);
     }
 
     const logs = await CalendarSyncLogModel.findByConnection(connectionId, limit);
@@ -267,7 +267,7 @@ export const resetCalendarConnectionErrorsController = catchAsync(
     });
 
     if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
+      throw createAppError('CalendarTypes connection not found', 404);
     }
 
     await connection.resetErrors();
@@ -289,7 +289,7 @@ export const getCalendarProvidersController = catchAsync(
       {
         id: ECalendarProvider.GOOGLE,
         name: 'Google Calendar',
-        description: 'Connect your Google Calendar',
+        description: 'Connect your Google CalendarTypes',
         authType: 'oauth2',
         features: ['import', 'export', 'bidirectional'],
         setupInstructions: 'You will be redirected to Google to authorize access to your calendar.'
@@ -328,7 +328,7 @@ export const getCalendarProvidersController = catchAsync(
       }
     ];
 
-    sendSuccessResponse(res, 'Calendar providers retrieved successfully', providers);
+    sendSuccessResponse(res, 'CalendarTypes providers retrieved successfully', providers);
   }
 );
 
@@ -346,14 +346,14 @@ export const testCalendarConnectionController = catchAsync(
     }).select('+accessToken +refreshToken');
 
     if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
+      throw createAppError('CalendarTypes connection not found', 404);
     }
 
     try {
       const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
       const calendars = await provider.getCalendars(connection);
 
-      sendSuccessResponse(res, 'Calendar connection test successful', {
+      sendSuccessResponse(res, 'CalendarTypes connection test successful', {
         status: 'connected',
         calendarsFound: calendars.length,
         provider: connection.provider,
@@ -361,7 +361,7 @@ export const testCalendarConnectionController = catchAsync(
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      sendSuccessResponse(res, 'Calendar connection test failed', {
+      sendSuccessResponse(res, 'CalendarTypes connection test failed', {
         status: 'error',
         error: errorMessage,
         provider: connection.provider,
@@ -413,6 +413,6 @@ export const getCalendarConnectionStatsController = catchAsync(
       }))
     };
 
-    sendSuccessResponse(res, 'Calendar connection statistics retrieved successfully', stats);
+    sendSuccessResponse(res, 'CalendarTypes connection statistics retrieved successfully', stats);
   }
 );

@@ -34,19 +34,14 @@ export const getParaItems = catchAsync(
 
     const result = await paraService.getParaItems(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'PARA items retrieved successfully',
-      result.items,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'PARA items retrieved successfully', result.items, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -89,105 +84,85 @@ export const deleteParaItem = catchAsync(
 
 export const getProjects = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       category: [EParaCategory.PROJECTS]
     };
     const userId = getUserId(req);
 
     const result = await paraService.getParaItems(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'PARA projects retrieved successfully',
-      result.items,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'PARA projects retrieved successfully', result.items, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getAreas = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       category: [EParaCategory.AREAS]
     };
     const userId = getUserId(req);
 
     const result = await paraService.getParaItems(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'PARA areas retrieved successfully',
-      result.items,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'PARA areas retrieved successfully', result.items, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getResources = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       category: [EParaCategory.RESOURCES]
     };
     const userId = getUserId(req);
 
     const result = await paraService.getParaItems(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'PARA resources retrieved successfully',
-      result.items,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'PARA resources retrieved successfully', result.items, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getArchive = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       category: [EParaCategory.ARCHIVE]
     };
     const userId = getUserId(req);
 
     const result = await paraService.getParaItems(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'PARA archive retrieved successfully',
-      result.items,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'PARA archive retrieved successfully', result.items, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -196,8 +171,8 @@ export const getArchive = catchAsync(
 export const getItemsByStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { status } = req.params;
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       status: [status as EParaStatus]
     };
     const userId = getUserId(req);
@@ -223,8 +198,8 @@ export const getItemsByStatus = catchAsync(
 export const getItemsByPriority = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { priority } = req.params;
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       priority: [priority as EParaPriority]
     };
     const userId = getUserId(req);
@@ -249,8 +224,8 @@ export const getItemsByPriority = catchAsync(
 
 export const getReviewsOverdue = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IParaQueryParams = { 
-      ...req.query as any, 
+    const params: IParaQueryParams = {
+      ...(req.query as any),
       reviewOverdue: true
     };
     const userId = getUserId(req);
@@ -276,24 +251,19 @@ export const getReviewsOverdue = catchAsync(
 export const searchParaItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { q: search } = req.query;
-    const params: IParaQueryParams = { ...req.query as any, search: search as string };
+    const params: IParaQueryParams = { ...(req.query as any), search: search as string };
     const userId = getUserId(req);
 
     const result = await paraService.getParaItems(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'PARA item search completed successfully',
-      result.items,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'PARA item search completed successfully', result.items, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -339,20 +309,28 @@ export const markReviewed = catchAsync(
     const userId = getUserId(req);
 
     // Update the item to mark it as reviewed
-    const item = await paraService.updateParaItem(id, {
-      customFields: {
-        lastReviewNotes: notes,
-        reviewedBy: userId
-      }
-    }, userId);
+    const item = await paraService.updateParaItem(
+      id,
+      {
+        customFields: {
+          lastReviewNotes: notes,
+          reviewedBy: userId
+        }
+      },
+      userId
+    );
 
     // Update last reviewed date
-    await paraService.updateParaItem(id, {
-      customFields: {
-        ...item.customFields,
-        lastReviewedAt: new Date().toISOString()
-      }
-    }, userId);
+    await paraService.updateParaItem(
+      id,
+      {
+        customFields: {
+          ...item.customFields,
+          lastReviewedAt: new Date().toISOString()
+        }
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Item marked as reviewed successfully', item);
   }
@@ -376,11 +354,36 @@ export const getParaStats = catchAsync(
         archive: 0
       },
       byStatus: {
-        active: 0,
-        inactive: 0,
-        completed: 0,
-        on_hold: 0,
-        archived: 0
+        active: {
+          projects: 0,
+          areas: 0,
+          resources: 0,
+          archive: 0
+        },
+        inactive: {
+          projects: 0,
+          areas: 0,
+          resources: 0,
+          archive: 0
+        },
+        completed: {
+          projects: 0,
+          areas: 0,
+          resources: 0,
+          archive: 0
+        },
+        on_hold: {
+          projects: 0,
+          areas: 0,
+          resources: 0,
+          archive: 0
+        },
+        archived: {
+          projects: 0,
+          areas: 0,
+          resources: 0,
+          archive: 0
+        }
       },
       byPriority: {
         low: 0,
