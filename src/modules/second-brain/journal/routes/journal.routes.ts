@@ -144,7 +144,6 @@ router.get('/journal/mood-trends', validateQuery(trendsQuerySchema), getMoodTren
 
 router.get('/journal/insights', validateQuery(insightsQuerySchema), getJournalInsights);
 
-// CalendarTypes and visualization routes
 router.get('/journal/calendar', validateQuery(calendarQuerySchema), getJournalCalendar);
 
 // Search and utility routes

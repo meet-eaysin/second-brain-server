@@ -217,7 +217,6 @@ export interface IContentCalendar {
   name: string;
   description?: string;
 
-  // CalendarTypes settings
   startDate: Date;
   endDate: Date;
   timezone: string;

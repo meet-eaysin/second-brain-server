@@ -49,25 +49,64 @@ export const createCalendar = async (
   request: ICreateCalendarRequest,
   workspaceId?: string
 ): Promise<ICalendar> => {
-  try {
-    // Check if this should be the default calendar
-    if (request.isDefault) {
-      await CalendarModel.updateMany({ ownerId: userId, workspaceId }, { isDefault: false });
-    }
+  // Input validation
+  if (!userId) {
+    throw createAppError('User ID is required', 400);
+  }
 
-    const calendar = new CalendarModel({
-      ...request,
-      id: generateId(),
-      ownerId: userId,
-      workspaceId: workspaceId || 'default',
-      createdBy: userId,
-      provider: ECalendarProvider.INTERNAL
+  if (!request.name || request.name.trim().length === 0) {
+    throw createAppError('Calendar name is required', 400);
+  }
+
+  if (request.name.length > 100) {
+    throw createAppError('Calendar name must be 100 characters or less', 400);
+  }
+
+  const session = await CalendarModel.startSession();
+
+  try {
+    let calendar: ICalendarDocument;
+
+    await session.withTransaction(async session => {
+      if (request.isDefault) {
+        const existingDefault = await CalendarModel.findOne(
+          { ownerId: userId, isDefault: true },
+          null,
+          { session }
+        );
+
+        if (existingDefault) {
+          await CalendarModel.updateMany(
+            { ownerId: userId, isDefault: true },
+            { $set: { isDefault: false, updatedAt: new Date(), updatedBy: userId } },
+            { session }
+          );
+        }
+      }
+
+      calendar = new CalendarModel({
+        ...request,
+        id: generateId(),
+        ownerId: userId,
+        workspaceId: workspaceId || 'default',
+        createdBy: userId,
+        updatedBy: userId,
+        provider: ECalendarProvider.INTERNAL
+      });
+
+      await calendar.save({ session });
     });
 
-    await calendar.save();
-    return transformCalendarDocument(calendar);
-  } catch (error) {
-    throw createAppError('Failed to create calendar', 500);
+    return transformCalendarDocument(calendar!);
+  } catch (error: any) {
+    if (error.code === 11000 && error.keyPattern?.isDefault === 1) {
+      throw createAppError('User can only have one default calendar', 409);
+    }
+
+    if (error.statusCode) throw error;
+    throw createAppError(`Failed to create calendar: ${error.message}`, 500);
+  } finally {
+    await session.endSession();
   }
 };
 

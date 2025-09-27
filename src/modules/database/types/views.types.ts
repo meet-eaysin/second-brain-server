@@ -74,7 +74,6 @@ export interface IViewGroup {
   direction: ESortDirection;
 }
 
-// View settings interface
 export interface IViewSettings {
   filters: IViewFilter[];
   sorts: IViewSort[];
@@ -84,10 +83,8 @@ export interface IViewSettings {
   frozenColumns: string[];
   pageSize: number;
 
-  // Board view specific
   boardGroupProperty?: string;
 
-  // CalendarTypes view specific
   calendarDateProperty?: string;
   calendarViewType?: 'month' | 'week' | 'day';
 

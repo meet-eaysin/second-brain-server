@@ -64,28 +64,36 @@ export class WorkspaceService {
           const { initializeCoreModules } = await import('@/modules/modules');
           await initializeCoreModules(workspace.id.toString(), ownerId, false);
         } catch (moduleError: any) {
-          // Log the error but don't fail workspace creation
-          console.error('Failed to initialize core modules for workspace:', moduleError.message);
+          console.error(
+            `Failed to initialize core modules for workspace ${workspace.id}:`,
+            moduleError.message
+          );
         }
 
-        // Create default calendar for the workspace
         try {
-          const { createCalendar } = await import('@/modules/calendar/services/calendar.service');
-          await createCalendar(
-            ownerId,
-            {
-              name: 'My CalendarTypes',
-              description: 'Default calendar for this workspace',
-              color: '#3B82F6',
-              type: ECalendarType.PERSONAL,
-              timeZone: 'UTC',
-              isDefault: true
-            },
-            workspace.id.toString()
-          );
+          const { CalendarModel } = await import('@/modules/calendar/models/calendar.model');
+          const existingDefault = await CalendarModel.findDefault(ownerId);
+
+          if (!existingDefault) {
+            const { createCalendar } = await import('@/modules/calendar/services/calendar.service');
+            await createCalendar(
+              ownerId,
+              {
+                name: 'My Calendar',
+                description: 'Default calendar for this workspace',
+                color: '#3B82F6',
+                type: ECalendarType.PERSONAL,
+                timeZone: 'UTC',
+                isDefault: true
+              },
+              workspace.id.toString()
+            );
+          }
         } catch (calendarError: any) {
-          // Log the error but don't fail workspace creation
-          console.error('Failed to create default calendar for workspace:', calendarError.message);
+          console.error(
+            `Failed to create default calendar for workspace ${workspace.id}:`,
+            calendarError.message
+          );
         }
       });
 

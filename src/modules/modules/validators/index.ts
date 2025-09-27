@@ -192,7 +192,6 @@ export const moduleViewSettingsSchema = z.object({
   pageSize: z.number().min(1).max(100).optional(),
   cardSize: z.enum(['small', 'medium', 'large']).optional(),
 
-  // CalendarTypes view specific properties
   dateProperty: z.string().optional(),
   titleProperty: z.string().optional(),
   colorProperty: z.string().optional(),
