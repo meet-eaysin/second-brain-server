@@ -366,6 +366,41 @@ export class WorkspaceService {
       return false;
     }
   }
+
+  // Set user's last selected workspace
+  async setUserLastSelectedWorkspace(userId: string, workspaceId: string): Promise<void> {
+    try {
+      const { UserModel } = await import('@/modules/users/models/users.model');
+      await UserModel.findByIdAndUpdate(userId, { lastSelectedWorkspace: workspaceId });
+    } catch (error: any) {
+      throw createAppError(`Failed to set last selected workspace: ${error.message}`, 500);
+    }
+  }
+
+  // Get user's last selected workspace if valid, otherwise primary
+  async getUserCurrentWorkspace(userId: string): Promise<IWorkspace | null> {
+    try {
+      const { UserModel } = await import('@/modules/users/models/users.model');
+      const user = await UserModel.findById(userId);
+
+      if (user?.lastSelectedWorkspace) {
+        // Check if user still has access to the last selected workspace
+        const hasAccess = await this.hasWorkspaceAccess(
+          user.lastSelectedWorkspace.toString(),
+          userId
+        );
+        if (hasAccess) {
+          return await this.getWorkspaceById(user.lastSelectedWorkspace.toString(), userId);
+        }
+      }
+
+      // Fall back to primary workspace
+      return await this.getUserPrimaryWorkspace(userId);
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createAppError(`Failed to get user current workspace: ${error.message}`, 500);
+    }
+  }
 }
 
 export const workspaceService = new WorkspaceService();

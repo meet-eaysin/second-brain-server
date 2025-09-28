@@ -113,13 +113,13 @@ export const getPrimaryWorkspace = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
 
-    const primaryWorkspace = await workspaceService.getUserPrimaryWorkspace(userId);
+    const currentWorkspace = await workspaceService.getUserCurrentWorkspace(userId);
 
-    if (!primaryWorkspace) {
+    if (!currentWorkspace) {
       const defaultWorkspace = await workspaceService.createDefaultWorkspace(userId);
       sendSuccessResponse(res, 'Default workspace created', defaultWorkspace, 201);
     } else {
-      sendSuccessResponse(res, 'Primary workspace retrieved successfully', primaryWorkspace);
+      sendSuccessResponse(res, 'Current workspace retrieved successfully', currentWorkspace);
     }
   }
 );
@@ -132,5 +132,30 @@ export const getOrCreateDefaultWorkspace = catchAsync(
     const workspace = await workspaceService.getOrCreateDefaultWorkspace(userId, userInfo);
 
     sendSuccessResponse(res, 'Default workspace ready', workspace);
+  }
+);
+
+export const switchCurrentWorkspace = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = getUserId(req);
+    const { workspaceId } = req.body;
+
+    if (!workspaceId) {
+      throw new Error('Workspace ID is required');
+    }
+
+    // Verify user has access to the workspace
+    const hasAccess = await workspaceService.hasWorkspaceAccess(workspaceId, userId);
+    if (!hasAccess) {
+      throw new Error('User does not have access to this workspace');
+    }
+
+    // Update user's last selected workspace
+    await workspaceService.setUserLastSelectedWorkspace(userId, workspaceId);
+
+    // Get the workspace details
+    const workspace = await workspaceService.getWorkspaceById(workspaceId, userId);
+
+    sendSuccessResponse(res, 'Current workspace switched successfully', workspace);
   }
 );

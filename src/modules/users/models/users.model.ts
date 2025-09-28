@@ -119,7 +119,11 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
         color: String,
         moduleType: String
       }
-    ]
+    ],
+    lastSelectedWorkspace: {
+      type: Schema.Types.ObjectId,
+      ref: 'Workspace'
+    }
   },
   {
     timestamps: true,

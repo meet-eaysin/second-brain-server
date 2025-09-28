@@ -33,8 +33,7 @@ export const resolveWorkspaceContext = (options?: {
 
       // Check header first (recommended approach)
       if (options?.allowFromHeader !== false) {
-        workspaceId =
-          (req.headers['x-workspace-id'] as string) || (req.headers['workspace-id'] as string);
+        workspaceId = req.headers['workspace-id'] as string;
       }
 
       // Fallback to params (for workspace-specific routes)

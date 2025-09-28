@@ -13,7 +13,8 @@ import {
   getWorkspaceStats,
   checkWorkspaceAccess,
   getPrimaryWorkspace,
-  getOrCreateDefaultWorkspace
+  getOrCreateDefaultWorkspace,
+  switchCurrentWorkspace
 } from '../controllers/workspace.controllers';
 import {
   CreateWorkspaceSchema,
@@ -29,6 +30,7 @@ router.get('/', getUserWorkspaces);
 router.get('/primary', getPrimaryWorkspace);
 router.post('/default', getOrCreateDefaultWorkspace);
 router.get('/current', getPrimaryWorkspace);
+router.put('/current/switch', switchCurrentWorkspace);
 router.put(
   '/current',
   validateBody(UpdateWorkspaceSchema),

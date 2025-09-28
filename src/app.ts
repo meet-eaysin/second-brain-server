@@ -75,7 +75,7 @@ app.use(
       'Authorization',
       'X-Requested-With',
       'X-Forwarded-For',
-      'x-workspace-id'
+      'workspace-id'
     ],
     exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
   })

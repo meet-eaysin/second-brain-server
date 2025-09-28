@@ -35,6 +35,7 @@ export type TUser = {
   recentlyVisited?: IRecentlyVisitedItem[];
   // Workspace information
   workspaces?: TUserWorkspace[];
+  lastSelectedWorkspace?: string;
 };
 
 export type TUserCreateRequest = {
