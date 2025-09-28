@@ -10,105 +10,111 @@ export type TPropertyModel = Model<TPropertyDocument> & {
   findVisibleProperties(databaseId: string): Promise<TPropertyDocument[]>;
 };
 
-const PropertyOptionSchema = new Schema({
-  id: {
-    type: String,
-    required: true
+const PropertyOptionSchema = new Schema(
+  {
+    id: {
+      type: String,
+      required: true
+    },
+    value: {
+      type: String,
+      required: true
+    },
+    label: {
+      type: String,
+      required: true
+    },
+    color: {
+      type: String
+    },
+    description: {
+      type: String
+    }
   },
-  value: {
-    type: String,
-    required: true
-  },
-  label: {
-    type: String,
-    required: true
-  },
-  color: {
-    type: String
-  },
-  description: {
-    type: String
-  }
-}, { _id: false });
+  { _id: false }
+);
 
-const PropertyConfigSchema = new Schema({
-  // For select/multi-select
-  options: [PropertyOptionSchema],
+const PropertyConfigSchema = new Schema(
+  {
+    // For select/multi-select
+    options: [PropertyOptionSchema],
 
-  // For number
-  format: {
-    type: String,
-    enum: ['number', 'currency', 'percentage']
-  },
-  precision: {
-    type: Number,
-    min: 0,
-    max: 10
-  },
+    // For number
+    format: {
+      type: String,
+      enum: ['number', 'currency', 'percentage']
+    },
+    precision: {
+      type: Number,
+      min: 0,
+      max: 10
+    },
 
-  // For date
-  includeTime: {
-    type: Boolean,
-    default: false
-  },
+    // For date
+    includeTime: {
+      type: Boolean,
+      default: false
+    },
 
-  // For relation
-  relationDatabaseId: {
-    type: String
-  },
-  relationPropertyId: {
-    type: String
-  },
+    // For relation
+    relationDatabaseId: {
+      type: String
+    },
+    relationPropertyId: {
+      type: String
+    },
 
-  // For rollup
-  rollupPropertyId: {
-    type: String
-  },
-  rollupFunction: {
-    type: String,
-    enum: ['count', 'sum', 'average', 'min', 'max', 'latest', 'earliest']
-  },
+    // For rollup
+    rollupPropertyId: {
+      type: String
+    },
+    rollupFunction: {
+      type: String,
+      enum: ['count', 'sum', 'average', 'min', 'max', 'latest', 'earliest']
+    },
 
-  // For formula
-  formula: {
-    type: String
-  },
+    // For formula
+    formula: {
+      type: String
+    },
 
-  // For file
-  allowMultiple: {
-    type: Boolean,
-    default: true
-  },
-  allowedTypes: [String],
-  maxSize: {
-    type: Number,
-    min: 1
-  },
+    // For file
+    allowMultiple: {
+      type: Boolean,
+      default: true
+    },
+    allowedTypes: [String],
+    maxSize: {
+      type: Number,
+      min: 1
+    },
 
-  // For text/rich_text
-  maxLength: {
-    type: Number,
-    min: 1
-  },
+    // For text/rich_text
+    maxLength: {
+      type: Number,
+      min: 1
+    },
 
-  // For URL
-  displayText: {
-    type: String
-  },
+    // For URL
+    displayText: {
+      type: String
+    },
 
-  // Validation rules
-  required: {
-    type: Boolean,
-    default: false
+    // Validation rules
+    required: {
+      type: Boolean,
+      default: false
+    },
+    unique: {
+      type: Boolean,
+      default: false
+    },
+    defaultValue: {
+      type: Schema.Types.Mixed
+    }
   },
-  unique: {
-    type: Boolean,
-    default: false
-  },
-  defaultValue: {
-    type: Schema.Types.Mixed
-  }
-}, { _id: false });
+  { _id: false }
+);
 
 const PropertySchema = createBaseSchema({
   databaseId: {
@@ -157,36 +163,35 @@ const PropertySchema = createBaseSchema({
 
 // Indexes
 PropertySchema.index({ databaseId: 1, order: 1 });
-PropertySchema.index({ databaseId: 1, name: 1 });
 PropertySchema.index({ databaseId: 1, name: 1 }, { unique: true });
 PropertySchema.index({ databaseId: 1, isSystem: 1 });
 PropertySchema.index({ databaseId: 1, isVisible: 1 });
 
 // Static methods
-PropertySchema.statics.findByDatabase = function(databaseId: string) {
+PropertySchema.statics.findByDatabase = function (databaseId: string) {
   return this.find({ databaseId }).notDeleted().sort({ order: 1 }).exec();
 };
 
-PropertySchema.statics.findSystemProperties = function(databaseId: string) {
+PropertySchema.statics.findSystemProperties = function (databaseId: string) {
   return this.find({ databaseId, isSystem: true }).notDeleted().sort({ order: 1 }).exec();
 };
 
-PropertySchema.statics.findVisibleProperties = function(databaseId: string) {
+PropertySchema.statics.findVisibleProperties = function (databaseId: string) {
   return this.find({ databaseId, isVisible: true }).notDeleted().sort({ order: 1 }).exec();
 };
 
 // Instance methods
-PropertySchema.methods.updateOrder = function(newOrder: number) {
+PropertySchema.methods.updateOrder = function (newOrder: number) {
   this.order = newOrder;
   return this.save();
 };
 
-PropertySchema.methods.toggleVisibility = function() {
+PropertySchema.methods.toggleVisibility = function () {
   this.isVisible = !this.isVisible;
   return this.save();
 };
 
-PropertySchema.methods.addOption = function(option: IPropertyOption) {
+PropertySchema.methods.addOption = function (option: IPropertyOption) {
   if (!this.config.options) {
     this.config.options = [];
   }
@@ -195,7 +200,7 @@ PropertySchema.methods.addOption = function(option: IPropertyOption) {
   return this.save();
 };
 
-PropertySchema.methods.removeOption = function(optionId: string) {
+PropertySchema.methods.removeOption = function (optionId: string) {
   if (this.config.options) {
     this.config.options = this.config.options.filter((opt: IPropertyOption) => opt.id !== optionId);
     this.markModified('config.options');
@@ -203,7 +208,10 @@ PropertySchema.methods.removeOption = function(optionId: string) {
   return this.save();
 };
 
-PropertySchema.methods.updateOption = function(optionId: string, updates: Partial<IPropertyOption>) {
+PropertySchema.methods.updateOption = function (
+  optionId: string,
+  updates: Partial<IPropertyOption>
+) {
   if (this.config.options) {
     const option = this.config.options.find((opt: IPropertyOption) => opt.id === optionId);
     if (option) {
@@ -215,7 +223,7 @@ PropertySchema.methods.updateOption = function(optionId: string, updates: Partia
 };
 
 // Pre-save middleware
-PropertySchema.pre('save', function(next: (error?: Error) => void) {
+PropertySchema.pre('save', function (next: (error?: Error) => void) {
   // Ensure system properties cannot be deleted
   if (this.isSystem && this.isDeleted) {
     const error = new Error('System properties cannot be deleted');
@@ -249,4 +257,7 @@ PropertySchema.pre('findOneAndDelete', (next: (error?: Error) => void) => {
   next();
 });
 
-export const PropertyModel = mongoose.model<TPropertyDocument, TPropertyModel>('Property', PropertySchema);
+export const PropertyModel = mongoose.model<TPropertyDocument, TPropertyModel>(
+  'Property',
+  PropertySchema
+);

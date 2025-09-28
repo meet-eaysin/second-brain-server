@@ -26,8 +26,7 @@ const ActivitySchema = createBaseSchema({
   },
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   userName: {
     type: String,

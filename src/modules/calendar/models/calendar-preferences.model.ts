@@ -50,14 +50,12 @@ const CalendarPreferencesSchema = new Schema<ICalendarPreferencesDocument>(
     userId: {
       type: String,
       required: true,
-      unique: true,
-      index: true
+      unique: true
     },
 
     // General Settings
     defaultCalendarId: {
-      type: String,
-      index: true
+      type: String
     },
 
     timeZone: {
@@ -143,7 +141,6 @@ const CalendarPreferencesSchema = new Schema<ICalendarPreferencesDocument>(
 );
 
 // Indexes
-CalendarPreferencesSchema.index({ userId: 1 });
 CalendarPreferencesSchema.index({ defaultCalendarId: 1 });
 
 // Static methods

@@ -243,9 +243,7 @@ const ViewSchema = createBaseSchema({
 
 // Indexes
 ViewSchema.index({ databaseId: 1, order: 1 });
-ViewSchema.index({ databaseId: 1, name: 1 });
 ViewSchema.index({ databaseId: 1, type: 1 });
-ViewSchema.index({ databaseId: 1, isDefault: 1 });
 ViewSchema.index({ databaseId: 1, isPublic: 1 });
 
 // Unique constraint for view names within a database

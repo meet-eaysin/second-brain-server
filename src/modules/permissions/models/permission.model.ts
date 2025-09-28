@@ -41,22 +41,21 @@ const PermissionSchema = new Schema<TPermissionDocument, TPermissionModel>(
     },
     userId: {
       type: String,
-      index: true,
-      required: function(this: TPermissionDocument) {
+      required: function (this: TPermissionDocument) {
         return this.type === EPermissionType.USER;
       }
     },
     workspaceId: {
       type: String,
       index: true,
-      required: function(this: TPermissionDocument) {
+      required: function (this: TPermissionDocument) {
         return this.type === EPermissionType.WORKSPACE;
       }
     },
     linkId: {
       type: String,
       index: true,
-      required: function(this: TPermissionDocument) {
+      required: function (this: TPermissionDocument) {
         return this.type === EPermissionType.LINK;
       }
     },
@@ -159,7 +158,7 @@ PermissionSchema.index({ resourceType: 1, resourceId: 1, userId: 1 });
 PermissionSchema.index({ resourceType: 1, resourceId: 1, type: 1, isActive: 1 });
 
 // Static methods
-PermissionSchema.statics.findByResource = function(resourceType: EShareScope, resourceId: string) {
+PermissionSchema.statics.findByResource = function (resourceType: EShareScope, resourceId: string) {
   return this.find({
     resourceType,
     resourceId,
@@ -167,21 +166,21 @@ PermissionSchema.statics.findByResource = function(resourceType: EShareScope, re
   }).exec();
 };
 
-PermissionSchema.statics.findByUser = function(userId: string) {
+PermissionSchema.statics.findByUser = function (userId: string) {
   return this.find({
     userId,
     isActive: true
   }).exec();
 };
 
-PermissionSchema.statics.findByWorkspace = function(workspaceId: string) {
+PermissionSchema.statics.findByWorkspace = function (workspaceId: string) {
   return this.find({
     workspaceId,
     isActive: true
   }).exec();
 };
 
-PermissionSchema.statics.hasPermission = async function(
+PermissionSchema.statics.hasPermission = async function (
   resourceType: EShareScope,
   resourceId: string,
   userId: string,
@@ -192,10 +191,7 @@ PermissionSchema.statics.hasPermission = async function(
     resourceId,
     userId,
     isActive: true,
-    $or: [
-      { expiresAt: { $exists: false } },
-      { expiresAt: { $gt: new Date() } }
-    ]
+    $or: [{ expiresAt: { $exists: false } }, { expiresAt: { $gt: new Date() } }]
   }).exec();
 
   if (!permission) return false;
@@ -213,7 +209,7 @@ PermissionSchema.statics.hasPermission = async function(
 };
 
 // Pre-save middleware to set capabilities based on level
-PermissionSchema.pre<TPermissionDocument>('save', function(next) {
+PermissionSchema.pre<TPermissionDocument>('save', function (next) {
   // Set capabilities based on permission level
   switch (this.level) {
     case EPermissionLevel.NONE:
@@ -280,4 +276,7 @@ PermissionSchema.pre<TPermissionDocument>('save', function(next) {
   next();
 });
 
-export const PermissionModel = mongoose.model<TPermissionDocument, TPermissionModel>('Permission', PermissionSchema);
+export const PermissionModel = mongoose.model<TPermissionDocument, TPermissionModel>(
+  'Permission',
+  PermissionSchema
+);

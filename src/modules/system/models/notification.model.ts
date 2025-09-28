@@ -34,8 +34,7 @@ export type TNotificationModel = Model<TNotificationDocument, QueryHelpers> & {
 const NotificationSchema = createBaseSchema({
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   workspaceId: {
     type: String,

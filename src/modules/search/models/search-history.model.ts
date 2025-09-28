@@ -19,21 +19,18 @@ export type TSearchHistoryModel = Model<TSearchHistoryDocument, QueryHelpers> & 
 const SearchHistorySchema = createBaseSchema({
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   query: {
     type: String,
     required: true,
     trim: true,
-    maxlength: 500,
-    index: true
+    maxlength: 500
   },
   scope: {
     type: String,
     enum: Object.values(ESearchScope),
-    required: true,
-    index: true
+    required: true
   },
   filters: {
     workspaceId: String,
@@ -57,8 +54,7 @@ const SearchHistorySchema = createBaseSchema({
   searchedAt: {
     type: Date,
     required: true,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 });
 
@@ -69,20 +65,17 @@ SearchHistorySchema.index({ scope: 1, searchedAt: -1 });
 SearchHistorySchema.index({ searchedAt: -1 }); // For cleanup
 
 // Instance methods
-SearchHistorySchema.methods.updateResultCount = function(count: number) {
+SearchHistorySchema.methods.updateResultCount = function (count: number) {
   this.resultCount = count;
   return this.save();
 };
 
 // Static methods
-SearchHistorySchema.statics.findByUser = function(userId: string, limit: number = 10) {
-  return this.find({ userId })
-    .sort({ searchedAt: -1 })
-    .limit(limit)
-    .exec();
+SearchHistorySchema.statics.findByUser = function (userId: string, limit: number = 10) {
+  return this.find({ userId }).sort({ searchedAt: -1 }).limit(limit).exec();
 };
 
-SearchHistorySchema.statics.findPopularQueries = function(limit: number = 10) {
+SearchHistorySchema.statics.findPopularQueries = function (limit: number = 10) {
   return this.aggregate([
     {
       $group: {
@@ -107,14 +100,11 @@ SearchHistorySchema.statics.findPopularQueries = function(limit: number = 10) {
   ]);
 };
 
-SearchHistorySchema.statics.findByScope = function(scope: ESearchScope, limit: number = 10) {
-  return this.find({ scope })
-    .sort({ searchedAt: -1 })
-    .limit(limit)
-    .exec();
+SearchHistorySchema.statics.findByScope = function (scope: ESearchScope, limit: number = 10) {
+  return this.find({ scope }).sort({ searchedAt: -1 }).limit(limit).exec();
 };
 
-SearchHistorySchema.statics.cleanupOldSearches = function(olderThanDays: number = 90) {
+SearchHistorySchema.statics.cleanupOldSearches = function (olderThanDays: number = 90) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 

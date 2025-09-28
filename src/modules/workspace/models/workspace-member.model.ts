@@ -68,13 +68,11 @@ const CustomPermissionsSchema = new Schema<IWorkspaceMemberPermissions>(
 const WorkspaceMemberSchema = createBaseSchema({
   workspaceId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   role: {
     type: String,

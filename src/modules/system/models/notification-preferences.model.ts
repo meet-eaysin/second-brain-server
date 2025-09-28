@@ -118,13 +118,11 @@ const GlobalSettingsSchema = new Schema(
 const NotificationPreferencesSchema = createBaseSchema({
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   workspaceId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   preferences: {
     type: Map,

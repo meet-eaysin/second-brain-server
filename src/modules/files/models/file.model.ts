@@ -18,8 +18,7 @@ const FileSchema = new Schema<IFile>(
   {
     userId: {
       type: String,
-      required: true,
-      index: true
+      required: true
     },
     originalName: {
       type: String,
@@ -47,13 +46,11 @@ const FileSchema = new Schema<IFile>(
     },
     category: {
       type: String,
-      default: 'general',
-      index: true
+      default: 'general'
     },
     isPublic: {
       type: Boolean,
-      default: false,
-      index: true
+      default: false
     }
   },
   {

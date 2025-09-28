@@ -220,7 +220,6 @@ DatabaseSchema.index({ workspaceId: 1, isPublic: 1 });
 DatabaseSchema.index({ workspaceId: 1, isTemplate: 1 });
 DatabaseSchema.index({ workspaceId: 1, lastActivityAt: -1 });
 DatabaseSchema.index({ recordCount: -1 });
-DatabaseSchema.index({ searchText: 'text' });
 
 // Static methods
 DatabaseSchema.statics.findByWorkspace = function (workspaceId: string) {

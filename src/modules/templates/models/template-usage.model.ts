@@ -17,24 +17,20 @@ const TemplateUsageSchema = createBaseSchema({
   templateId: {
     type: Schema.Types.ObjectId,
     ref: 'Template',
-    required: true,
-    index: true
+    required: true
   },
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   workspaceId: {
     type: Schema.Types.ObjectId,
-    ref: 'Workspace',
-    index: true
+    ref: 'Workspace'
   },
   usedAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   context: {
     type: String,
@@ -55,28 +51,28 @@ TemplateUsageSchema.index({ workspaceId: 1, usedAt: -1 });
 TemplateUsageSchema.index({ usedAt: -1, context: 1 });
 
 // Static methods
-TemplateUsageSchema.statics.findByTemplate = function(templateId: string) {
+TemplateUsageSchema.statics.findByTemplate = function (templateId: string) {
   return this.find({ templateId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .populate('userId', 'name email')
     .populate('workspaceId', 'name');
 };
 
-TemplateUsageSchema.statics.findByUser = function(userId: string) {
+TemplateUsageSchema.statics.findByUser = function (userId: string) {
   return this.find({ userId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .populate('templateId', 'name type category')
     .populate('workspaceId', 'name');
 };
 
-TemplateUsageSchema.statics.findByWorkspace = function(workspaceId: string) {
+TemplateUsageSchema.statics.findByWorkspace = function (workspaceId: string) {
   return this.find({ workspaceId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .populate('templateId', 'name type category')
     .populate('userId', 'name email');
 };
 
-TemplateUsageSchema.statics.getUsageStats = async function(templateId: string) {
+TemplateUsageSchema.statics.getUsageStats = async function (templateId: string) {
   const pipeline: any[] = [
     { $match: { templateId: new mongoose.Types.ObjectId(templateId), isDeleted: { $ne: true } } },
     {
@@ -126,16 +122,18 @@ TemplateUsageSchema.statics.getUsageStats = async function(templateId: string) {
   ];
 
   const result = await this.aggregate(pipeline);
-  return result[0] || {
-    totalUsage: 0,
-    uniqueUsers: 0,
-    firstUsed: null,
-    lastUsed: null,
-    contextBreakdown: {}
-  };
+  return (
+    result[0] || {
+      totalUsage: 0,
+      uniqueUsers: 0,
+      firstUsed: null,
+      lastUsed: null,
+      contextBreakdown: {}
+    }
+  );
 };
 
-TemplateUsageSchema.statics.getPopularTemplates = async function(limit = 10) {
+TemplateUsageSchema.statics.getPopularTemplates = async function (limit = 10) {
   const pipeline: any[] = [
     { $match: { isDeleted: { $ne: true } } },
     {
@@ -184,7 +182,7 @@ TemplateUsageSchema.statics.getPopularTemplates = async function(limit = 10) {
   return this.aggregate(pipeline);
 };
 
-TemplateUsageSchema.statics.getUserTemplateHistory = function(userId: string, limit = 20) {
+TemplateUsageSchema.statics.getUserTemplateHistory = function (userId: string, limit = 20) {
   return this.find({ userId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .limit(limit)
@@ -193,7 +191,7 @@ TemplateUsageSchema.statics.getUserTemplateHistory = function(userId: string, li
 };
 
 // Instance methods
-TemplateUsageSchema.methods.getUsageContext = function() {
+TemplateUsageSchema.methods.getUsageContext = function () {
   return {
     template: this.templateId,
     user: this.userId,
@@ -204,4 +202,7 @@ TemplateUsageSchema.methods.getUsageContext = function() {
   };
 };
 
-export const TemplateUsageModel = mongoose.model<TTemplateUsageDocument, TTemplateUsageModel>('TemplateUsage', TemplateUsageSchema);
+export const TemplateUsageModel = mongoose.model<TTemplateUsageDocument, TTemplateUsageModel>(
+  'TemplateUsage',
+  TemplateUsageSchema
+);

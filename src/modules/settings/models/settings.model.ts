@@ -118,9 +118,7 @@ const SettingsSchema = new Schema<ISettings & Document>(
   {
     userId: {
       type: String,
-      required: true,
-      unique: true,
-      index: true
+      required: true
     },
     appearance: {
       type: AppearanceSettingsSchema,

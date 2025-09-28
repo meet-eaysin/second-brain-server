@@ -17,13 +17,11 @@ const RecordSchema = new Schema<IRecord>(
     },
     databaseId: {
       type: String,
-      required: true,
-      index: true
+      required: true
     },
     userId: {
       type: String,
-      required: true,
-      index: true
+      required: true
     }
   },
   {

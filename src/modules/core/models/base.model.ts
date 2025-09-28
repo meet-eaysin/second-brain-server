@@ -49,7 +49,7 @@ export const TaggableSchema = new Schema({
 export const SearchableSchema = new Schema({
   searchText: {
     type: String,
-    index: 'text'
+    index: true
   }
 });
 

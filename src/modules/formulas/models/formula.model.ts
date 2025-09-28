@@ -1,5 +1,10 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
-import { IFormulaPropertyConfig, IFormulaPropertyDocument, IFormulaCacheEntry, IFormulaPerformanceMetrics } from '../types/formula.types';
+import {
+  IFormulaPropertyConfig,
+  IFormulaPropertyDocument,
+  IFormulaCacheEntry,
+  IFormulaPerformanceMetrics
+} from '../types/formula.types';
 import { createBaseSchema, IBaseDocument } from '@/modules/core/models/base.model';
 import { EPropertyType } from '@/modules/core/types/property.types';
 
@@ -15,7 +20,10 @@ export type TFormulaPerformanceDocument = IFormulaPerformanceMetrics & IBaseDocu
 // Formula property model interface
 export type TFormulaPropertyModel = Model<TFormulaPropertyDocument> & {
   findByDatabase(databaseId: string): Promise<TFormulaPropertyDocument[]>;
-  findByProperty(databaseId: string, propertyName: string): Promise<TFormulaPropertyDocument | null>;
+  findByProperty(
+    databaseId: string,
+    propertyName: string
+  ): Promise<TFormulaPropertyDocument | null>;
   findDependentFormulas(propertyName: string): Promise<TFormulaPropertyDocument[]>;
   updateDependencies(formulaId: string, dependencies: string[]): Promise<void>;
 };
@@ -125,11 +133,11 @@ FormulaPropertySchema.index({ dependencies: 1, isActive: 1 });
 FormulaPropertySchema.index({ complexity: -1, isActive: 1 });
 
 // Static methods for formula properties
-FormulaPropertySchema.statics.findByDatabase = function(databaseId: string) {
+FormulaPropertySchema.statics.findByDatabase = function (databaseId: string) {
   return this.find({ databaseId, isActive: true, isDeleted: { $ne: true } });
 };
 
-FormulaPropertySchema.statics.findByProperty = function(databaseId: string, propertyName: string) {
+FormulaPropertySchema.statics.findByProperty = function (databaseId: string, propertyName: string) {
   return this.findOne({
     databaseId,
     propertyName,
@@ -138,7 +146,7 @@ FormulaPropertySchema.statics.findByProperty = function(databaseId: string, prop
   });
 };
 
-FormulaPropertySchema.statics.findDependentFormulas = function(propertyName: string) {
+FormulaPropertySchema.statics.findDependentFormulas = function (propertyName: string) {
   return this.find({
     dependencies: propertyName,
     isActive: true,
@@ -146,7 +154,10 @@ FormulaPropertySchema.statics.findDependentFormulas = function(propertyName: str
   });
 };
 
-FormulaPropertySchema.statics.updateDependencies = async function(formulaId: string, dependencies: string[]) {
+FormulaPropertySchema.statics.updateDependencies = async function (
+  formulaId: string,
+  dependencies: string[]
+) {
   await this.findByIdAndUpdate(formulaId, {
     dependencies,
     lastValidated: new Date()
@@ -191,8 +202,7 @@ const FormulaCacheSchema = createBaseSchema({
     index: true
   },
   expiresAt: {
-    type: Date,
-    index: true
+    type: Date
   },
   version: {
     type: Number,
@@ -216,26 +226,26 @@ FormulaCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 FormulaCacheSchema.index({ dependencies: 1, calculatedAt: -1 });
 
 // Static methods for formula cache
-FormulaCacheSchema.statics.findByRecord = function(recordId: string) {
+FormulaCacheSchema.statics.findByRecord = function (recordId: string) {
   return this.find({ recordId, isDeleted: { $ne: true } });
 };
 
-FormulaCacheSchema.statics.findByProperty = function(recordId: string, propertyName: string) {
+FormulaCacheSchema.statics.findByProperty = function (recordId: string, propertyName: string) {
   return this.findOne({ recordId, propertyName, isDeleted: { $ne: true } });
 };
 
-FormulaCacheSchema.statics.invalidateByDependency = async function(dependency: string) {
+FormulaCacheSchema.statics.invalidateByDependency = async function (dependency: string) {
   await this.deleteMany({ dependencies: dependency });
 };
 
-FormulaCacheSchema.statics.cleanupExpired = async function() {
+FormulaCacheSchema.statics.cleanupExpired = async function () {
   const result = await this.deleteMany({
     expiresAt: { $lt: new Date() }
   });
   return result.deletedCount || 0;
 };
 
-FormulaCacheSchema.statics.getCacheStats = async function() {
+FormulaCacheSchema.statics.getCacheStats = async function () {
   const pipeline = [
     {
       $group: {
@@ -330,7 +340,7 @@ FormulaPerformanceSchema.index({ errorRate: -1 });
 FormulaPerformanceSchema.index({ complexityScore: -1 });
 
 // Static methods for formula performance
-FormulaPerformanceSchema.statics.recordExecution = async function(
+FormulaPerformanceSchema.statics.recordExecution = async function (
   formulaId: string,
   executionTime: number,
   success: boolean
@@ -349,7 +359,8 @@ FormulaPerformanceSchema.statics.recordExecution = async function(
   const existing = await this.findOne({ formulaId });
   if (existing) {
     const newTotal = existing.totalExecutions + 1;
-    const newAverage = ((existing.averageExecutionTime * existing.totalExecutions) + executionTime) / newTotal;
+    const newAverage =
+      (existing.averageExecutionTime * existing.totalExecutions + executionTime) / newTotal;
 
     update.$set = {
       ...update.$set,
@@ -371,18 +382,15 @@ FormulaPerformanceSchema.statics.recordExecution = async function(
   await this.findOneAndUpdate({ formulaId }, update, { upsert: true });
 };
 
-FormulaPerformanceSchema.statics.getPerformanceStats = function(formulaId: string) {
+FormulaPerformanceSchema.statics.getPerformanceStats = function (formulaId: string) {
   return this.findOne({ formulaId });
 };
 
-FormulaPerformanceSchema.statics.getSlowFormulas = function(limit = 10) {
-  return this.find({})
-    .sort({ averageExecutionTime: -1 })
-    .limit(limit)
-    .populate('formulaId');
+FormulaPerformanceSchema.statics.getSlowFormulas = function (limit = 10) {
+  return this.find({}).sort({ averageExecutionTime: -1 }).limit(limit).populate('formulaId');
 };
 
-FormulaPerformanceSchema.statics.getErrorProneFormulas = function(limit = 10) {
+FormulaPerformanceSchema.statics.getErrorProneFormulas = function (limit = 10) {
   return this.find({ errorRate: { $gt: 0 } })
     .sort({ errorRate: -1 })
     .limit(limit)
@@ -400,7 +408,7 @@ export const FormulaCacheModel = mongoose.model<TFormulaCacheDocument, TFormulaC
   FormulaCacheSchema
 );
 
-export const FormulaPerformanceModel = mongoose.model<TFormulaPerformanceDocument, TFormulaPerformanceModel>(
-  'FormulaPerformance',
-  FormulaPerformanceSchema
-);
+export const FormulaPerformanceModel = mongoose.model<
+  TFormulaPerformanceDocument,
+  TFormulaPerformanceModel
+>('FormulaPerformance', FormulaPerformanceSchema);

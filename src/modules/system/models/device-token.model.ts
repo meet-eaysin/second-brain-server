@@ -67,14 +67,12 @@ const DeviceInfoSchema = new Schema(
 const DeviceTokenSchema = createBaseSchema({
   userId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   type: {
     type: String,
     enum: ['fcm', 'webpush'],
-    required: true,
-    index: true
+    required: true
   },
   token: {
     type: String,
@@ -94,8 +92,7 @@ const DeviceTokenSchema = createBaseSchema({
   },
   isActive: {
     type: Boolean,
-    default: true,
-    index: true
+    default: true
   }
 });
 

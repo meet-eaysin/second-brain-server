@@ -97,8 +97,7 @@ const CalendarSchema = new Schema<ICalendarDocument>(
 
     // External calendar data
     externalId: {
-      type: String,
-      sparse: true
+      type: String
     },
     externalData: {
       type: Schema.Types.Mixed,
@@ -108,8 +107,7 @@ const CalendarSchema = new Schema<ICalendarDocument>(
     // Access and sharing
     ownerId: {
       type: String,
-      required: true,
-      index: true
+      required: true
     },
     workspaceId: {
       type: String,
@@ -166,8 +164,7 @@ const CalendarSchema = new Schema<ICalendarDocument>(
 
 // Indexes
 CalendarSchema.index({ ownerId: 1, isVisible: 1 });
-CalendarSchema.index({ provider: 1, externalId: 1 }, { sparse: true });
-CalendarSchema.index({ ownerId: 1, isDefault: 1 });
+CalendarSchema.index({ provider: 1, externalId: 1 });
 CalendarSchema.index({ type: 1, ownerId: 1 });
 
 // Ensure only one default calendar per user
@@ -370,8 +367,7 @@ const CalendarSubscriptionSchema = new Schema<ICalendarSubscription>(
   {
     userId: {
       type: String,
-      required: true,
-      index: true
+      required: true
     },
     name: {
       type: String,

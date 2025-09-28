@@ -147,8 +147,7 @@ const WorkspaceSchema = createBaseSchema({
   },
   ownerId: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   memberCount: {
     type: Number,
