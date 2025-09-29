@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// View types
 export enum EViewType {
   TABLE = 'TABLE',
   BOARD = 'BOARD',
@@ -12,7 +11,6 @@ export enum EViewType {
   CHART = 'CHART'
 }
 
-// Filter conditions
 export enum EFilterCondition {
   EQUALS = 'equals',
   NOT_EQUALS = 'not_equals',
@@ -41,19 +39,16 @@ export enum EFilterCondition {
   IS_NEXT_MONTH = 'is_next_month'
 }
 
-// Filter operators
 export enum EFilterOperator {
   AND = 'and',
   OR = 'or'
 }
 
-// Sort directions
 export enum ESortDirection {
   ASCENDING = 'ascending',
   DESCENDING = 'descending'
 }
 
-// View filter interface
 export interface IViewFilter {
   id: string;
   property: string;
@@ -62,13 +57,11 @@ export interface IViewFilter {
   operator: EFilterOperator;
 }
 
-// View sort interface
 export interface IViewSort {
   property: string;
   direction: ESortDirection;
 }
 
-// View group interface
 export interface IViewGroup {
   property: string;
   direction: ESortDirection;
@@ -102,7 +95,6 @@ export interface IViewSettings {
   ganttDependencyProperty?: string;
 }
 
-// Database view interface
 export interface IDatabaseView {
   id: string;
   databaseId: string;
@@ -121,7 +113,6 @@ export interface IDatabaseView {
   updatedBy?: string;
 }
 
-// Request/Response types
 export interface ICreateViewRequest {
   name: string;
   type: EViewType;
@@ -142,12 +133,6 @@ export interface IUpdateViewRequest {
 
 export interface IViewResponse extends IDatabaseView {}
 
-export interface IViewListResponse {
-  views: IViewResponse[];
-  total: number;
-}
-
-// Validation schemas
 export const ViewFilterSchema = z.object({
   id: z.string().optional(),
   property: z.string().min(1, 'Property is required'),

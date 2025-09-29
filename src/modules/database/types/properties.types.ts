@@ -169,12 +169,6 @@ export interface IReorderPropertiesRequest {
 
 export interface IPropertyResponse extends IDatabaseProperty {}
 
-export interface IPropertyListResponse {
-  properties: IPropertyResponse[];
-  total: number;
-}
-
-// Validation schemas
 export const SelectOptionSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Option name is required').max(100),

@@ -579,25 +579,23 @@ const getSampleDataForModule = (moduleId: EDatabaseType): Array<Record<string, u
         }
       ];
 
-    case EDatabaseType.PROJECTS:
+    case EDatabaseType.PARA_PROJECTS:
       return [
         {
           Name: 'Second Brain System',
+          Outcome: 'Complete second brain system implementation',
           Status: 'active',
           Priority: 'high',
-          'Start Date': new Date(Date.now() - 604800000),
-          'End Date': new Date(Date.now() + 2592000000),
-          Progress: 75,
-          Budget: 10000
+          Deadline: new Date(Date.now() + 2592000000),
+          Progress: 75
         },
         {
           Name: 'Website Redesign',
-          Status: 'planning',
+          Outcome: 'Modern, user-friendly website design',
+          Status: 'active',
           Priority: 'medium',
-          'Start Date': new Date(Date.now() + 86400000),
-          'End Date': new Date(Date.now() + 1814400000),
-          Progress: 0,
-          Budget: 5000
+          Deadline: new Date(Date.now() + 1814400000),
+          Progress: 0
         }
       ];
 

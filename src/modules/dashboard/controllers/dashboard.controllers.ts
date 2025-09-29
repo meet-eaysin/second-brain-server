@@ -238,7 +238,7 @@ const calculateInsights = async (
     EDatabaseType.TASKS,
     EDatabaseType.NOTES,
     EDatabaseType.GOALS,
-    EDatabaseType.PROJECTS
+    EDatabaseType.PARA_PROJECTS
   ];
 
   for (const moduleType of moduleTypes) {

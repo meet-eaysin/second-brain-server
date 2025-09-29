@@ -27,6 +27,7 @@ import {
   ICalendarEventQuery,
   ICalendarView,
   EEventStatus,
+  ECalendarType,
   IUpdateCalendarPreferencesRequest
 } from '../types/calendar.types';
 import { getUserId } from '@/auth/index';
@@ -66,7 +67,7 @@ export const getCalendarsController = catchAsync(
           {
             name: 'My Calendar',
             color: '#3B82F6',
-            type: 'personal',
+            type: ECalendarType.PERSONAL,
             isDefault: true,
             timeZone: 'UTC'
           },

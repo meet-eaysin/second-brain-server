@@ -244,9 +244,7 @@ export class RelationAnalyticsService {
 
   // Analyze workflow efficiency
   private async analyzeWorkflowEfficiency(userId: string): Promise<any> {
-    const projectsDb = await DatabaseModel.findOne({ type: EDatabaseType.PROJECTS, createdBy: userId });
-    const notesDb = await DatabaseModel.findOne({ type: EDatabaseType.NOTES, createdBy: userId });
-    const resourcesDb = await DatabaseModel.findOne({ type: EDatabaseType.RESOURCES, createdBy: userId });
+    const projectsDb = await DatabaseModel.findOne({ type: EDatabaseType.PARA_PROJECTS, createdBy: userId });
 
     if (!projectsDb) return this.getEmptyWorkflowAnalysis();
 
@@ -262,12 +260,12 @@ export class RelationAnalyticsService {
     for (const project of projects) {
       const relatedRecords = await crossModuleRelationsService.getRelatedRecords(
         project.id.toString(),
-        { moduleTypes: [EDatabaseType.TASKS, EDatabaseType.NOTES, EDatabaseType.RESOURCES] }
+        { moduleTypes: [EDatabaseType.TASKS, EDatabaseType.NOTES, EDatabaseType.PARA_RESOURCES] }
       );
 
       if (relatedRecords.some(r => r.module === EDatabaseType.TASKS)) projectsWithTasks++;
       if (relatedRecords.some(r => r.module === EDatabaseType.NOTES)) projectsWithNotes++;
-      if (relatedRecords.some(r => r.module === EDatabaseType.RESOURCES)) projectsWithResources++;
+      if (relatedRecords.some(r => r.module === EDatabaseType.PARA_RESOURCES)) projectsWithResources++;
     }
 
     const totalProjects = projects.length;
@@ -396,7 +394,7 @@ export class RelationAnalyticsService {
           clusterId: 'cluster-1',
           theme: 'Professional Development',
           recordCount: 15,
-          modules: [EDatabaseType.GOALS, EDatabaseType.TASKS, EDatabaseType.RESOURCES]
+          modules: [EDatabaseType.GOALS, EDatabaseType.TASKS, EDatabaseType.PARA_RESOURCES]
         }
       ]
     };

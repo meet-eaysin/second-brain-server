@@ -35,12 +35,10 @@ const createDefaultDatabaseMapping = (): Record<EDatabaseType, string | null> =>
   [EDatabaseType.TASKS]: null,
   [EDatabaseType.HABITS]: null,
   [EDatabaseType.PEOPLE]: null,
-  [EDatabaseType.RESOURCES]: null,
   [EDatabaseType.PARA_PROJECTS]: null,
   [EDatabaseType.PARA_AREAS]: null,
   [EDatabaseType.PARA_RESOURCES]: null,
   [EDatabaseType.PARA_ARCHIVE]: null,
-  [EDatabaseType.PROJECTS]: null,
   [EDatabaseType.QUICK_TASKS]: null,
   [EDatabaseType.QUICK_NOTES]: null,
   [EDatabaseType.CONTENT]: null,
@@ -180,8 +178,8 @@ const calculateQuickStats = async (
       : Promise.resolve({}),
 
     // Projects statistics
-    databaseMap[EDatabaseType.PROJECTS]
-      ? calculateProjectsStats(databaseMap[EDatabaseType.PROJECTS])
+    databaseMap[EDatabaseType.PARA_PROJECTS]
+      ? calculateProjectsStats(databaseMap[EDatabaseType.PARA_PROJECTS])
       : Promise.resolve({}),
 
     // Finance statistics
@@ -983,72 +981,12 @@ const createPageDefinitions = () => [
     databaseType: null
   },
   {
-    id: 'ai-assistant',
-    name: 'AI Assistant',
-    preview: 'Get help with AI-powered features',
-    route: '/app/ai-assistant',
-    moduleType: 'ai-assistant',
-    icon: '🤖',
-    color: '#f59e0b',
-    databaseType: null
-  },
-  {
     id: 'notes',
     name: 'Notes',
     preview: 'View and manage your knowledge base',
-    route: '/app/notes',
+    route: '/app/second-brain/notes',
     moduleType: 'notes',
     icon: '📝',
-    color: '#3b82f6',
-    databaseType: EDatabaseType.NOTES
-  },
-  {
-    id: 'ideas',
-    name: 'Ideas',
-    preview: 'Capture and organize your ideas',
-    route: '/app/ideas',
-    moduleType: 'ideas',
-    icon: '💡',
-    color: '#3b82f6',
-    databaseType: EDatabaseType.NOTES
-  },
-  {
-    id: 'capture',
-    name: 'Quick Capture',
-    preview: 'Quickly capture thoughts and notes',
-    route: '/app/capture',
-    moduleType: 'capture',
-    icon: '⚡',
-    color: '#3b82f6',
-    databaseType: EDatabaseType.NOTES
-  },
-  {
-    id: 'collections',
-    name: 'Collections',
-    preview: 'Organize your notes into collections',
-    route: '/app/collections',
-    moduleType: 'collections',
-    icon: '📚',
-    color: '#3b82f6',
-    databaseType: EDatabaseType.NOTES
-  },
-  {
-    id: 'favorites',
-    name: 'Favorites',
-    preview: 'Your favorite notes and content',
-    route: '/app/favorites',
-    moduleType: 'favorites',
-    icon: '⭐',
-    color: '#3b82f6',
-    databaseType: EDatabaseType.NOTES
-  },
-  {
-    id: 'recent',
-    name: 'Recent Notes',
-    preview: 'Recently viewed and edited notes',
-    route: '/app/recent',
-    moduleType: 'recent',
-    icon: '🕒',
     color: '#3b82f6',
     databaseType: EDatabaseType.NOTES
   },
@@ -1056,27 +994,17 @@ const createPageDefinitions = () => [
     id: 'templates',
     name: 'Templates',
     preview: 'Use templates for consistent note-taking',
-    route: '/app/templates',
+    route: '/app/second-brain/templates',
     moduleType: 'templates',
     icon: '📋',
     color: '#3b82f6',
     databaseType: EDatabaseType.NOTES
   },
   {
-    id: 'search',
-    name: 'Search',
-    preview: 'Search through all your content',
-    route: '/app/search',
-    moduleType: 'search',
-    icon: '🔍',
-    color: '#6b7280',
-    databaseType: null
-  },
-  {
     id: 'calendar',
     name: 'Calendar',
     preview: 'Manage your schedule and events',
-    route: '/app/calendar',
+    route: '/app/second-brain/calendar',
     moduleType: 'calendar',
     icon: '📅',
     color: '#10b981',
@@ -1086,81 +1014,41 @@ const createPageDefinitions = () => [
     id: 'tasks',
     name: 'Tasks',
     preview: 'Track and manage your tasks',
-    route: '/app/tasks',
+    route: '/app/second-brain/tasks',
     moduleType: 'tasks',
     icon: '✅',
     color: '#10b981',
     databaseType: EDatabaseType.TASKS
   },
   {
-    id: 'tags',
-    name: 'Tags',
-    preview: 'Manage and organize your tags',
-    route: '/app/tags',
-    moduleType: 'tags',
-    icon: '🏷️',
-    color: '#f59e0b',
-    databaseType: null
-  },
-  {
     id: 'archive',
     name: 'Archive',
     preview: 'Access archived notes and content',
-    route: '/app/archive',
+    route: '/app/second-brain/para/archive',
     moduleType: 'archive',
     icon: '📦',
     color: '#6b7280',
     databaseType: EDatabaseType.NOTES
   },
   {
-    id: 'goals',
-    name: 'Goals',
-    preview: 'Set and track your objectives',
-    route: '/app/goals',
-    moduleType: 'goals',
-    icon: '🎯',
-    color: '#8b5cf6',
-    databaseType: EDatabaseType.GOALS
-  },
-  {
     id: 'projects',
     name: 'Projects',
     preview: 'Manage your projects and initiatives',
-    route: '/app/projects',
+    route: '/app/second-brain/para/projects',
     moduleType: 'projects',
     icon: '📁',
     color: '#f59e0b',
-    databaseType: EDatabaseType.PROJECTS
-  },
-  {
-    id: 'habits',
-    name: 'Habits',
-    preview: 'Build and maintain good habits',
-    route: '/app/habits',
-    moduleType: 'habits',
-    icon: '🔥',
-    color: '#ef4444',
-    databaseType: EDatabaseType.HABITS
+    databaseType: EDatabaseType.PARA_PROJECTS
   },
   {
     id: 'finance',
     name: 'Finance',
     preview: 'Track income and expenses',
-    route: '/app/finance',
+    route: '/app/second-brain/finance',
     moduleType: 'finance',
     icon: '💰',
     color: '#059669',
     databaseType: EDatabaseType.FINANCE
-  },
-  {
-    id: 'settings',
-    name: 'Settings',
-    preview: 'Configure your account and preferences',
-    route: '/app/settings',
-    moduleType: 'settings',
-    icon: '⚙️',
-    color: '#6b7280',
-    databaseType: null
   },
   {
     id: 'settings-profile',
@@ -1240,16 +1128,6 @@ const createPageDefinitions = () => [
     moduleType: 'settings-workspace',
     icon: '🏢',
     color: '#6b7280',
-    databaseType: null
-  },
-  {
-    id: 'data-tables',
-    name: 'Data Tables',
-    preview: 'View and manage your data tables',
-    route: '/app/data-tables',
-    moduleType: 'data-tables',
-    icon: '📊',
-    color: '#6366f1',
     databaseType: null
   },
   {

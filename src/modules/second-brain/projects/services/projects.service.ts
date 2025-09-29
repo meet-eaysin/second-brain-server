@@ -41,7 +41,7 @@ export class ProjectsService {
         throw createNotFoundError('Database', data.databaseId);
       }
 
-      if (database.type !== EDatabaseType.PROJECTS) {
+      if (database.type !== EDatabaseType.PARA_PROJECTS) {
         throw createValidationError('Database must be of type PROJECTS');
       }
 

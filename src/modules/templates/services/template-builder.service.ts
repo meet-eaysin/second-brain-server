@@ -513,7 +513,7 @@ export class TemplateBuilderService {
     if (lowerPrompt.includes('goal')) modules.push(EDatabaseType.GOALS);
     if (lowerPrompt.includes('habit')) modules.push(EDatabaseType.HABITS);
     if (lowerPrompt.includes('journal')) modules.push(EDatabaseType.JOURNAL);
-    if (lowerPrompt.includes('project')) modules.push(EDatabaseType.PROJECTS);
+    if (lowerPrompt.includes('project')) modules.push(EDatabaseType.PARA_PROJECTS);
     if (lowerPrompt.includes('note')) modules.push(EDatabaseType.NOTES);
 
     return [...new Set(modules)];

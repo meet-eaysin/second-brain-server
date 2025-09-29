@@ -171,7 +171,7 @@ export class PredefinedTemplatesService {
         tags: ['project', 'software', 'development'],
         icon: '💻',
         color: '#059669',
-        moduleType: EDatabaseType.PROJECTS,
+        moduleType: EDatabaseType.PARA_PROJECTS,
         defaultValues: {
           Status: 'planning',
           Priority: 'high',
@@ -453,17 +453,17 @@ export class PredefinedTemplatesService {
         icon: '👥',
         color: '#10B981',
         modules: [
-          EDatabaseType.PROJECTS,
+          EDatabaseType.PARA_PROJECTS,
           EDatabaseType.TASKS,
           EDatabaseType.PEOPLE,
           EDatabaseType.NOTES,
-          EDatabaseType.RESOURCES
+          EDatabaseType.PARA_RESOURCES
         ],
         databases: [],
         crossModuleRelations: [
           {
             sourceModule: EDatabaseType.TASKS,
-            targetModule: EDatabaseType.PROJECTS,
+            targetModule: EDatabaseType.PARA_PROJECTS,
             sourceProperty: 'Project',
             targetProperty: 'Name',
             type: 'many_to_one',
@@ -471,7 +471,7 @@ export class PredefinedTemplatesService {
             cascadeDelete: false
           },
           {
-            sourceModule: EDatabaseType.PROJECTS,
+            sourceModule: EDatabaseType.PARA_PROJECTS,
             targetModule: EDatabaseType.PEOPLE,
             sourceProperty: 'Team',
             targetProperty: 'Name',
@@ -500,23 +500,17 @@ export class PredefinedTemplatesService {
     }
   }
 
-  // Helper method to create template
   private async createTemplate(templateData: any): Promise<void> {
-    try {
-      const template = new TemplateModel({
-        ...templateData,
-        createdBy: new TemplateModel().id, // System user
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+    const template = new TemplateModel({
+      ...templateData,
+      createdBy: new TemplateModel().id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
 
-      await template.save();
-    } catch (error) {
-      console.error(`Failed to create template ${templateData.name}:`, error);
-    }
+    await template.save();
   }
 
-  // Get all predefined templates by category
   async getPredefinedTemplatesByCategory(category: ETemplateCategory): Promise<any[]> {
     return TemplateModel.find({
       category,
@@ -525,7 +519,6 @@ export class PredefinedTemplatesService {
     }).sort({ isFeatured: -1, usageCount: -1 });
   }
 
-  // Get featured predefined templates
   async getFeaturedPredefinedTemplates(): Promise<any[]> {
     return TemplateModel.find({
       isOfficial: true,

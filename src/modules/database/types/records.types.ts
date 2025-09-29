@@ -1,20 +1,14 @@
 import { z } from 'zod';
 import { IRecord, IRichText } from '@/modules/core/types/record.types';
 
-// Database record interface (extends base record)
 export interface IDatabaseRecord extends IRecord {
   databaseId: string;
   order: number;
-
-  // Rich content support
   hasContent: boolean;
-
-  // Metadata
   lastEditedBy?: string;
   lastEditedAt?: Date;
 }
 
-// Record query options
 export interface IRecordQueryOptions {
   viewId?: string;
   includeContent?: boolean;
@@ -26,7 +20,6 @@ export interface IRecordQueryOptions {
   search?: string;
 }
 
-// Record list response
 export interface IRecordListResponse {
   records: IDatabaseRecord[];
   total: number;

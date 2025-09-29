@@ -42,7 +42,7 @@ export class ResourcesService {
         throw createNotFoundError('Database', data.databaseId);
       }
 
-      if (database.type !== EDatabaseType.RESOURCES) {
+      if (database.type !== EDatabaseType.PARA_RESOURCES) {
         throw createValidationError('Database must be of type RESOURCES');
       }
 

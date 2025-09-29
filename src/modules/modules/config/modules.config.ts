@@ -1592,16 +1592,16 @@ export const PARA_PROJECTS_MODULE: IModuleConfig = {
   ],
   defaultViews: [
     {
-      name: 'Active Projects',
+      name: 'All Projects',
       type: EViewType.TABLE,
-      description: 'All active projects',
+      description: 'All projects',
       isDefault: true,
       order: 0,
       settings: {
         hiddenProperties: [],
         visibleProperties: ['Name', 'Deadline', 'Status', 'Priority', 'Progress'],
         frozenColumns: ['Name'],
-        filters: [{ property: 'Status', operator: 'equals', value: 'active' }],
+        filters: [],
         sorts: [{ property: 'Deadline', direction: 'asc' }],
         pageSize: 25
       }

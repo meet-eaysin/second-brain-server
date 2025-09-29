@@ -532,20 +532,16 @@ const syncProjectsToCalendar = async (
   workspaceId?: string
 ): Promise<void> => {
   try {
-    // Get project databases - filter by workspace if provided
     const query: any = {
-      type: EDatabaseType.PROJECTS,
+      type: EDatabaseType.PARA_PROJECTS,
       createdBy: userId
     };
 
-    if (workspaceId) {
-      query.workspaceId = workspaceId;
-    }
+    if (workspaceId) query.workspaceId = workspaceId;
 
     const projectDatabases = await DatabaseModel.find(query);
 
     for (const database of projectDatabases) {
-      // Get projects with deadlines
       const projects = await RecordModel.find({
         databaseId: database.id.toString(),
         'properties.deadline': { $exists: true, $ne: null },

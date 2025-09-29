@@ -289,12 +289,10 @@ export const getDatabaseTypeDisplayName = (type: EDatabaseType): string => {
     [EDatabaseType.TASKS]: 'Tasks',
     [EDatabaseType.HABITS]: 'Habits',
     [EDatabaseType.PEOPLE]: 'People',
-    [EDatabaseType.RESOURCES]: 'Resources',
     [EDatabaseType.PARA_PROJECTS]: 'PARA Projects',
     [EDatabaseType.PARA_AREAS]: 'PARA Areas',
     [EDatabaseType.PARA_RESOURCES]: 'PARA Resources',
     [EDatabaseType.PARA_ARCHIVE]: 'PARA Archive',
-    [EDatabaseType.PROJECTS]: 'Projects',
     [EDatabaseType.QUICK_TASKS]: 'Quick Tasks',
     [EDatabaseType.QUICK_NOTES]: 'Quick Notes',
     [EDatabaseType.CONTENT]: 'Content',
@@ -318,12 +316,10 @@ export const getDatabaseTypeIcon = (type: EDatabaseType): string => {
     [EDatabaseType.TASKS]: '✅',
     [EDatabaseType.HABITS]: '🔄',
     [EDatabaseType.PEOPLE]: '👥',
-    [EDatabaseType.RESOURCES]: '📚',
     [EDatabaseType.PARA_PROJECTS]: '🚀',
     [EDatabaseType.PARA_AREAS]: '🏠',
     [EDatabaseType.PARA_RESOURCES]: '📖',
     [EDatabaseType.PARA_ARCHIVE]: '📦',
-    [EDatabaseType.PROJECTS]: '📋',
     [EDatabaseType.QUICK_TASKS]: '⚡',
     [EDatabaseType.QUICK_NOTES]: '💭',
     [EDatabaseType.CONTENT]: '📄',
@@ -390,11 +386,6 @@ export const getDefaultDatabaseConfig = (type: EDatabaseType): Partial<IDatabase
       ...baseConfig,
       allowDuplicates: false
     },
-    [EDatabaseType.RESOURCES]: {
-      ...baseConfig,
-      enableAutoTagging: true,
-      enableSmartSuggestions: true
-    },
     [EDatabaseType.PARA_PROJECTS]: {
       ...baseConfig,
       enableAutoTagging: true
@@ -411,10 +402,6 @@ export const getDefaultDatabaseConfig = (type: EDatabaseType): Partial<IDatabase
     [EDatabaseType.PARA_ARCHIVE]: {
       ...baseConfig,
       allowComments: false
-    },
-    [EDatabaseType.PROJECTS]: {
-      ...baseConfig,
-      enableAutoTagging: true
     },
     [EDatabaseType.QUICK_TASKS]: {
       ...baseConfig,

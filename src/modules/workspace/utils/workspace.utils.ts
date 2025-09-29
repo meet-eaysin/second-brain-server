@@ -90,7 +90,7 @@ export const getUserDatabasesInWorkspace = async (userId: string, workspaceId?: 
 export const createDatabaseMapping = async (userId: string, workspaceId?: string): Promise<Record<EDatabaseType, string | null>> => {
   try {
     const databases = await getUserDatabasesInWorkspace(userId, workspaceId);
-    
+
     const mapping: Record<EDatabaseType, string | null> = {
       [EDatabaseType.DASHBOARD]: null,
       [EDatabaseType.FINANCE]: null,
@@ -101,12 +101,10 @@ export const createDatabaseMapping = async (userId: string, workspaceId?: string
       [EDatabaseType.TASKS]: null,
       [EDatabaseType.HABITS]: null,
       [EDatabaseType.PEOPLE]: null,
-      [EDatabaseType.RESOURCES]: null,
       [EDatabaseType.PARA_PROJECTS]: null,
       [EDatabaseType.PARA_AREAS]: null,
       [EDatabaseType.PARA_RESOURCES]: null,
       [EDatabaseType.PARA_ARCHIVE]: null,
-      [EDatabaseType.PROJECTS]: null,
       [EDatabaseType.QUICK_TASKS]: null,
       [EDatabaseType.QUICK_NOTES]: null,
       [EDatabaseType.CONTENT]: null,

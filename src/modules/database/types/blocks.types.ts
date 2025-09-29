@@ -133,7 +133,6 @@ export interface IFileObject {
   caption?: IRichTextContent[];
 }
 
-// Block-specific properties interfaces
 export interface IParagraphBlock {
   type: BlockType.PARAGRAPH;
   paragraph: {
