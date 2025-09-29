@@ -446,15 +446,9 @@ export const syncTimeRelatedModules = async (
     // Sync project milestones
     await syncProjectsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 
-    // Sync habit schedules
     await syncHabitsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 
-    // Sync goal deadlines
     await syncGoalsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
-
-    console.log(
-      `✅ Synced time-related modules for user ${userId}${workspaceId ? ` in workspace ${workspaceId}` : ''}`
-    );
   } catch (error) {
     console.error('Failed to sync time-related modules:', error);
     throw error;

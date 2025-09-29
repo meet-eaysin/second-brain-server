@@ -39,8 +39,6 @@ export const generateGoogleLoginUrl = (): { url: string } => {
 
   const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-  console.log('🔗 Generated Google OAuth redirect URL');
-
   return { url };
 };
 
@@ -164,7 +162,6 @@ export const verifyStateToken = (state: string) => {
 
     return decoded;
   } catch (error) {
-    console.error('❌ State token verification failed:', error);
     throw new Error('Invalid or expired state token');
   }
 };

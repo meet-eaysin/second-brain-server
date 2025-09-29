@@ -189,6 +189,8 @@ export const systemApi = {
       }
     } catch (error) {
       console.error('Failed to record page visit:', error);
+      // Re-throw the error so the controller can handle it
+      throw error;
     }
   }
 };

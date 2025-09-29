@@ -59,63 +59,32 @@ export const getActivities = async (
   options: IActivityQueryOptions,
   requestingUserId?: string
 ): Promise<IActivityListResponse> => {
-  // Build MongoDB query
   const query: any = {};
-
-  // Apply filters
-  if (options.workspaceId) {
-    query.workspaceId = options.workspaceId;
-  }
-
-  if (options.userId) {
-    query.userId = options.userId;
-  }
-
-  if (options.type) {
-    query.type = options.type;
-  }
-
-  if (options.types) {
-    query.type = { $in: options.types };
-  }
-
-  if (options.context) {
-    query.context = options.context;
-  }
-
-  if (options.entityId) {
-    query.entityId = options.entityId;
-  }
-
-  if (options.entityType) {
-    query.entityType = options.entityType;
-  }
-
+  if (options.workspaceId) query.workspaceId = options.workspaceId;
+  if (options.userId) query.userId = options.userId;
+  if (options.type) query.type = options.type;
+  if (options.types) query.type = { $in: options.types };
+  if (options.context) query.context = options.context;
+  if (options.entityId) query.entityId = options.entityId;
+  if (options.entityType) query.entityType = options.entityType;
   if (options.dateRange) {
     query.timestamp = {
       $gte: options.dateRange.start,
       $lte: options.dateRange.end
     };
   }
+  if (!options.includeSystem) query.context = { $ne: EActivityContext.SYSTEM };
 
-  if (!options.includeSystem) {
-    query.context = { $ne: EActivityContext.SYSTEM };
-  }
-
-  // Add soft delete filter
   query.isDeleted = { $ne: true };
 
-  // Build sort options
   const sortBy = options.sortBy || 'timestamp';
   const sortOrder = options.sortOrder === 'asc' ? 1 : -1;
   const sortOptions: any = {};
   sortOptions[sortBy] = sortOrder;
 
-  // Pagination
   const limit = options.limit || 50;
   const offset = options.offset || 0;
 
-  // Execute query with pagination
   const activities = await ActivityModel.find(query)
     .sort(sortOptions)
     .skip(offset)
@@ -124,20 +93,17 @@ export const getActivities = async (
 
   const total = await ActivityModel.countDocuments(query).exec();
 
-  // Convert to IActivity objects for permission checking
   let filteredActivities = activities.map(doc => doc.toObject() as unknown as IActivity);
 
-  // Filter activities based on permissions (simplified for now - can be enhanced later)
   if (requestingUserId) {
     filteredActivities = filteredActivities.filter(
       activity =>
         activity.userId === requestingUserId ||
         activity.context === EActivityContext.SYSTEM ||
-        !activity.entityId // Allow activities without entityId
+        !activity.entityId
     );
   }
 
-  // Generate summary
   const summary = generateActivitySummary(filteredActivities);
 
   return {

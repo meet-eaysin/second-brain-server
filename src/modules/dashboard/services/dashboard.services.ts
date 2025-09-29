@@ -1,33 +1,30 @@
 import {
-  IDashboardOverview,
-  IQuickStats,
   IActivityFeedItem,
-  IUpcomingTask,
-  IRecentNote,
+  IDashboardOverview,
+  IDashboardQueryParams,
+  IFinanceSummary,
   IGoalProgress,
   IHabitStreak,
-  IFinanceSummary,
-  IWorkspaceStats,
+  IQuickStats,
   IRecentlyVisitedItem,
-  IDashboardQueryParams
+  IRecentNote,
+  IUpcomingTask,
+  IWorkspaceStats
 } from '../types/dashboard.types';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { EDatabaseType } from '@/modules/core/types/database.types';
-import { EStatus, EPriority, EFinanceType } from '@/modules/core/types/common.types';
+import { EFinanceType, EPriority, EStatus } from '@/modules/core/types/common.types';
 import { createAppError } from '@/utils/error.utils';
 import {
-  getStringProperty,
-  getNumberProperty,
   getDateProperty,
+  getNumberProperty,
+  getPriorityProperty,
   getStatusProperty,
   getStringArrayProperty,
-  getPriorityProperty
+  getStringProperty
 } from '@/modules/core/utils/type-guards';
 
-// Helper functions
-
-// Helper Functions
 const createDefaultDatabaseMapping = (): Record<EDatabaseType, string | null> => ({
   [EDatabaseType.DASHBOARD]: null,
   [EDatabaseType.FINANCE]: null,
@@ -81,7 +78,6 @@ const getDatabaseMapping = async (
 
     return mapping;
   } catch (error: any) {
-    console.error('Failed to get database mapping:', error);
     return createDefaultDatabaseMapping();
   }
 };
@@ -94,7 +90,6 @@ const getDashboardOverview = async (
     const workspaceId = params.workspaceId;
     const databaseMap = await getDatabaseMapping(userId, workspaceId);
 
-    // Calculate all dashboard components in parallel
     const [
       quickStats,
       recentActivity,
@@ -659,11 +654,9 @@ const getRecentlyVisited = async (
 
     const recentPages = processPageVisits(pageVisits, pageMetadata);
     const recentlyVisited = await createRecentlyVisitedItems(recentPages, limit);
-    console.log('## recentlyVisited', recentlyVisited);
 
     return recentlyVisited.length > 0 ? recentlyVisited : getAvailableModules(databaseMap, limit);
   } catch (error) {
-    console.error('Error getting recently visited pages:', error);
     return getAvailableModules(databaseMap, limit);
   }
 };
@@ -674,71 +667,11 @@ const createPageMetadata = (): Record<
   { name: string; preview: string; icon: string; color: string }
 > => ({
   '/app': { name: 'Home', preview: 'Your personal dashboard', icon: '🏠', color: '#6366f1' },
-  '/app/second-brain': {
-    name: 'Second Brain',
-    preview: 'Organize your knowledge and thoughts',
-    icon: '🧠',
-    color: '#6366f1'
-  },
   '/app/databases': {
     name: 'Databases',
     preview: 'Manage your data tables and records',
     icon: '🗄️',
     color: '#8b5cf6'
-  },
-  '/app/ai-assistant': {
-    name: 'AI Assistant',
-    preview: 'Get help with AI-powered features',
-    icon: '🤖',
-    color: '#f59e0b'
-  },
-  '/app/notes': {
-    name: 'Notes',
-    preview: 'View and manage your knowledge base',
-    icon: '📝',
-    color: '#3b82f6'
-  },
-  '/app/ideas': {
-    name: 'Ideas',
-    preview: 'Capture and organize your ideas',
-    icon: '💡',
-    color: '#3b82f6'
-  },
-  '/app/capture': {
-    name: 'Quick Capture',
-    preview: 'Quickly capture thoughts and notes',
-    icon: '⚡',
-    color: '#3b82f6'
-  },
-  '/app/collections': {
-    name: 'Collections',
-    preview: 'Organize your notes into collections',
-    icon: '📚',
-    color: '#3b82f6'
-  },
-  '/app/favorites': {
-    name: 'Favorites',
-    preview: 'Your favorite notes and content',
-    icon: '⭐',
-    color: '#3b82f6'
-  },
-  '/app/recent': {
-    name: 'Recent Notes',
-    preview: 'Recently viewed and edited notes',
-    icon: '🕒',
-    color: '#3b82f6'
-  },
-  '/app/templates': {
-    name: 'Templates',
-    preview: 'Use templates for consistent note-taking',
-    icon: '📋',
-    color: '#3b82f6'
-  },
-  '/app/search': {
-    name: 'Search',
-    preview: 'Search through all your content',
-    icon: '🔍',
-    color: '#6b7280'
   },
   '/app/calendar': {
     name: 'Calendar',
@@ -746,52 +679,82 @@ const createPageMetadata = (): Record<
     icon: '📅',
     color: '#10b981'
   },
-  '/app/tasks': {
+  '/app/notifications': {
+    name: 'Notifications',
+    preview: 'View your notifications and alerts',
+    icon: '🔔',
+    color: '#f59e0b'
+  },
+  '/app/second-brain/dashboard': {
+    name: 'Second Brain Dashboard',
+    preview: 'Organize your knowledge and thoughts',
+    icon: '🧠',
+    color: '#6366f1'
+  },
+  '/app/second-brain/tasks': {
     name: 'Tasks',
     preview: 'Track and manage your tasks',
     icon: '✅',
     color: '#10b981'
   },
-  '/app/tags': {
-    name: 'Tags',
-    preview: 'Manage and organize your tags',
-    icon: '🏷️',
-    color: '#f59e0b'
+  '/app/second-brain/notes': {
+    name: 'Notes',
+    preview: 'View and manage your knowledge base',
+    icon: '📝',
+    color: '#3b82f6'
   },
-  '/app/archive': {
-    name: 'Archive',
-    preview: 'Access archived notes and content',
-    icon: '📦',
-    color: '#6b7280'
+  '/app/second-brain/people': {
+    name: 'People',
+    preview: 'View and manage your people',
+    icon: '📝',
+    color: '#3b82f6'
   },
-  '/app/goals': {
-    name: 'Goals',
-    preview: 'Set and track your objectives',
-    icon: '🎯',
-    color: '#8b5cf6'
-  },
-  '/app/projects': {
-    name: 'Projects',
-    preview: 'Manage your projects and initiatives',
-    icon: '📁',
-    color: '#f59e0b'
-  },
-  '/app/habits': {
-    name: 'Habits',
-    preview: 'Build and maintain good habits',
-    icon: '🔥',
-    color: '#ef4444'
-  },
-  '/app/finance': {
+  '/app/second-brain/finance': {
     name: 'Finance',
     preview: 'Track income and expenses',
     icon: '💰',
     color: '#059669'
   },
-  '/app/settings': {
-    name: 'Settings',
-    preview: 'Configure your account and preferences',
-    icon: '⚙️',
+  '/app/second-brain/journal': {
+    name: 'Journal',
+    preview: 'Manage you journals',
+    icon: '💰',
+    color: '#059669'
+  },
+  '/app/second-brain/para/projects': {
+    name: 'Projects',
+    preview: 'Manage your projects and initiatives',
+    icon: '📁',
+    color: '#f59e0b'
+  },
+  '/app/second-brain/para/areas': {
+    name: 'Areas',
+    preview: 'Manage your areas',
+    icon: 'A',
+    color: '#6b7280'
+  },
+  '/app/second-brain/para/resources': {
+    name: 'Resources',
+    preview: 'Manage your resources',
+    icon: 'A',
+    color: '#6b7280'
+  },
+  '/app/second-brain/para/archive': {
+    name: 'Archive',
+    preview: 'Access archived notes and content',
+    icon: '📦',
+    color: '#6b7280'
+  },
+  '/app/second-brain/templates': {
+    name: 'Templates',
+    preview: 'Use templates for consistent note-taking',
+    icon: '📋',
+    color: '#3b82f6'
+  },
+  '/app/second-brain/search': {
+    name: 'Search',
+    preview: 'Search through all your content',
+    icon: '🔍',
     color: '#6b7280'
   },
   '/app/settings/profile': {
@@ -842,23 +805,17 @@ const createPageMetadata = (): Record<
     icon: '🏢',
     color: '#6b7280'
   },
-  '/app/data-tables': {
-    name: 'Data Tables',
-    preview: 'View and manage your data tables',
-    icon: '📊',
-    color: '#6366f1'
+  '/app/help-center': {
+    name: 'Help Center',
+    preview: 'Help center',
+    icon: '👥',
+    color: '#10b981'
   },
   '/app/users': {
     name: 'Users',
     preview: 'Manage user accounts and permissions',
     icon: '👥',
     color: '#10b981'
-  },
-  '/app/notifications': {
-    name: 'Notifications',
-    preview: 'View your notifications and alerts',
-    icon: '🔔',
-    color: '#f59e0b'
   }
 });
 
@@ -886,7 +843,9 @@ const processPageVisits = (pageVisits: readonly any[], pageMetadata: any) => {
 };
 
 const findMatchingRoute = (page: string, pageMetadata: any): string | null => {
-  for (const route of Object.keys(pageMetadata)) {
+  const sortedRoutes = Object.keys(pageMetadata).sort((a, b) => b.length - a.length);
+
+  for (const route of sortedRoutes) {
     if (page === route || page.startsWith(route + '/')) {
       return route;
     }
@@ -921,24 +880,21 @@ const createRecentlyVisitedItem = async (
   const databaseMatch = page.match(/^\/app\/databases\/([^/]+)$/);
   if (databaseMatch) {
     const databaseId = databaseMatch[1];
-    try {
-      const database = await DatabaseModel.findById(databaseId).exec();
-      if (database) {
-        return {
-          id: `database-${databaseId}`,
-          name: database.name || `Database ${databaseId}`,
-          type: 'page' as const,
-          preview: `View and manage ${database.name || 'this database'}`,
-          route: page,
-          lastVisitedAt,
-          moduleType: 'database',
-          icon: '🗄️',
-          color: '#8b5cf6'
-        };
-      }
-    } catch (error) {
-      console.error('Error fetching database for recently visited:', error);
+    const database = await DatabaseModel.findById(databaseId).exec();
+    if (database) {
+      return {
+        id: `database-${databaseId}`,
+        name: database.name || `Database ${databaseId}`,
+        type: 'page' as const,
+        preview: `View and manage ${database.name || 'this database'}`,
+        route: page,
+        lastVisitedAt,
+        moduleType: 'database',
+        icon: '🗄️',
+        color: '#8b5cf6'
+      };
     }
+
     return {
       id: `database-${databaseId}`,
       name: `Database ${databaseId}`,

@@ -109,11 +109,6 @@ export const createInitialSuperAdminController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { email, username, password, firstName, lastName, setupToken } = req.body;
 
-    // Additional security: rate limiting and IP logging could be added here
-    console.log(
-      `Initial super admin setup attempt from IP: ${req.ip} at ${new Date().toISOString()}`
-    );
-
     const superAdmin = await createInitialSuperAdmin({
       email,
       username,

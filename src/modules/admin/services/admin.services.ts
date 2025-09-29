@@ -206,11 +206,6 @@ export const createInitialSuperAdmin = async (userData: {
 
     await superAdmin.save();
 
-    // Log the creation for audit purposes
-    console.log(
-      `Initial super admin created: ${userData.email} (${userData.username}) at ${new Date().toISOString()}`
-    );
-
     // Return user without password
     const userObject = superAdmin.toObject();
     delete userObject.password;
