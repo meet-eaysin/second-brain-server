@@ -174,7 +174,7 @@ const completeModuleInitialization = async (
     name: moduleConfig.name,
     propertiesCreated,
     viewsCreated,
-    templatesCreated: 0 // Templates not implemented for completion
+    templatesCreated: 0
   };
 };
 

@@ -6,7 +6,7 @@ import { EViewType } from '@/modules/core/types/view.types';
 export const DASHBOARD_MODULE: IModuleConfig = {
   id: EDatabaseType.DASHBOARD,
   name: 'Dashboard',
-  description: 'Central hub for second brain overview and quick access',
+  description: 'Central for second brain overview and quick access',
   icon: '📊',
   color: '#3B82F6',
   category: EModuleCategory.SYSTEM,
@@ -162,7 +162,7 @@ export const TASKS_MODULE: IModuleConfig = {
       name: 'Assignee',
       type: EPropertyType.RELATION,
       config: {
-        relatedDatabase: EDatabaseType.PEOPLE,
+        relationDatabaseId: EDatabaseType.PEOPLE,
         allowMultiple: true
       },
       isSystem: true,
@@ -175,7 +175,7 @@ export const TASKS_MODULE: IModuleConfig = {
       name: 'Project',
       type: EPropertyType.RELATION,
       config: {
-        relatedDatabase: EDatabaseType.PROJECTS,
+        relationDatabaseId: EDatabaseType.PARA_PROJECTS,
         allowMultiple: false
       },
       isSystem: true,
@@ -240,7 +240,7 @@ export const TASKS_MODULE: IModuleConfig = {
         hiddenProperties: [],
         visibleProperties: ['Name', 'Status', 'Priority', 'Due Date', 'Project'],
         sorts: [{ property: 'Due Date', direction: 'asc' }],
-        filters: [{ property: 'Assignee', operator: 'contains', value: '@me' }],
+        filters: [{ property: 'Assignee', operator: 'contains_relation', value: '@me' }],
         pageSize: 25
       }
     },
@@ -259,7 +259,7 @@ export const TASKS_MODULE: IModuleConfig = {
     {
       name: 'Calendar',
       type: EViewType.CALENDAR,
-      description: 'CalendarTypes view of tasks by due date',
+      description: 'Calendar view of tasks by due date',
       isDefault: false,
       order: 3,
       settings: {
@@ -273,7 +273,7 @@ export const TASKS_MODULE: IModuleConfig = {
       sourceProperty: 'Project',
       targetModule: EDatabaseType.PARA_PROJECTS,
       targetProperty: 'Name',
-      type: 'many_to_many',
+      type: 'many_to_one',
       isRequired: false,
       cascadeDelete: false
     },
@@ -440,7 +440,7 @@ export const NOTES_MODULE: IModuleConfig = {
       settings: {
         hiddenProperties: [],
         visibleProperties: ['Title', 'Category', 'Tags', 'Reading Time'],
-        filters: [{ property: 'Status', operator: 'equals', value: 'published' }],
+        filters: [{ property: 'Status', operator: 'is', value: 'published' }],
         sorts: [{ property: 'Last Viewed', direction: 'desc' }],
         cardSize: 'medium'
       }
@@ -454,7 +454,7 @@ export const NOTES_MODULE: IModuleConfig = {
       settings: {
         hiddenProperties: [],
         visibleProperties: ['Title', 'Category', 'Word Count'],
-        filters: [{ property: 'Status', operator: 'equals', value: 'draft' }],
+        filters: [{ property: 'Status', operator: 'is', value: 'draft' }],
         sorts: [{ property: 'Last Viewed', direction: 'desc' }]
       }
     }
@@ -609,7 +609,7 @@ export const GOALS_MODULE: IModuleConfig = {
       name: 'Related Tasks',
       type: EPropertyType.RELATION,
       config: {
-        relatedDatabase: EDatabaseType.TASKS,
+        relationDatabaseId: EDatabaseType.TASKS,
         allowMultiple: true
       },
       isSystem: false,
@@ -647,8 +647,8 @@ export const GOALS_MODULE: IModuleConfig = {
         groups: [{ property: 'Status', direction: 'asc', showEmpty: true }],
         visibleProperties: ['Name', 'Priority', 'Target Date', 'Progress'],
         filters: [
-          { property: 'Status', operator: 'not_equals', value: 'completed' },
-          { property: 'Status', operator: 'not_equals', value: 'cancelled' }
+          { property: 'Status', operator: 'is_not', value: 'completed' },
+          { property: 'Status', operator: 'is_not', value: 'cancelled' }
         ],
         cardSize: 'medium'
       }
@@ -658,40 +658,8 @@ export const GOALS_MODULE: IModuleConfig = {
     {
       sourceProperty: 'Related Tasks',
       targetModule: EDatabaseType.TASKS,
-      targetProperty: 'Title',
+      targetProperty: 'Name',
       type: 'one_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Related Projects',
-      targetModule: EDatabaseType.PARA_PROJECTS,
-      targetProperty: 'Name',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Supporting Habits',
-      targetModule: EDatabaseType.HABITS,
-      targetProperty: 'Name',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Goal Notes',
-      targetModule: EDatabaseType.NOTES,
-      targetProperty: 'Title',
-      type: 'one_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Learning Resources',
-      targetModule: EDatabaseType.PARA_RESOURCES,
-      targetProperty: 'Name',
-      type: 'many_to_many',
       isRequired: false,
       cascadeDelete: false
     }
@@ -1190,37 +1158,12 @@ export const HABITS_MODULE: IModuleConfig = {
       settings: {
         groups: [{ property: 'Category', direction: 'asc', showEmpty: true }],
         visibleProperties: ['Name', 'Frequency', 'Current Streak', 'Target'],
-        filters: [{ property: 'Status', operator: 'equals', value: 'active' }],
+        filters: [{ property: 'Status', operator: 'is', value: 'active' }],
         cardSize: 'small'
       }
     }
   ],
-  defaultRelations: [
-    {
-      sourceProperty: 'Related Goals',
-      targetModule: EDatabaseType.GOALS,
-      targetProperty: 'Title',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Habit Notes',
-      targetModule: EDatabaseType.NOTES,
-      targetProperty: 'Title',
-      type: 'one_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Learning Resources',
-      targetModule: EDatabaseType.PARA_RESOURCES,
-      targetProperty: 'Name',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    }
-  ],
+  defaultRelations: [],
   templates: [
     {
       name: 'Daily Habit',
@@ -1378,9 +1321,9 @@ export const JOURNAL_MODULE: IModuleConfig = {
       }
     },
     {
-      name: 'CalendarTypes View',
+      name: 'Calendar View',
       type: EViewType.CALENDAR,
-      description: 'CalendarTypes view of journal entries',
+      description: 'Calendar view of journal entries',
       isDefault: false,
       order: 1,
       settings: {
@@ -1390,40 +1333,7 @@ export const JOURNAL_MODULE: IModuleConfig = {
       }
     }
   ],
-  defaultRelations: [
-    {
-      sourceProperty: 'Related Goals',
-      targetModule: EDatabaseType.GOALS,
-      targetProperty: 'Title',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Completed Habits',
-      targetModule: EDatabaseType.HABITS,
-      targetProperty: 'Name',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Related Tasks',
-      targetModule: EDatabaseType.TASKS,
-      targetProperty: 'Title',
-      type: 'many_to_many',
-      isRequired: false,
-      cascadeDelete: false
-    },
-    {
-      sourceProperty: 'Mood Entry',
-      targetModule: EDatabaseType.MOOD_TRACKER,
-      targetProperty: 'Date',
-      type: 'one_to_one',
-      isRequired: false,
-      cascadeDelete: false
-    }
-  ],
+  defaultRelations: [],
   templates: [
     {
       name: 'Daily Entry',
@@ -1556,9 +1466,9 @@ export const MOOD_TRACKER_MODULE: IModuleConfig = {
       }
     },
     {
-      name: 'Mood CalendarTypes',
+      name: 'Mood Calendar',
       type: EViewType.CALENDAR,
-      description: 'CalendarTypes view of mood entries',
+      description: 'Calendar view of mood entries',
       isDefault: false,
       order: 1,
       settings: {
@@ -1644,7 +1554,7 @@ export const PARA_PROJECTS_MODULE: IModuleConfig = {
     {
       name: 'Area',
       type: EPropertyType.RELATION,
-      config: { relationDatabaseId: 'para_areas', allowMultiple: false },
+      config: { relationDatabaseId: EDatabaseType.PARA_AREAS, allowMultiple: false },
       isSystem: true,
       isFrozen: false,
       isVisible: true,

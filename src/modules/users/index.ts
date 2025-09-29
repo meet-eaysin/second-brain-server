@@ -1,9 +1,5 @@
-
-
-// Routes
 export { default as usersRoutes } from './routes/users.routes';
 
-// Controllers
 export {
   getUser,
   updateProfile,
@@ -13,7 +9,6 @@ export {
   updateUserRoleController
 } from './controllers/users.controllers';
 
-// Services
 export {
   createUser,
   getUserById,
@@ -30,10 +25,8 @@ export {
   createOrUpdateGoogleUser
 } from './services/users.services';
 
-// Models
 export { UserModel } from './models/users.model';
 
-// Types
 export type {
   TUser,
   TUserCreateRequest,
