@@ -127,17 +127,16 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_-])[A-Za-z\d@$!%*?&_-]{8,}$/;
-  return passwordRegex.test(password);
+  return password.length >= 8;
 };
 
 export const validateUsername = (username: string): boolean => {
-  const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
+  const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
   return usernameRegex.test(username);
 };
 
 export const generateUsernameFromEmail = (email: string): string => {
-  const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
+  const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '');
   return baseUsername.substring(0, 30);
 };
 

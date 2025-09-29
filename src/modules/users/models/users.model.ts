@@ -38,10 +38,10 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
       maxlength: 30,
       validate: {
         validator: (username: string) => {
-          const usernameRegex = /^[a-zA-Z0-9_]+$/;
+          const usernameRegex = /^[a-zA-Z0-9_-]+$/;
           return usernameRegex.test(username);
         },
-        message: 'Username can only contain letters, numbers, and underscores'
+        message: 'Username can only contain letters, numbers, underscores, and hyphens'
       }
     },
     password: {
@@ -51,12 +51,9 @@ const UserSchema = new Schema<TUserDocument, TUserModel>(
         validator: function (this: TUserDocument, password: string) {
           if (this.authProvider === EAuthProvider.GOOGLE) return true;
           if (!password) return false;
-          const passwordRegex =
-            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_-])[A-Za-z\d@$!%*?&_-]{8,}$/;
-          return passwordRegex.test(password);
+          return password.length >= 8;
         },
-        message:
-          'Password must be at least 8 characters with uppercase, lowercase, number, and special character'
+        message: 'Password must be at least 8 characters long'
       }
     },
     firstName: {

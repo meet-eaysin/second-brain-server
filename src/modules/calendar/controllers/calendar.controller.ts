@@ -56,7 +56,30 @@ export const getCalendarsController = catchAsync(
     const workspaceId = getWorkspaceId(req);
     const includeHidden = req.query.includeHidden === 'true';
 
-    const calendars = await getCalendars(userId, includeHidden, workspaceId);
+    let calendars = await getCalendars(userId, includeHidden, workspaceId);
+
+    // If no calendars exist for this workspace, create a default one
+    if (calendars.length === 0) {
+      try {
+        await createCalendar(
+          userId,
+          {
+            name: 'My Calendar',
+            color: '#3B82F6',
+            type: 'personal',
+            isDefault: true,
+            timeZone: 'UTC'
+          },
+          workspaceId
+        );
+
+        // Re-fetch calendars after creating default
+        calendars = await getCalendars(userId, includeHidden, workspaceId);
+      } catch (error) {
+        console.error('Failed to create default calendar:', error);
+        // Continue with empty array if creation fails
+      }
+    }
 
     sendSuccessResponse(res, 'Calendars retrieved successfully', calendars);
   }
