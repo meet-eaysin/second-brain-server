@@ -306,8 +306,10 @@ export const getDashboard = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const params: IDashboardQueryParams = req.query as any;
     const userId = getUserId(req);
+    const workspaceId = getWorkspaceId(req);
+    const dashboardParams = { ...params, workspaceId };
 
-    const dashboard = await dashboardService.getDashboardOverview(params, userId);
+    const dashboard = await dashboardService.getDashboardOverview(dashboardParams, userId);
 
     sendSuccessResponse(res, 'Dashboard data retrieved successfully', dashboard);
   }
