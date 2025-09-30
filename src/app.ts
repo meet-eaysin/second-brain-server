@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { errorHandler, notFound } from './middlewares';
-import { encryptRequest, encryptResponse } from './config';
+import {encryptRequest, encryptResponse, generalLimiter} from './config';
 import { stream } from './config/logger';
 import routes from './routes';
 import { createAppError } from './utils';
@@ -91,7 +91,7 @@ app.use(
   })
 );
 
-// app.use(generalLimiter);
+app.use(generalLimiter);
 
 app.use(encryptRequest);
 app.use(encryptResponse);
