@@ -67,8 +67,8 @@ export const getUserWithWorkspaces = async (userId: string) => {
       isDefault: workspace.type === 'personal',
       memberCount: workspace.memberCount,
       databaseCount: workspace.databaseCount,
-      createdAt: workspace.createdAt.toISOString(),
-      updatedAt: workspace.updatedAt.toISOString()
+      createdAt: workspace.createdAt ? workspace.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: workspace.updatedAt ? workspace.updatedAt.toISOString() : new Date().toISOString()
     };
   });
 

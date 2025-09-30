@@ -63,9 +63,9 @@ export const exchangeGoogleCodeForToken = async (code: string): Promise<TGoogleT
 
     return response.data;
   } catch (error: any) {
-    throw new Error(
-      `Failed to exchange Google code for token: ${error.response?.data?.error_description || error.message}`
-    );
+    const errorDesc =
+      error.response?.data?.error_description || error.response?.data?.error || error.message;
+    throw new Error(`Failed to exchange Google code for token: ${errorDesc}`);
   }
 };
 
