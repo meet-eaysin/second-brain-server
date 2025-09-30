@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { errorHandler, notFound } from './middlewares';
-import {encryptRequest, encryptResponse, generalLimiter} from './config';
+import { encryptRequest, encryptResponse, generalLimiter } from './config';
 import { stream } from './config/logger';
 import routes from './routes';
 import { createAppError } from './utils';
@@ -44,7 +44,7 @@ app.use(
       const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
         'http://localhost:5000',
         'http://localhost:5173',
-        'https://second-brain-rust-one.vercel.app/'
+        'https://second-brain-rust-one.vercel.app'
       ];
 
       if (!origin) return callback(null, true);
@@ -63,7 +63,8 @@ app.use(
       'Authorization',
       'X-Requested-With',
       'X-Forwarded-For',
-      'workspace-id'
+      'workspace-id',
+      'x-workspace-id'
     ],
     exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
   })
