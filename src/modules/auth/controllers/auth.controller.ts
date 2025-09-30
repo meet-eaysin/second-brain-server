@@ -139,7 +139,7 @@ export const googleCallback = catchAsync(
     }
 
     if (!code || typeof code !== 'string') {
-      const errorUrl = `${appConfig.clientUrl}/login?error=missing_code&message=Authorization code not received`;
+      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=missing_code&message=Authorization code not received`;
       return res.redirect(errorUrl);
     }
 
@@ -149,7 +149,7 @@ export const googleCallback = catchAsync(
         try {
           verifyStateToken(state);
         } catch (error) {
-          const errorUrl = `${appConfig.clientUrl}/login?error=invalid_state&message=Security validation failed`;
+          const errorUrl = `${appConfig.clientUrl}/auth/callback?error=invalid_state&message=Security validation failed`;
           return res.redirect(errorUrl);
         }
       }
@@ -165,7 +165,7 @@ export const googleCallback = catchAsync(
       res.redirect(redirectUrl);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      const errorUrl = `${appConfig.clientUrl}/login?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`;
+      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`;
       return res.redirect(errorUrl);
     }
   }
