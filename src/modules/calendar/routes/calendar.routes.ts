@@ -22,7 +22,7 @@ import {
   getCalendarConfigController,
   getCalendarPreferencesController,
   updateCalendarPreferencesController
-} from '../controllers/calendar.controller';
+} from '@/modules/calendar/controllers/calendar.controller';
 import {
   connectCalendarController,
   getCalendarConnectionsController,
@@ -35,14 +35,14 @@ import {
   getCalendarProvidersController,
   testCalendarConnectionController,
   getCalendarConnectionStatsController
-} from '../controllers/connection.controller';
+} from '@/modules/calendar/controllers/connection.controller';
 import {
   CalendarSchema,
   EventSchema,
   CalendarConnectionSchema,
   EEventStatus,
   EEventVisibility
-} from '../types/calendar.types';
+} from '@/modules/calendar/types/calendar.types';
 import { authenticateToken, validateRequest } from '@/middlewares';
 import {
   resolveWorkspaceContext,
@@ -52,12 +52,10 @@ import {
 
 const router = Router();
 
-// Apply authentication to all routes
 router.use(authenticateToken);
 router.use(resolveWorkspaceContext({ allowFromBody: true }));
 router.use(ensureDefaultWorkspace);
 
-// Validation schemas
 const createCalendarSchema = CalendarSchema;
 
 const updateCalendarSchema = z.object({

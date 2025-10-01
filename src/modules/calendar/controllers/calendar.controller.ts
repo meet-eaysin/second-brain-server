@@ -170,11 +170,7 @@ export const getEventsController = catchAsync(
 
     const events = await getEvents(userId, query, workspaceId);
 
-    sendSuccessResponse(res, 'Events retrieved successfully', {
-      events,
-      total: events.length,
-      query
-    });
+    sendSuccessResponse(res, 'Events retrieved successfully', events);
   }
 );
 
