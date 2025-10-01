@@ -23,7 +23,7 @@ import { generateId } from '@/utils/id-generator';
  * Initialize calendar sync system
  */
 export const initializeCalendarSync = (): void => {
-  console.log('📅 Initializing CalendarTypes Sync System...');
+  console.log('📅 Initializing Calendar Sync System...');
 
   // Sync external calendars every 15 minutes
   cron.schedule('*/15 * * * *', async () => {
@@ -52,7 +52,7 @@ export const initializeCalendarSync = (): void => {
     }
   });
 
-  console.log('✅ CalendarTypes Sync System initialized');
+  console.log('✅ Calendar Sync System initialized');
 };
 
 /**
@@ -152,7 +152,7 @@ const syncCalendarMetadata = async (
       // Create new internal calendar
       internalCalendar = new CalendarModel({
         id: generateId(),
-        name: externalCalendar.summary || externalCalendar.name || 'External CalendarTypes',
+        name: externalCalendar.summary || externalCalendar.name || 'External Calendar',
         description: externalCalendar.description,
         color: externalCalendar.backgroundColor || '#3B82F6',
         provider: connection.provider,
@@ -356,7 +356,7 @@ const convertExternalEventToInternal = (provider: ECalendarProvider, externalEve
 };
 
 /**
- * Parse Google CalendarTypes date/time
+ * Parse Google Calendar date/time
  */
 const parseGoogleDateTime = (dateTime: any): Date => {
   if (dateTime.date) {
@@ -366,7 +366,7 @@ const parseGoogleDateTime = (dateTime: any): Date => {
 };
 
 /**
- * Map Google CalendarTypes status
+ * Map Google Calendar status
  */
 const mapGoogleStatus = (status: string): EEventStatus => {
   switch (status) {
@@ -378,7 +378,7 @@ const mapGoogleStatus = (status: string): EEventStatus => {
 };
 
 /**
- * Map Google CalendarTypes attendee status
+ * Map Google Calendar attendee status
  */
 const mapGoogleAttendeeStatus = (status: string): string => {
   switch (status) {
@@ -495,7 +495,7 @@ export const manualSyncConnection = async (connectionId: string, userId: string)
     }).select('+accessToken +refreshToken');
 
     if (!connection) {
-      throw new Error('CalendarTypes connection not found');
+      throw new Error('Calendar connection not found');
     }
 
     await syncConnection(connection);
@@ -504,7 +504,7 @@ export const manualSyncConnection = async (connectionId: string, userId: string)
     await createNotification({
       type: ENotificationType.SYSTEM_UPDATE,
       priority: ENotificationPriority.LOW,
-      title: 'CalendarTypes Sync Complete',
+      title: 'Calendar Sync Complete',
       message: `Successfully synced calendar: ${connection.accountEmail}`,
       userId: userId,
       workspaceId: 'default',
@@ -522,7 +522,7 @@ export const manualSyncConnection = async (connectionId: string, userId: string)
     await createNotification({
       type: ENotificationType.SYSTEM_UPDATE,
       priority: ENotificationPriority.MEDIUM,
-      title: 'CalendarTypes Sync Failed',
+      title: 'Calendar Sync Failed',
       message: `Failed to sync calendar: ${errorMessage}`,
       userId: userId,
       workspaceId: 'default',

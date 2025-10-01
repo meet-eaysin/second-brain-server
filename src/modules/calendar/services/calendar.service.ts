@@ -137,7 +137,7 @@ export const getCalendarById = async (calendarId: string, userId: string): Promi
     });
 
     if (!calendar) {
-      throw createAppError('CalendarTypes not found', 404);
+      throw createAppError('Calendar not found', 404);
     }
 
     return transformCalendarDocument(calendar);
@@ -161,7 +161,7 @@ export const updateCalendar = async (
     });
 
     if (!calendar) {
-      throw createAppError('CalendarTypes not found', 404);
+      throw createAppError('Calendar not found', 404);
     }
 
     Object.assign(calendar, request);
@@ -185,7 +185,7 @@ export const deleteCalendar = async (calendarId: string, userId: string): Promis
     });
 
     if (!calendar) {
-      throw createAppError('CalendarTypes not found', 404);
+      throw createAppError('Calendar not found', 404);
     }
 
     // Don't allow deleting the default calendar if it's the only one
@@ -222,7 +222,7 @@ export const createEvent = async (
     });
 
     if (!calendar) {
-      throw createAppError('CalendarTypes not found', 404);
+      throw createAppError('Calendar not found', 404);
     }
 
     const event = new CalendarEventModel({

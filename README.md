@@ -374,7 +374,7 @@ The API is organized into the following main modules:
 - `GET /api/v1/goals` - List goals
 - `POST /api/v1/goals` - Create goal
 
-#### CalendarTypes Integration (`/api/v1/calendars`)
+#### Calendar Integration (`/api/v1/calendars`)
 - `GET /api/v1/calendars/events` - Get calendar events
 - `POST /api/v1/calendars/events` - Create calendar event
 - `PUT /api/v1/calendars/events/:id` - Update calendar event

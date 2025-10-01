@@ -219,7 +219,7 @@ export const updateTemplateSchema = createTemplateSchema
 
 // Content calendar schemas
 export const createCalendarSchema = z.object({
-  name: z.string().min(1, 'CalendarTypes name is required').max(200, 'Name too long'),
+  name: z.string().min(1, 'Calendar name is required').max(200, 'Name too long'),
   description: z.string().max(1000, 'Description too long').optional(),
   startDate: z
     .string()
@@ -267,7 +267,7 @@ export const updateCalendarSchema = createCalendarSchema
   .omit({ name: true })
   .partial()
   .extend({
-    name: z.string().min(1, 'CalendarTypes name is required').max(200, 'Name too long').optional()
+    name: z.string().min(1, 'Calendar name is required').max(200, 'Name too long').optional()
   });
 
 // Search schemas
@@ -351,7 +351,7 @@ export const contentValidators = {
   createTemplateSchema,
   updateTemplateSchema,
 
-  // CalendarTypes
+  // Calendar
   createCalendarSchema,
   updateCalendarSchema,
 
