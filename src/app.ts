@@ -92,7 +92,7 @@ app.use(
   })
 );
 
-app.use(generalLimiter);
+// app.use(generalLimiter);
 
 app.use(encryptRequest);
 app.use(encryptResponse);
