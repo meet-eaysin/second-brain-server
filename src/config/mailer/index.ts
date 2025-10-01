@@ -71,7 +71,7 @@ export const sendEmail = async (emailData: EmailData): Promise<boolean> => {
 export const emailTemplates = {
   welcome: (name: string): string => {
     return `
-      <h1>Welcome to our CRM, ${name}!</h1>
+      <h1>Welcome to you Second Brain, ${name}!</h1>
       <p>Thank you for joining us. We are excited to have you on board.</p>
       <p>Get started by logging into your account.</p>
     `;

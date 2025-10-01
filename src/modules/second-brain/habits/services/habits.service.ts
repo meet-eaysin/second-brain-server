@@ -1,7 +1,7 @@
 import { RecordModel } from '@/modules/database/models/record.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { EDatabaseType } from '@/modules/core/types/database.types';
-import { createNotFoundError } from '@/utils/response.utils';
+import { createNotFoundError } from '@/utils';
 import {
   getStringProperty,
   getNumberProperty,
@@ -35,7 +35,9 @@ export interface IHabitStats {
 }
 
 // Helper functions for type-safe property access
-function getCompletionHistory(properties: Record<string, TPropertyValue> | undefined): IHabitEntry[] {
+function getCompletionHistory(
+  properties: Record<string, TPropertyValue> | undefined
+): IHabitEntry[] {
   const history = properties?.completionHistory;
   if (isHabitEntryArray(history)) {
     return history;
@@ -44,12 +46,16 @@ function getCompletionHistory(properties: Record<string, TPropertyValue> | undef
 }
 
 function isHabitEntryArray(value: unknown): value is IHabitEntry[] {
-  return Array.isArray(value) && value.every(item =>
-    item &&
-    typeof item === 'object' &&
-    'habitId' in item &&
-    'date' in item &&
-    'completed' in item
+  return (
+    Array.isArray(value) &&
+    value.every(
+      item =>
+        item &&
+        typeof item === 'object' &&
+        'habitId' in item &&
+        'date' in item &&
+        'completed' in item
+    )
   );
 }
 
@@ -87,11 +93,7 @@ export class HabitsService {
   }
 
   // Mark habit as not completed for a specific date
-  async markHabitIncomplete(
-    habitId: string,
-    date: string,
-    userId?: string
-  ): Promise<void> {
+  async markHabitIncomplete(habitId: string, date: string, userId?: string): Promise<void> {
     const habit = await RecordModel.findById(habitId);
     if (!habit) {
       throw createNotFoundError('Habit not found');
@@ -129,9 +131,7 @@ export class HabitsService {
       });
     }
 
-    return filteredHistory.sort((a: IHabitEntry, b: IHabitEntry) =>
-      b.date.localeCompare(a.date)
-    );
+    return filteredHistory.sort((a: IHabitEntry, b: IHabitEntry) => b.date.localeCompare(a.date));
   }
 
   // Calculate habit statistics
@@ -148,12 +148,17 @@ export class HabitsService {
     const today = new Date();
 
     // Calculate total completions
-    const totalCompletions = completionHistory.filter((entry: IHabitEntry) => entry.completed).length;
+    const totalCompletions = completionHistory.filter(
+      (entry: IHabitEntry) => entry.completed
+    ).length;
 
     // Calculate completion rate
-    const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceStart = Math.floor(
+      (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
     const expectedCompletions = this.calculateExpectedCompletions(frequency, daysSinceStart);
-    const completionRate = expectedCompletions > 0 ? (totalCompletions / expectedCompletions) * 100 : 0;
+    const completionRate =
+      expectedCompletions > 0 ? (totalCompletions / expectedCompletions) * 100 : 0;
 
     // Get current streak
     const currentStreak = getNumberProperty(habit.properties, 'Current Streak', 0);
@@ -260,34 +265,24 @@ export class HabitsService {
     entry: IHabitEntry,
     userId?: string
   ): Promise<void> {
-    await RecordModel.findByIdAndUpdate(
-      habitId,
-      {
-        $push: { 'properties.completionHistory': entry },
-        $set: {
-          lastEditedAt: new Date(),
-          lastEditedBy: userId
-        }
+    await RecordModel.findByIdAndUpdate(habitId, {
+      $push: { 'properties.completionHistory': entry },
+      $set: {
+        lastEditedAt: new Date(),
+        lastEditedBy: userId
       }
-    );
+    });
   }
 
   // Remove habit entry
-  private async removeHabitEntry(
-    habitId: string,
-    date: string,
-    userId?: string
-  ): Promise<void> {
-    await RecordModel.findByIdAndUpdate(
-      habitId,
-      {
-        $pull: { 'properties.completionHistory': { date } },
-        $set: {
-          lastEditedAt: new Date(),
-          lastEditedBy: userId
-        }
+  private async removeHabitEntry(habitId: string, date: string, userId?: string): Promise<void> {
+    await RecordModel.findByIdAndUpdate(habitId, {
+      $pull: { 'properties.completionHistory': { date } },
+      $set: {
+        lastEditedAt: new Date(),
+        lastEditedBy: userId
       }
-    );
+    });
   }
 
   // Calculate streak based on completion history
@@ -360,9 +355,7 @@ export class HabitsService {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
 
-      const completed = completionHistory.some(
-        entry => entry.date === dateStr && entry.completed
-      );
+      const completed = completionHistory.some(entry => entry.date === dateStr && entry.completed);
 
       result.push(completed);
     }

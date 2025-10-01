@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { TJwtPayload, TUserRole } from '@/users/types/user.types';
 import { extractTokenFromHeader, verifyAccessToken } from '@/auth/utils/auth.utils';
-import { createForbiddenError, createUnauthorizedError } from '@/utils/response.utils';
-import { getUserById } from '../modules/users/services/users.services';
+import { createForbiddenError, createUnauthorizedError } from '@/utils';
+import { getUserById } from '@/modules/users/services/users.services';
 
 export interface AuthenticatedRequest extends Request {
   user: TJwtPayload & { userId: string };
@@ -14,7 +14,6 @@ export const authenticateToken = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // Stateless authentication: Only use Authorization header
     const accessToken = extractTokenFromHeader(req.headers.authorization);
 
     if (!accessToken) {

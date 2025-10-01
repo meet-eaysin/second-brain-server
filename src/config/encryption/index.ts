@@ -7,10 +7,6 @@ dotenv.config();
 const ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET as string;
 const ALGORITHM = 'aes-256-gcm';
 
-interface CustomResponse extends Response {
-  rawJson?: Function;
-}
-
 export const encryptData = (data: unknown): string => {
   try {
     const dataString = typeof data === 'string' ? data : JSON.stringify(data);

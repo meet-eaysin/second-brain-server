@@ -1,62 +1,57 @@
+import { sendEmail } from '@/config/mailer';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import {
-  TAuthResponse,
-  TLoginRequest,
-  TChangePasswordRequest,
-  TForgotPasswordRequest,
-  TResetPasswordRequest,
-  EAuthProvider
-} from '../../users/types/user.types';
-import { TRefreshTokenPayload } from '../types/auth.types';
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-  getGoogleUserProfile,
-  comparePassword,
-  exchangeGoogleCodeForToken,
-  validateEmail,
-  validatePassword
-} from '../utils/auth.utils';
-import {
-  createOrUpdateGoogleUser,
-  getUserByEmailWithPassword
-} from '../../users/services/users.services';
-import { UserModel } from '../../users/models/users.model';
-import { sendEmail } from '../../../utils/email.utils';
 import { jwtConfig } from '@/config/jwt/jwt.config';
 import { workspaceService } from '@/modules/workspace';
 import { WorkspaceMemberModel } from '@/modules/workspace/models/workspace-member.model';
 import {
-  createInvalidCredentialsError,
   createAccountDeactivatedError,
-  createOAuthAccountError,
-  createUserNotFoundError,
-  createUserInactiveError,
-  createPasswordMismatchError,
-  createPasswordRequiredError,
-  createOAuthOnlyAccountError,
-  createResetTokenInvalidError,
-  createResetNotAvailableError,
-  createRefreshTokenInvalidError,
-  createRefreshTokenExpiredError,
-  createOAuthCodeInvalidError,
-  createOAuthTokenExchangeFailedError,
-  createOAuthProfileFetchFailedError,
+  createAuthenticationFailedError,
+  createInvalidCredentialsError,
   createInvalidEmailFormatError,
   createInvalidPasswordFormatError,
-  createAuthenticationFailedError,
-  createResetTokenExpiredError
-} from '../utils/auth-errors';
+  createOAuthAccountError,
+  createOAuthCodeInvalidError,
+  createOAuthOnlyAccountError,
+  createOAuthProfileFetchFailedError,
+  createOAuthTokenExchangeFailedError,
+  createPasswordMismatchError,
+  createPasswordRequiredError,
+  createRefreshTokenExpiredError,
+  createRefreshTokenInvalidError,
+  createResetNotAvailableError,
+  createResetTokenExpiredError,
+  createResetTokenInvalidError,
+  createUserInactiveError,
+  createUserNotFoundError
+} from '@/modules/auth/utils/auth-errors';
+import {
+  createOrUpdateGoogleUser,
+  EAuthProvider,
+  getUserByEmailWithPassword,
+  TAuthResponse,
+  TChangePasswordRequest,
+  TForgotPasswordRequest,
+  TLoginRequest,
+  TResetPasswordRequest,
+  UserModel
+} from '@/modules/users';
+import {
+  comparePassword,
+  exchangeGoogleCodeForToken,
+  generateAccessToken,
+  generateRefreshToken,
+  getGoogleUserProfile,
+  TRefreshTokenPayload,
+  validateEmail,
+  validatePassword,
+  verifyRefreshToken
+} from '@/modules/auth';
 
-// Helper function to get user with workspace information
 export const getUserWithWorkspaces = async (userId: string) => {
-  // Fetch user's workspaces with membership details
   const workspaces = await workspaceService.getUserWorkspaces(userId);
   const workspaceMemberships = await WorkspaceMemberModel.findByUser(userId);
 
-  // Combine workspace data with membership info
-  const userWorkspaces = workspaces.map(workspace => {
+  return workspaces.map(workspace => {
     const membership = workspaceMemberships.find(m => m.workspaceId.toString() === workspace.id);
     return {
       id: workspace.id,
@@ -71,8 +66,6 @@ export const getUserWithWorkspaces = async (userId: string) => {
       updatedAt: workspace.updatedAt ? workspace.updatedAt.toISOString() : new Date().toISOString()
     };
   });
-
-  return userWorkspaces;
 };
 
 export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthResponse> => {
@@ -111,7 +104,6 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 
     const { password: _, ...userWithoutPassword } = user;
 
-    // Add workspace information to user
     const workspaces = await getUserWithWorkspaces(user.id);
     const userWithWorkspaces = {
       ...userWithoutPassword,
@@ -136,21 +128,14 @@ export const authenticateUser = async (loginData: TLoginRequest): Promise<TAuthR
 
 export const handleGoogleCallback = async (code: string): Promise<TAuthResponse> => {
   try {
-    if (!code || typeof code !== 'string') {
-      throw createOAuthCodeInvalidError();
-    }
+    if (!code || typeof code !== 'string') throw createOAuthCodeInvalidError();
 
-    // Exchange authorization code for access token
     const tokenResponse = await exchangeGoogleCodeForToken(code);
-    if (!tokenResponse.access_token) {
+    if (!tokenResponse.access_token)
       throw createAuthenticationFailedError('Failed to get access token from Google');
-    }
 
-    // Get user profile from Google
     const googleProfile = await getGoogleUserProfile(tokenResponse.access_token);
-    if (!googleProfile.email) {
-      throw createAuthenticationFailedError('Email not provided by Google');
-    }
+    if (!googleProfile.email) throw createAuthenticationFailedError('Email not provided by Google');
 
     const user = await createOrUpdateGoogleUser(googleProfile);
 
@@ -172,7 +157,6 @@ export const handleGoogleCallback = async (code: string): Promise<TAuthResponse>
     const newAccessToken = generateAccessToken(accessTokenPayload);
     const newRefreshToken = generateRefreshToken(refreshTokenPayload);
 
-    // Add workspace information to user
     const workspaces = await getUserWithWorkspaces(user.id);
     const userWithWorkspaces = {
       ...user,
@@ -187,15 +171,10 @@ export const handleGoogleCallback = async (code: string): Promise<TAuthResponse>
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      throw error;
-    }
-    if (errorMessage.includes('token exchange')) {
+    if (error && typeof error === 'object' && 'statusCode' in error) throw error;
+    if (errorMessage.includes('token exchange'))
       throw createOAuthTokenExchangeFailedError(errorMessage);
-    }
-    if (errorMessage.includes('profile')) {
-      throw createOAuthProfileFetchFailedError(errorMessage);
-    }
+    if (errorMessage.includes('profile')) throw createOAuthProfileFetchFailedError(errorMessage);
 
     throw createAuthenticationFailedError(errorMessage);
   }
@@ -207,19 +186,16 @@ export const refreshAccessToken = async (
   try {
     const payload = verifyRefreshToken(refreshToken);
 
-    if (!refreshToken || typeof refreshToken !== 'string') {
-      throw createRefreshTokenInvalidError();
-    }
+    if (!refreshToken) throw createRefreshTokenInvalidError();
 
     const user = await UserModel.findById(payload.userId).select(
       'email username role authProvider isActive'
     );
+
     if (!user) throw createUserNotFoundError();
     if (!user.isActive) throw createUserInactiveError();
-
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000))
       throw createRefreshTokenExpiredError();
-    }
 
     const accessTokenPayload: JwtPayload = {
       userId: user.id,
@@ -231,7 +207,6 @@ export const refreshAccessToken = async (
 
     const newAccessToken = generateAccessToken(accessTokenPayload);
 
-    // Generate new refresh token for security
     const newRefreshTokenPayload: TRefreshTokenPayload = {
       userId: user.id,
       tokenVersion: 0
@@ -320,7 +295,7 @@ export const resetPassword = async (resetPasswordData: TResetPasswordRequest): P
   try {
     const { resetToken, newPassword } = resetPasswordData;
 
-    if (!resetToken || typeof resetToken !== 'string') throw createResetTokenInvalidError();
+    if (!resetToken) throw createResetTokenInvalidError();
     if (!validatePassword(newPassword)) throw createInvalidPasswordFormatError();
 
     interface IResetTokenPayload {
@@ -359,45 +334,18 @@ export const logoutUser = async (userId: string): Promise<void> => {
   console.log('User logout:', { userId, timestamp: new Date().toISOString() });
 };
 
-export const logoutAllDevices = async (userId: string): Promise<void> => {
+const logoutAllDevices = async (userId: string): Promise<void> => {
   console.log('User logout all devices:', { userId, timestamp: new Date().toISOString() });
 };
 
-// AuthService class for consistency with other modules
-export class AuthService {
-  async authenticateUser(credentials: TLoginRequest): Promise<TAuthResponse> {
-    return authenticateUser(credentials);
-  }
-
-  async handleGoogleCallback(code: string): Promise<TAuthResponse> {
-    return handleGoogleCallback(code);
-  }
-
-  async refreshAccessToken(
-    refreshToken: string
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    return refreshAccessToken(refreshToken);
-  }
-
-  async changePassword(userId: string, data: TChangePasswordRequest): Promise<void> {
-    return changePassword(userId, data);
-  }
-
-  async forgotPassword(data: TForgotPasswordRequest): Promise<void> {
-    return forgotPassword(data);
-  }
-
-  async resetPassword(data: TResetPasswordRequest): Promise<void> {
-    return resetPassword(data);
-  }
-
-  async logoutUser(userId: string): Promise<void> {
-    return logoutUser(userId);
-  }
-
-  async logoutAllDevices(userId: string): Promise<void> {
-    return logoutAllDevices(userId);
-  }
-}
-
-export const authService = new AuthService();
+export const authService = {
+  logoutAllDevices,
+  logoutUser,
+  resetPassword,
+  forgotPassword,
+  changePassword,
+  refreshAccessToken,
+  handleGoogleCallback,
+  getUserWithWorkspaces,
+  authenticateUser
+};

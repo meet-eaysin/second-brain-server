@@ -3,14 +3,14 @@ import { catchAsync } from '@/utils/catch-async';
 import { sendSuccessResponse } from '@/utils/response.utils';
 import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
-import { CalendarConnectionModel, CalendarSyncLogModel } from '../models/connection.model';
-import { ExternalCalendarProviderFactory } from '../services/external-calendar.service';
-import { manualSyncConnection } from '../services/sync.service';
-import {
-  IConnectCalendarRequest,
-  ECalendarProvider
-} from '../types/calendar.types';
 import { getUserId } from '@/auth/index';
+import {
+  ECalendarProvider,
+  ExternalCalendarProviderFactory,
+  IConnectCalendarRequest,
+  manualSyncConnection
+} from "@/modules/calendar";
+import {CalendarConnectionModel, CalendarSyncLogModel} from "@/modules/calendar/models/connection.model";
 
 /**
  * Connect external calendar
@@ -20,34 +20,29 @@ export const connectCalendarController = catchAsync(
     const userId = getUserId(req);
     const request: IConnectCalendarRequest = req.body;
 
-    // Check if connection already exists
     const existingConnection = await CalendarConnectionModel.findOne({
       userId,
       provider: request.provider,
       accountEmail: request.accountEmail
     });
 
-    if (existingConnection) {
-      throw createAppError('Calendar connection already exists for this account', 409);
-    }
+    if (existingConnection) throw createAppError('Calendar connection already exists for this account', 409);
 
-    // Validate provider
     if (!Object.values(ECalendarProvider).includes(request.provider)) {
       throw createAppError('Invalid calendar provider', 400);
     }
 
-    // Create new connection
     const connection = new CalendarConnectionModel({
       id: generateId(),
       userId,
       provider: request.provider,
       accountEmail: request.accountEmail,
-      accountName: request.accountEmail, // Will be updated after first sync
+      accountName: request.accountEmail,
       accessToken: request.accessToken || '',
       refreshToken: request.refreshToken,
       isActive: true,
       syncEnabled: true,
-      syncFrequency: 15, // 15 minutes default
+      syncFrequency: 15,
       syncSettings: {
         importEvents: true,
         exportEvents: false,
@@ -62,7 +57,6 @@ export const connectCalendarController = catchAsync(
 
     await connection.save();
 
-    // Trigger initial sync
     try {
       await manualSyncConnection(connection.id, userId);
     } catch (error) {
@@ -161,20 +155,10 @@ export const updateCalendarConnectionController = catchAsync(
       userId
     });
 
-    if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
-    }
-
-    // Update allowed fields
-    if (typeof syncEnabled === 'boolean') {
-      connection.syncEnabled = syncEnabled;
-    }
-    if (typeof syncFrequency === 'number' && syncFrequency >= 5 && syncFrequency <= 1440) {
-      connection.syncFrequency = syncFrequency;
-    }
-    if (syncSettings && typeof syncSettings === 'object') {
-      connection.syncSettings = { ...connection.syncSettings, ...syncSettings };
-    }
+    if (!connection) throw createAppError('Calendar connection not found', 404);
+    if (typeof syncEnabled === 'boolean') connection.syncEnabled = syncEnabled;
+    if (typeof syncFrequency === 'number' && syncFrequency >= 5 && syncFrequency <= 1440) connection.syncFrequency = syncFrequency;
+    if (syncSettings && typeof syncSettings === 'object') connection.syncSettings = { ...connection.syncSettings, ...syncSettings };
 
     await connection.save();
 
@@ -200,10 +184,7 @@ export const disconnectCalendarController = catchAsync(
       userId
     });
 
-    if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
-    }
-
+    if (!connection) throw createAppError('Calendar connection not found', 404);
     await connection.disconnect();
 
     sendSuccessResponse(res, 'Calendar disconnected successfully');
@@ -233,7 +214,6 @@ export const getCalendarSyncLogsController = catchAsync(
     const { connectionId } = req.params;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
 
-    // Verify connection ownership
     const connection = await CalendarConnectionModel.findOne({
       _id: connectionId,
       userId
@@ -345,9 +325,7 @@ export const testCalendarConnectionController = catchAsync(
       userId
     }).select('+accessToken +refreshToken');
 
-    if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
-    }
+    if (!connection) throw createAppError('Calendar connection not found', 404);
 
     try {
       const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
@@ -366,7 +344,7 @@ export const testCalendarConnectionController = catchAsync(
         error: errorMessage,
         provider: connection.provider,
         accountEmail: connection.accountEmail
-      }, 200); // Still return 200 since the test completed
+      }, 200);
     }
   }
 );
@@ -390,7 +368,6 @@ export const getCalendarConnectionStatsController = catchAsync(
       CalendarSyncLogModel.find({}).sort({ startedAt: -1 }).limit(10)
     ]);
 
-    // Get connections by provider
     const connectionsByProvider = await CalendarConnectionModel.aggregate([
       { $match: { userId, isActive: true } },
       { $group: { _id: '$provider', count: { $sum: 1 } } }

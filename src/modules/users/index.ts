@@ -27,6 +27,8 @@ export {
 
 export { UserModel } from './models/users.model';
 
+export { TUserRole, EAuthProvider } from './types/user.types';
+
 export type {
   TUser,
   TUserCreateRequest,
@@ -35,7 +37,5 @@ export type {
   TAuthResponse,
   TChangePasswordRequest,
   TForgotPasswordRequest,
-  TResetPasswordRequest,
-  TUserRole,
-  EAuthProvider
+  TResetPasswordRequest
 } from './types/user.types';

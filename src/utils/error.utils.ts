@@ -1,5 +1,35 @@
-import { convertErrorArrayToRecord, convertToValidationError } from './validation-error-converter';
 import {IValidationError, TAppError} from "@/types";
+import {convertErrorArrayToRecord, convertToValidationError} from "@/utils/validation-error-converter";
+
+/**
+ * Get error code from status code
+ */
+export const getErrorCode = (statusCode: number): string => {
+  switch (statusCode) {
+    case 400:
+      return 'BAD_REQUEST';
+    case 401:
+      return 'UNAUTHORIZED';
+    case 403:
+      return 'FORBIDDEN';
+    case 404:
+      return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
+    case 422:
+      return 'VALIDATION_ERROR';
+    case 429:
+      return 'RATE_LIMIT_EXCEEDED';
+    case 500:
+      return 'INTERNAL_SERVER_ERROR';
+    case 502:
+      return 'BAD_GATEWAY';
+    case 503:
+      return 'SERVICE_UNAVAILABLE';
+    default:
+      return 'UNKNOWN_ERROR';
+  }
+}
 
 export const createAppError = (
   message: string,
@@ -37,7 +67,6 @@ export const createValidationError = (
   if (Array.isArray(errors)) {
     error.errors = convertErrorArrayToRecord(errors);
   } else if (errors && typeof errors === 'object') {
-    // If it's already in the correct format, use it
     if ('field' in errors || 'code' in errors || 'message' in errors) {
       error.errors = { error: convertToValidationError(errors) };
     } else {

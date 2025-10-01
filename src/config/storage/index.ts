@@ -101,7 +101,6 @@ export const uploadToS3 = async (file: Express.Multer.File): Promise<string> => 
   }
 };
 
-// Upload directly from memory buffer (for multer.memoryStorage)
 export const uploadBufferToS3 = async (
   buffer: Buffer,
   originalName: string,

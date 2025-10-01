@@ -2,34 +2,27 @@ import axios from 'axios';
 import bcrypt from 'bcrypt';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import crypto from 'crypto';
-import {
-  TGoogleUserProfile,
-  TRefreshTokenPayload,
-  TGoogleTokenResponse
-} from '../types/auth.types';
-import { jwtConfig } from '../../../config/jwt/jwt.config';
-import { TJwtPayload } from '../../users/types/user.types';
 import { createAppError } from '@/utils';
 import { Request } from 'express';
 import googleConfig from '@/config/google/google';
+import {jwtConfig} from "@/config";
+import {TGoogleTokenResponse, TGoogleUserProfile, TRefreshTokenPayload} from "@/modules/auth";
+import {TJwtPayload} from "@/users/types/user.types";
 
 export const generateGoogleLoginUrl = (): { url: string } => {
-  // Create state payload for CSRF protection
   const statePayload = {
     timestamp: Date.now(),
     nonce: crypto.randomBytes(16).toString('hex'),
     provider: 'google'
   };
 
-  // Sign the state token for security
   const state = jwt.sign(statePayload, jwtConfig.accessTokenSecret, {
-    expiresIn: '10m' // State expires in 10 minutes
+    expiresIn: '10m'
   });
 
-  // Build Google OAuth URL for redirect flow
   const params = new URLSearchParams({
     client_id: googleConfig.clientId,
-    redirect_uri: googleConfig.redirectUri, // Points to backend callback
+    redirect_uri: googleConfig.redirectUri,
     response_type: 'code',
     scope: 'openid profile email',
     access_type: 'offline',
@@ -98,9 +91,7 @@ export const verifyRefreshToken = (accessToken: string): TRefreshTokenPayload =>
 };
 
 export const extractTokenFromHeader = (authHeader: string | undefined): string | null => {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   return authHeader.substring(7);
 };
 
@@ -144,20 +135,12 @@ export const verifyStateToken = (state: string) => {
   try {
     const decoded = jwt.verify(state, jwtConfig.accessTokenSecret) as any;
 
-    // Verify timestamp (should be within last 10 minutes)
     const now = Date.now();
     const stateTime = decoded.timestamp;
     const timeDiff = now - stateTime;
 
-    if (timeDiff > 10 * 60 * 1000) {
-      // 10 minutes
-      throw new Error('State token expired');
-    }
-
-    // Verify provider
-    if (decoded.provider !== 'google') {
-      throw new Error('Invalid provider in state token');
-    }
+    if (timeDiff > 10 * 60 * 1000) throw new Error('State token expired');
+    if (decoded.provider !== 'google') throw new Error('Invalid provider in state token');
 
     return decoded;
   } catch (error) {
@@ -167,8 +150,6 @@ export const verifyStateToken = (state: string) => {
 
 export const getUserId = (req: Request): string => {
   const userId = req.user?.userId;
-  if (!userId) {
-    throw createAppError('User not authenticated', 401);
-  }
+  if (!userId) throw createAppError('User not authenticated', 401);
   return userId;
 };

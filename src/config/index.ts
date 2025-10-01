@@ -7,4 +7,3 @@ export { sendEmail } from './mailer';
 export { generalLimiter, authLimiter, strictLimiter } from './rate-limiter';
 export { sendSMS } from './sms';
 export { uploadToS3, uploadBufferToS3, deleteFromS3 } from './storage';
-export { default as swaggerDefinition } from './swagger';

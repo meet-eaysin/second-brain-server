@@ -2,8 +2,7 @@ import { ObjectId } from 'mongodb';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { EDatabaseType } from '@/modules/core/types/database.types';
-import { createNotFoundError } from '@/utils/response.utils';
-import { createAppError } from '@/utils';
+import { createAppError, createNotFoundError } from '@/utils';
 
 export interface IJournalEntry {
   id: string;
@@ -54,7 +53,9 @@ export class JournalService {
     });
 
     if (!journalDb) {
-      throw createNotFoundError('Journal database not found. Please initialize journal module first.');
+      throw createNotFoundError(
+        'Journal database not found. Please initialize journal module first.'
+      );
     }
 
     // Check if entry already exists for this date
@@ -72,16 +73,16 @@ export class JournalService {
     const journalEntry = new RecordModel({
       databaseId: journalDb.id.toString(),
       properties: {
-        'Date': entryData.date,
-        'Title': entryData.title || `Journal Entry - ${entryData.date}`,
-        'Mood': entryData.mood,
+        Date: entryData.date,
+        Title: entryData.title || `Journal Entry - ${entryData.date}`,
+        Mood: entryData.mood,
         'Energy Level': entryData.energyLevel,
-        'Gratitude': entryData.gratitude,
-        'Highlights': entryData.highlights,
-        'Challenges': entryData.challenges,
+        Gratitude: entryData.gratitude,
+        Highlights: entryData.highlights,
+        Challenges: entryData.challenges,
         'Lessons Learned': entryData.lessonsLearned,
         'Tomorrow Goals': entryData.tomorrowGoals,
-        'Tags': entryData.tags || []
+        Tags: entryData.tags || []
       },
       content: entryData.content || [],
       createdBy: userId,
@@ -112,12 +113,17 @@ export class JournalService {
 
     if (updateData.title !== undefined) updates['properties.Title'] = updateData.title;
     if (updateData.mood !== undefined) updates['properties.Mood'] = updateData.mood;
-    if (updateData.energyLevel !== undefined) updates['properties.Energy Level'] = updateData.energyLevel;
+    if (updateData.energyLevel !== undefined)
+      updates['properties.Energy Level'] = updateData.energyLevel;
     if (updateData.gratitude !== undefined) updates['properties.Gratitude'] = updateData.gratitude;
-    if (updateData.highlights !== undefined) updates['properties.Highlights'] = updateData.highlights;
-    if (updateData.challenges !== undefined) updates['properties.Challenges'] = updateData.challenges;
-    if (updateData.lessonsLearned !== undefined) updates['properties.Lessons Learned'] = updateData.lessonsLearned;
-    if (updateData.tomorrowGoals !== undefined) updates['properties.Tomorrow Goals'] = updateData.tomorrowGoals;
+    if (updateData.highlights !== undefined)
+      updates['properties.Highlights'] = updateData.highlights;
+    if (updateData.challenges !== undefined)
+      updates['properties.Challenges'] = updateData.challenges;
+    if (updateData.lessonsLearned !== undefined)
+      updates['properties.Lessons Learned'] = updateData.lessonsLearned;
+    if (updateData.tomorrowGoals !== undefined)
+      updates['properties.Tomorrow Goals'] = updateData.tomorrowGoals;
     if (updateData.tags !== undefined) updates['properties.Tags'] = updateData.tags;
     if (updateData.content !== undefined) updates.content = updateData.content;
 
@@ -195,8 +201,7 @@ export class JournalService {
     const total = await RecordModel.countDocuments(query);
 
     // Get entries with pagination
-    const entriesQuery = RecordModel.find(query)
-      .sort({ 'properties.Date': -1 });
+    const entriesQuery = RecordModel.find(query).sort({ 'properties.Date': -1 });
 
     if (options.limit) {
       entriesQuery.limit(options.limit);
@@ -262,12 +267,13 @@ export class JournalService {
       const energyLevel = e.properties?.['Energy Level'];
       return typeof energyLevel === 'number';
     });
-    const averageEnergyLevel = energyEntries.length > 0
-      ? energyEntries.reduce((sum, e) => {
-          const energyLevel = e.properties?.['Energy Level'];
-          return sum + (typeof energyLevel === 'number' ? energyLevel : 0);
-        }, 0) / energyEntries.length
-      : 0;
+    const averageEnergyLevel =
+      energyEntries.length > 0
+        ? energyEntries.reduce((sum, e) => {
+            const energyLevel = e.properties?.['Energy Level'];
+            return sum + (typeof energyLevel === 'number' ? energyLevel : 0);
+          }, 0) / energyEntries.length
+        : 0;
 
     // Calculate time-based stats
     const now = new Date();
@@ -289,7 +295,7 @@ export class JournalService {
     entries.forEach(entry => {
       const tagsProperty = entry.properties?.['Tags'];
       const tags = Array.isArray(tagsProperty) ? tagsProperty : [];
-      tags.forEach((tag) => {
+      tags.forEach(tag => {
         if (typeof tag === 'string') {
           tagCounts[tag] = (tagCounts[tag] || 0) + 1;
         }
@@ -315,11 +321,7 @@ export class JournalService {
   }
 
   // Get mood trends over time
-  async getMoodTrends(
-    userId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<IMoodTrend[]> {
+  async getMoodTrends(userId: string, startDate?: string, endDate?: string): Promise<IMoodTrend[]> {
     const { entries } = await this.getJournalEntries(userId, {
       startDate,
       endDate
@@ -371,8 +373,7 @@ export class JournalService {
 
     const total = await RecordModel.countDocuments(query);
 
-    const entriesQuery = RecordModel.find(query)
-      .sort({ 'properties.Date': -1 });
+    const entriesQuery = RecordModel.find(query).sort({ 'properties.Date': -1 });
 
     if (options.limit) {
       entriesQuery.limit(options.limit);
@@ -472,7 +473,9 @@ export class JournalService {
         const entryDate = new Date(entryDateStr);
         entryDate.setHours(0, 0, 0, 0);
 
-        const daysDiff = Math.floor((currentDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.floor(
+          (currentDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
 
         if (daysDiff === streak) {
           streak++;
@@ -520,7 +523,9 @@ export class JournalService {
         const prevDate = new Date(prevDateStr);
         const currDate = new Date(currDateStr);
 
-        const daysDiff = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.floor(
+          (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
 
         if (daysDiff === 1) {
           currentStreak++;
@@ -536,11 +541,11 @@ export class JournalService {
 
   private getMoodScore(mood: string): number {
     const moodScores: { [mood: string]: number } = {
-      'terrible': 1,
-      'bad': 2,
-      'okay': 3,
-      'good': 4,
-      'amazing': 5
+      terrible: 1,
+      bad: 2,
+      okay: 3,
+      good: 4,
+      amazing: 5
     };
 
     return moodScores[mood] || 3;

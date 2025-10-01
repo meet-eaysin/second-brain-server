@@ -18,8 +18,7 @@ import {
 } from '../types/template.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { IFilterGroup, ISortConfig, IGroupConfig } from '@/modules/core/types/view.types';
-import { createNotFoundError } from '@/utils/response.utils';
-import { createAppError } from '@/utils';
+import {createAppError, createNotFoundError} from '@/utils';
 
 export class TemplateBuilderService {
   // Create row template from existing record

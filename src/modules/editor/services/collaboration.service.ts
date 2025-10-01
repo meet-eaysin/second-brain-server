@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { IEditorOperation } from './rich-editor.service';
 import { generateId } from '@/utils/id-generator';
-import { createNotFoundError } from '@/utils/response.utils';
+import { createNotFoundError } from '@/utils';
 
 export interface ICollaborationSession {
   id: string;
@@ -55,8 +55,16 @@ export interface IOperationalTransform {
 export class CollaborationService extends EventEmitter {
   private sessions: Map<string, ICollaborationSession> = new Map();
   private userColors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#96CEB4',
+    '#FFEAA7',
+    '#DDA0DD',
+    '#98D8C8',
+    '#F7DC6F',
+    '#BB8FCE',
+    '#85C1E9'
   ];
 
   // Create or join collaboration session
@@ -173,10 +181,7 @@ export class CollaborationService extends EventEmitter {
   }
 
   // Update cursor position
-  async updateCursor(
-    recordId: string,
-    cursorUpdate: ICursorUpdate
-  ): Promise<void> {
+  async updateCursor(recordId: string, cursorUpdate: ICursorUpdate): Promise<void> {
     const session = this.sessions.get(recordId);
     if (!session) return;
 
@@ -198,10 +203,7 @@ export class CollaborationService extends EventEmitter {
   }
 
   // Update text selection
-  async updateSelection(
-    recordId: string,
-    selectionUpdate: ISelectionUpdate
-  ): Promise<void> {
+  async updateSelection(recordId: string, selectionUpdate: ISelectionUpdate): Promise<void> {
     const session = this.sessions.get(recordId);
     if (!session) return;
 
@@ -252,7 +254,7 @@ export class CollaborationService extends EventEmitter {
     for (const concurrentOp of concurrentOps) {
       const result = this.transformTwoOperations(transformedOp, concurrentOp);
       transformedOp = result.transformed;
-      
+
       if (result.hasConflict) {
         conflicts.push(concurrentOp);
       }
@@ -307,7 +309,7 @@ export class CollaborationService extends EventEmitter {
       // Both formatting - check for overlap
       const op1End = op1.position + (op1.length || 0);
       const op2End = op2.position + (op2.length || 0);
-      
+
       if (!(op1End <= op2.position || op2End <= op1.position)) {
         hasConflict = true;
       }
@@ -320,11 +322,11 @@ export class CollaborationService extends EventEmitter {
   private assignUserColor(participants: IParticipant[]): string {
     const usedColors = participants.map(p => p.color);
     const availableColors = this.userColors.filter(color => !usedColors.includes(color));
-    
+
     if (availableColors.length > 0) {
       return availableColors[0];
     }
-    
+
     // If all colors are used, cycle through them
     return this.userColors[participants.length % this.userColors.length];
   }
@@ -336,12 +338,12 @@ export class CollaborationService extends EventEmitter {
 
     for (const [recordId, session] of this.sessions.entries()) {
       const timeSinceLastActivity = now.getTime() - session.lastActivity.getTime();
-      
+
       if (timeSinceLastActivity > inactiveThreshold) {
         // Mark all participants as inactive
-        session.participants.forEach(p => p.isActive = false);
+        session.participants.forEach(p => (p.isActive = false));
         this.sessions.delete(recordId);
-        
+
         this.emit('session-closed', {
           sessionId: session.id,
           recordId,
@@ -408,7 +410,7 @@ export class CollaborationService extends EventEmitter {
   private mergeConflictingOperations(conflicts: IEditorOperation[]): IEditorOperation[] {
     // Simple merge strategy - combine text insertions, prioritize latest formatting
     const merged: IEditorOperation[] = [];
-    
+
     // Group by operation type and position
     const insertions = conflicts.filter(op => op.type === 'insert');
     const deletions = conflicts.filter(op => op.type === 'delete');
@@ -426,7 +428,7 @@ export class CollaborationService extends EventEmitter {
 
     // Keep latest deletion
     if (deletions.length > 0) {
-      const latestDeletion = deletions.reduce((latest, current) => 
+      const latestDeletion = deletions.reduce((latest, current) =>
         current.timestamp > latest.timestamp ? current : latest
       );
       merged.push(latestDeletion);
@@ -434,7 +436,7 @@ export class CollaborationService extends EventEmitter {
 
     // Keep latest formatting
     if (formatting.length > 0) {
-      const latestFormatting = formatting.reduce((latest, current) => 
+      const latestFormatting = formatting.reduce((latest, current) =>
         current.timestamp > latest.timestamp ? current : latest
       );
       merged.push(latestFormatting);
@@ -447,6 +449,9 @@ export class CollaborationService extends EventEmitter {
 export const collaborationService = new CollaborationService();
 
 // Clean up inactive sessions every 5 minutes
-setInterval(() => {
-  collaborationService.cleanupInactiveSessions();
-}, 5 * 60 * 1000);
+setInterval(
+  () => {
+    collaborationService.cleanupInactiveSessions();
+  },
+  5 * 60 * 1000
+);

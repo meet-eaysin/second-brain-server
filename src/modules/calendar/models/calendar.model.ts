@@ -1,5 +1,5 @@
 import { Schema, model, Document, Model } from 'mongoose';
-import { ECalendarProvider, ECalendarType, ECalendarAccessLevel } from '../types/calendar.types';
+import {ECalendarAccessLevel, ECalendarProvider, ECalendarType} from "@/modules/calendar";
 
 export interface ICalendarDocument extends Document {
   name: string;
@@ -8,47 +8,38 @@ export interface ICalendarDocument extends Document {
   provider: ECalendarProvider;
   type: ECalendarType;
 
-  // External calendar data
   externalId?: string;
   externalData?: Record<string, unknown>;
 
-  // Access and sharing
   ownerId: string;
   workspaceId: string;
   isDefault: boolean;
   isVisible: boolean;
   accessLevel: ECalendarAccessLevel;
 
-  // Sync settings
   syncEnabled: boolean;
   lastSyncAt?: Date;
   syncToken?: string;
 
-  // Time zone
   timeZone: string;
 
-  // Metadata
   metadata?: {
     source?: string;
     tags?: string[];
     category?: string;
   };
 
-  // Timestamps (from IBaseEntity)
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
   updatedBy?: string;
 
-  // Document _id override
   _id: string;
 
-  // Instance methods
   updateSyncStatus(syncToken?: string, error?: string): Promise<this>;
   setAsDefault(): Promise<this>;
 }
 
-// Static methods interface
 export interface ICalendarModel extends Model<ICalendarDocument> {
   findByOwner(
     ownerId: string,
@@ -162,12 +153,10 @@ const CalendarSchema = new Schema<ICalendarDocument>(
   }
 );
 
-// Indexes
 CalendarSchema.index({ ownerId: 1, isVisible: 1 });
 CalendarSchema.index({ provider: 1, externalId: 1 });
 CalendarSchema.index({ type: 1, ownerId: 1 });
 
-// Ensure only one default calendar per user
 CalendarSchema.index(
   { ownerId: 1, isDefault: 1 },
   {
@@ -176,12 +165,10 @@ CalendarSchema.index(
   }
 );
 
-// Virtual for ID
 CalendarSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
-// Transform output
 CalendarSchema.set('toJSON', {
   virtuals: true,
   transform: function (_doc, ret) {
@@ -196,7 +183,6 @@ CalendarSchema.set('toJSON', {
   }
 });
 
-// Pre-save middleware
 CalendarSchema.pre('save', function (next) {
   if (this.isModified() && !this.isNew) {
     this.updatedBy = this.ownerId;
@@ -204,7 +190,6 @@ CalendarSchema.pre('save', function (next) {
   next();
 });
 
-// Static methods
 CalendarSchema.statics.findByOwner = function (
   ownerId: string,
   includeHidden = false,
@@ -239,7 +224,6 @@ CalendarSchema.statics.findByExternalId = function (
   return this.findOne({ provider, externalId });
 };
 
-// Instance methods
 CalendarSchema.methods.updateSyncStatus = function (syncToken?: string, error?: string) {
   this.lastSyncAt = new Date();
   if (syncToken) {
@@ -257,12 +241,10 @@ CalendarSchema.methods.setAsDefault = async function () {
     { isDefault: false }
   );
 
-  // Set this as default
   this.isDefault = true;
   return this.save();
 };
 
-// Export model
 export const CalendarModel = model<ICalendarDocument, ICalendarModel>('Calendar', CalendarSchema);
 
 export interface ICalendarShare extends Document {
@@ -308,15 +290,12 @@ const CalendarShareSchema = new Schema<ICalendarShare>(
   }
 );
 
-// Unique constraint for calendar sharing
 CalendarShareSchema.index({ calendarId: 1, sharedWithUserId: 1 }, { unique: true });
 
-// Virtual for ID
 CalendarShareSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
-// Transform output
 CalendarShareSchema.set('toJSON', {
   virtuals: true,
   transform: function (_doc, ret) {
@@ -331,7 +310,6 @@ CalendarShareSchema.set('toJSON', {
   }
 });
 
-// Static methods
 CalendarShareSchema.statics.findByUser = function (userId: string) {
   return this.find({ sharedWithUserId: userId }).populate('calendarId');
 };
@@ -340,13 +318,10 @@ CalendarShareSchema.statics.findByCalendar = function (calendarId: string) {
   return this.find({ calendarId });
 };
 
-// Instance methods
 CalendarShareSchema.methods.accept = function () {
   this.acceptedAt = new Date();
   return this.save();
 };
-
-export const CalendarShareModel = model<ICalendarShare>('CalendarShare', CalendarShareSchema);
 
 export interface ICalendarSubscription extends Document {
   userId: string;
@@ -420,16 +395,13 @@ const CalendarSubscriptionSchema = new Schema<ICalendarSubscription>(
   }
 );
 
-// Indexes
 CalendarSubscriptionSchema.index({ userId: 1, isActive: 1 });
 CalendarSubscriptionSchema.index({ url: 1 }, { unique: true });
 
-// Virtual for ID
 CalendarSubscriptionSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
-// Transform output
 CalendarSubscriptionSchema.set('toJSON', {
   virtuals: true,
   transform: function (_doc, ret) {
@@ -444,7 +416,6 @@ CalendarSubscriptionSchema.set('toJSON', {
   }
 });
 
-// Static methods
 CalendarSubscriptionSchema.statics.findByUser = function (userId: string) {
   return this.find({ userId, isActive: true });
 };

@@ -1,23 +1,18 @@
-import { UserModel } from '../../users/models/users.model';
-import { TUserRole } from '../../users/types/user.types';
-import { DatabaseModel } from '../../database/models/database.model';
-import { RecordModel } from '../../database/models/record.model';
-import { EDatabaseType } from '../../core/types/database.types';
-import { AdminDashboardStats, AdminUserStats, SystemHealthMetrics } from '../types/admin.types';
+import { TUserRole } from '@/users/types/user.types';
+import { AdminDashboardStats, AdminUserStats, SystemHealthMetrics } from '@/modules/admin';
+import {UserModel } from '@/modules/users';
+import { DatabaseModel, RecordModel } from '@/modules/database';
+import { EDatabaseType } from '@/modules/core/types';
 
 /**
  * Get comprehensive admin dashboard statistics
  */
 export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => {
   try {
-    // Get user statistics
     const totalUsers = await UserModel.countDocuments();
     const activeUsers = await UserModel.countDocuments({ isActive: true });
-
-    // Get database count
     const totalDatabases = await DatabaseModel.countDocuments({ isDeleted: { $ne: true } });
 
-    // Get total notes (journal entries across all users)
     const journalDatabases = await DatabaseModel.find({
       type: EDatabaseType.JOURNAL,
       isDeleted: { $ne: true }
@@ -29,7 +24,6 @@ export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => 
       isDeleted: { $ne: true }
     });
 
-    // Calculate growth rate (users created in last 30 days vs previous 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -46,14 +40,10 @@ export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => 
 
     const growthRate =
       previousUsers > 0 ? ((recentUsers - previousUsers) / previousUsers) * 100 : 0;
+    const systemHealth: 'Good' | 'Warning' | 'Critical' = 'Good';
 
-    // System health - check for recent errors or issues
-    const systemHealth: 'Good' | 'Warning' | 'Critical' = 'Good'; // TODO: Implement actual health monitoring
-
-    // Uptime - mock for now, would come from process monitoring
     const uptime = 99.9;
 
-    // Recent activity - count users active in last 24 hours
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
@@ -106,32 +96,23 @@ export const getAdminUserStats = async (): Promise<AdminUserStats> => {
  */
 export const getSystemHealthMetrics = async (): Promise<SystemHealthMetrics> => {
   try {
-    // Check database connectivity
     const dbStatus = await checkDatabaseHealth();
 
-    // Check user activity (users active in last hour)
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
     const activeUsers = await UserModel.countDocuments({
       lastLoginAt: { $gte: oneHourAgo }
     });
 
-    // Determine system status based on metrics
     let status: 'Good' | 'Warning' | 'Critical' = 'Good';
     if (!dbStatus || activeUsers === 0) {
       status = 'Warning';
     }
 
-    // Calculate uptime (mock - would come from process monitoring)
     const uptime = 99.9;
-
-    // Last backup time (mock - would come from backup service)
     const lastBackup = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(); // 2 hours ago
-
-    // Response time (mock - would be measured)
     const responseTime = 145;
 
-    // Error rate (mock - would come from error monitoring)
     const errorRate = 0.8;
 
     return {
@@ -172,14 +153,12 @@ export const createInitialSuperAdmin = async (userData: {
   setupToken?: string;
 }): Promise<any> => {
   try {
-    // Check if any super admin already exists
     const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
 
     if (existingSuperAdmin) {
       throw new Error('Super admin already exists. Initial setup has already been completed.');
     }
 
-    // Validate setup token if provided (additional security layer)
     if (userData.setupToken) {
       const expectedToken = process.env.INITIAL_SETUP_TOKEN;
       if (expectedToken && userData.setupToken !== expectedToken) {
@@ -187,7 +166,6 @@ export const createInitialSuperAdmin = async (userData: {
       }
     }
 
-    // Validate required fields
     if (!userData.email || !userData.username || !userData.password) {
       throw new Error('Email, username, and password are required for super admin creation.');
     }
@@ -206,7 +184,6 @@ export const createInitialSuperAdmin = async (userData: {
 
     await superAdmin.save();
 
-    // Return user without password
     const userObject = superAdmin.toObject();
     delete userObject.password;
     delete userObject.passwordResetToken;
@@ -227,8 +204,6 @@ export const isInitialSetupNeeded = async (): Promise<boolean> => {
     const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
     return !existingSuperAdmin;
   } catch (error) {
-    console.error('Error checking initial setup status:', error);
-    // If there's an error checking, assume setup is needed for safety
     return true;
   }
 };
@@ -244,7 +219,6 @@ export const createSuperAdmin = async (userData: {
   lastName?: string;
 }): Promise<any> => {
   try {
-    // Check if any super admin already exists
     const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
 
     if (existingSuperAdmin) {
@@ -261,7 +235,6 @@ export const createSuperAdmin = async (userData: {
 
     await superAdmin.save();
 
-    // Return user without password
     const userObject = superAdmin.toObject();
     delete userObject.password;
     return userObject;
@@ -283,14 +256,8 @@ export const getAllUsersForAdmin = async (filters?: {
 }) => {
   try {
     const query: any = {};
-
-    if (filters?.role) {
-      query.role = filters.role;
-    }
-
-    if (filters?.isActive !== undefined) {
-      query.isActive = filters.isActive;
-    }
+    if (filters?.role) query.role = filters.role;
+    if (filters?.isActive !== undefined) query.isActive = filters.isActive;
 
     if (filters?.search) {
       query.$or = [

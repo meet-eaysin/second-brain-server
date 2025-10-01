@@ -6,8 +6,7 @@ import {
   IStopTimeTrackingRequest,
   ITimeTrackingResponse
 } from '../types/tasks.types';
-import { createAppError, createAuthError } from '@/utils';
-import { createNotFoundError } from '@/utils/response.utils';
+import { createAppError, createAuthError, createNotFoundError } from '@/utils';
 import { generateId } from '@/utils/id-generator';
 import {
   getTimeEntriesProperty,
@@ -30,7 +29,10 @@ export class TimeTrackingService {
     // Check if user already has active time tracking
     const activeEntry = await this.getActiveTimeEntry(userId);
     if (activeEntry) {
-      throw createAppError('You already have an active time tracking session. Please stop it first.', 400);
+      throw createAppError(
+        'You already have an active time tracking session. Please stop it first.',
+        400
+      );
     }
 
     const timeEntry: ITaskTimeEntry = {
@@ -83,11 +85,13 @@ export class TimeTrackingService {
     }
 
     const endTime = new Date();
-    const duration = Math.round((endTime.getTime() - activeTracking.startTime.getTime()) / (1000 * 60)); // minutes
+    const duration = Math.round(
+      (endTime.getTime() - activeTracking.startTime.getTime()) / (1000 * 60)
+    ); // minutes
 
     // Update the time entry
     const timeEntries = getTimeEntriesProperty(task.properties);
-    const entryIndex = timeEntries.findIndex((entry) => entry.id === activeTracking.entryId);
+    const entryIndex = timeEntries.findIndex(entry => entry.id === activeTracking.entryId);
 
     if (entryIndex !== -1) {
       const updatedTimeEntries = [...timeEntries];
@@ -120,10 +124,7 @@ export class TimeTrackingService {
   }
 
   // Get time tracking status for a task
-  async getTimeTrackingStatus(
-    taskId: string,
-    userId: string
-  ): Promise<ITimeTrackingResponse> {
+  async getTimeTrackingStatus(taskId: string, userId: string): Promise<ITimeTrackingResponse> {
     const task = await RecordModel.findById(taskId);
     if (!task) {
       throw createNotFoundError('Task not found');
@@ -135,7 +136,7 @@ export class TimeTrackingService {
     let currentEntry: ITaskTimeEntry | undefined;
     if (isTracking && activeTracking) {
       const timeEntries = getTimeEntriesProperty(task.properties);
-      currentEntry = timeEntries.find((entry) => entry.id === activeTracking.entryId);
+      currentEntry = timeEntries.find(entry => entry.id === activeTracking.entryId);
     }
 
     return {
@@ -171,7 +172,9 @@ export class TimeTrackingService {
 
     // Calculate duration if not provided
     if (!newEntry.duration && newEntry.endTime) {
-      newEntry.duration = Math.round((newEntry.endTime.getTime() - newEntry.startTime.getTime()) / (1000 * 60));
+      newEntry.duration = Math.round(
+        (newEntry.endTime.getTime() - newEntry.startTime.getTime()) / (1000 * 60)
+      );
     }
 
     // Add time entry to task
@@ -216,7 +219,7 @@ export class TimeTrackingService {
     }
 
     const timeEntries = getTimeEntriesProperty(task.properties);
-    const entryIndex = timeEntries.findIndex((entry) => entry.id === entryId);
+    const entryIndex = timeEntries.findIndex(entry => entry.id === entryId);
 
     if (entryIndex === -1) {
       throw createAppError('Time entry not found', 404);
@@ -236,7 +239,9 @@ export class TimeTrackingService {
     // Recalculate duration if times changed
     if (updates.startTime || updates.endTime) {
       if (updatedEntry.endTime && updatedEntry.startTime) {
-        updatedEntry.duration = Math.round((updatedEntry.endTime.getTime() - updatedEntry.startTime.getTime()) / (1000 * 60));
+        updatedEntry.duration = Math.round(
+          (updatedEntry.endTime.getTime() - updatedEntry.startTime.getTime()) / (1000 * 60)
+        );
       }
     }
 
@@ -257,18 +262,14 @@ export class TimeTrackingService {
   }
 
   // Delete time entry
-  async deleteTimeEntry(
-    taskId: string,
-    entryId: string,
-    userId: string
-  ): Promise<void> {
+  async deleteTimeEntry(taskId: string, entryId: string, userId: string): Promise<void> {
     const task = await RecordModel.findById(taskId);
     if (!task) {
       throw createNotFoundError('Task not found');
     }
 
     const timeEntries = getTimeEntriesProperty(task.properties);
-    const entryIndex = timeEntries.findIndex((entry) => entry.id === entryId);
+    const entryIndex = timeEntries.findIndex(entry => entry.id === entryId);
 
     if (entryIndex === -1) {
       throw createAppError('Time entry not found', 404);
@@ -309,7 +310,7 @@ export class TimeTrackingService {
     }
 
     const timeEntries = getTimeEntriesProperty(task.properties);
-    return timeEntries.find((entry) => entry.id === activeTracking.entryId) || null;
+    return timeEntries.find(entry => entry.id === activeTracking.entryId) || null;
   }
 
   // Get total time logged today for user
@@ -330,10 +331,8 @@ export class TimeTrackingService {
     let totalTime = 0;
     tasks.forEach(task => {
       const timeEntries = getTimeEntriesProperty(task.properties);
-      timeEntries.forEach((entry) => {
-        if (entry.userId === userId &&
-            entry.startTime >= today &&
-            entry.startTime < tomorrow) {
+      timeEntries.forEach(entry => {
+        if (entry.userId === userId && entry.startTime >= today && entry.startTime < tomorrow) {
           totalTime += entry.duration;
         }
       });
@@ -363,10 +362,12 @@ export class TimeTrackingService {
     let totalTime = 0;
     tasks.forEach(task => {
       const timeEntries = getTimeEntriesProperty(task.properties);
-      timeEntries.forEach((entry) => {
-        if (entry.userId === userId &&
-            entry.startTime >= startOfWeek &&
-            entry.startTime < endOfWeek) {
+      timeEntries.forEach(entry => {
+        if (
+          entry.userId === userId &&
+          entry.startTime >= startOfWeek &&
+          entry.startTime < endOfWeek
+        ) {
           totalTime += entry.duration;
         }
       });

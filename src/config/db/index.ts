@@ -84,7 +84,7 @@ export default class SafeMongooseConnection {
 
       cachedConnection = connection;
 
-      connection.connection.on('error', (error) => {
+      connection.connection.on('error', error => {
         if (this.options.onConnectionError) {
           this.options.onConnectionError(error, this.options.mongoUrl);
         }
@@ -97,7 +97,6 @@ export default class SafeMongooseConnection {
 
       this.isConnectedBefore = true;
       return connection;
-
     } catch (error) {
       if (this.options.onConnectionError) {
         this.options.onConnectionError(error as Error, this.options.mongoUrl);

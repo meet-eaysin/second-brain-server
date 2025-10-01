@@ -18,7 +18,7 @@ import {
   syncTimeRelatedModules,
   getCalendarPreferences,
   updateCalendarPreferences
-} from '../services/calendar.service';
+} from '@/modules/calendar/services/calendar.service';
 import {
   ICreateCalendarRequest,
   IUpdateCalendarRequest,
@@ -29,7 +29,7 @@ import {
   EEventStatus,
   ECalendarType,
   IUpdateCalendarPreferencesRequest
-} from '../types/calendar.types';
+} from '@/modules/calendar/types/calendar.types';
 import { getUserId } from '@/auth/index';
 import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
@@ -59,7 +59,6 @@ export const getCalendarsController = catchAsync(
 
     let calendars = await getCalendars(userId, includeHidden, workspaceId);
 
-    // If no calendars exist for this workspace, create a default one
     if (calendars.length === 0) {
       try {
         await createCalendar(
@@ -74,11 +73,9 @@ export const getCalendarsController = catchAsync(
           workspaceId
         );
 
-        // Re-fetch calendars after creating default
         calendars = await getCalendars(userId, includeHidden, workspaceId);
       } catch (error) {
         console.error('Failed to create default calendar:', error);
-        // Continue with empty array if creation fails
       }
     }
 
@@ -351,9 +348,7 @@ export const searchEventsController = catchAsync(
     const workspaceId = getWorkspaceId(req);
     const { q: searchQuery } = req.query;
 
-    if (!searchQuery || typeof searchQuery !== 'string') {
-      throw createAppError('Search query is required', 400);
-    }
+    if (!searchQuery || typeof searchQuery !== 'string') throw createAppError('Search query is required', 400);
 
     const events = await getEvents(
       userId,
@@ -425,7 +420,6 @@ export const getCalendarBusyTimesController = catchAsync(
       workspaceId
     );
 
-    // Convert events to busy time slots
     const busyTimes = events.map(event => ({
       start: event.startTime,
       end: event.endTime,

@@ -3,8 +3,7 @@ import { PropertyModel } from '../models/property.model';
 import { RecordModel } from '../models/record.model';
 import { RelationModel, RelationConnectionModel } from '../models/relation.model';
 import { EPropertyType } from '@/modules/core/types/property.types';
-import { createAppError } from '@/utils';
-import { createNotFoundError } from '@/utils/response.utils';
+import { createAppError, createNotFoundError } from '@/utils';
 
 export enum ERollupFunction {
   COUNT = 'count',
@@ -54,10 +53,7 @@ export interface IRollupConfig {
 
 export class RollupService {
   // Calculate rollup value for a record
-  async calculateRollupValue(
-    recordId: string,
-    rollupConfig: IRollupConfig
-  ): Promise<any> {
+  async calculateRollupValue(recordId: string, rollupConfig: IRollupConfig): Promise<any> {
     // Get the relation property
     const relationProperty = await PropertyModel.findById(rollupConfig.relationPropertyId);
     if (!relationProperty || relationProperty.type !== EPropertyType.RELATION) {
@@ -249,7 +245,9 @@ export class RollupService {
           return numericValues.length > 0 ? Math.min(...numericValues) : null;
         } else if (propertyType === EPropertyType.DATE) {
           const dateValues = values.filter(v => v instanceof Date || !isNaN(Date.parse(v)));
-          return dateValues.length > 0 ? new Date(Math.min(...dateValues.map(d => new Date(d).getTime()))) : null;
+          return dateValues.length > 0
+            ? new Date(Math.min(...dateValues.map(d => new Date(d).getTime())))
+            : null;
         }
         return null;
 
@@ -259,7 +257,9 @@ export class RollupService {
           return numericValues.length > 0 ? Math.max(...numericValues) : null;
         } else if (propertyType === EPropertyType.DATE) {
           const dateValues = values.filter(v => v instanceof Date || !isNaN(Date.parse(v)));
-          return dateValues.length > 0 ? new Date(Math.max(...dateValues.map(d => new Date(d).getTime()))) : null;
+          return dateValues.length > 0
+            ? new Date(Math.max(...dateValues.map(d => new Date(d).getTime())))
+            : null;
         }
         return null;
 
@@ -290,7 +290,11 @@ export class RollupService {
         const dates = dateVals.map(d => new Date(d));
         const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
         const latest = new Date(Math.max(...dates.map(d => d.getTime())));
-        return { earliest, latest, days: Math.ceil((latest.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24)) };
+        return {
+          earliest,
+          latest,
+          days: Math.ceil((latest.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24))
+        };
 
       case ERollupFunction.CHECKED:
         if (propertyType !== EPropertyType.CHECKBOX) return null;
@@ -362,15 +366,12 @@ export class RollupService {
           );
 
           // Update the record with new rollup value
-          await RecordModel.findByIdAndUpdate(
-            affectedRecord._id,
-            {
-              $set: {
-                [`properties.${rollupProperty.name}`]: rollupValue,
-                lastEditedAt: new Date()
-              }
+          await RecordModel.findByIdAndUpdate(affectedRecord._id, {
+            $set: {
+              [`properties.${rollupProperty.name}`]: rollupValue,
+              lastEditedAt: new Date()
             }
-          );
+          });
         }
       }
     }

@@ -174,7 +174,6 @@ export const validateBody =
 export const validateQuery =
   (schema: z.ZodSchema) => async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Just validate without reassigning (req.query is read-only in Express 5.x)
       await schema.parseAsync(req.query);
       return next();
     } catch (error) {
@@ -221,14 +220,8 @@ export const validateRequest =
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (schemas.body) req.body = await schemas.body.parseAsync(req.body);
-      if (schemas.query) {
-        // Validate but don't reassign for query - it may be read-only
-        await schemas.query.parseAsync(req.query);
-      }
-      if (schemas.params) {
-        // Validate but don't reassign for params - it may be read-only
-        await schemas.params.parseAsync(req.params);
-      }
+      if (schemas.query) await schemas.query.parseAsync(req.query);
+      if (schemas.params) await schemas.params.parseAsync(req.params);
 
       return next();
     } catch (error) {

@@ -1,4 +1,4 @@
-import { createNotFoundError } from '@/utils/response.utils';
+import { createNotFoundError } from '@/utils';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { PropertyModel } from '@/modules/database/models/property.model';
 import { RecordModel } from '@/modules/database/models/record.model';

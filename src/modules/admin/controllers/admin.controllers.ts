@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { catchAsync, sendSuccessResponse } from '../../../utils';
 import {
   getAdminDashboardStats,
   getAdminUserStats,
@@ -8,13 +7,13 @@ import {
   getAllUsersForAdmin,
   createInitialSuperAdmin,
   isInitialSetupNeeded
-} from '../services/admin.services';
-import { getUserId } from '../../../modules/auth';
+} from '@/modules/admin/services/admin.services';
+import { getUserId } from '@/modules/auth';
+import {catchAsync, sendSuccessResponse} from "@/utils";
 
 /**
  * Get admin dashboard statistics
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const getAdminDashboardStatsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const stats = await getAdminDashboardStats();
@@ -26,7 +25,6 @@ export const getAdminDashboardStatsController = catchAsync(
 /**
  * Get admin user statistics
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const getAdminUserStatsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const stats = await getAdminUserStats();
@@ -38,7 +36,6 @@ export const getAdminUserStatsController = catchAsync(
 /**
  * Get system health metrics
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const getSystemHealthMetricsController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const metrics = await getSystemHealthMetrics();
@@ -50,7 +47,6 @@ export const getSystemHealthMetricsController = catchAsync(
 /**
  * Create a super admin user (only callable by existing super admin)
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const createSuperAdminController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userData = req.body;
@@ -64,7 +60,6 @@ export const createSuperAdminController = catchAsync(
 /**
  * Get all users for admin management
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const getAllUsersForAdminController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { role, isActive, search, page = 1, limit = 10 } = req.query;
@@ -87,7 +82,6 @@ export const getAllUsersForAdminController = catchAsync(
 /**
  * Check if initial setup is needed
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const checkInitialSetupController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const setupNeeded = await isInitialSetupNeeded();
@@ -104,7 +98,6 @@ export const checkInitialSetupController = catchAsync(
 /**
  * Create initial super admin (one-time setup)
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const createInitialSuperAdminController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { email, username, password, firstName, lastName, setupToken } = req.body;
@@ -132,16 +125,13 @@ export const createInitialSuperAdminController = catchAsync(
 /**
  * Get current admin user profile
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const getCurrentAdminProfileController = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
 
-    // This would typically get the full admin profile
-    // For now, return basic user info
     sendSuccessResponse(res, 'Admin profile retrieved successfully', {
       userId,
-      role: 'admin' // Would come from actual user data
+      role: 'admin'
     });
   }
 );

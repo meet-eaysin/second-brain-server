@@ -1,32 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { TAppError } from '@/types';
+import {IAuth0Error, IMongoCastError, IMongoDuplicateError, IMongoValidationError, TAppError} from '@/types';
 import { createAppError } from '@/utils';
 import { logger } from '@/config';
-
-interface IMongoCastError {
-  name: 'CastError';
-  path: string;
-  value: unknown;
-  kind: string;
-}
-
-interface IMongoDuplicateError {
-  name: 'MongoServerError';
-  code: 11000;
-  keyValue: Record<string, unknown>;
-}
-
-interface IMongoValidationError {
-  name: 'ValidationError';
-  errors: Record<
-    string,
-    {
-      message: string;
-      path: string;
-      value: unknown;
-    }
-  >;
-}
 
 const handleCastErrorDB = (err: IMongoCastError): TAppError => {
   const message = `Invalid ${err.path}: ${err.value}`;
@@ -53,12 +28,6 @@ const handleJWTError = (): TAppError => {
 const handleJWTExpiredError = (): TAppError => {
   return createAppError('Your token has expired! Please log in again.', 401);
 };
-
-// Auth0 Error
-interface IAuth0Error {
-  message?: string;
-  statusCode?: number;
-}
 
 const handleAuth0Error = (err: IAuth0Error): TAppError => {
   const message = err.message || 'Authentication failed';

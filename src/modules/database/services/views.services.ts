@@ -21,7 +21,7 @@ import {
 import { EPropertyType } from '@/modules/core/types/property.types';
 import { createAppError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
-import { createNotFoundError } from '@/utils/response.utils';
+import { createNotFoundError } from '@/utils';
 import { IDatabaseQueryParams } from '@/modules/core/types/database.types';
 
 function convertSortDirection(direction: string | number | boolean): 'asc' | 'desc' {

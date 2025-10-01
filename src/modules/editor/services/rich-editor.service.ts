@@ -1,8 +1,12 @@
-import { createNotFoundError } from '@/utils/response.utils';
 import { RecordModel } from '@/modules/database/models/record.model';
-import { IRichTextContent, ITextAnnotations, RichTextType, MentionType } from '@/modules/database/types/blocks.types';
+import {
+  IRichTextContent,
+  ITextAnnotations,
+  RichTextType,
+  MentionType
+} from '@/modules/database/types/blocks.types';
 import { IRichText } from '@/modules/core/types/record.types';
-import { createAppError } from '@/utils';
+import { createAppError, createNotFoundError } from '@/utils';
 import { generateId } from '@/utils/id-generator';
 
 // Conversion functions between IRichText and IRichTextContent
@@ -63,13 +67,15 @@ function convertIRichTextContentToIRichText(richTextContent: IRichTextContent): 
     case RichTextType.MENTION:
       // Convert mention type from enum to string and simplify structure
       const mention = 'mention' in richTextContent ? richTextContent.mention : undefined;
-      const convertedMention = mention ? {
-        type: mention.type as 'user' | 'page' | 'database' | 'date',
-        user: mention.user ? { id: mention.user.id } : undefined,
-        page: mention.page ? { id: mention.page.id } : undefined,
-        database: mention.database ? { id: mention.database.id } : undefined,
-        date: mention.date
-      } : undefined;
+      const convertedMention = mention
+        ? {
+            type: mention.type as 'user' | 'page' | 'database' | 'date',
+            user: mention.user ? { id: mention.user.id } : undefined,
+            page: mention.page ? { id: mention.page.id } : undefined,
+            database: mention.database ? { id: mention.database.id } : undefined,
+            date: mention.date
+          }
+        : undefined;
       return {
         type: 'mention' as const,
         mention: convertedMention,
@@ -88,11 +94,15 @@ function convertIRichTextContentToIRichText(richTextContent: IRichTextContent): 
   }
 }
 
-export function convertIRichTextArrayToIRichTextContentArray(richTextArray: IRichText[]): IRichTextContent[] {
+export function convertIRichTextArrayToIRichTextContentArray(
+  richTextArray: IRichText[]
+): IRichTextContent[] {
   return richTextArray.map(convertIRichTextToIRichTextContent);
 }
 
-export function convertIRichTextContentArrayToIRichTextArray(richTextContentArray: IRichTextContent[]): IRichText[] {
+export function convertIRichTextContentArrayToIRichTextArray(
+  richTextContentArray: IRichTextContent[]
+): IRichText[] {
   return richTextContentArray.map(convertIRichTextContentToIRichText);
 }
 
@@ -170,12 +180,7 @@ export class RichEditorService {
 
     // Apply formatting to the specified range
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const updatedContent = this.applyFormattingToRange(
-      convertedContent,
-      start,
-      end,
-      formatting
-    );
+    const updatedContent = this.applyFormattingToRange(convertedContent, start, end, formatting);
 
     // Update the block content
     await this.updateBlockContent(recordId, blockId, updatedContent, userId);
@@ -203,12 +208,7 @@ export class RichEditorService {
     }
 
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const updatedContent = this.insertTextAtPosition(
-      convertedContent,
-      position,
-      text,
-      formatting
-    );
+    const updatedContent = this.insertTextAtPosition(convertedContent, position, text, formatting);
 
     await this.updateBlockContent(recordId, blockId, updatedContent, userId);
 
@@ -244,11 +244,7 @@ export class RichEditorService {
     }
 
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const updatedContent = this.insertContentAtPosition(
-      convertedContent,
-      position,
-      specialContent
-    );
+    const updatedContent = this.insertContentAtPosition(convertedContent, position, specialContent);
 
     await this.updateBlockContent(recordId, blockId, updatedContent, userId);
 
@@ -274,11 +270,7 @@ export class RichEditorService {
     }
 
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const updatedContent = this.deleteTextRange(
-      convertedContent,
-      start,
-      end
-    );
+    const updatedContent = this.deleteTextRange(convertedContent, start, end);
 
     await this.updateBlockContent(recordId, blockId, updatedContent, userId);
 
@@ -502,10 +494,7 @@ export class RichEditorService {
   }
 
   // Create text content with formatting
-  private createTextContent(
-    text: string,
-    formatting?: IFormattingOptions
-  ): IRichTextContent {
+  private createTextContent(text: string, formatting?: IFormattingOptions): IRichTextContent {
     return {
       type: RichTextType.TEXT,
       text: {
@@ -606,10 +595,9 @@ export class RichEditorService {
       } else {
         // Partially within deletion range
         if (item.type === 'text') {
-          const beforeText = currentPos < start ?
-            item.text?.content.substring(0, start - currentPos) : '';
-          const afterText = itemEnd > end ?
-            item.text?.content.substring(end - currentPos) : '';
+          const beforeText =
+            currentPos < start ? item.text?.content.substring(0, start - currentPos) : '';
+          const afterText = itemEnd > end ? item.text?.content.substring(end - currentPos) : '';
 
           if (beforeText) {
             result.push({
@@ -652,8 +640,9 @@ export class RichEditorService {
             ...previous,
             text: {
               ...('text' in previous ? previous.text : { content: '' }),
-              content: (('text' in previous ? previous.text?.content : '') || '') +
-                      (('text' in current ? current.text?.content : '') || '')
+              content:
+                (('text' in previous ? previous.text?.content : '') || '') +
+                (('text' in current ? current.text?.content : '') || '')
             },
             plain_text: previous.plain_text + current.plain_text
           };
@@ -673,8 +662,7 @@ export class RichEditorService {
   private canMergeItems(a: IRichTextContent, b: IRichTextContent): boolean {
     if (a.type !== 'text' || b.type !== 'text') return false;
 
-    return JSON.stringify(a.annotations) === JSON.stringify(b.annotations) &&
-           a.href === b.href;
+    return JSON.stringify(a.annotations) === JSON.stringify(b.annotations) && a.href === b.href;
   }
 
   // Update block content in database
@@ -748,19 +736,21 @@ export class RichEditorService {
     return lines.map(line => ({
       id: generateId(),
       type: 'paragraph',
-      content: [{
-        type: 'text',
-        text: { content: line },
-        annotations: {
-          bold: false,
-          italic: false,
-          underline: false,
-          strikethrough: false,
-          code: false,
-          color: 'default'
-        },
-        plain_text: line
-      }],
+      content: [
+        {
+          type: 'text',
+          text: { content: line },
+          annotations: {
+            bold: false,
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            code: false,
+            color: 'default'
+          },
+          plain_text: line
+        }
+      ],
       createdAt: new Date(),
       lastEditedAt: new Date()
     }));
@@ -780,19 +770,21 @@ export class RichEditorService {
     return lines.map(line => ({
       id: generateId(),
       type: 'paragraph',
-      content: [{
-        type: 'text',
-        text: { content: line },
-        annotations: {
-          bold: false,
-          italic: false,
-          underline: false,
-          strikethrough: false,
-          code: false,
-          color: 'default'
-        },
-        plain_text: line
-      }],
+      content: [
+        {
+          type: 'text',
+          text: { content: line },
+          annotations: {
+            bold: false,
+            italic: false,
+            underline: false,
+            strikethrough: false,
+            code: false,
+            color: 'default'
+          },
+          plain_text: line
+        }
+      ],
       createdAt: new Date(),
       lastEditedAt: new Date()
     }));

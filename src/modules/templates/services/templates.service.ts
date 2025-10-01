@@ -20,7 +20,7 @@ import {
 } from '../types/template.types';
 import { EDatabaseType } from '@/modules/core/types/database.types';
 import { createAppError } from '@/utils';
-import { createNotFoundError } from '@/utils/response.utils';
+import { createNotFoundError } from '@/utils/error.utils';
 import { WorkspaceModel } from '@/modules/workspace/models/workspace.model';
 import { moduleInitializationService } from '@/modules/modules/services/module-initialization.service';
 
@@ -33,21 +33,30 @@ export class TemplatesService {
   }
 
   // Type guard functions
-  private isRowTemplate(template: TTemplateDocument): template is TTemplateDocument & { type: ETemplateType.ROW } {
-    return template.type === ETemplateType.ROW &&
-           template.defaultValues !== undefined &&
-           template.moduleType !== undefined;
+  private isRowTemplate(
+    template: TTemplateDocument
+  ): template is TTemplateDocument & { type: ETemplateType.ROW } {
+    return (
+      template.type === ETemplateType.ROW &&
+      template.defaultValues !== undefined &&
+      template.moduleType !== undefined
+    );
   }
 
-  private isDatabaseTemplate(template: TTemplateDocument): template is TTemplateDocument & { type: ETemplateType.DATABASE } {
-    return template.type === ETemplateType.DATABASE &&
-           template.properties !== undefined &&
-           template.moduleType !== undefined;
+  private isDatabaseTemplate(
+    template: TTemplateDocument
+  ): template is TTemplateDocument & { type: ETemplateType.DATABASE } {
+    return (
+      template.type === ETemplateType.DATABASE &&
+      template.properties !== undefined &&
+      template.moduleType !== undefined
+    );
   }
 
-  private isWorkspaceTemplate(template: TTemplateDocument): template is TTemplateDocument & { type: ETemplateType.WORKSPACE } {
-    return template.type === ETemplateType.WORKSPACE &&
-           template.modules !== undefined;
+  private isWorkspaceTemplate(
+    template: TTemplateDocument
+  ): template is TTemplateDocument & { type: ETemplateType.WORKSPACE } {
+    return template.type === ETemplateType.WORKSPACE && template.modules !== undefined;
   }
   // Create a new template
   async createTemplate(
@@ -62,7 +71,15 @@ export class TemplatesService {
 
     // Create template
     // Destructure templateData to avoid conflicts with base document fields
-    const { createdBy: _, createdAt: __, updatedAt: ___, deletedBy: ____, deletedAt: _____, isDeleted: ______, ...safeTemplateData } = templateData as any;
+    const {
+      createdBy: _,
+      createdAt: __,
+      updatedAt: ___,
+      deletedBy: ____,
+      deletedAt: _____,
+      isDeleted: ______,
+      ...safeTemplateData
+    } = templateData as any;
 
     // Ensure boolean fields are properly typed
     const templateDataWithBooleans = {
@@ -151,10 +168,7 @@ export class TemplatesService {
   }
 
   // Get templates by module type
-  async getTemplatesByModule(
-    moduleType: EDatabaseType,
-    limit = 20
-  ): Promise<TTemplateDocument[]> {
+  async getTemplatesByModule(moduleType: EDatabaseType, limit = 20): Promise<TTemplateDocument[]> {
     const templates = await TemplateModel.findByModule(moduleType).limit(limit);
     return templates.map((t: TTemplateDocument) => this.formatTemplate(t));
   }
@@ -228,7 +242,10 @@ export class TemplatesService {
     const template = await this.getTemplate(templateId, userId);
 
     if (!this.isDatabaseTemplate(template)) {
-      throw createAppError('Template is not a database template or missing required properties', 400);
+      throw createAppError(
+        'Template is not a database template or missing required properties',
+        400
+      );
     }
 
     // Create database from template
@@ -311,12 +328,16 @@ export class TemplatesService {
     const template = await this.getTemplate(templateId, userId);
 
     if (!this.isWorkspaceTemplate(template)) {
-      throw createAppError('Template is not a workspace template or missing required properties', 400);
+      throw createAppError(
+        'Template is not a workspace template or missing required properties',
+        400
+      );
     }
 
     // Create workspace from template
     // Destructure workspace settings to avoid isPublic duplication
-    const { isPublic: workspaceIsPublic, ...otherWorkspaceSettings } = template.workspaceSettings || {};
+    const { isPublic: workspaceIsPublic, ...otherWorkspaceSettings } =
+      template.workspaceSettings || {};
 
     const workspaceData = {
       name: overrides.name || template.workspaceSettings.name,
@@ -418,11 +439,7 @@ export class TemplatesService {
   }
 
   // Rate template
-  async rateTemplate(
-    templateId: string,
-    rating: number,
-    userId: string
-  ): Promise<void> {
+  async rateTemplate(templateId: string, rating: number, userId: string): Promise<void> {
     if (rating < 1 || rating > 5) {
       throw createAppError('Rating must be between 1 and 5', 400);
     }
@@ -509,7 +526,9 @@ export class TemplatesService {
     return Boolean(userId && template.createdBy.toString() === userId);
   }
 
-  private async validateTemplate(templateData: ICreateTemplateRequest): Promise<ITemplateValidationResult> {
+  private async validateTemplate(
+    templateData: ICreateTemplateRequest
+  ): Promise<ITemplateValidationResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
     const suggestions: string[] = [];
@@ -607,7 +626,9 @@ export class TemplatesService {
     return {};
   }
 
-  private async getTopUsers(templateId: string): Promise<Array<{ userId: string; usageCount: number }>> {
+  private async getTopUsers(
+    templateId: string
+  ): Promise<Array<{ userId: string; usageCount: number }>> {
     // Implementation for getting top users
     return [];
   }

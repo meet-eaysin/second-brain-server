@@ -4,7 +4,6 @@ import { ETemplateType } from '../types/template.types';
 import { catchAsync, sendSuccessResponse, sendErrorResponse } from '@/utils';
 import { getUserId } from '@/auth/index';
 
-// Create row template from existing record
 export const createRowTemplateFromRecord = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { recordId } = req.params;

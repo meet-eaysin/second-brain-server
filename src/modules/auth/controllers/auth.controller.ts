@@ -1,4 +1,3 @@
-import { getUserWithWorkspaces } from './../services/auth.service';
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import {
@@ -16,7 +15,6 @@ import {
   forgotPassword,
   generateGoogleLoginUrl,
   handleGoogleCallback,
-  logoutAllDevices,
   logoutUser,
   refreshAccessToken,
   resetPassword,
@@ -28,7 +26,7 @@ import {
   createOAuthCodeInvalidError
 } from '@/auth/utils/auth-errors';
 import { appConfig } from '@/config';
-import { googleConfig } from '@/config/google/google';
+import {getUserWithWorkspaces} from "@/auth/services/auth.service";
 
 export const register = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -144,7 +142,6 @@ export const googleCallback = catchAsync(
     }
 
     try {
-      // Verify state token for security
       if (state && typeof state === 'string') {
         try {
           verifyStateToken(state);

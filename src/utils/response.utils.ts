@@ -1,5 +1,5 @@
-// Response Utilities - Standardized API responses
 import { Response } from 'express';
+import {getErrorCode} from "@/utils/error.utils";
 
 export interface DatabaseProperty {
   id: string;
@@ -55,7 +55,15 @@ export function sendSuccessResponse<T = unknown>(
   meta?: Record<string, unknown>,
   schema?: Record<string, unknown>
 ): void {
-  const response: ApiResponse<T> = {
+  const response: {
+    success: boolean;
+    message: string;
+    data: T | undefined;
+    meta: Record<string, unknown> | undefined;
+    schema: Record<string, unknown> | undefined;
+    timestamp: string;
+    requestId: any
+  } = {
     success: true,
     message,
     data,
@@ -125,36 +133,6 @@ export function sendPaginatedResponse<T = any>(
 }
 
 /**
- * Get error code from status code
- */
-function getErrorCode(statusCode: number): string {
-  switch (statusCode) {
-    case 400:
-      return 'BAD_REQUEST';
-    case 401:
-      return 'UNAUTHORIZED';
-    case 403:
-      return 'FORBIDDEN';
-    case 404:
-      return 'NOT_FOUND';
-    case 409:
-      return 'CONFLICT';
-    case 422:
-      return 'VALIDATION_ERROR';
-    case 429:
-      return 'RATE_LIMIT_EXCEEDED';
-    case 500:
-      return 'INTERNAL_SERVER_ERROR';
-    case 502:
-      return 'BAD_GATEWAY';
-    case 503:
-      return 'SERVICE_UNAVAILABLE';
-    default:
-      return 'UNKNOWN_ERROR';
-  }
-}
-
-/**
  * Create standardized error objects
  */
 export class ApiError extends Error {
@@ -171,68 +149,8 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Create validation error
- */
-export function createValidationError(message: string, details?: any): ApiError {
-  return new ApiError(message, 422, 'VALIDATION_ERROR', details);
-}
-
-/**
- * Create not found error
- */
-export function createNotFoundError(message: string = 'Resource not found'): ApiError {
-  return new ApiError(message, 404, 'NOT_FOUND');
-}
-
-/**
- * Create forbidden error
- */
-export function createForbiddenError(message: string = 'Access forbidden'): ApiError {
-  return new ApiError(message, 403, 'FORBIDDEN');
-}
-
-/**
- * Create unauthorized error
- */
-export function createUnauthorizedError(message: string = 'Unauthorized'): ApiError {
-  return new ApiError(message, 401, 'UNAUTHORIZED');
-}
-
-/**
- * Create conflict error
- */
-export function createConflictError(message: string, details?: any): ApiError {
-  return new ApiError(message, 409, 'CONFLICT', details);
-}
-
-/**
- * Create rate limit error
- */
-export function createRateLimitError(message: string = 'Rate limit exceeded'): ApiError {
-  return new ApiError(message, 429, 'RATE_LIMIT_EXCEEDED');
-}
-
-/**
- * Create internal server error
- */
-export function createInternalServerError(
-  message: string = 'Internal server error',
-  details?: any
-): ApiError {
-  return new ApiError(message, 500, 'INTERNAL_SERVER_ERROR', details);
-}
-
 export default {
   sendSuccessResponse,
-  sendErrorResponse,
   sendPaginatedResponse,
-  ApiError,
-  createValidationError,
-  createNotFoundError,
-  createForbiddenError,
-  createUnauthorizedError,
-  createConflictError,
-  createRateLimitError,
-  createInternalServerError
+  ApiError
 };

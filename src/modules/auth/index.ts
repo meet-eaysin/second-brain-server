@@ -1,7 +1,5 @@
-// Routes
 export { default as authRoutes } from './routes/auth.routes';
 
-// Controllers
 export {
   register,
   login,
@@ -19,7 +17,6 @@ export {
 
 // Services
 export {
-  AuthService,
   authService,
   authenticateUser,
   handleGoogleCallback,
@@ -28,10 +25,8 @@ export {
   forgotPassword,
   resetPassword,
   logoutUser,
-  logoutAllDevices
 } from './services/auth.service';
 
-// Types
 export type {
   TApiResponse,
   TRefreshTokenPayload,
@@ -39,7 +34,6 @@ export type {
   TGoogleTokenResponse
 } from './types/auth.types';
 
-// Utils
 export {
   generateAccessToken,
   generateRefreshToken,
@@ -54,7 +48,6 @@ export {
   getUserId
 } from './utils/auth.utils';
 
-// Validators
 export {
   changePasswordSchema,
   forgotPasswordSchema,

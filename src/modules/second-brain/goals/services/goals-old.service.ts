@@ -2,8 +2,7 @@ import { ObjectId } from 'mongodb';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { EDatabaseType } from '@/modules/core/types/database.types';
-import { createNotFoundError } from '@/utils/response.utils';
-import { createAppError } from '@/utils';
+import { createAppError, createNotFoundError } from '@/utils';
 
 export interface IGoal {
   id: string;
@@ -56,20 +55,26 @@ export interface IGoalStats {
 export class GoalsService {
   // Type guards for safe conversion
   private isMilestone(obj: unknown): obj is IMilestone {
-    return typeof obj === 'object' && obj !== null &&
-           typeof (obj as any).id === 'string' &&
-           typeof (obj as any).title === 'string' &&
-           typeof (obj as any).completed === 'boolean' &&
-           typeof (obj as any).order === 'number';
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      typeof (obj as any).id === 'string' &&
+      typeof (obj as any).title === 'string' &&
+      typeof (obj as any).completed === 'boolean' &&
+      typeof (obj as any).order === 'number'
+    );
   }
 
   private isGoalMetric(obj: unknown): obj is IGoalMetric {
-    return typeof obj === 'object' && obj !== null &&
-           typeof (obj as any).id === 'string' &&
-           typeof (obj as any).name === 'string' &&
-           typeof (obj as any).type === 'string' &&
-           typeof (obj as any).target === 'number' &&
-           typeof (obj as any).current === 'number';
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      typeof (obj as any).id === 'string' &&
+      typeof (obj as any).name === 'string' &&
+      typeof (obj as any).type === 'string' &&
+      typeof (obj as any).target === 'number' &&
+      typeof (obj as any).current === 'number'
+    );
   }
 
   private getMilestonesFromProperty(property: unknown): IMilestone[] {
@@ -97,15 +102,15 @@ export class GoalsService {
     const goal = new RecordModel({
       databaseId: goalsDb.id,
       properties: {
-        'Title': goalData.title,
-        'Description': goalData.description,
-        'Category': goalData.category,
-        'Timeframe': goalData.timeframe,
-        'Status': goalData.status || 'not_started',
-        'Priority': goalData.priority || 'medium',
+        Title: goalData.title,
+        Description: goalData.description,
+        Category: goalData.category,
+        Timeframe: goalData.timeframe,
+        Status: goalData.status || 'not_started',
+        Priority: goalData.priority || 'medium',
         'Target Date': goalData.targetDate,
-        'Progress': goalData.progress || 0,
-        'Tags': goalData.tags || []
+        Progress: goalData.progress || 0,
+        Tags: goalData.tags || []
       },
       content: [],
       createdBy: userId,
@@ -140,16 +145,20 @@ export class GoalsService {
     };
 
     if (updateData.title !== undefined) updates['properties.Title'] = updateData.title;
-    if (updateData.description !== undefined) updates['properties.Description'] = updateData.description;
+    if (updateData.description !== undefined)
+      updates['properties.Description'] = updateData.description;
     if (updateData.category !== undefined) updates['properties.Category'] = updateData.category;
     if (updateData.timeframe !== undefined) updates['properties.Timeframe'] = updateData.timeframe;
     if (updateData.status !== undefined) updates['properties.Status'] = updateData.status;
     if (updateData.priority !== undefined) updates['properties.Priority'] = updateData.priority;
-    if (updateData.targetDate !== undefined) updates['properties.Target Date'] = updateData.targetDate;
+    if (updateData.targetDate !== undefined)
+      updates['properties.Target Date'] = updateData.targetDate;
     if (updateData.progress !== undefined) updates['properties.Progress'] = updateData.progress;
     if (updateData.tags !== undefined) updates['properties.Tags'] = updateData.tags;
-    if (updateData.milestones !== undefined) updates['properties.milestones'] = updateData.milestones.map(m => ({ ...m }));
-    if (updateData.metrics !== undefined) updates['properties.metrics'] = updateData.metrics.map(m => ({ ...m }));
+    if (updateData.milestones !== undefined)
+      updates['properties.milestones'] = updateData.milestones.map(m => ({ ...m }));
+    if (updateData.metrics !== undefined)
+      updates['properties.metrics'] = updateData.metrics.map(m => ({ ...m }));
 
     // Auto-update status based on progress
     if (updateData.progress !== undefined) {
@@ -210,11 +219,16 @@ export class GoalsService {
     // Build sort
     const sort: any = {};
     if (options.sortBy) {
-      const sortField = options.sortBy === 'title' ? 'properties.Title' :
-                       options.sortBy === 'progress' ? 'properties.Progress' :
-                       options.sortBy === 'targetDate' ? 'properties.Target Date' :
-                       options.sortBy === 'priority' ? 'properties.Priority' :
-                       'createdAt';
+      const sortField =
+        options.sortBy === 'title'
+          ? 'properties.Title'
+          : options.sortBy === 'progress'
+            ? 'properties.Progress'
+            : options.sortBy === 'targetDate'
+              ? 'properties.Target Date'
+              : options.sortBy === 'priority'
+                ? 'properties.Priority'
+                : 'createdAt';
       sort[sortField] = options.sortOrder === 'desc' ? -1 : 1;
     } else {
       sort['properties.Target Date'] = 1; // Default sort by target date
@@ -323,9 +337,14 @@ export class GoalsService {
 
     // Calculate progress based on metrics
     const totalProgress = metrics.reduce((sum: number, m: IGoalMetric) => {
-      const metricProgress = m.type === 'percentage' ? m.current :
-                           m.type === 'boolean' ? (m.current ? 100 : 0) :
-                           Math.min((m.current / m.target) * 100, 100);
+      const metricProgress =
+        m.type === 'percentage'
+          ? m.current
+          : m.type === 'boolean'
+            ? m.current
+              ? 100
+              : 0
+            : Math.min((m.current / m.target) * 100, 100);
       return sum + metricProgress;
     }, 0);
 
@@ -363,9 +382,7 @@ export class GoalsService {
     const overdue = goals.filter(g => {
       const targetDate = g.properties?.['Target Date'];
       const status = g.properties?.['Status'];
-      return typeof targetDate === 'string' &&
-             targetDate < today &&
-             status !== 'completed';
+      return typeof targetDate === 'string' && targetDate < today && status !== 'completed';
     }).length;
 
     const completionRate = totalGoals > 0 ? (completedGoals / totalGoals) * 100 : 0;
@@ -404,7 +421,9 @@ export class GoalsService {
         const targetDate = g.properties?.['Target Date'] as string;
         const title = g.properties?.['Title'];
         const titleStr = typeof title === 'string' ? title : 'Untitled Goal';
-        const daysLeft = Math.ceil((new Date(targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.ceil(
+          (new Date(targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+        );
         return {
           goalId: g.id,
           title: titleStr,
@@ -457,8 +476,7 @@ export class GoalsService {
 
     const total = await RecordModel.countDocuments(query);
 
-    const goalsQuery = RecordModel.find(query)
-      .sort({ 'properties.Title': 1 });
+    const goalsQuery = RecordModel.find(query).sort({ 'properties.Title': 1 });
 
     if (options.limit) {
       goalsQuery.limit(options.limit);

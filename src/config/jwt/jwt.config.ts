@@ -4,7 +4,7 @@ export const jwtConfig = {
   accessTokenSecret: process.env.JWT_ACCESS_SECRET || 'your-access-secret-key',
   refreshTokenSecret: process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
   accessTokenOptions: {
-    expiresIn: '24h', // Increased for development
+    expiresIn: '24h',
     issuer: 'your-app-name',
     audience: 'your-app-users'
   } as SignOptions,

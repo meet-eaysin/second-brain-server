@@ -3,9 +3,7 @@ import { RecordModel } from '../models/record.model';
 import { DatabaseModel } from '../models/database.model';
 import { richEditorService } from '@/modules/editor/services/rich-editor.service';
 import { textProcessingService } from '@/modules/editor/services/text-processing.service';
-import {
-  convertIRichTextArrayToIRichTextContentArray
-} from '@/modules/editor/services/rich-editor.service';
+import { convertIRichTextArrayToIRichTextContentArray } from '@/modules/editor/services/rich-editor.service';
 import {
   IBlock,
   ICompleteBlock,
@@ -21,9 +19,8 @@ import {
   IRichTextContent
 } from '../types/blocks.types';
 import { IRecordContent } from '@/modules/core/types/record.types';
-import { createAppError } from '@/utils/error.utils';
+import { createAppError, createNotFoundError } from '@/utils/error.utils';
 import { generateId } from '@/utils/id-generator';
-import { createNotFoundError } from '@/utils/response.utils';
 
 export class BlocksService {
   // Add a new content block to a record
@@ -161,8 +158,9 @@ export class BlocksService {
 
     // Apply pagination
     const limit = options.limit || 50;
-    const startIndex = options.cursor ?
-      blocks.findIndex(block => block.id === options.cursor) + 1 : 0;
+    const startIndex = options.cursor
+      ? blocks.findIndex(block => block.id === options.cursor) + 1
+      : 0;
 
     const paginatedBlocks = blocks.slice(startIndex, startIndex + limit);
     const hasMore = startIndex + limit < blocks.length;
@@ -341,8 +339,6 @@ export class BlocksService {
     return this.formatBlockResponse(updatedContent[newIndex]);
   }
 
-
-
   // Bulk operations on blocks
   async bulkOperations(
     databaseId: string,
@@ -359,12 +355,23 @@ export class BlocksService {
         switch (operation.operation) {
           case 'create':
             if (operation.data && 'type' in operation.data) {
-              await this.addBlock(databaseId, recordId, operation.data as ICreateBlockRequest, userId);
+              await this.addBlock(
+                databaseId,
+                recordId,
+                operation.data as ICreateBlockRequest,
+                userId
+              );
             }
             break;
           case 'update':
             if (operation.blockId && operation.data) {
-              await this.updateBlock(databaseId, recordId, operation.blockId, operation.data as IUpdateBlockRequest, userId);
+              await this.updateBlock(
+                databaseId,
+                recordId,
+                operation.blockId,
+                operation.data as IUpdateBlockRequest,
+                userId
+              );
             }
             break;
           case 'delete':
@@ -374,7 +381,13 @@ export class BlocksService {
             break;
           case 'move':
             if (operation.blockId && operation.data) {
-              await this.moveBlock(databaseId, recordId, operation.blockId, operation.data as IMoveBlockRequest, userId);
+              await this.moveBlock(
+                databaseId,
+                recordId,
+                operation.blockId,
+                operation.data as IMoveBlockRequest,
+                userId
+              );
             }
             break;
         }
@@ -393,10 +406,7 @@ export class BlocksService {
     // Verify database access
     const database = await DatabaseModel.findOne({
       _id: new ObjectId(databaseId),
-      $or: [
-        { createdBy: new ObjectId(userId) },
-        { 'permissions.userId': new ObjectId(userId) }
-      ]
+      $or: [{ createdBy: new ObjectId(userId) }, { 'permissions.userId': new ObjectId(userId) }]
     });
 
     if (!database) {
@@ -416,7 +426,10 @@ export class BlocksService {
     return record;
   }
 
-  private validateBlockContent(type: BlockType, content: Record<string, unknown>): IBlockValidationResult {
+  private validateBlockContent(
+    type: BlockType,
+    content: Record<string, unknown>
+  ): IBlockValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -483,9 +496,9 @@ export class BlocksService {
     // Search in rich text content
     const richTextFields = this.extractRichTextFromBlock(block);
     for (const richText of richTextFields) {
-      if (richText.some((rt: IRichTextContent) =>
-        rt.plain_text?.toLowerCase().includes(searchText)
-      )) {
+      if (
+        richText.some((rt: IRichTextContent) => rt.plain_text?.toLowerCase().includes(searchText))
+      ) {
         return true;
       }
     }
@@ -639,11 +652,7 @@ export class BlocksService {
   }
 
   // Auto-format block content
-  async autoFormatBlock(
-    recordId: string,
-    blockId: string,
-    userId: string
-  ): Promise<any> {
+  async autoFormatBlock(recordId: string, blockId: string, userId: string): Promise<any> {
     const record = await RecordModel.findById(recordId);
     if (!record) {
       throw createNotFoundError('Record not found');
@@ -775,10 +784,7 @@ export class BlocksService {
 
     // Generate summary using text processing service
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const summary = textProcessingService.generateSummary(
-      convertedContent,
-      maxSentences
-    );
+    const summary = textProcessingService.generateSummary(convertedContent, maxSentences);
 
     return summary;
   }

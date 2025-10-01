@@ -6,8 +6,6 @@ import {
   refreshTokenLimiter,
   registerLimiter
 } from '@/config/rate-limiter/auth-rate-limiter';
-import * as authMiddleware from '../../../middlewares/auth';
-const { authenticateToken } = authMiddleware;
 import { validateBody, validateQuery } from '@/middlewares/validation';
 import {
   register,
@@ -33,6 +31,7 @@ import {
   googleCallbackQuerySchema,
   googleCallbackSchema
 } from '@/modules/auth/validators/auth.validaations';
+import {authenticateToken} from "@/middlewares";
 
 const router = Router();
 

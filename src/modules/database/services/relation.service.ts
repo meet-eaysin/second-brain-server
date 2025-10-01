@@ -10,8 +10,7 @@ import { PropertyModel } from '../models/property.model';
 import { RecordModel } from '../models/record.model';
 import { DatabaseModel } from '../models/database.model';
 import { EPropertyType, IRelationValue } from '@/modules/core/types/property.types';
-import { createNotFoundError } from '@/utils/response.utils';
-import { createAppError } from '@/utils';
+import { createAppError, createNotFoundError } from '@/utils';
 
 export interface ICreateRelationRequest {
   sourcePropertyId: string;
@@ -33,10 +32,7 @@ export interface IRelationConnectionRequest {
 
 export class RelationService {
   // Create a new relation between properties
-  async createRelation(
-    data: ICreateRelationRequest,
-    userId: string
-  ): Promise<IRelation> {
+  async createRelation(data: ICreateRelationRequest, userId: string): Promise<IRelation> {
     // Get source property
     const sourceProperty = await PropertyModel.findById(data.sourcePropertyId);
     if (!sourceProperty) {
@@ -219,7 +215,9 @@ export class RelationService {
     if (relation.type === ERelationType.ONE_TO_ONE) {
       // Check if source already has a connection
       const sourceConnections = await RelationConnectionModel.findBySourceRecord(sourceRecordId);
-      const existingSourceConnection = sourceConnections.find(c => c.relationId === relation.id.toString());
+      const existingSourceConnection = sourceConnections.find(
+        c => c.relationId === relation.id.toString()
+      );
 
       if (existingSourceConnection) {
         throw createAppError('Source record already has a one-to-one connection', 400);
@@ -227,7 +225,9 @@ export class RelationService {
 
       // Check if target already has a connection
       const targetConnections = await RelationConnectionModel.findByTargetRecord(targetRecordId);
-      const existingTargetConnection = targetConnections.find(c => c.relationId === relation.id.toString());
+      const existingTargetConnection = targetConnections.find(
+        c => c.relationId === relation.id.toString()
+      );
 
       if (existingTargetConnection) {
         throw createAppError('Target record already has a one-to-one connection', 400);
@@ -235,7 +235,9 @@ export class RelationService {
     } else if (relation.type === ERelationType.ONE_TO_MANY) {
       // Check if target already has a connection (target can only have one source)
       const targetConnections = await RelationConnectionModel.findByTargetRecord(targetRecordId);
-      const existingTargetConnection = targetConnections.find(c => c.relationId === relation.id.toString());
+      const existingTargetConnection = targetConnections.find(
+        c => c.relationId === relation.id.toString()
+      );
 
       if (existingTargetConnection) {
         throw createAppError('Target record already has a connection in one-to-many relation', 400);
@@ -243,7 +245,9 @@ export class RelationService {
     } else if (relation.type === ERelationType.MANY_TO_ONE) {
       // Check if source already has a connection (source can only have one target)
       const sourceConnections = await RelationConnectionModel.findBySourceRecord(sourceRecordId);
-      const existingSourceConnection = sourceConnections.find(c => c.relationId === relation.id.toString());
+      const existingSourceConnection = sourceConnections.find(
+        c => c.relationId === relation.id.toString()
+      );
 
       if (existingSourceConnection) {
         throw createAppError('Source record already has a connection in many-to-one relation', 400);
@@ -258,25 +262,17 @@ export class RelationService {
     connection: IRelationConnection
   ) {
     // Update source record
-    await this.addRelationValueToRecord(
-      connection.sourceRecordId,
-      relation.sourcePropertyId,
-      {
-        recordId: connection.targetRecordId,
-        databaseId: relation.targetDatabaseId
-      }
-    );
+    await this.addRelationValueToRecord(connection.sourceRecordId, relation.sourcePropertyId, {
+      recordId: connection.targetRecordId,
+      databaseId: relation.targetDatabaseId
+    });
 
     // Update target record (if symmetric)
     if (relation.isSymmetric) {
-      await this.addRelationValueToRecord(
-        connection.targetRecordId,
-        relation.targetPropertyId,
-        {
-          recordId: connection.sourceRecordId,
-          databaseId: relation.sourceDatabaseId
-        }
-      );
+      await this.addRelationValueToRecord(connection.targetRecordId, relation.targetPropertyId, {
+        recordId: connection.sourceRecordId,
+        databaseId: relation.sourceDatabaseId
+      });
     }
   }
 
@@ -474,10 +470,7 @@ export class RelationService {
     }
 
     // Soft delete all connections
-    await RelationConnectionModel.updateMany(
-      { relationId, isActive: true },
-      { isActive: false }
-    );
+    await RelationConnectionModel.updateMany({ relationId, isActive: true }, { isActive: false });
 
     // Soft delete relation
     relation.isActive = false;
