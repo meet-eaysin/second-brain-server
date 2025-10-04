@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
-import { viewsService } from '../services/views.services';
+import { viewsService } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
 export const createDatabaseView = catchAsync(

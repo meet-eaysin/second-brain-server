@@ -22,6 +22,18 @@ export {
   duplicateDatabaseService
 } from './services/database.services';
 
+export { recordsService } from './services/records.services';
+
+export { propertiesService } from './services/properties.services';
+
+export { viewsService } from './services/views.services';
+
+export { blocksService } from './services/blocks.services';
+
+export { relationService } from './services/relation.service';
+
+export { rollupService } from './services/rollup.service';
+
 export { DatabaseModel } from './models/database.model';
 export { PropertyModel } from './models/property.model';
 export { ViewModel } from './models/view.model';
@@ -39,6 +51,10 @@ export type {
   IDatabaseIcon,
   IDatabaseCover
 } from './types/database.types';
+
+export type { IRecordQueryOptions } from './types/records.types';
+
+export type { IReorderPropertiesRequest } from './types/properties.types';
 
 export { EDatabaseType } from '@/modules/core/types/database.types';
 

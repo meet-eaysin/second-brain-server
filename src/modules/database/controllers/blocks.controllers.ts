@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
-import { blocksService } from '../services/blocks.services';
+import { blocksService } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
 export const addContentBlock = catchAsync(
@@ -74,7 +74,7 @@ export const duplicateContentBlock = catchAsync(
     const duplicateData = {
       type: blockType,
       content: blockContent,
-      afterBlockId: blockId 
+      afterBlockId: blockId
     };
 
     const duplicatedBlock = await blocksService.addBlock(

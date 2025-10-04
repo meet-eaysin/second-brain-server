@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { relationService, ICreateRelationRequest, IRelationConnectionRequest } from '../services/relation.service';
-import { rollupService } from '../services/rollup.service';
+import { relationService, rollupService } from '@/modules/database';
+import { ICreateRelationRequest, IRelationConnectionRequest } from '../services/relation.service';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/auth/index';
 
@@ -48,15 +48,11 @@ export const getRelatedRecords = catchAsync(
     const { recordId, propertyId } = req.params;
     const { includeProperties, limit, offset } = req.query;
 
-    const relatedRecords = await relationService.getRelatedRecords(
-      recordId,
-      propertyId,
-      {
-        includeProperties: includeProperties === 'true',
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined
-      }
-    );
+    const relatedRecords = await relationService.getRelatedRecords(recordId, propertyId, {
+      includeProperties: includeProperties === 'true',
+      limit: limit ? parseInt(limit as string) : undefined,
+      offset: offset ? parseInt(offset as string) : undefined
+    });
 
     sendSuccessResponse(res, 'Related records retrieved successfully', relatedRecords);
   }

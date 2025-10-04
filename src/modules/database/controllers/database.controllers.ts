@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
-import { databaseService } from '@/modules/database/services/database.services';
 import {
+  databaseService,
   ICreateDatabaseRequest,
   IUpdateDatabaseRequest,
   IDatabaseQueryParams
-} from '../types/database.types';
+} from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
 export const createDatabase = catchAsync(

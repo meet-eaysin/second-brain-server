@@ -1,12 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { createAppError } from '@/utils/error.utils';
-import { propertiesService } from '../services/properties.services';
+import { propertiesService, IReorderPropertiesRequest } from '@/modules/database';
 import {
   ICreatePropertyRequest,
   IUpdatePropertyRequest
 } from '@/modules/core/types/property.types';
-import { IReorderPropertiesRequest } from '../types/properties.types';
 import { getUserId } from '@/auth/index';
 
 export const createDatabaseProperty = catchAsync(

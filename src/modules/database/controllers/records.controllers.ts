@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
-import { recordsService } from '../services/records.services';
+import { recordsService, IRecordQueryOptions } from '@/modules/database';
 import { getUserId } from '@/auth/index';
-import { IRecordQueryOptions } from '@/modules/database/types/records.types';
 
 export const createDatabaseRecord = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
