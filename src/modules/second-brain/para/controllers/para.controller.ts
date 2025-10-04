@@ -424,3 +424,24 @@ export const getParaStats = catchAsync(
     sendSuccessResponse(res, 'PARA statistics retrieved successfully', stats);
   }
 );
+
+export const paraController = {
+  createParaItem,
+  getParaItems,
+  getParaItemById,
+  updateParaItem,
+  deleteParaItem,
+  getProjects,
+  getAreas,
+  getResources,
+  getArchive,
+  getItemsByStatus,
+  getItemsByPriority,
+  getReviewsOverdue,
+  searchParaItems,
+  moveToArchive,
+  restoreFromArchive,
+  categorizeExistingItem,
+  markReviewed,
+  getParaStats
+};

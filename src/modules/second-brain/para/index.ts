@@ -6,41 +6,10 @@
 export { default as paraRoutes } from './routes/para.routes';
 
 // Controllers - PARA business logic
-export {
-  // PARA item CRUD operations
-  createParaItem,
-  getParaItems,
-  getParaItemById,
-  updateParaItem,
-  deleteParaItem,
-  
-  // PARA categories
-  getProjects,
-  getAreas,
-  getResources,
-  getArchive,
-  
-  // PARA analytics
-  getItemsByStatus,
-  getItemsByPriority,
-  getReviewsOverdue,
-  searchParaItems,
-  
-  // PARA actions
-  moveToArchive,
-  restoreFromArchive,
-  categorizeExistingItem,
-  markReviewed,
-  
-  // Statistics
-  getParaStats
-} from './controllers/para.controller';
+export { paraController } from './controllers/para.controller';
 
 // Services - PARA-specific services
-export {
-  ParaService,
-  paraService
-} from './services/para.service';
+export { paraService } from './services/para.service';
 
 // Types
 export type * from './types/para.types';

@@ -30,13 +30,226 @@ import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.t
 import { projectsService } from '../../projects/services/projects.service';
 import { resourcesService } from '../../resources/services/resources.service';
 
-export class ParaService {
+// ===== HELPER METHODS =====
+
+async function validateLinkedItems(data: ICreateParaItemRequest, userId: string): Promise<void> {
+  // This could be expanded to actually validate that linked items exist
+  // For now, we'll just do basic validation
+  const allLinkedIds = [
+    ...(data.linkedProjectIds || []),
+    ...(data.linkedResourceIds || []),
+    ...(data.linkedTaskIds || []),
+    ...(data.linkedNoteIds || []),
+    ...(data.linkedGoalIds || []),
+    ...(data.linkedPeopleIds || [])
+  ];
+
+  if (allLinkedIds.length > 100) {
+    throw createValidationError('Too many linked items. Maximum 100 allowed.');
+  }
+}
+
+function calculateNextReviewDate(frequency: EParaReviewFrequency): Date {
+  const now = new Date();
+  switch (frequency) {
+    case EParaReviewFrequency.DAILY:
+      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    case EParaReviewFrequency.WEEKLY:
+      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    case EParaReviewFrequency.MONTHLY:
+      return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    case EParaReviewFrequency.QUARTERLY:
+      return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
+    case EParaReviewFrequency.YEARLY:
+      return new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+    case EParaReviewFrequency.NEVER:
+    default:
+      return new Date(now.getFullYear() + 10, now.getMonth(), now.getDate()); // Far future
+  }
+}
+
+function buildParaQuery(params: IParaQueryParams, userId: string): any {
+  const query: any = {
+    isDeleted: { $ne: true }
+  };
+
+  if (params.databaseId) {
+    query.databaseId = params.databaseId;
+  }
+
+  if (params.category && params.category.length > 0) {
+    query['properties.Category'] = { $in: params.category };
+  }
+
+  if (params.status && params.status.length > 0) {
+    query['properties.Status'] = { $in: params.status };
+  }
+
+  if (params.priority && params.priority.length > 0) {
+    query['properties.Priority'] = { $in: params.priority };
+  }
+
+  if (params.tags && params.tags.length > 0) {
+    query['properties.Tags'] = { $in: params.tags };
+  }
+
+  if (params.search) {
+    query.$or = [
+      { 'properties.Title': { $regex: params.search, $options: 'i' } },
+      { 'properties.Description': { $regex: params.search, $options: 'i' } },
+      { 'properties.Tags': { $elemMatch: { $regex: params.search, $options: 'i' } } }
+    ];
+  }
+
+  if (params.parentAreaId) {
+    query['properties.Parent Area ID'] = params.parentAreaId;
+  }
+
+  if (params.reviewOverdue) {
+    query['properties.Next Review Date'] = { $lt: new Date() };
+  }
+
+  if (params.isTemplate !== undefined) {
+    query['properties.Is Template'] = params.isTemplate;
+  }
+
+  if (params.isPublic !== undefined) {
+    query['properties.Is Public'] = params.isPublic;
+  }
+
+  // Add date filters
+  if (params.createdAfter || params.createdBefore) {
+    const dateQuery: any = {};
+    if (params.createdAfter) dateQuery.$gte = params.createdAfter;
+    if (params.createdBefore) dateQuery.$lte = params.createdBefore;
+    query.createdAt = dateQuery;
+  }
+
+  if (params.lastReviewedBefore) {
+    query['properties.Last Reviewed At'] = { $lt: params.lastReviewedBefore };
+  }
+
+  return query;
+}
+
+function mapSortField(sortBy: string): string {
+  const fieldMap: Record<string, string> = {
+    title: 'properties.Title',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    priority: 'properties.Priority',
+    nextReviewDate: 'properties.Next Review Date'
+  };
+  return fieldMap[sortBy] || 'updatedAt';
+}
+
+function formatParaItemResponse(record: any): IParaItem | IParaArea | IParaArchive {
+  const category = record.properties.Category || EParaCategory.AREAS;
+
+  const baseItem: IParaItem = {
+    id: record._id.toString(),
+    databaseId: record.databaseId,
+    category,
+    title: record.properties.Title || '',
+    description: record.properties.Description,
+    status: record.properties.Status || EParaStatus.ACTIVE,
+    priority: record.properties.Priority || EParaPriority.MEDIUM,
+    linkedProjectIds: record.properties['Linked Project IDs'] || [],
+    linkedResourceIds: record.properties['Linked Resource IDs'] || [],
+    linkedTaskIds: record.properties['Linked Task IDs'] || [],
+    linkedNoteIds: record.properties['Linked Note IDs'] || [],
+    linkedGoalIds: record.properties['Linked Goal IDs'] || [],
+    linkedPeopleIds: record.properties['Linked People IDs'] || [],
+    reviewFrequency: record.properties['Review Frequency'] || EParaReviewFrequency.MONTHLY,
+    lastReviewedAt: record.properties['Last Reviewed At'],
+    nextReviewDate: record.properties['Next Review Date'],
+    tags: record.properties.Tags || [],
+    parentAreaId: record.properties['Parent Area ID'],
+    childAreaIds: record.properties['Child Area IDs'] || [],
+    createdFromCategory: record.properties['Created From Category'],
+    archivedFromCategory: record.properties['Archived From Category'],
+    archiveReason: record.properties['Archive Reason'],
+    completionPercentage: record.properties['Completion Percentage'] || 0,
+    timeSpentMinutes: record.properties['Time Spent Minutes'] || 0,
+    isTemplate: record.properties['Is Template'] || false,
+    isPublic: record.properties['Is Public'] || false,
+    notificationSettings: record.properties['Notification Settings'] || {
+      reviewReminders: true,
+      statusUpdates: true,
+      completionAlerts: true
+    },
+    customFields: record.properties['Custom Fields'] || {},
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    createdBy: record.createdBy,
+    updatedBy: record.updatedBy
+  };
+
+  // Return area-specific data for areas
+  if (category === EParaCategory.AREAS) {
+    return {
+      ...baseItem,
+      category: EParaCategory.AREAS,
+      areaType: record.properties['Area Type'] || 'personal',
+      maintenanceLevel: record.properties['Maintenance Level'] || 'medium',
+      standardsOfExcellence: record.properties['Standards Of Excellence'] || [],
+      currentChallenges: record.properties['Current Challenges'] || [],
+      keyMetrics: record.properties['Key Metrics'] || [],
+      isResponsibilityArea:
+        record.properties['Is Responsibility Area'] !== undefined
+          ? record.properties['Is Responsibility Area']
+          : true,
+      stakeholders: record.properties['Stakeholders'] || [],
+      maintenanceActions: record.properties['Maintenance Actions'] || []
+    } as IParaArea;
+  }
+
+  // Return archive-specific data for archives
+  if (category === EParaCategory.ARCHIVE) {
+    return {
+      ...baseItem,
+      category: EParaCategory.ARCHIVE,
+      originalCategory: record.properties['Original Category'] || EParaCategory.PROJECTS,
+      archivedAt: record.properties['Archived At'],
+      archivedBy: record.properties['Archived By'] || '',
+      archiveReason: record.properties['Archive Reason'] || 'completed',
+      archiveNotes: record.properties['Archive Notes'],
+      retentionPolicy: record.properties['Retention Policy'] || 'permanent',
+      deleteAfterDate: record.properties['Delete After Date'],
+      originalData: record.properties['Original Data'] || {},
+      relatedArchiveIds: record.properties['Related Archive IDs'] || []
+    } as IParaArchive;
+  }
+
+  return baseItem;
+}
+
+async function getNextOrder(databaseId: string): Promise<number> {
+  const lastRecord = await RecordModel.findOne(
+    { databaseId, isDeleted: { $ne: true } },
+    { order: 1 }
+  )
+    .sort({ order: -1 })
+    .exec();
+
+  return (lastRecord?.order || 0) + 1;
+}
+
+async function addChildArea(parentId: string, childId: string, userId: string): Promise<void> {
+  await RecordModel.findByIdAndUpdate(parentId, {
+    $addToSet: { 'properties.Child Area IDs': childId },
+    updatedBy: userId,
+    updatedAt: new Date()
+  });
+}
+
+export const paraService = {
   // ===== PARA ITEM OPERATIONS =====
 
-  async createParaItem(
+  createParaItem: async (
     data: ICreateParaItemRequest,
     userId: string
-  ): Promise<IParaItem | IParaArea | IParaArchive> {
+  ): Promise<IParaItem | IParaArea | IParaArchive> => {
     try {
       // Verify the database exists and is a PARA database
       const database = await DatabaseModel.findOne({
@@ -74,10 +287,10 @@ export class ParaService {
       }
 
       // Validate linked items exist (optional - could be async validation)
-      await this.validateLinkedItems(data, userId);
+      await validateLinkedItems(data, userId);
 
       // Calculate next review date
-      const nextReviewDate = this.calculateNextReviewDate(
+      const nextReviewDate = calculateNextReviewDate(
         data.reviewFrequency || EParaReviewFrequency.MONTHLY
       );
 
@@ -140,14 +353,14 @@ export class ParaService {
         content: [],
         createdBy: userId,
         updatedBy: userId,
-        order: await this.getNextOrder(data.databaseId)
+        order: await getNextOrder(data.databaseId)
       });
 
       const savedRecord = await paraRecord.save();
 
       // Update parent area if specified
       if (data.parentAreaId) {
-        await this.addChildArea(data.parentAreaId, savedRecord._id as string, userId);
+        await addChildArea(data.parentAreaId, savedRecord._id as string, userId);
       }
 
       // Update database record count and activity
@@ -156,14 +369,14 @@ export class ParaService {
         lastActivityAt: new Date()
       });
 
-      return this.formatParaItemResponse(savedRecord);
+      return formatParaItemResponse(savedRecord);
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to create PARA item: ${error.message}`, 500);
     }
-  }
+  },
 
-  async getParaItems(
+  getParaItems: async (
     params: IParaQueryParams,
     userId: string
   ): Promise<{
@@ -173,20 +386,20 @@ export class ParaService {
     limit: number;
     hasNext: boolean;
     hasPrev: boolean;
-  }> {
+  }> => {
     try {
-      const query = this.buildParaQuery(params, userId);
+      const query = buildParaQuery(params, userId);
       const { page = 1, limit = 25, sortBy = 'updatedAt', sortOrder = 'desc' } = params;
 
       const skip = (page - 1) * limit;
-      const sortOptions: any = { [this.mapSortField(sortBy)]: sortOrder === 'desc' ? -1 : 1 };
+      const sortOptions: any = { [mapSortField(sortBy)]: sortOrder === 'desc' ? -1 : 1 };
 
       const [items, total] = await Promise.all([
         RecordModel.find(query).sort(sortOptions).skip(skip).limit(limit).exec(),
         RecordModel.countDocuments(query)
       ]);
 
-      const formattedItems = items.map(item => this.formatParaItemResponse(item));
+      const formattedItems = items.map(item => formatParaItemResponse(item));
 
       const hasNext = skip + limit < total;
       const hasPrev = page > 1;
@@ -203,9 +416,12 @@ export class ParaService {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to get PARA items: ${error.message}`, 500);
     }
-  }
+  },
 
-  async getParaItemById(id: string, userId: string): Promise<IParaItem | IParaArea | IParaArchive> {
+  getParaItemById: async (
+    id: string,
+    userId: string
+  ): Promise<IParaItem | IParaArea | IParaArchive> => {
     try {
       const item = await RecordModel.findOne({
         _id: id,
@@ -228,18 +444,18 @@ export class ParaService {
         throw createForbiddenError('Insufficient permissions to view this PARA item');
       }
 
-      return this.formatParaItemResponse(item);
+      return formatParaItemResponse(item);
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to get PARA item: ${error.message}`, 500);
     }
-  }
+  },
 
-  async updateParaItem(
+  updateParaItem: async (
     id: string,
     data: IUpdateParaItemRequest,
     userId: string
-  ): Promise<IParaItem | IParaArea | IParaArchive> {
+  ): Promise<IParaItem | IParaArea | IParaArchive> => {
     try {
       const item = await RecordModel.findOne({
         _id: id,
@@ -296,9 +512,7 @@ export class ParaService {
       // Update review frequency and calculate next review date
       if (data.reviewFrequency !== undefined) {
         updateData['properties.Review Frequency'] = data.reviewFrequency;
-        updateData['properties.Next Review Date'] = this.calculateNextReviewDate(
-          data.reviewFrequency
-        );
+        updateData['properties.Next Review Date'] = calculateNextReviewDate(data.reviewFrequency);
       }
 
       // Area-specific updates
@@ -332,14 +546,14 @@ export class ParaService {
       // Update database activity
       await DatabaseModel.findByIdAndUpdate(updatedItem.databaseId, { lastActivityAt: new Date() });
 
-      return this.formatParaItemResponse(updatedItem);
+      return formatParaItemResponse(updatedItem);
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to update PARA item: ${error.message}`, 500);
     }
-  }
+  },
 
-  async deleteParaItem(id: string, userId: string, permanent: boolean = false): Promise<void> {
+  deleteParaItem: async (id: string, userId: string, permanent: boolean = false): Promise<void> => {
     try {
       const item = await RecordModel.findOne({
         _id: id,
@@ -381,11 +595,11 @@ export class ParaService {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to delete PARA item: ${error.message}`, 500);
     }
-  }
+  },
 
   // ===== PARA-SPECIFIC OPERATIONS =====
 
-  async moveToArchive(data: IMoveToArchiveRequest, userId: string): Promise<void> {
+  moveToArchive: async (data: IMoveToArchiveRequest, userId: string): Promise<void> => {
     try {
       const results = await Promise.allSettled(
         data.itemIds.map(async itemId => {
@@ -417,9 +631,9 @@ export class ParaService {
     } catch (error: any) {
       throw createAppError(`Failed to move items to archive: ${error.message}`, 500);
     }
-  }
+  },
 
-  async restoreFromArchive(data: IRestoreFromArchiveRequest, userId: string): Promise<void> {
+  restoreFromArchive: async (data: IRestoreFromArchiveRequest, userId: string): Promise<void> => {
     try {
       const results = await Promise.allSettled(
         data.itemIds.map(async itemId => {
@@ -442,12 +656,12 @@ export class ParaService {
     } catch (error: any) {
       throw createAppError(`Failed to restore items from archive: ${error.message}`, 500);
     }
-  }
+  },
 
-  async categorizeExistingItem(
+  categorizeExistingItem: async (
     data: IParaCategorizeRequest,
     userId: string
-  ): Promise<IParaItem | IParaArea | IParaArchive | null> {
+  ): Promise<IParaItem | IParaArea | IParaArchive | null> => {
     try {
       // Validate the existing item exists
       let existingItem;
@@ -469,14 +683,14 @@ export class ParaService {
 
       // If linking to existing PARA item
       if (data.paraItemId) {
-        const paraItem = await this.getParaItemById(data.paraItemId, userId);
+        const paraItem = await paraService.getParaItemById(data.paraItemId, userId);
 
         // Update the PARA item to include this linked item
         const linkedField =
           `linked${data.itemType.charAt(0).toUpperCase() + data.itemType.slice(1)}Ids` as keyof IUpdateParaItemRequest;
         const currentLinked = (paraItem as any)[linkedField] || [];
 
-        await this.updateParaItem(
+        await paraService.updateParaItem(
           data.paraItemId,
           {
             [linkedField]: [...currentLinked, data.itemId]
@@ -484,7 +698,7 @@ export class ParaService {
           userId
         );
 
-        return await this.getParaItemById(data.paraItemId, userId);
+        return await paraService.getParaItemById(data.paraItemId, userId);
       }
 
       // If creating new PARA item
@@ -496,7 +710,7 @@ export class ParaService {
           [linkedField]: [data.itemId]
         };
 
-        return await this.createParaItem(newParaItemData, userId);
+        return await paraService.createParaItem(newParaItemData, userId);
       }
 
       return null;
@@ -505,220 +719,4 @@ export class ParaService {
       throw createAppError(`Failed to categorize item: ${error.message}`, 500);
     }
   }
-
-  // ===== HELPER METHODS =====
-
-  private async validateLinkedItems(data: ICreateParaItemRequest, userId: string): Promise<void> {
-    // This could be expanded to actually validate that linked items exist
-    // For now, we'll just do basic validation
-    const allLinkedIds = [
-      ...(data.linkedProjectIds || []),
-      ...(data.linkedResourceIds || []),
-      ...(data.linkedTaskIds || []),
-      ...(data.linkedNoteIds || []),
-      ...(data.linkedGoalIds || []),
-      ...(data.linkedPeopleIds || [])
-    ];
-
-    if (allLinkedIds.length > 100) {
-      throw createValidationError('Too many linked items. Maximum 100 allowed.');
-    }
-  }
-
-  private calculateNextReviewDate(frequency: EParaReviewFrequency): Date {
-    const now = new Date();
-    switch (frequency) {
-      case EParaReviewFrequency.DAILY:
-        return new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      case EParaReviewFrequency.WEEKLY:
-        return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      case EParaReviewFrequency.MONTHLY:
-        return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
-      case EParaReviewFrequency.QUARTERLY:
-        return new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
-      case EParaReviewFrequency.YEARLY:
-        return new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-      case EParaReviewFrequency.NEVER:
-      default:
-        return new Date(now.getFullYear() + 10, now.getMonth(), now.getDate()); // Far future
-    }
-  }
-
-  private buildParaQuery(params: IParaQueryParams, userId: string): any {
-    const query: any = {
-      isDeleted: { $ne: true }
-    };
-
-    if (params.databaseId) {
-      query.databaseId = params.databaseId;
-    }
-
-    if (params.category && params.category.length > 0) {
-      query['properties.Category'] = { $in: params.category };
-    }
-
-    if (params.status && params.status.length > 0) {
-      query['properties.Status'] = { $in: params.status };
-    }
-
-    if (params.priority && params.priority.length > 0) {
-      query['properties.Priority'] = { $in: params.priority };
-    }
-
-    if (params.tags && params.tags.length > 0) {
-      query['properties.Tags'] = { $in: params.tags };
-    }
-
-    if (params.search) {
-      query.$or = [
-        { 'properties.Title': { $regex: params.search, $options: 'i' } },
-        { 'properties.Description': { $regex: params.search, $options: 'i' } },
-        { 'properties.Tags': { $elemMatch: { $regex: params.search, $options: 'i' } } }
-      ];
-    }
-
-    if (params.parentAreaId) {
-      query['properties.Parent Area ID'] = params.parentAreaId;
-    }
-
-    if (params.reviewOverdue) {
-      query['properties.Next Review Date'] = { $lt: new Date() };
-    }
-
-    if (params.isTemplate !== undefined) {
-      query['properties.Is Template'] = params.isTemplate;
-    }
-
-    if (params.isPublic !== undefined) {
-      query['properties.Is Public'] = params.isPublic;
-    }
-
-    // Add date filters
-    if (params.createdAfter || params.createdBefore) {
-      const dateQuery: any = {};
-      if (params.createdAfter) dateQuery.$gte = params.createdAfter;
-      if (params.createdBefore) dateQuery.$lte = params.createdBefore;
-      query.createdAt = dateQuery;
-    }
-
-    if (params.lastReviewedBefore) {
-      query['properties.Last Reviewed At'] = { $lt: params.lastReviewedBefore };
-    }
-
-    return query;
-  }
-
-  private mapSortField(sortBy: string): string {
-    const fieldMap: Record<string, string> = {
-      title: 'properties.Title',
-      createdAt: 'createdAt',
-      updatedAt: 'updatedAt',
-      priority: 'properties.Priority',
-      nextReviewDate: 'properties.Next Review Date'
-    };
-    return fieldMap[sortBy] || 'updatedAt';
-  }
-
-  private formatParaItemResponse(record: any): IParaItem | IParaArea | IParaArchive {
-    const category = record.properties.Category || EParaCategory.AREAS;
-
-    const baseItem: IParaItem = {
-      id: record._id.toString(),
-      databaseId: record.databaseId,
-      category,
-      title: record.properties.Title || '',
-      description: record.properties.Description,
-      status: record.properties.Status || EParaStatus.ACTIVE,
-      priority: record.properties.Priority || EParaPriority.MEDIUM,
-      linkedProjectIds: record.properties['Linked Project IDs'] || [],
-      linkedResourceIds: record.properties['Linked Resource IDs'] || [],
-      linkedTaskIds: record.properties['Linked Task IDs'] || [],
-      linkedNoteIds: record.properties['Linked Note IDs'] || [],
-      linkedGoalIds: record.properties['Linked Goal IDs'] || [],
-      linkedPeopleIds: record.properties['Linked People IDs'] || [],
-      reviewFrequency: record.properties['Review Frequency'] || EParaReviewFrequency.MONTHLY,
-      lastReviewedAt: record.properties['Last Reviewed At'],
-      nextReviewDate: record.properties['Next Review Date'],
-      tags: record.properties.Tags || [],
-      parentAreaId: record.properties['Parent Area ID'],
-      childAreaIds: record.properties['Child Area IDs'] || [],
-      createdFromCategory: record.properties['Created From Category'],
-      archivedFromCategory: record.properties['Archived From Category'],
-      archiveReason: record.properties['Archive Reason'],
-      completionPercentage: record.properties['Completion Percentage'] || 0,
-      timeSpentMinutes: record.properties['Time Spent Minutes'] || 0,
-      isTemplate: record.properties['Is Template'] || false,
-      isPublic: record.properties['Is Public'] || false,
-      notificationSettings: record.properties['Notification Settings'] || {
-        reviewReminders: true,
-        statusUpdates: true,
-        completionAlerts: true
-      },
-      customFields: record.properties['Custom Fields'] || {},
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-      createdBy: record.createdBy,
-      updatedBy: record.updatedBy
-    };
-
-    // Return area-specific data for areas
-    if (category === EParaCategory.AREAS) {
-      return {
-        ...baseItem,
-        category: EParaCategory.AREAS,
-        areaType: record.properties['Area Type'] || 'personal',
-        maintenanceLevel: record.properties['Maintenance Level'] || 'medium',
-        standardsOfExcellence: record.properties['Standards Of Excellence'] || [],
-        currentChallenges: record.properties['Current Challenges'] || [],
-        keyMetrics: record.properties['Key Metrics'] || [],
-        isResponsibilityArea:
-          record.properties['Is Responsibility Area'] !== undefined
-            ? record.properties['Is Responsibility Area']
-            : true,
-        stakeholders: record.properties['Stakeholders'] || [],
-        maintenanceActions: record.properties['Maintenance Actions'] || []
-      } as IParaArea;
-    }
-
-    // Return archive-specific data for archives
-    if (category === EParaCategory.ARCHIVE) {
-      return {
-        ...baseItem,
-        category: EParaCategory.ARCHIVE,
-        originalCategory: record.properties['Original Category'] || EParaCategory.PROJECTS,
-        archivedAt: record.properties['Archived At'],
-        archivedBy: record.properties['Archived By'] || '',
-        archiveReason: record.properties['Archive Reason'] || 'completed',
-        archiveNotes: record.properties['Archive Notes'],
-        retentionPolicy: record.properties['Retention Policy'] || 'permanent',
-        deleteAfterDate: record.properties['Delete After Date'],
-        originalData: record.properties['Original Data'] || {},
-        relatedArchiveIds: record.properties['Related Archive IDs'] || []
-      } as IParaArchive;
-    }
-
-    return baseItem;
-  }
-
-  private async getNextOrder(databaseId: string): Promise<number> {
-    const lastRecord = await RecordModel.findOne(
-      { databaseId, isDeleted: { $ne: true } },
-      { order: 1 }
-    )
-      .sort({ order: -1 })
-      .exec();
-
-    return (lastRecord?.order || 0) + 1;
-  }
-
-  private async addChildArea(parentId: string, childId: string, userId: string): Promise<void> {
-    await RecordModel.findByIdAndUpdate(parentId, {
-      $addToSet: { 'properties.Child Area IDs': childId },
-      updatedBy: userId,
-      updatedAt: new Date()
-    });
-  }
-}
-
-export const paraService = new ParaService();
-export default paraService;
+};

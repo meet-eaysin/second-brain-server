@@ -3,35 +3,7 @@ import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
 
 // PARA controllers
-import {
-  // PARA item CRUD
-  createParaItem,
-  getParaItems,
-  getParaItemById,
-  updateParaItem,
-  deleteParaItem,
-
-  // PARA categories
-  getProjects,
-  getAreas,
-  getResources,
-  getArchive,
-
-  // PARA analytics
-  getItemsByStatus,
-  getItemsByPriority,
-  getReviewsOverdue,
-  searchParaItems,
-
-  // PARA actions
-  moveToArchive,
-  restoreFromArchive,
-  categorizeExistingItem,
-  markReviewed,
-
-  // Statistics
-  getParaStats
-} from '../controllers/para.controller';
+import { paraController } from '../controllers/para.controller';
 
 // Validators
 import {
@@ -56,34 +28,46 @@ router.use(authenticateToken);
 
 // ===== PARA ITEM CRUD OPERATIONS =====
 
-router.post('/', validateBody(createParaItemSchema), createParaItem);
+router.post('/', validateBody(createParaItemSchema), paraController.createParaItem);
 
-router.get('/', validateQuery(getParaItemsQuerySchema), getParaItems);
+router.get('/', validateQuery(getParaItemsQuerySchema), paraController.getParaItems);
 
-router.get('/stats', validateQuery(paraStatsQuerySchema), getParaStats);
+router.get('/stats', validateQuery(paraStatsQuerySchema), paraController.getParaStats);
 
-router.get('/search', validateQuery(searchParaItemsSchema), searchParaItems);
+router.get('/search', validateQuery(searchParaItemsSchema), paraController.searchParaItems);
 
-router.get('/:id', validateParams(paraItemIdSchema), getParaItemById);
+router.get('/:id', validateParams(paraItemIdSchema), paraController.getParaItemById);
 
 router.put(
   '/:id',
   validateParams(paraItemIdSchema),
   validateBody(updateParaItemSchema),
-  updateParaItem
+  paraController.updateParaItem
 );
 
-router.delete('/:id', validateParams(paraItemIdSchema), deleteParaItem);
+router.delete('/:id', validateParams(paraItemIdSchema), paraController.deleteParaItem);
 
 // ===== PARA CATEGORIES =====
 
-router.get('/categories/projects', validateQuery(getParaItemsQuerySchema), getProjects);
+router.get(
+  '/categories/projects',
+  validateQuery(getParaItemsQuerySchema),
+  paraController.getProjects
+);
 
-router.get('/categories/areas', validateQuery(getParaItemsQuerySchema), getAreas);
+router.get('/categories/areas', validateQuery(getParaItemsQuerySchema), paraController.getAreas);
 
-router.get('/categories/resources', validateQuery(getParaItemsQuerySchema), getResources);
+router.get(
+  '/categories/resources',
+  validateQuery(getParaItemsQuerySchema),
+  paraController.getResources
+);
 
-router.get('/categories/archive', validateQuery(getParaItemsQuerySchema), getArchive);
+router.get(
+  '/categories/archive',
+  validateQuery(getParaItemsQuerySchema),
+  paraController.getArchive
+);
 
 // ===== PARA ANALYTICS =====
 
@@ -91,31 +75,39 @@ router.get(
   '/status/:status',
   validateParams(statusParamSchema),
   validateQuery(getParaItemsQuerySchema),
-  getItemsByStatus
+  paraController.getItemsByStatus
 );
 
 router.get(
   '/priority/:priority',
   validateParams(priorityParamSchema),
   validateQuery(getParaItemsQuerySchema),
-  getItemsByPriority
+  paraController.getItemsByPriority
 );
 
-router.get('/reviews/overdue', validateQuery(getParaItemsQuerySchema), getReviewsOverdue);
+router.get(
+  '/reviews/overdue',
+  validateQuery(getParaItemsQuerySchema),
+  paraController.getReviewsOverdue
+);
 
 // ===== PARA ACTIONS =====
 
-router.post('/archive', validateBody(moveToArchiveSchema), moveToArchive);
+router.post('/archive', validateBody(moveToArchiveSchema), paraController.moveToArchive);
 
-router.post('/restore', validateBody(restoreFromArchiveSchema), restoreFromArchive);
+router.post('/restore', validateBody(restoreFromArchiveSchema), paraController.restoreFromArchive);
 
-router.post('/categorize', validateBody(categorizeExistingItemSchema), categorizeExistingItem);
+router.post(
+  '/categorize',
+  validateBody(categorizeExistingItemSchema),
+  paraController.categorizeExistingItem
+);
 
 router.post(
   '/:id/review',
   validateParams(paraItemIdSchema),
   validateBody(markReviewedSchema),
-  markReviewed
+  paraController.markReviewed
 );
 
 export default router;
