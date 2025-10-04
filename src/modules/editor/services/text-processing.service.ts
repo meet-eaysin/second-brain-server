@@ -39,46 +39,79 @@ export interface IFormattingRule {
   type: 'bold' | 'italic' | 'code' | 'link';
 }
 
-export class TextProcessingService {
-  private commonWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
-    'will', 'would', 'could', 'should', 'may', 'might', 'can', 'must', 'shall'
-  ]);
+const commonWords = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'but',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'with',
+  'by',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'can',
+  'must',
+  'shall'
+]);
 
-  private formattingRules: IFormattingRule[] = [
-    {
-      pattern: /\*\*(.*?)\*\*/g,
-      replacement: '$1',
-      type: 'bold'
-    },
-    {
-      pattern: /\*(.*?)\*/g,
-      replacement: '$1',
-      type: 'italic'
-    },
-    {
-      pattern: /`(.*?)`/g,
-      replacement: '$1',
-      type: 'code'
-    },
-    {
-      pattern: /\[([^\]]+)\]\(([^)]+)\)/g,
-      replacement: '$1',
-      type: 'link'
-    }
-  ];
+const formattingRules: IFormattingRule[] = [
+  {
+    pattern: /\*\*(.*?)\*\*/g,
+    replacement: '$1',
+    type: 'bold'
+  },
+  {
+    pattern: /\*(.*?)\*/g,
+    replacement: '$1',
+    type: 'italic'
+  },
+  {
+    pattern: /`(.*?)`/g,
+    replacement: '$1',
+    type: 'code'
+  },
+  {
+    pattern: /\[([^\]]+)\]\(([^)]+)\)/g,
+    replacement: '$1',
+    type: 'link'
+  }
+];
 
+export const textProcessingService = {
   // Calculate text statistics
-  calculateStatistics(content: IRichTextContent[]): ITextStatistics {
+  calculateStatistics: function (content: IRichTextContent[]): ITextStatistics {
     const text = this.extractPlainText(content);
 
     const characterCount = text.length;
     const words = this.extractWords(text);
     const wordCount = words.length;
-    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    const paragraphs = text.split(/\n\s*\n/).filter((p: string) => p.trim().length > 0);
     const paragraphCount = paragraphs.length;
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
     const sentenceCount = sentences.length;
 
     // Reading time calculation (average 200 words per minute)
@@ -96,10 +129,10 @@ export class TextProcessingService {
       averageWordsPerSentence,
       averageSentencesPerParagraph
     };
-  }
+  },
 
   // Auto-complete text suggestions
-  generateAutoComplete(
+  generateAutoComplete: function (
     content: IRichTextContent[],
     cursorPosition: number,
     context: string = ''
@@ -122,10 +155,10 @@ export class TextProcessingService {
 
     // Sort by confidence
     return suggestions.sort((a, b) => b.confidence - a.confidence).slice(0, 10);
-  }
+  },
 
   // Spell check
-  performSpellCheck(content: IRichTextContent[]): ISpellCheckResult[] {
+  performSpellCheck: function (content: IRichTextContent[]): ISpellCheckResult[] {
     const text = this.extractPlainText(content);
     const words = this.extractWordsWithPositions(text);
     const errors: ISpellCheckResult[] = [];
@@ -143,10 +176,10 @@ export class TextProcessingService {
     }
 
     return errors;
-  }
+  },
 
   // Analyze text content
-  analyzeText(content: IRichTextContent[]): ITextAnalysis {
+  analyzeText: function (content: IRichTextContent[]): ITextAnalysis {
     const text = this.extractPlainText(content);
 
     return {
@@ -157,26 +190,26 @@ export class TextProcessingService {
       language: this.detectLanguage(text),
       readabilityScore: this.calculateReadabilityScore(text)
     };
-  }
+  },
 
   // Auto-format text with markdown-like syntax
-  autoFormat(content: IRichTextContent[]): IRichTextContent[] {
+  autoFormat: function (content: IRichTextContent[]): IRichTextContent[] {
     return content.map(item => {
       if (item.type === RichTextType.TEXT && item.text?.content) {
         return this.applyAutoFormatting(item);
       }
       return item;
     });
-  }
+  },
 
   // Extract keywords from text
-  extractKeywords(text: string, limit: number = 10): string[] {
+  extractKeywords: function (text: string, limit: number = 10): string[] {
     const words = this.extractWords(text.toLowerCase());
     const wordFreq = new Map<string, number>();
 
     // Count word frequencies
     words.forEach(word => {
-      if (!this.commonWords.has(word) && word.length > 3) {
+      if (!commonWords.has(word) && word.length > 3) {
         wordFreq.set(word, (wordFreq.get(word) || 0) + 1);
       }
     });
@@ -186,10 +219,10 @@ export class TextProcessingService {
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
       .map(([word]) => word);
-  }
+  },
 
   // Generate text summary
-  generateSummary(content: IRichTextContent[], maxSentences: number = 3): string {
+  generateSummary: function (content: IRichTextContent[], maxSentences: number = 3): string {
     const text = this.extractPlainText(content);
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
 
@@ -198,22 +231,25 @@ export class TextProcessingService {
     }
 
     // Simple extractive summarization
-    const sentenceScores = sentences.map(sentence => ({
+    const sentenceScores = sentences.map((sentence: string) => ({
       sentence: sentence.trim(),
       score: this.calculateSentenceScore(sentence, text)
     }));
 
     // Sort by score and take top sentences
     const topSentences = sentenceScores
-      .sort((a, b) => b.score - a.score)
+      .sort(
+        (a: { sentence: string; score: number }, b: { sentence: string; score: number }) =>
+          b.score - a.score
+      )
       .slice(0, maxSentences)
-      .map(item => item.sentence);
+      .map((item: { sentence: string; score: number }) => item.sentence);
 
     return topSentences.join('. ') + '.';
-  }
+  },
 
   // Convert between formats
-  convertFormat(
+  convertFormat: function (
     content: IRichTextContent[],
     fromFormat: 'rich' | 'markdown' | 'html',
     toFormat: 'rich' | 'markdown' | 'html'
@@ -237,22 +273,23 @@ export class TextProcessingService {
     }
 
     throw createAppError('Unsupported format conversion', 400);
-  }
+  },
 
   // Private helper methods
 
-  private extractPlainText(content: IRichTextContent[]): string {
+  extractPlainText: function (content: IRichTextContent[]): string {
     return content.map(item => item.plain_text || '').join('');
-  }
+  },
 
-  private extractWords(text: string): string[] {
-    return text.toLowerCase()
+  extractWords: function (text: string): string[] {
+    return text
+      .toLowerCase()
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(word => word.length > 0);
-  }
+  },
 
-  private extractWordsWithPositions(text: string): Array<{ word: string; position: number }> {
+  extractWordsWithPositions: function (text: string): Array<{ word: string; position: number }> {
     const words: Array<{ word: string; position: number }> = [];
     const regex = /\b\w+\b/g;
     let match;
@@ -265,20 +302,20 @@ export class TextProcessingService {
     }
 
     return words;
-  }
+  },
 
-  private getCurrentWord(text: string): string {
+  getCurrentWord: function (text: string): string {
     const words = text.split(/\s+/);
     return words[words.length - 1] || '';
-  }
+  },
 
-  private getWordSuggestions(currentWord: string, context: string): IAutoCompleteResult[] {
+  getWordSuggestions: function (currentWord: string, context: string): IAutoCompleteResult[] {
     const words = this.extractWords(context);
     const suggestions: IAutoCompleteResult[] = [];
 
     // Find words that start with current word
-    const matchingWords = words.filter(word =>
-      word.startsWith(currentWord.toLowerCase()) && word !== currentWord.toLowerCase()
+    const matchingWords = words.filter(
+      word => word.startsWith(currentWord.toLowerCase()) && word !== currentWord.toLowerCase()
     );
 
     // Remove duplicates and calculate confidence
@@ -288,15 +325,15 @@ export class TextProcessingService {
       const frequency = words.filter(w => w === word).length;
       suggestions.push({
         text: word,
-        confidence: Math.min(0.9, frequency / words.length * 10),
+        confidence: Math.min(0.9, (frequency / words.length) * 10),
         type: 'word'
       });
     });
 
     return suggestions;
-  }
+  },
 
-  private getPhraseSuggestions(beforeCursor: string, context: string): IAutoCompleteResult[] {
+  getPhraseSuggestions: function (beforeCursor: string, context: string): IAutoCompleteResult[] {
     // Simple phrase completion based on common patterns
     const suggestions: IAutoCompleteResult[] = [];
 
@@ -310,10 +347,13 @@ export class TextProcessingService {
       { trigger: ['for'], completion: 'example', confidence: 0.5 }
     ];
 
-    patterns.forEach(pattern => {
-      if (pattern.trigger.every((word, index) =>
-        lastWords[lastWords.length - pattern.trigger.length + index] === word
-      )) {
+    patterns.forEach((pattern: { trigger: string[]; completion: string; confidence: number }) => {
+      if (
+        pattern.trigger.every(
+          (word: string, index: number) =>
+            lastWords[lastWords.length - pattern.trigger.length + index] === word
+        )
+      ) {
         suggestions.push({
           text: pattern.completion,
           confidence: pattern.confidence,
@@ -323,25 +363,25 @@ export class TextProcessingService {
     });
 
     return suggestions;
-  }
+  },
 
-  private isWordCorrect(word: string): boolean {
+  isWordCorrect: function (word: string): boolean {
     // Simple spell check - in a real implementation, use a proper dictionary
     return word.length > 0 && /^[a-zA-Z]+$/.test(word);
-  }
+  },
 
-  private getSpellingSuggestions(word: string): string[] {
+  getSpellingSuggestions: function (word: string): string[] {
     // Simple suggestions based on edit distance
     // In a real implementation, use a proper spell checker
     const suggestions = [];
 
     // Common corrections
     const corrections: Record<string, string> = {
-      'teh': 'the',
-      'adn': 'and',
-      'recieve': 'receive',
-      'seperate': 'separate',
-      'definately': 'definitely'
+      teh: 'the',
+      adn: 'and',
+      recieve: 'receive',
+      seperate: 'separate',
+      definately: 'definitely'
     };
 
     if (corrections[word.toLowerCase()]) {
@@ -349,13 +389,13 @@ export class TextProcessingService {
     }
 
     return suggestions;
-  }
+  },
 
-  private calculateSpellingConfidence(word: string, suggestions: string[]): number {
+  calculateSpellingConfidence: function (word: string, suggestions: string[]): number {
     return suggestions.length > 0 ? 0.8 : 0.3;
-  }
+  },
 
-  private analyzeSentiment(text: string): 'positive' | 'negative' | 'neutral' {
+  analyzeSentiment: function (text: string): 'positive' | 'negative' | 'neutral' {
     // Simple sentiment analysis
     const positiveWords = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic'];
     const negativeWords = ['bad', 'terrible', 'awful', 'horrible', 'disappointing'];
@@ -367,9 +407,9 @@ export class TextProcessingService {
     if (positiveCount > negativeCount) return 'positive';
     if (negativeCount > positiveCount) return 'negative';
     return 'neutral';
-  }
+  },
 
-  private extractTopics(text: string): string[] {
+  extractTopics: function (text: string): string[] {
     // Simple topic extraction based on keyword clustering
     const keywords = this.extractKeywords(text, 20);
 
@@ -386,18 +426,18 @@ export class TextProcessingService {
     }
 
     return topics;
-  }
+  },
 
-  private detectLanguage(text: string): string {
+  detectLanguage: function (text: string): string {
     // Simple language detection - in a real implementation, use a proper library
     const englishWords = ['the', 'and', 'is', 'in', 'to', 'of', 'a', 'that', 'it', 'with'];
     const words = this.extractWords(text);
     const englishCount = words.filter(word => englishWords.includes(word)).length;
 
     return englishCount > words.length * 0.1 ? 'en' : 'unknown';
-  }
+  },
 
-  private calculateReadabilityScore(text: string): number {
+  calculateReadabilityScore: function (text: string): number {
     // Simplified Flesch Reading Ease score
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const words = this.extractWords(text);
@@ -408,11 +448,11 @@ export class TextProcessingService {
     const avgSentenceLength = words.length / sentences.length;
     const avgSyllablesPerWord = syllables / words.length;
 
-    const score = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
+    const score = 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord;
     return Math.max(0, Math.min(100, score));
-  }
+  },
 
-  private countSyllables(word: string): number {
+  countSyllables: function (word: string): number {
     // Simple syllable counting
     const vowels = 'aeiouy';
     let count = 0;
@@ -432,9 +472,9 @@ export class TextProcessingService {
     }
 
     return Math.max(1, count);
-  }
+  },
 
-  private calculateSentenceScore(sentence: string, fullText: string): number {
+  calculateSentenceScore: function (sentence: string, fullText: string): number {
     const words = this.extractWords(sentence);
     const keywords = this.extractKeywords(fullText, 10);
 
@@ -449,9 +489,9 @@ export class TextProcessingService {
 
     // Normalize by sentence length
     return words.length > 0 ? score / words.length : 0;
-  }
+  },
 
-  private applyAutoFormatting(item: IRichTextContent): IRichTextContent {
+  applyAutoFormatting: function (item: IRichTextContent): IRichTextContent {
     if (item.type !== RichTextType.TEXT || !item.text?.content) {
       return item;
     }
@@ -460,7 +500,7 @@ export class TextProcessingService {
     const annotations = { ...item.annotations };
 
     // Apply formatting rules
-    this.formattingRules.forEach(rule => {
+    formattingRules.forEach(rule => {
       if (rule.pattern.test(content)) {
         switch (rule.type) {
           case 'bold':
@@ -486,44 +526,48 @@ export class TextProcessingService {
       annotations,
       plain_text: content
     };
-  }
+  },
 
-  private convertToMarkdown(content: IRichTextContent[]): string {
-    return content.map(item => {
-      if (item.type === RichTextType.TEXT) {
-        let text = item.plain_text || '';
+  convertToMarkdown: function (content: IRichTextContent[]): string {
+    return content
+      .map(item => {
+        if (item.type === RichTextType.TEXT) {
+          let text = item.plain_text || '';
 
-        if (item.annotations.bold) text = `**${text}**`;
-        if (item.annotations.italic) text = `*${text}*`;
-        if (item.annotations.strikethrough) text = `~~${text}~~`;
-        if (item.annotations.code) text = `\`${text}\``;
-        if (item.href) text = `[${text}](${item.href})`;
+          if (item.annotations.bold) text = `**${text}**`;
+          if (item.annotations.italic) text = `*${text}*`;
+          if (item.annotations.strikethrough) text = `~~${text}~~`;
+          if (item.annotations.code) text = `\`${text}\``;
+          if (item.href) text = `[${text}](${item.href})`;
 
-        return text;
-      }
-      return item.plain_text || '';
-    }).join('');
-  }
+          return text;
+        }
+        return item.plain_text || '';
+      })
+      .join('');
+  },
 
-  private convertToHtml(content: IRichTextContent[]): string {
-    return content.map(item => {
-      if (item.type === RichTextType.TEXT) {
-        let text = item.plain_text || '';
+  convertToHtml: function (content: IRichTextContent[]): string {
+    return content
+      .map(item => {
+        if (item.type === RichTextType.TEXT) {
+          let text = item.plain_text || '';
 
-        if (item.annotations.bold) text = `<strong>${text}</strong>`;
-        if (item.annotations.italic) text = `<em>${text}</em>`;
-        if (item.annotations.underline) text = `<u>${text}</u>`;
-        if (item.annotations.strikethrough) text = `<del>${text}</del>`;
-        if (item.annotations.code) text = `<code>${text}</code>`;
-        if (item.href) text = `<a href="${item.href}">${text}</a>`;
+          if (item.annotations.bold) text = `<strong>${text}</strong>`;
+          if (item.annotations.italic) text = `<em>${text}</em>`;
+          if (item.annotations.underline) text = `<u>${text}</u>`;
+          if (item.annotations.strikethrough) text = `<del>${text}</del>`;
+          if (item.annotations.code) text = `<code>${text}</code>`;
+          if (item.href) text = `<a href="${item.href}">${text}</a>`;
 
-        return text;
-      }
-      return item.plain_text || '';
-    }).join('');
-  }
+          return text;
+        }
+        return item.plain_text || '';
+      })
+      .join('');
+  },
 
-  private parseMarkdown(content: string): IRichTextContent[] {
+  parseMarkdown: function (content: string): IRichTextContent[] {
     // Basic markdown parsing - in a real implementation, use a proper parser
     const lines = content.split('\n');
     return lines.map(line => ({
@@ -539,25 +583,25 @@ export class TextProcessingService {
       },
       plain_text: line
     }));
-  }
+  },
 
-  private parseHtml(content: string): IRichTextContent[] {
+  parseHtml: function (content: string): IRichTextContent[] {
     // Basic HTML parsing - in a real implementation, use a proper parser
     const textContent = content.replace(/<[^>]*>/g, '');
-    return [{
-      type: RichTextType.TEXT,
-      text: { content: textContent },
-      annotations: {
-        bold: false,
-        italic: false,
-        underline: false,
-        strikethrough: false,
-        code: false,
-        color: 'default'
-      },
-      plain_text: textContent
-    }];
+    return [
+      {
+        type: RichTextType.TEXT,
+        text: { content: textContent },
+        annotations: {
+          bold: false,
+          italic: false,
+          underline: false,
+          strikethrough: false,
+          code: false,
+          color: 'default'
+        },
+        plain_text: textContent
+      }
+    ];
   }
-}
-
-export const textProcessingService = new TextProcessingService();
+};

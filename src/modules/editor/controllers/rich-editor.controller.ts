@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { richEditorService, IFormattingOptions, IInsertOptions } from '../services/rich-editor.service';
+import {
+  richEditorService,
+  IFormattingOptions,
+  IInsertOptions
+} from '../services/rich-editor.service';
 import { collaborationService } from '../services/collaboration.service';
 import { textProcessingService } from '../services/text-processing.service';
 import { catchAsync, sendSuccessResponse } from '@/utils';
@@ -103,7 +107,10 @@ export const exportContent = catchAsync(
       json: 'application/json'
     };
 
-    res.setHeader('Content-Type', contentTypes[format as keyof typeof contentTypes] || 'text/plain');
+    res.setHeader(
+      'Content-Type',
+      contentTypes[format as keyof typeof contentTypes] || 'text/plain'
+    );
     res.setHeader('Content-Disposition', `attachment; filename="content.${format}"`);
 
     sendSuccessResponse(res, 'Content exported successfully', { content: exportedContent });
@@ -314,11 +321,7 @@ export const convertFormat = catchAsync(
 
     // Get record content (simplified)
     const content: IRichTextContent[] = []; // Fetch actual content
-    const convertedContent = textProcessingService.convertFormat(
-      content,
-      fromFormat,
-      toFormat
-    );
+    const convertedContent = textProcessingService.convertFormat(content, fromFormat, toFormat);
 
     sendSuccessResponse(res, 'Format converted successfully', convertedContent);
   }
@@ -346,3 +349,28 @@ export const resolveConflicts = catchAsync(
     sendSuccessResponse(res, 'Conflicts resolved successfully');
   }
 );
+
+// Export controller object
+export const richEditorController = {
+  applyFormatting,
+  insertText,
+  insertSpecialContent,
+  deleteText,
+  exportContent,
+  importContent,
+  joinCollaboration,
+  leaveCollaboration,
+  updateCursor,
+  updateSelection,
+  getCollaborationParticipants,
+  getTextStatistics,
+  getAutoComplete,
+  performSpellCheck,
+  analyzeText,
+  generateSummary,
+  extractKeywords,
+  autoFormatText,
+  convertFormat,
+  getCollaborationStats,
+  resolveConflicts
+};

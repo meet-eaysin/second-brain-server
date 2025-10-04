@@ -17,14 +17,15 @@ function convertIRichTextToIRichTextContent(richText: IRichText): IRichTextConte
   };
 
   switch (richText.type) {
-    case 'text':
+    case 'text': {
       return {
         type: RichTextType.TEXT,
         text: richText.text || { content: '' },
         href: richText.href,
         ...baseContent
       };
-    case 'mention':
+    }
+    case 'mention': {
       // Convert mention type from string to enum
       const mentionType = richText.mention?.type || 'user';
       const convertedMention = {
@@ -39,12 +40,14 @@ function convertIRichTextToIRichTextContent(richText: IRichText): IRichTextConte
         mention: convertedMention,
         ...baseContent
       };
-    case 'equation':
+    }
+    case 'equation': {
       return {
         type: RichTextType.EQUATION,
         equation: richText.equation || { expression: '' },
         ...baseContent
       };
+    }
     default:
       throw new Error(`Unknown rich text type: ${richText.type}`);
   }
@@ -57,14 +60,15 @@ function convertIRichTextContentToIRichText(richTextContent: IRichTextContent): 
   };
 
   switch (richTextContent.type) {
-    case RichTextType.TEXT:
+    case RichTextType.TEXT: {
       return {
         type: 'text' as const,
         text: 'text' in richTextContent ? richTextContent.text : undefined,
         href: 'href' in richTextContent ? richTextContent.href : undefined,
         ...baseContent
       };
-    case RichTextType.MENTION:
+    }
+    case RichTextType.MENTION: {
       // Convert mention type from enum to string and simplify structure
       const mention = 'mention' in richTextContent ? richTextContent.mention : undefined;
       const convertedMention = mention
@@ -81,16 +85,19 @@ function convertIRichTextContentToIRichText(richTextContent: IRichTextContent): 
         mention: convertedMention,
         ...baseContent
       };
-    case RichTextType.EQUATION:
+    }
+    case RichTextType.EQUATION: {
       return {
         type: 'equation' as const,
         equation: 'equation' in richTextContent ? richTextContent.equation : undefined,
         ...baseContent
       };
-    default:
+    }
+    default: {
       // TypeScript exhaustiveness check
       const _exhaustiveCheck: never = richTextContent;
       throw new Error(`Unknown rich text content type: ${(_exhaustiveCheck as any).type}`);
+    }
   }
 }
 
@@ -158,9 +165,9 @@ export interface IInsertOptions {
   };
 }
 
-export class RichEditorService {
+export const richEditorService = {
   // Apply text formatting to selection
-  async applyFormatting(
+  applyFormatting: async function (
     recordId: string,
     blockId: string,
     start: number,
@@ -180,16 +187,21 @@ export class RichEditorService {
 
     // Apply formatting to the specified range
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const updatedContent = this.applyFormattingToRange(convertedContent, start, end, formatting);
+    const updatedContent = richEditorService.applyFormattingToRange(
+      convertedContent,
+      start,
+      end,
+      formatting
+    );
 
     // Update the block content
-    await this.updateBlockContent(recordId, blockId, updatedContent, userId);
+    await richEditorService.updateBlockContent(recordId, blockId, updatedContent, userId);
 
     return updatedContent;
-  }
+  },
 
   // Insert text at cursor position
-  async insertText(
+  insertText: async function (
     recordId: string,
     blockId: string,
     position: number,
@@ -208,15 +220,20 @@ export class RichEditorService {
     }
 
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content || []);
-    const updatedContent = this.insertTextAtPosition(convertedContent, position, text, formatting);
+    const updatedContent = richEditorService.insertTextAtPosition(
+      convertedContent,
+      position,
+      text,
+      formatting
+    );
 
-    await this.updateBlockContent(recordId, blockId, updatedContent, userId);
+    await richEditorService.updateBlockContent(recordId, blockId, updatedContent, userId);
 
     return updatedContent;
-  }
+  },
 
   // Insert special content (mentions, equations, embeds)
-  async insertSpecialContent(
+  insertSpecialContent: async function (
     recordId: string,
     blockId: string,
     position: number,
@@ -249,10 +266,10 @@ export class RichEditorService {
     await this.updateBlockContent(recordId, blockId, updatedContent, userId);
 
     return updatedContent;
-  }
+  },
 
   // Delete text range
-  async deleteText(
+  deleteText: async function (
     recordId: string,
     blockId: string,
     start: number,
@@ -275,10 +292,10 @@ export class RichEditorService {
     await this.updateBlockContent(recordId, blockId, updatedContent, userId);
 
     return updatedContent;
-  }
+  },
 
   // Convert rich text to different formats
-  async exportContent(
+  exportContent: async function (
     recordId: string,
     format: 'markdown' | 'html' | 'plain' | 'json'
   ): Promise<string> {
@@ -299,10 +316,10 @@ export class RichEditorService {
       default:
         throw createAppError('Unsupported export format', 400);
     }
-  }
+  },
 
   // Import content from different formats
-  async importContent(
+  importContent: async function (
     recordId: string,
     content: string,
     format: 'markdown' | 'html' | 'plain',
@@ -332,10 +349,10 @@ export class RichEditorService {
     });
 
     return parsedContent;
-  }
+  },
 
   // Apply formatting to a range of text
-  private applyFormattingToRange(
+  applyFormattingToRange: function (
     content: IRichTextContent[],
     start: number,
     end: number,
@@ -369,10 +386,10 @@ export class RichEditorService {
     }
 
     return this.mergeAdjacentItems(result);
-  }
+  },
 
   // Split text item and apply formatting
-  private splitAndFormatItem(
+  splitAndFormatItem: function (
     item: IRichTextContent,
     start: number,
     end: number,
@@ -425,10 +442,10 @@ export class RichEditorService {
     }
 
     return result;
-  }
+  },
 
   // Insert text at specific position
-  private insertTextAtPosition(
+  insertTextAtPosition: function (
     content: IRichTextContent[],
     position: number,
     text: string,
@@ -491,10 +508,10 @@ export class RichEditorService {
     }
 
     return this.mergeAdjacentItems(result);
-  }
+  },
 
   // Create text content with formatting
-  private createTextContent(text: string, formatting?: IFormattingOptions): IRichTextContent {
+  createTextContent: function (text: string, formatting?: IFormattingOptions): IRichTextContent {
     return {
       type: RichTextType.TEXT,
       text: {
@@ -512,10 +529,10 @@ export class RichEditorService {
       plain_text: text,
       href: formatting?.link?.url
     };
-  }
+  },
 
   // Create mention content
-  private createMentionContent(mention: {
+  createMentionContent: function (mention: {
     type: 'user' | 'page' | 'database' | 'date';
     id: string;
     displayText: string;
@@ -539,10 +556,10 @@ export class RichEditorService {
       },
       plain_text: mention.displayText
     };
-  }
+  },
 
   // Create equation content
-  private createEquationContent(equation: {
+  createEquationContent: function (equation: {
     expression: string;
     latex?: string;
   }): IRichTextContent {
@@ -561,20 +578,20 @@ export class RichEditorService {
       },
       plain_text: equation.expression
     };
-  }
+  },
 
   // Insert content at position
-  private insertContentAtPosition(
+  insertContentAtPosition: function (
     content: IRichTextContent[],
     position: number,
     newContent: IRichTextContent
   ): IRichTextContent[] {
     // Similar to insertTextAtPosition but for rich content
     return this.insertTextAtPosition(content, position, '', {}).concat([newContent]);
-  }
+  },
 
   // Delete text range
-  private deleteTextRange(
+  deleteTextRange: function (
     content: IRichTextContent[],
     start: number,
     end: number
@@ -621,10 +638,10 @@ export class RichEditorService {
     }
 
     return this.mergeAdjacentItems(result);
-  }
+  },
 
   // Merge adjacent items with same formatting
-  private mergeAdjacentItems(content: IRichTextContent[]): IRichTextContent[] {
+  mergeAdjacentItems: function (content: IRichTextContent[]): IRichTextContent[] {
     if (content.length <= 1) return content;
 
     const result: IRichTextContent[] = [content[0]];
@@ -656,17 +673,17 @@ export class RichEditorService {
     }
 
     return result;
-  }
+  },
 
   // Check if two items can be merged
-  private canMergeItems(a: IRichTextContent, b: IRichTextContent): boolean {
+  canMergeItems: function (a: IRichTextContent, b: IRichTextContent): boolean {
     if (a.type !== 'text' || b.type !== 'text') return false;
 
     return JSON.stringify(a.annotations) === JSON.stringify(b.annotations) && a.href === b.href;
-  }
+  },
 
   // Update block content in database
-  private async updateBlockContent(
+  updateBlockContent: async function (
     recordId: string,
     blockId: string,
     content: IRichTextContent[],
@@ -687,50 +704,50 @@ export class RichEditorService {
         }
       }
     );
-  }
+  },
 
   // Convert to markdown
-  private convertToMarkdown(content: any[]): string {
+  convertToMarkdown: function (content: any[]): string {
     // Implementation for markdown conversion
     return content.map(block => this.blockToMarkdown(block)).join('\n\n');
-  }
+  },
 
   // Convert to HTML
-  private convertToHtml(content: any[]): string {
+  convertToHtml: function (content: any[]): string {
     // Implementation for HTML conversion
     return content.map(block => this.blockToHtml(block)).join('\n');
-  }
+  },
 
   // Convert to plain text
-  private convertToPlainText(content: any[]): string {
+  convertToPlainText: function (content: any[]): string {
     // Implementation for plain text conversion
     return content.map(block => this.blockToPlainText(block)).join('\n');
-  }
+  },
 
   // Helper methods for format conversion
-  private blockToMarkdown(block: any): string {
+  blockToMarkdown: function (block: any): string {
     // Convert block to markdown
     if (!block.content) return '';
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content);
     return convertedContent.map((item: IRichTextContent) => item.plain_text).join('') || '';
-  }
+  },
 
-  private blockToHtml(block: any): string {
+  blockToHtml: function (block: any): string {
     // Convert block to HTML
     if (!block.content) return '<p></p>';
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content);
     return `<p>${convertedContent.map((item: IRichTextContent) => item.plain_text).join('') || ''}</p>`;
-  }
+  },
 
-  private blockToPlainText(block: any): string {
+  blockToPlainText: function (block: any): string {
     // Convert block to plain text
     if (!block.content) return '';
     const convertedContent = convertIRichTextArrayToIRichTextContentArray(block.content);
     return convertedContent.map((item: IRichTextContent) => item.plain_text).join('') || '';
-  }
+  },
 
   // Parse markdown to rich content
-  private parseMarkdown(content: string): any[] {
+  parseMarkdown: function (content: string): any[] {
     // Basic markdown parsing implementation
     const lines = content.split('\n');
     return lines.map(line => ({
@@ -754,18 +771,18 @@ export class RichEditorService {
       createdAt: new Date(),
       lastEditedAt: new Date()
     }));
-  }
+  },
 
   // Parse HTML to rich content
-  private parseHtml(content: string): any[] {
+  parseHtml: function (content: string): any[] {
     // Basic HTML parsing implementation
     // In a real implementation, you'd use a proper HTML parser
     const textContent = content.replace(/<[^>]*>/g, '');
     return this.parsePlainText(textContent);
-  }
+  },
 
   // Parse plain text to rich content
-  private parsePlainText(content: string): any[] {
+  parsePlainText: function (content: string): any[] {
     const lines = content.split('\n');
     return lines.map(line => ({
       id: generateId(),
@@ -789,6 +806,4 @@ export class RichEditorService {
       lastEditedAt: new Date()
     }));
   }
-}
-
-export const richEditorService = new RichEditorService();
+};

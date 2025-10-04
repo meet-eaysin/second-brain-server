@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { collaborationService } from './collaboration.service';
 import { richEditorService } from './rich-editor.service';
 import { IEditorOperation } from './rich-editor.service';
+import { eventEmitter } from './collaboration.service';
 
 export interface ISocketUser {
   userId: string;
@@ -27,8 +28,8 @@ export class WebSocketService {
   constructor(server: HttpServer) {
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
-        methods: ["GET", "POST"],
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        methods: ['GET', 'POST'],
         credentials: true
       },
       transports: ['websocket', 'polling']
@@ -43,17 +44,18 @@ export class WebSocketService {
   private setupMiddleware(): void {
     this.io.use(async (socket, next) => {
       try {
-        const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
-        
+        const token =
+          socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+
         if (!token) {
           return next(new Error('Authentication token required'));
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-        
+
         socket.data.userId = decoded.userId;
         socket.data.userName = decoded.userName || decoded.email;
-        
+
         next();
       } catch (error) {
         next(new Error('Invalid authentication token'));
@@ -77,10 +79,10 @@ export class WebSocketService {
       socket.on('join-record', async (data: { recordId: string }) => {
         try {
           const { recordId } = data;
-          
+
           // Join socket room for this record
           await socket.join(`record:${recordId}`);
-          
+
           // Add to record session tracking
           if (!this.recordSessions.has(recordId)) {
             this.recordSessions.set(recordId, new Set());
@@ -107,7 +109,6 @@ export class WebSocketService {
             version: session.version,
             operations: session.operations.slice(-50) // Last 50 operations
           });
-
         } catch (error) {
           socket.emit('error', { message: 'Failed to join record session' });
         }
@@ -117,9 +118,9 @@ export class WebSocketService {
       socket.on('leave-record', async (data: { recordId: string }) => {
         try {
           const { recordId } = data;
-          
+
           await socket.leave(`record:${recordId}`);
-          
+
           // Remove from record session tracking
           this.recordSessions.get(recordId)?.delete(socket.id);
           if (this.recordSessions.get(recordId)?.size === 0) {
@@ -134,111 +135,104 @@ export class WebSocketService {
             userId: socket.data.userId,
             timestamp: Date.now()
           });
-
         } catch (error) {
           socket.emit('error', { message: 'Failed to leave record session' });
         }
       });
 
       // Handle editor operations
-      socket.on('editor-operation', async (data: {
-        recordId: string;
-        operation: IEditorOperation;
-      }) => {
-        try {
-          const { recordId, operation } = data;
-          
-          // Apply operation with operational transformation
-          const result = await collaborationService.applyOperation(recordId, {
-            ...operation,
-            userId: socket.data.userId,
-            timestamp: Date.now()
-          });
+      socket.on(
+        'editor-operation',
+        async (data: { recordId: string; operation: IEditorOperation }) => {
+          try {
+            const { recordId, operation } = data;
 
-          // Apply the operation to the actual content
-          await this.applyOperationToContent(recordId, result.operation);
+            // Apply operation with operational transformation
+            const result = await collaborationService.applyOperation(recordId, {
+              ...operation,
+              userId: socket.data.userId,
+              timestamp: Date.now()
+            });
 
-          // Broadcast transformed operation to other participants
-          socket.to(`record:${recordId}`).emit('operation-applied', {
-            operation: result.transformedOperation,
-            userId: socket.data.userId,
-            timestamp: Date.now()
-          });
+            // Apply the operation to the actual content
+            await this.applyOperationToContent(recordId, result.operation);
 
-          // Send acknowledgment to sender
-          socket.emit('operation-acknowledged', {
-            operationId: operation.timestamp,
-            transformedOperation: result.transformedOperation,
-            conflicts: result.conflicts
-          });
+            // Broadcast transformed operation to other participants
+            socket.to(`record:${recordId}`).emit('operation-applied', {
+              operation: result.transformedOperation,
+              userId: socket.data.userId,
+              timestamp: Date.now()
+            });
 
-        } catch (error) {
-          socket.emit('error', { message: 'Failed to apply operation' });
+            // Send acknowledgment to sender
+            socket.emit('operation-acknowledged', {
+              operationId: operation.timestamp,
+              transformedOperation: result.transformedOperation,
+              conflicts: result.conflicts
+            });
+          } catch (error) {
+            socket.emit('error', { message: 'Failed to apply operation' });
+          }
         }
-      });
+      );
 
       // Handle cursor updates
-      socket.on('cursor-update', async (data: {
-        recordId: string;
-        blockId: string;
-        position: number;
-      }) => {
-        try {
-          const { recordId, blockId, position } = data;
-          
-          await collaborationService.updateCursor(recordId, {
-            userId: socket.data.userId,
-            blockId,
-            position,
-            timestamp: Date.now()
-          });
+      socket.on(
+        'cursor-update',
+        async (data: { recordId: string; blockId: string; position: number }) => {
+          try {
+            const { recordId, blockId, position } = data;
 
-          // Broadcast cursor position to other participants
-          socket.to(`record:${recordId}`).emit('cursor-updated', {
-            userId: socket.data.userId,
-            userName: socket.data.userName,
-            blockId,
-            position,
-            timestamp: Date.now()
-          });
+            await collaborationService.updateCursor(recordId, {
+              userId: socket.data.userId,
+              blockId,
+              position,
+              timestamp: Date.now()
+            });
 
-        } catch (error) {
-          socket.emit('error', { message: 'Failed to update cursor' });
+            // Broadcast cursor position to other participants
+            socket.to(`record:${recordId}`).emit('cursor-updated', {
+              userId: socket.data.userId,
+              userName: socket.data.userName,
+              blockId,
+              position,
+              timestamp: Date.now()
+            });
+          } catch (error) {
+            socket.emit('error', { message: 'Failed to update cursor' });
+          }
         }
-      });
+      );
 
       // Handle selection updates
-      socket.on('selection-update', async (data: {
-        recordId: string;
-        blockId: string;
-        start: number;
-        end: number;
-      }) => {
-        try {
-          const { recordId, blockId, start, end } = data;
-          
-          await collaborationService.updateSelection(recordId, {
-            userId: socket.data.userId,
-            blockId,
-            start,
-            end,
-            timestamp: Date.now()
-          });
+      socket.on(
+        'selection-update',
+        async (data: { recordId: string; blockId: string; start: number; end: number }) => {
+          try {
+            const { recordId, blockId, start, end } = data;
 
-          // Broadcast selection to other participants
-          socket.to(`record:${recordId}`).emit('selection-updated', {
-            userId: socket.data.userId,
-            userName: socket.data.userName,
-            blockId,
-            start,
-            end,
-            timestamp: Date.now()
-          });
+            await collaborationService.updateSelection(recordId, {
+              userId: socket.data.userId,
+              blockId,
+              start,
+              end,
+              timestamp: Date.now()
+            });
 
-        } catch (error) {
-          socket.emit('error', { message: 'Failed to update selection' });
+            // Broadcast selection to other participants
+            socket.to(`record:${recordId}`).emit('selection-updated', {
+              userId: socket.data.userId,
+              userName: socket.data.userName,
+              blockId,
+              start,
+              end,
+              timestamp: Date.now()
+            });
+          } catch (error) {
+            socket.emit('error', { message: 'Failed to update selection' });
+          }
         }
-      });
+      );
 
       // Handle typing indicators
       socket.on('typing-start', (data: { recordId: string; blockId: string }) => {
@@ -262,21 +256,21 @@ export class WebSocketService {
       // Handle disconnection
       socket.on('disconnect', async () => {
         console.log(`User disconnected: ${socket.data.userId} (${socket.id})`);
-        
+
         // Clean up user from all record sessions
         for (const [recordId, socketIds] of this.recordSessions.entries()) {
           if (socketIds.has(socket.id)) {
             socketIds.delete(socket.id);
-            
+
             // Leave collaboration session
             await collaborationService.leaveSession(recordId, socket.data.userId);
-            
+
             // Notify other participants
             socket.to(`record:${recordId}`).emit('user-left', {
               userId: socket.data.userId,
               timestamp: Date.now()
             });
-            
+
             if (socketIds.size === 0) {
               this.recordSessions.delete(recordId);
             }
@@ -291,33 +285,36 @@ export class WebSocketService {
 
   // Setup collaboration service event listeners
   private setupCollaborationListeners(): void {
-    collaborationService.on('user-joined', (event) => {
+    eventEmitter.on('user-joined', event => {
       this.io.to(`record:${event.recordId}`).emit('collaboration-user-joined', event);
     });
 
-    collaborationService.on('user-left', (event) => {
+    eventEmitter.on('user-left', event => {
       this.io.to(`record:${event.recordId}`).emit('collaboration-user-left', event);
     });
 
-    collaborationService.on('operation-applied', (event) => {
+    eventEmitter.on('operation-applied', event => {
       this.io.to(`record:${event.recordId}`).emit('collaboration-operation', event);
     });
 
-    collaborationService.on('cursor-updated', (event) => {
+    eventEmitter.on('cursor-updated', event => {
       this.io.to(`record:${event.recordId}`).emit('collaboration-cursor', event);
     });
 
-    collaborationService.on('selection-updated', (event) => {
+    eventEmitter.on('selection-updated', event => {
       this.io.to(`record:${event.recordId}`).emit('collaboration-selection', event);
     });
 
-    collaborationService.on('conflicts-resolved', (event) => {
+    eventEmitter.on('conflicts-resolved', event => {
       this.io.to(`record:${event.recordId}`).emit('collaboration-conflicts-resolved', event);
     });
   }
 
   // Apply operation to actual content
-  private async applyOperationToContent(recordId: string, operation: IEditorOperation): Promise<void> {
+  private async applyOperationToContent(
+    recordId: string,
+    operation: IEditorOperation
+  ): Promise<void> {
     try {
       switch (operation.type) {
         case 'insert':
@@ -414,7 +411,7 @@ export class WebSocketService {
     for (const [recordId, socketIds] of this.recordSessions.entries()) {
       const activeSocketIds = Array.from(socketIds).filter(socketId => {
         const socket = this.io.sockets.sockets.get(socketId);
-        return socket && (now - socket.handshake.issued) < inactiveThreshold;
+        return socket && now - socket.handshake.issued < inactiveThreshold;
       });
 
       if (activeSocketIds.length === 0) {
@@ -430,11 +427,14 @@ export let webSocketService: WebSocketService;
 
 export const initializeWebSocketService = (server: HttpServer): WebSocketService => {
   webSocketService = new WebSocketService(server);
-  
+
   // Cleanup inactive sessions every 5 minutes
-  setInterval(() => {
-    webSocketService.cleanupInactiveSessions();
-  }, 5 * 60 * 1000);
-  
+  setInterval(
+    () => {
+      webSocketService.cleanupInactiveSessions();
+    },
+    5 * 60 * 1000
+  );
+
   return webSocketService;
 };

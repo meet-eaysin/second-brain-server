@@ -1,79 +1,40 @@
 import { EventEmitter } from 'events';
-import { IEditorOperation } from './rich-editor.service';
 import { generateId } from '@/utils/id-generator';
 import { createNotFoundError } from '@/utils';
+import {
+  ICollaborationSession,
+  IParticipant,
+  ICursorUpdate,
+  ISelectionUpdate,
+  IOperationalTransform
+} from '@/modules/editor/types/collaboration.types';
+import { IEditorOperation } from '@/modules/editor/types/editor.types';
 
-export interface ICollaborationSession {
-  id: string;
-  recordId: string;
-  participants: IParticipant[];
-  operations: IEditorOperation[];
-  version: number;
-  createdAt: Date;
-  lastActivity: Date;
-}
+export const eventEmitter = new EventEmitter();
 
-export interface IParticipant {
-  userId: string;
-  userName: string;
-  cursor?: {
-    blockId: string;
-    position: number;
-  };
-  selection?: {
-    blockId: string;
-    start: number;
-    end: number;
-  };
-  color: string;
-  joinedAt: Date;
-  lastSeen: Date;
-  isActive: boolean;
-}
+const userColors = [
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#96CEB4',
+  '#FFEAA7',
+  '#DDA0DD',
+  '#98D8C8',
+  '#F7DC6F',
+  '#BB8FCE',
+  '#85C1E9'
+];
 
-export interface ICursorUpdate {
-  userId: string;
-  blockId: string;
-  position: number;
-  timestamp: number;
-}
+const sessions: Map<string, ICollaborationSession> = new Map();
 
-export interface ISelectionUpdate {
-  userId: string;
-  blockId: string;
-  start: number;
-  end: number;
-  timestamp: number;
-}
-
-export interface IOperationalTransform {
-  operation: IEditorOperation;
-  transformedOperation: IEditorOperation;
-  conflicts: IEditorOperation[];
-}
-
-export class CollaborationService extends EventEmitter {
-  private sessions: Map<string, ICollaborationSession> = new Map();
-  private userColors = [
-    '#FF6B6B',
-    '#4ECDC4',
-    '#45B7D1',
-    '#96CEB4',
-    '#FFEAA7',
-    '#DDA0DD',
-    '#98D8C8',
-    '#F7DC6F',
-    '#BB8FCE',
-    '#85C1E9'
-  ];
-
+export const collaborationService = {
   // Create or join collaboration session
-  async joinSession(
+  joinSession: async (
     recordId: string,
     userId: string,
     userName: string
-  ): Promise<ICollaborationSession> {
-    let session = this.sessions.get(recordId);
+  ): Promise<ICollaborationSession> => {
+    let session = sessions.get(recordId);
 
     if (!session) {
       // Create new session
@@ -86,7 +47,7 @@ export class CollaborationService extends EventEmitter {
         createdAt: new Date(),
         lastActivity: new Date()
       };
-      this.sessions.set(recordId, session);
+      sessions.set(recordId, session);
     }
 
     // Check if user is already in session
@@ -97,7 +58,7 @@ export class CollaborationService extends EventEmitter {
       participant = {
         userId,
         userName,
-        color: this.assignUserColor(session.participants),
+        color: collaborationService.assignUserColor(session.participants),
         joinedAt: new Date(),
         lastSeen: new Date(),
         isActive: true
@@ -112,18 +73,18 @@ export class CollaborationService extends EventEmitter {
     session.lastActivity = new Date();
 
     // Emit join event
-    this.emit('user-joined', {
+    eventEmitter.emit('user-joined', {
       sessionId: session.id,
       recordId,
       participant
     });
 
     return session;
-  }
+  },
 
   // Leave collaboration session
-  async leaveSession(recordId: string, userId: string): Promise<void> {
-    const session = this.sessions.get(recordId);
+  leaveSession: async (recordId: string, userId: string): Promise<void> => {
+    const session = sessions.get(recordId);
     if (!session) return;
 
     const participant = session.participants.find(p => p.userId === userId);
@@ -135,23 +96,23 @@ export class CollaborationService extends EventEmitter {
     // Remove session if no active participants
     const activeParticipants = session.participants.filter(p => p.isActive);
     if (activeParticipants.length === 0) {
-      this.sessions.delete(recordId);
+      sessions.delete(recordId);
     }
 
     // Emit leave event
-    this.emit('user-left', {
+    eventEmitter.emit('user-left', {
       sessionId: session.id,
       recordId,
       userId
     });
-  }
+  },
 
   // Apply operation with operational transformation
-  async applyOperation(
+  applyOperation: async (
     recordId: string,
     operation: IEditorOperation
-  ): Promise<IOperationalTransform> {
-    const session = this.sessions.get(recordId);
+  ): Promise<IOperationalTransform> => {
+    const session = sessions.get(recordId);
     if (!session) {
       throw createNotFoundError('Collaboration session not found');
     }
@@ -162,7 +123,7 @@ export class CollaborationService extends EventEmitter {
     );
 
     // Apply operational transformation
-    const transformed = this.transformOperation(operation, concurrentOps);
+    const transformed = collaborationService.transformOperation(operation, concurrentOps);
 
     // Add to session operations
     session.operations.push(transformed.operation);
@@ -170,7 +131,7 @@ export class CollaborationService extends EventEmitter {
     session.lastActivity = new Date();
 
     // Emit operation to other participants
-    this.emit('operation-applied', {
+    eventEmitter.emit('operation-applied', {
       sessionId: session.id,
       recordId,
       operation: transformed.operation,
@@ -178,11 +139,11 @@ export class CollaborationService extends EventEmitter {
     });
 
     return transformed;
-  }
+  },
 
   // Update cursor position
-  async updateCursor(recordId: string, cursorUpdate: ICursorUpdate): Promise<void> {
-    const session = this.sessions.get(recordId);
+  updateCursor: async (recordId: string, cursorUpdate: ICursorUpdate): Promise<void> => {
+    const session = sessions.get(recordId);
     if (!session) return;
 
     const participant = session.participants.find(p => p.userId === cursorUpdate.userId);
@@ -195,16 +156,16 @@ export class CollaborationService extends EventEmitter {
     }
 
     // Emit cursor update to other participants
-    this.emit('cursor-updated', {
+    eventEmitter.emit('cursor-updated', {
       sessionId: session.id,
       recordId,
       cursorUpdate
     });
-  }
+  },
 
   // Update text selection
-  async updateSelection(recordId: string, selectionUpdate: ISelectionUpdate): Promise<void> {
-    const session = this.sessions.get(recordId);
+  updateSelection: async (recordId: string, selectionUpdate: ISelectionUpdate): Promise<void> => {
+    const session = sessions.get(recordId);
     if (!session) return;
 
     const participant = session.participants.find(p => p.userId === selectionUpdate.userId);
@@ -218,22 +179,22 @@ export class CollaborationService extends EventEmitter {
     }
 
     // Emit selection update to other participants
-    this.emit('selection-updated', {
+    eventEmitter.emit('selection-updated', {
       sessionId: session.id,
       recordId,
       selectionUpdate
     });
-  }
+  },
 
   // Get session participants
-  getSessionParticipants(recordId: string): IParticipant[] {
-    const session = this.sessions.get(recordId);
+  getSessionParticipants: (recordId: string): IParticipant[] => {
+    const session = sessions.get(recordId);
     return session ? session.participants.filter(p => p.isActive) : [];
-  }
+  },
 
   // Get session operations
-  getSessionOperations(recordId: string, fromVersion?: number): IEditorOperation[] {
-    const session = this.sessions.get(recordId);
+  getSessionOperations: (recordId: string, fromVersion?: number): IEditorOperation[] => {
+    const session = sessions.get(recordId);
     if (!session) return [];
 
     if (fromVersion !== undefined) {
@@ -241,18 +202,18 @@ export class CollaborationService extends EventEmitter {
     }
 
     return session.operations;
-  }
+  },
 
   // Operational transformation for concurrent operations
-  private transformOperation(
+  transformOperation: (
     operation: IEditorOperation,
     concurrentOps: IEditorOperation[]
-  ): IOperationalTransform {
+  ): IOperationalTransform => {
     let transformedOp = { ...operation };
     const conflicts: IEditorOperation[] = [];
 
     for (const concurrentOp of concurrentOps) {
-      const result = this.transformTwoOperations(transformedOp, concurrentOp);
+      const result = collaborationService.transformTwoOperations(transformedOp, concurrentOp);
       transformedOp = result.transformed;
 
       if (result.hasConflict) {
@@ -265,13 +226,13 @@ export class CollaborationService extends EventEmitter {
       transformedOperation: transformedOp,
       conflicts
     };
-  }
+  },
 
   // Transform two operations
-  private transformTwoOperations(
+  transformTwoOperations: (
     op1: IEditorOperation,
     op2: IEditorOperation
-  ): { transformed: IEditorOperation; hasConflict: boolean } {
+  ): { transformed: IEditorOperation; hasConflict: boolean } => {
     // Different block IDs - no transformation needed
     if (op1.blockId !== op2.blockId) {
       return { transformed: op1, hasConflict: false };
@@ -316,51 +277,53 @@ export class CollaborationService extends EventEmitter {
     }
 
     return { transformed, hasConflict };
-  }
+  },
 
   // Assign color to user
-  private assignUserColor(participants: IParticipant[]): string {
+  assignUserColor: (participants: IParticipant[]): string => {
     const usedColors = participants.map(p => p.color);
-    const availableColors = this.userColors.filter(color => !usedColors.includes(color));
+    const availableColors = userColors.filter(color => !usedColors.includes(color));
 
     if (availableColors.length > 0) {
       return availableColors[0];
     }
 
     // If all colors are used, cycle through them
-    return this.userColors[participants.length % this.userColors.length];
-  }
+    return userColors[participants.length % userColors.length];
+  },
 
   // Clean up inactive sessions
-  cleanupInactiveSessions(): void {
+  cleanupInactiveSessions: (): void => {
     const now = new Date();
     const inactiveThreshold = 30 * 60 * 1000; // 30 minutes
 
-    for (const [recordId, session] of this.sessions.entries()) {
+    for (const [recordId, session] of sessions.entries()) {
       const timeSinceLastActivity = now.getTime() - session.lastActivity.getTime();
 
       if (timeSinceLastActivity > inactiveThreshold) {
         // Mark all participants as inactive
         session.participants.forEach(p => (p.isActive = false));
-        this.sessions.delete(recordId);
+        sessions.delete(recordId);
 
-        this.emit('session-closed', {
+        eventEmitter.emit('session-closed', {
           sessionId: session.id,
           recordId,
           reason: 'inactivity'
         });
       }
     }
-  }
+  },
 
   // Get session statistics
-  getSessionStats(recordId: string): {
+  getSessionStats: (
+    recordId: string
+  ): {
     participantCount: number;
     operationCount: number;
     version: number;
     lastActivity: Date;
-  } | null {
-    const session = this.sessions.get(recordId);
+  } | null => {
+    const session = sessions.get(recordId);
     if (!session) return null;
 
     return {
@@ -369,15 +332,15 @@ export class CollaborationService extends EventEmitter {
       version: session.version,
       lastActivity: session.lastActivity
     };
-  }
+  },
 
   // Resolve conflicts
-  async resolveConflicts(
+  resolveConflicts: async (
     recordId: string,
     conflicts: IEditorOperation[],
     resolution: 'accept' | 'reject' | 'merge'
-  ): Promise<void> {
-    const session = this.sessions.get(recordId);
+  ): Promise<void> => {
+    const session = sessions.get(recordId);
     if (!session) return;
 
     switch (resolution) {
@@ -390,7 +353,7 @@ export class CollaborationService extends EventEmitter {
         break;
       case 'merge':
         // Attempt to merge operations
-        const mergedOps = this.mergeConflictingOperations(conflicts);
+        const mergedOps = collaborationService.mergeConflictingOperations(conflicts);
         session.operations.push(...mergedOps);
         break;
     }
@@ -398,16 +361,16 @@ export class CollaborationService extends EventEmitter {
     session.version++;
     session.lastActivity = new Date();
 
-    this.emit('conflicts-resolved', {
+    eventEmitter.emit('conflicts-resolved', {
       sessionId: session.id,
       recordId,
       conflicts,
       resolution
     });
-  }
+  },
 
   // Merge conflicting operations
-  private mergeConflictingOperations(conflicts: IEditorOperation[]): IEditorOperation[] {
+  mergeConflictingOperations: (conflicts: IEditorOperation[]): IEditorOperation[] => {
     // Simple merge strategy - combine text insertions, prioritize latest formatting
     const merged: IEditorOperation[] = [];
 
@@ -444,9 +407,7 @@ export class CollaborationService extends EventEmitter {
 
     return merged;
   }
-}
-
-export const collaborationService = new CollaborationService();
+};
 
 // Clean up inactive sessions every 5 minutes
 setInterval(
