@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
-import { activityController } from '../controllers/activity.controller';
+import {
+  getActivities,
+  getActivityFeed,
+  recordPageVisit,
+  getRecentlyVisited,
+  createActivity
+} from '../controllers/activity.controller';
 
 const router = Router();
 
@@ -8,10 +14,10 @@ const router = Router();
 router.use(authenticateToken);
 
 // Activity management routes - explicit API calls only
-router.get('/', activityController.getActivities);
-router.get('/feed', activityController.getActivityFeed);
-router.post('/page-visit', activityController.recordPageVisit);
-router.get('/recently-visited', activityController.getRecentlyVisited);
-router.post('/', activityController.createActivity);
+router.get('/', getActivities);
+router.get('/feed', getActivityFeed);
+router.post('/page-visit', recordPageVisit);
+router.get('/recently-visited', getRecentlyVisited);
+router.post('/', createActivity);
 
 export default router;

@@ -11,7 +11,7 @@ import { EStatus } from '@/modules/core/types/common.types';
 import { EDatabaseType } from '@/modules/database';
 
 // Reminder configuration interface
-export interface IReminderConfig {
+interface IReminderConfig {
   enabled: boolean;
   intervals: {
     beforeDue: number[]; // minutes before due date

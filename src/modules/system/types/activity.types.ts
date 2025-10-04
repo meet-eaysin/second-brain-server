@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 // Activity types
 export enum EActivityType {
   // Database operations
@@ -258,52 +256,3 @@ export interface IActivityAnalytics {
     readonly activityCount: number;
   }[];
 }
-
-// Validation schemas
-export const ActivityTypeSchema = z.enum(EActivityType);
-export const ActivityContextSchema = z.enum(EActivityContext);
-
-export const ActivityChangeSchema = z.object({
-  field: z.string(),
-  oldValue: z.unknown(),
-  newValue: z.unknown(),
-  fieldType: z.string()
-});
-
-export const CreateActivityRequestSchema = z.object({
-  type: ActivityTypeSchema,
-  context: ActivityContextSchema,
-  title: z.string().min(1).max(200),
-  description: z.string().min(1).max(1000),
-  userId: z.string().min(1),
-  userName: z.string().min(1),
-  workspaceId: z.string().min(1),
-  entityId: z.string().min(1),
-  entityType: z.string().min(1),
-  entityName: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  changes: z.array(ActivityChangeSchema).optional(),
-  ipAddress: z.string().optional(),
-  userAgent: z.string().optional()
-});
-
-export const ActivityQueryOptionsSchema = z.object({
-  workspaceId: z.string().optional(),
-  userId: z.string().optional(),
-  type: ActivityTypeSchema.optional(),
-  types: z.array(ActivityTypeSchema).optional(),
-  context: ActivityContextSchema.optional(),
-  entityId: z.string().optional(),
-  entityType: z.string().optional(),
-  dateRange: z
-    .object({
-      start: z.date(),
-      end: z.date()
-    })
-    .optional(),
-  limit: z.number().min(1).max(100).optional(),
-  offset: z.number().min(0).optional(),
-  sortBy: z.enum(['timestamp', 'type', 'userId']).optional(),
-  sortOrder: z.enum(['asc', 'desc']).optional(),
-  includeSystem: z.boolean().optional()
-});

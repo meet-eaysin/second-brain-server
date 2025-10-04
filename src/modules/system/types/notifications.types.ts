@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 // Notification types
 export enum ENotificationType {
   TASK_DUE = 'task_due',
@@ -219,56 +217,3 @@ export interface IDueTaskNotificationData {
   readonly projectName?: string;
   readonly workspaceId: string;
 }
-
-// Validation schemas
-export const NotificationTypeSchema = z.enum(ENotificationType);
-export const NotificationPrioritySchema = z.enum(ENotificationPriority);
-export const NotificationMethodSchema = z.enum(ENotificationMethod);
-export const NotificationStatusSchema = z.enum(ENotificationStatus);
-
-export const CreateNotificationRequestSchema = z.object({
-  type: NotificationTypeSchema,
-  priority: NotificationPrioritySchema,
-  title: z.string().min(1).max(200),
-  message: z.string().min(1).max(1000),
-  userId: z.string().min(1),
-  workspaceId: z.string().min(1),
-  entityId: z.string().optional(),
-  entityType: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  methods: z.array(NotificationMethodSchema).optional(),
-  scheduledFor: z.date().optional()
-});
-
-export const UpdateNotificationRequestSchema = z.object({
-  status: NotificationStatusSchema.optional(),
-  readAt: z.date().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional()
-});
-
-export const NotificationQueryOptionsSchema = z.object({
-  userId: z.string().optional(),
-  workspaceId: z.string().optional(),
-  type: NotificationTypeSchema.optional(),
-  status: NotificationStatusSchema.optional(),
-  priority: NotificationPrioritySchema.optional(),
-  unreadOnly: z.union([z.boolean(), z.string().transform(val => val === 'true')]).optional(),
-  entityId: z.string().optional(),
-  entityType: z.string().optional(),
-  dateRange: z
-    .object({
-      start: z.string().transform(str => new Date(str)),
-      end: z.string().transform(str => new Date(str))
-    })
-    .optional(),
-  limit: z
-    .union([z.number(), z.string().transform(val => parseInt(val))])
-    .refine(val => val >= 1 && val <= 100)
-    .optional(),
-  offset: z
-    .union([z.number(), z.string().transform(val => parseInt(val))])
-    .refine(val => val >= 0)
-    .optional(),
-  sortBy: z.enum(['createdAt', 'priority', 'scheduledFor']).optional(),
-  sortOrder: z.enum(['asc', 'desc']).optional()
-});

@@ -22,7 +22,7 @@ import {
   INotificationQueryOptions,
   IMentionNotificationData,
   IDueTaskNotificationData
-} from '../types/notifications.types';
+} from '@/modules/system';
 import { getUserId } from '@/auth/index';
 
 /**

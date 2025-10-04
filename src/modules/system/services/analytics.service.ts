@@ -12,7 +12,7 @@ import {
   IAnalyticsRecommendation,
   EAnalyticsPeriod,
   EAnalyticsMetric
-} from '../types/analytics.types';
+} from '@/modules/system';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { EDatabaseType } from '@/modules/database';

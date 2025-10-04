@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { EStatus, EPriority } from '@/modules/core/types/common.types';
 
 // Analytics period
@@ -327,21 +326,3 @@ export interface IChartData {
   }[];
   readonly options?: Record<string, unknown>;
 }
-
-// Validation schemas
-export const AnalyticsPeriodSchema = z.enum(EAnalyticsPeriod);
-export const AnalyticsMetricSchema = z.enum(EAnalyticsMetric);
-export const ChartTypeSchema = z.enum(EChartType);
-
-export const AnalyticsQueryOptionsSchema = z.object({
-  workspaceId: z.string().min(1),
-  userId: z.string().optional(),
-  period: AnalyticsPeriodSchema,
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
-  entityType: z.string().optional(),
-  entityId: z.string().optional(),
-  groupBy: z.string().optional(),
-  metrics: z.array(AnalyticsMetricSchema).optional(),
-  filters: z.record(z.string(), z.unknown()).optional()
-});

@@ -13,7 +13,7 @@ import {
   ENotificationPriority,
   ENotificationMethod,
   ENotificationStatus
-} from '../types/notifications.types';
+} from '@/modules/system';
 import { NotificationModel, TNotificationDocument } from '../models/notification.model';
 import { NotificationPreferencesModel } from '../models/notification-preferences.model';
 import { DeviceTokenModel, TDeviceTokenDocument } from '../models/device-token.model';

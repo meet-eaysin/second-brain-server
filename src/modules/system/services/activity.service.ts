@@ -10,7 +10,7 @@ import {
   IActivityAnalytics,
   EActivityType,
   EActivityContext
-} from '../types/activity.types';
+} from '@/modules/system';
 import { createAppError } from '@/utils/error.utils';
 import { ActivityModel } from '../models/activity.model';
 import { VersionHistoryModel } from '../models/version-history.model';
@@ -526,7 +526,7 @@ const formatTimeAgo = (timeDiff: number): string => {
 /**
  * Generate comprehensive audit trail
  */
-export const generateAuditTrail = async (
+const generateAuditTrail = async (
   workspaceId: string,
   options: {
     entityId?: string;

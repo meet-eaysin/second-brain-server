@@ -24,7 +24,7 @@ import {
   CreateNotificationRequestSchema,
   UpdateNotificationRequestSchema,
   NotificationQueryOptionsSchema
-} from '@/modules/system/types/notifications.types';
+} from '@/modules/system';
 import { z } from 'zod';
 
 const router = Router();

@@ -11,10 +11,7 @@ import {
   getContentAnalytics,
   getWorkspaceAnalytics
 } from '../services/analytics.service';
-import {
-  IAnalyticsQueryOptions,
-  EAnalyticsPeriod
-} from '../types/analytics.types';
+import { IAnalyticsQueryOptions, EAnalyticsPeriod } from '@/modules/system';
 import { getUserId } from '@/auth/index';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { EDatabaseType } from '@/modules/database';
@@ -22,7 +19,9 @@ import { EDatabaseType } from '@/modules/database';
 /**
  * Helper function to create database map
  */
-const createDatabaseMap = async (workspaceId: string): Promise<Record<EDatabaseType, string | null>> => {
+const createDatabaseMap = async (
+  workspaceId: string
+): Promise<Record<EDatabaseType, string | null>> => {
   const databases = await DatabaseModel.find({
     workspaceId,
     isDeleted: { $ne: true }
@@ -288,12 +287,7 @@ export const getAnalyticsSummaryController = catchAsync(
 
     const databaseMap = await createDatabaseMap(workspaceId as string);
 
-    const [
-      weeklyProductivity,
-      monthlyProductivity,
-      weeklyTasks,
-      monthlyTasks
-    ] = await Promise.all([
+    const [weeklyProductivity, monthlyProductivity, weeklyTasks, monthlyTasks] = await Promise.all([
       getProductivityAnalytics(databaseMap, weeklyOptions),
       getProductivityAnalytics(databaseMap, monthlyOptions),
       getTaskAnalytics(databaseMap, weeklyOptions),
@@ -311,8 +305,11 @@ export const getAnalyticsSummaryController = catchAsync(
       },
       trends: {
         productivityTrend: weeklyProductivity.velocityTrend,
-        taskCompletionTrend: weeklyTasks.completionRate > monthlyTasks.completionRate ? 'improving' : 'declining',
-        overallScore: Math.round((weeklyProductivity.productivityScore + weeklyTasks.completionRate) / 2)
+        taskCompletionTrend:
+          weeklyTasks.completionRate > monthlyTasks.completionRate ? 'improving' : 'declining',
+        overallScore: Math.round(
+          (weeklyProductivity.productivityScore + weeklyTasks.completionRate) / 2
+        )
       }
     };
 
@@ -397,12 +394,18 @@ export const exportAnalyticsController = catchAsync(
     if (format === 'csv') {
       // In a real implementation, convert to CSV format
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="analytics-${workspaceId}-${period}.csv"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="analytics-${workspaceId}-${period}.csv"`
+      );
       // Convert to CSV and send
       res.send('CSV export not implemented yet');
     } else {
       res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="analytics-${workspaceId}-${period}.json"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="analytics-${workspaceId}-${period}.json"`
+      );
       res.json(exportData);
     }
   }
