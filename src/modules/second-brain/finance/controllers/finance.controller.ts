@@ -5,7 +5,7 @@ import {
   getTransactionById,
   updateTransaction,
   deleteTransaction
-} from '../services/finance.service';
+} from '@/modules/second-brain/finance/services/finance.service';
 import { getUserId } from '@/modules/auth';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
 import {
@@ -14,7 +14,7 @@ import {
   ITransactionQueryParams,
   ETransactionType,
   ETransactionCategory
-} from '../types/finance.types';
+} from '@/modules/second-brain/finance/types/finance.types';
 
 // ===== TRANSACTION CONTROLLERS =====
 

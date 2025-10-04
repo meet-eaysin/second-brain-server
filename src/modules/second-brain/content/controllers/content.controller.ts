@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { contentService } from '../services/content.service';
+import { contentService } from '@/modules/second-brain/content/services/content.service';
 import { getUserId } from '@/modules/auth';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
 import {
@@ -8,9 +8,8 @@ import {
   IContentQueryParams,
   EContentType,
   EContentStatus,
-  EContentPriority,
   EWorkflowStage
-} from '../types/content.types';
+} from '@/modules/second-brain/content/types/content.types';
 
 export const createContent = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

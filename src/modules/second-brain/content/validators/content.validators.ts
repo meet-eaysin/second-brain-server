@@ -4,9 +4,183 @@ import {
   EContentStatus,
   EContentPriority,
   EWorkflowStage,
-  CreateContentRequestSchema,
-  UpdateContentRequestSchema
-} from '../types/content.types';
+  EPublishingPlatform
+} from '@/modules/second-brain/content/types/content.types';
+
+// Zod schemas for validation
+export const ContentPieceSchema = z.object({
+  id: z.string(),
+  databaseId: z.string(),
+  title: z.string().min(1).max(500),
+  subtitle: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  type: z.nativeEnum(EContentType),
+  status: z.nativeEnum(EContentStatus),
+  priority: z.nativeEnum(EContentPriority),
+  content: z.string(),
+  excerpt: z.string().max(500).optional(),
+  wordCount: z.number().min(0),
+  readingTime: z.number().min(0),
+  seoTitle: z.string().max(60).optional(),
+  metaDescription: z.string().max(160).optional(),
+  keywords: z.array(z.string()).default([]),
+  slug: z.string().max(200).optional(),
+  canonicalUrl: z.string().url().optional(),
+  publishingPlatforms: z
+    .array(
+      z.object({
+        platform: z.nativeEnum(EPublishingPlatform),
+        platformId: z.string().optional(),
+        url: z.string().url().optional(),
+        publishedAt: z.date().optional(),
+        status: z.enum(['pending', 'published', 'failed']),
+        metrics: z
+          .object({
+            views: z.number().min(0).optional(),
+            likes: z.number().min(0).optional(),
+            shares: z.number().min(0).optional(),
+            comments: z.number().min(0).optional(),
+            clicks: z.number().min(0).optional()
+          })
+          .optional()
+      })
+    )
+    .default([]),
+  scheduledDate: z.date().optional(),
+  publishedDate: z.date().optional(),
+  lastPublishedDate: z.date().optional(),
+  currentStage: z.nativeEnum(EWorkflowStage),
+  assignedTo: z.string().optional(),
+  reviewers: z.array(z.string()).default([]),
+  approvers: z.array(z.string()).default([]),
+  categories: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]),
+  series: z.string().optional(),
+  seriesOrder: z.number().min(1).optional(),
+  relatedContentIds: z.array(z.string()).default([]),
+  sourceNoteIds: z.array(z.string()).default([]),
+  sourceResourceIds: z.array(z.string()).default([]),
+  inspirationIds: z.array(z.string()).default([]),
+  featuredImage: z
+    .object({
+      url: z.string().url(),
+      alt: z.string(),
+      caption: z.string().optional()
+    })
+    .optional(),
+  images: z
+    .array(
+      z.object({
+        id: z.string(),
+        url: z.string().url(),
+        alt: z.string(),
+        caption: z.string().optional(),
+        position: z.number().optional()
+      })
+    )
+    .default([]),
+  attachments: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        url: z.string().url(),
+        type: z.string(),
+        size: z.number().min(0)
+      })
+    )
+    .default([]),
+  analytics: z.object({
+    totalViews: z.number().min(0).default(0),
+    totalLikes: z.number().min(0).default(0),
+    totalShares: z.number().min(0).default(0),
+    totalComments: z.number().min(0).default(0),
+    totalClicks: z.number().min(0).default(0),
+    engagementRate: z.number().min(0).max(100).default(0),
+    conversionRate: z.number().min(0).max(100).default(0),
+    bounceRate: z.number().min(0).max(100).default(0),
+    averageTimeOnPage: z.number().min(0).default(0)
+  }),
+  versions: z
+    .array(
+      z.object({
+        id: z.string(),
+        version: z.string(),
+        content: z.string(),
+        createdAt: z.date(),
+        createdBy: z.string(),
+        changelog: z.string().optional(),
+        isActive: z.boolean()
+      })
+    )
+    .default([]),
+  currentVersion: z.string(),
+  templateId: z.string().optional(),
+  isTemplate: z.boolean().default(false),
+  autoPublish: z.boolean().default(false),
+  autoPromote: z.boolean().default(false),
+  editorNotes: z.string().optional(),
+  reviewNotes: z.string().optional(),
+  approvalNotes: z.string().optional(),
+  isPublic: z.boolean().default(false),
+  allowComments: z.boolean().default(true),
+  requireApproval: z.boolean().default(false),
+  customFields: z.record(z.string(), z.any()).default({}),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  createdBy: z.string(),
+  updatedBy: z.string()
+});
+
+export const CreateContentRequestSchema = z.object({
+  databaseId: z.string().min(1, 'Database ID is required'),
+  title: z.string().min(1, 'Title is required').max(500, 'Title too long'),
+  subtitle: z.string().max(200, 'Subtitle too long').optional(),
+  description: z.string().max(2000, 'Description too long').optional(),
+  type: z.nativeEnum(EContentType),
+  priority: z.nativeEnum(EContentPriority).default(EContentPriority.MEDIUM),
+  content: z.string().default(''),
+  excerpt: z.string().max(500, 'Excerpt too long').optional(),
+  seoTitle: z.string().max(60, 'SEO title too long').optional(),
+  metaDescription: z.string().max(160, 'Meta description too long').optional(),
+  keywords: z.array(z.string().max(50)).default([]),
+  slug: z.string().max(200, 'Slug too long').optional(),
+  scheduledDate: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  currentStage: z.nativeEnum(EWorkflowStage).default(EWorkflowStage.IDEATION),
+  assignedTo: z.string().optional(),
+  reviewers: z.array(z.string()).default([]),
+  approvers: z.array(z.string()).default([]),
+  categories: z.array(z.string().max(100)).default([]),
+  tags: z.array(z.string().max(50)).default([]),
+  series: z.string().max(200).optional(),
+  seriesOrder: z.number().min(1).optional(),
+  relatedContentIds: z.array(z.string()).default([]),
+  sourceNoteIds: z.array(z.string()).default([]),
+  sourceResourceIds: z.array(z.string()).default([]),
+  featuredImage: z
+    .object({
+      url: z.string().url(),
+      alt: z.string(),
+      caption: z.string().optional()
+    })
+    .optional(),
+  templateId: z.string().optional(),
+  isTemplate: z.boolean().default(false),
+  autoPublish: z.boolean().default(false),
+  autoPromote: z.boolean().default(false),
+  isPublic: z.boolean().default(false),
+  allowComments: z.boolean().default(true),
+  requireApproval: z.boolean().default(false),
+  customFields: z.record(z.string(), z.any()).default({})
+});
+
+export const UpdateContentRequestSchema = CreateContentRequestSchema.omit({
+  databaseId: true
+}).partial();
 
 // Base schemas
 export const contentIdSchema = z.object({
@@ -14,15 +188,15 @@ export const contentIdSchema = z.object({
 });
 
 export const typeParamSchema = z.object({
-  type: z.enum(EContentType)
+  type: z.nativeEnum(EContentType)
 });
 
 export const statusParamSchema = z.object({
-  status: z.enum(EContentStatus)
+  status: z.nativeEnum(EContentStatus)
 });
 
 export const stageParamSchema = z.object({
-  stage: z.enum(EWorkflowStage)
+  stage: z.nativeEnum(EWorkflowStage)
 });
 
 export const seriesParamSchema = z.object({
@@ -37,19 +211,19 @@ export const updateContentSchema = UpdateContentRequestSchema;
 export const getContentQuerySchema = z.object({
   databaseId: z.string().optional(),
   type: z
-    .array(z.enum(EContentType))
+    .array(z.nativeEnum(EContentType))
     .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContentType)))
     .optional(),
   status: z
-    .array(z.enum(EContentStatus))
+    .array(z.nativeEnum(EContentStatus))
     .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContentStatus)))
     .optional(),
   priority: z
-    .array(z.enum(EContentPriority))
+    .array(z.nativeEnum(EContentPriority))
     .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContentPriority)))
     .optional(),
   stage: z
-    .array(z.enum(EWorkflowStage))
+    .array(z.nativeEnum(EWorkflowStage))
     .or(z.string().transform(val => val.split(',').map(s => s.trim() as EWorkflowStage)))
     .optional(),
   categories: z
@@ -170,7 +344,7 @@ export const publishContentSchema = z.object({
 export const createTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required').max(200, 'Name too long'),
   description: z.string().max(1000, 'Description too long').optional(),
-  type: z.enum(EContentType),
+  type: z.nativeEnum(EContentType),
   structure: z.object({
     sections: z
       .array(
@@ -275,7 +449,7 @@ export const searchContentSchema = z.object({
   q: z.string().min(1, 'Search query is required').max(500, 'Query too long'),
   databaseId: z.string().optional(),
   type: z
-    .array(z.enum(EContentType))
+    .array(z.nativeEnum(EContentType))
     .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContentType)))
     .optional(),
   page: z
@@ -305,7 +479,7 @@ export const contentAnalyticsQuerySchema = z.object({
     .transform(val => new Date(val))
     .optional(),
   type: z
-    .array(z.enum(EContentType))
+    .array(z.nativeEnum(EContentType))
     .or(z.string().transform(val => val.split(',').map(s => s.trim() as EContentType)))
     .optional(),
   includeMetrics: z

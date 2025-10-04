@@ -23,7 +23,7 @@ import {
   moveToNextStage,
   assignContent,
   getContentStats
-} from '../controllers/content.controller';
+} from '@/modules/second-brain/content/controllers/content.controller';
 import {
   contentIdSchema,
   createContentSchema,
@@ -39,7 +39,7 @@ import {
   statusParamSchema,
   stageParamSchema,
   seriesParamSchema
-} from '../validators/content.validators';
+} from '@/modules/second-brain/content/validators/content.validators';
 
 const router = Router();
 

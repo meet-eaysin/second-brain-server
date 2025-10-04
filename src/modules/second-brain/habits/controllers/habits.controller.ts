@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { habitsService } from '../services/habits.service';
+import { habitsService } from '@/modules/second-brain/habits/services/habits.service';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/modules/auth';
 
@@ -73,7 +73,7 @@ export const getHabitsDueToday = catchAsync(
 
     const habits = await habitsService.getHabitsDueToday(userId);
 
-    sendSuccessResponse(res, 'Today\'s habits retrieved successfully', habits);
+    sendSuccessResponse(res, "Today's habits retrieved successfully", habits);
   }
 );
 
@@ -157,8 +157,8 @@ export const getMonthlyHabitReport = catchAsync(
 
     for (const habit of habits) {
       const stats = await habitsService.calculateHabitStats(habit._id.toString());
-      const monthKey = month as string || new Date().toISOString().substring(0, 7);
-      
+      const monthKey = (month as string) || new Date().toISOString().substring(0, 7);
+
       monthlyReport.push({
         habitId: habit._id,
         name: habit.properties?.Name,
@@ -199,10 +199,10 @@ export const bulkUpdateHabits = catchAsync(
           results.push({ habitId: habitUpdate.habitId, success: true });
         }
       } catch (error) {
-        results.push({ 
-          habitId: habitUpdate.habitId, 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+        results.push({
+          habitId: habitUpdate.habitId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
     }
@@ -217,13 +217,18 @@ export const getHabitInsights = catchAsync(
     const { habitId } = req.params;
 
     const stats = await habitsService.calculateHabitStats(habitId);
-    
+
     // Generate insights based on statistics
     const insights = {
       performance: {
-        rating: stats.completionRate >= 80 ? 'excellent' : 
-                stats.completionRate >= 60 ? 'good' : 
-                stats.completionRate >= 40 ? 'fair' : 'needs_improvement',
+        rating:
+          stats.completionRate >= 80
+            ? 'excellent'
+            : stats.completionRate >= 60
+              ? 'good'
+              : stats.completionRate >= 40
+                ? 'fair'
+                : 'needs_improvement',
         completionRate: stats.completionRate,
         trend: analyzeTrend(stats.lastSevenDays)
       },
@@ -247,7 +252,7 @@ export const getHabitInsights = catchAsync(
 function analyzeTrend(lastSevenDays: boolean[]): 'improving' | 'declining' | 'stable' {
   const firstHalf = lastSevenDays.slice(0, 3).filter(Boolean).length;
   const secondHalf = lastSevenDays.slice(4).filter(Boolean).length;
-  
+
   if (secondHalf > firstHalf) return 'improving';
   if (secondHalf < firstHalf) return 'declining';
   return 'stable';
@@ -256,23 +261,23 @@ function analyzeTrend(lastSevenDays: boolean[]): 'improving' | 'declining' | 'st
 // Helper function to generate recommendations
 function generateRecommendations(stats: any): string[] {
   const recommendations = [];
-  
+
   if (stats.completionRate < 50) {
     recommendations.push('Consider reducing the frequency or making the habit smaller');
   }
-  
+
   if (stats.currentStreak === 0) {
     recommendations.push('Focus on building consistency - start with just one day');
   }
-  
+
   if (stats.averagePerWeek < 3) {
     recommendations.push('Try to complete this habit at least 3 times per week');
   }
-  
+
   if (stats.completionRate > 80) {
     recommendations.push('Great job! Consider adding a related habit or increasing the challenge');
   }
-  
+
   return recommendations;
 }
 

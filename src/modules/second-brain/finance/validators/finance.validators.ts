@@ -5,7 +5,7 @@ import {
   EAccountType,
   EBudgetPeriod,
   EFinancialGoalType
-} from '../types/finance.types';
+} from '@/modules/second-brain/finance/types/finance.types';
 
 // Base schemas
 export const transactionIdSchema = z.object({

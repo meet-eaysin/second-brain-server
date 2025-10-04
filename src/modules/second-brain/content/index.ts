@@ -2,7 +2,7 @@
 // This module provides comprehensive content management with workflow automation, multi-platform publishing, and analytics
 
 // Routes - Content-specific operations
-export { default as contentRoutes } from './routes/content.routes';
+export { default as contentRoutes } from '@/modules/second-brain/content/routes/content.routes';
 
 // Controllers - Content business logic
 export {
@@ -12,7 +12,7 @@ export {
   getContentById,
   updateContent,
   deleteContent,
-  
+
   // Content analytics
   getContentByType,
   getContentByStatus,
@@ -23,28 +23,25 @@ export {
   getScheduledContent,
   getContentTemplates,
   searchContent,
-  
+
   // Content actions
   duplicateContent,
   bulkUpdateContent,
   bulkDeleteContent,
-  
+
   // Workflow actions
   moveToNextStage,
   assignContent,
-  
+
   // Statistics
   getContentStats
-} from './controllers/content.controller';
+} from '@/modules/second-brain/content/controllers/content.controller';
 
 // Services - Content-specific services
-export {
-  ContentService,
-  contentService
-} from './services/content.service';
+export { contentService } from '@/modules/second-brain/content/services/content.service';
 
 // Types
-export type * from './types/content.types';
+export type * from '@/modules/second-brain/content/types/content.types';
 
 // Types - Specific exports for better IDE support
 export type {
@@ -60,7 +57,7 @@ export type {
   EContentPriority,
   EPublishingPlatform,
   EWorkflowStage
-} from './types/content.types';
+} from '@/modules/second-brain/content/types/content.types';
 
 // Validators
 export {
@@ -90,4 +87,4 @@ export {
   statusParamSchema,
   stageParamSchema,
   seriesParamSchema
-} from './validators/content.validators';
+} from '@/modules/second-brain/content/validators/content.validators';

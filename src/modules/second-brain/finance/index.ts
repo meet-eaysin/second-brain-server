@@ -2,7 +2,7 @@
 // This module provides comprehensive financial management with transactions, budgets, and goals
 
 // Routes - Finance-specific operations
-export { default as financeRoutes } from './routes/finance.routes';
+export { default as financeRoutes } from '@/modules/second-brain/finance/routes/finance.routes';
 
 // Controllers - Finance business logic
 export {
@@ -28,7 +28,7 @@ export {
 
   // Statistics
   getFinanceStatsController as getFinanceStats
-} from './controllers/finance.controller';
+} from '@/modules/second-brain/finance/controllers/finance.controller';
 
 // Services - Finance-specific services
 export {
@@ -37,10 +37,10 @@ export {
   getTransactionById as getTransactionByIdService,
   updateTransaction as updateTransactionService,
   deleteTransaction as deleteTransactionService
-} from './services/finance.service';
+} from '@/modules/second-brain/finance/services/finance.service';
 
 // Types
-export type * from './types/finance.types';
+export type * from '@/modules/second-brain/finance/types/finance.types';
 
 // Types - Specific exports for better IDE support
 export type {
@@ -63,7 +63,7 @@ export type {
   EAccountType,
   EBudgetPeriod,
   EFinancialGoalType
-} from './types/finance.types';
+} from '@/modules/second-brain/finance/types/finance.types';
 
 // Validators
 export {
@@ -85,4 +85,4 @@ export {
   financeStatsQuerySchema,
   categoryParamSchema,
   accountIdSchema
-} from './validators/finance.validators';
+} from '@/modules/second-brain/finance/validators/finance.validators';

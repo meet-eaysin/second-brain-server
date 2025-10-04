@@ -26,7 +26,7 @@ import {
 
   // Statistics
   getFinanceStatsController as getFinanceStats
-} from '../controllers/finance.controller';
+} from '@/modules/second-brain/finance/controllers/finance.controller';
 
 // Validators
 import {
@@ -41,7 +41,7 @@ import {
   financeStatsQuerySchema,
   categoryParamSchema,
   accountIdSchema
-} from '../validators/finance.validators';
+} from '@/modules/second-brain/finance/validators/finance.validators';
 
 const router = Router();
 
