@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { searchService } from '../services/search.service';
 import { sendSuccessResponse, sendErrorResponse } from '@/utils/response.utils';
 import {
   GlobalSearchQuerySchema,
@@ -9,17 +8,18 @@ import {
   ISearchOptions,
   IGlobalSearchResponse,
   ISearchSuggestionsResponse,
-  IRecentSearchesResponse
-} from '../types/search.types';
+  IRecentSearchesResponse,
+  searchService
+} from '@/modules/search';
 import { EDatabaseType } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
-class SearchController {
+export const searchController = {
   /**
    * Global search endpoint
    * GET /api/v1/search
    */
-  async globalSearch(req: Request, res: Response): Promise<void> {
+  globalSearch: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId(req);
 
@@ -101,13 +101,13 @@ class SearchController {
         error instanceof Error ? error.message : 'Unknown error'
       );
     }
-  }
+  },
 
   /**
    * Search databases specifically
    * GET /api/v1/search/databases
    */
-  async searchDatabases(req: Request, res: Response): Promise<void> {
+  searchDatabases: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -167,13 +167,13 @@ class SearchController {
         error instanceof Error ? error.message : 'Unknown error'
       );
     }
-  }
+  },
 
   /**
    * Search records specifically
    * GET /api/v1/search/records
    */
-  async searchRecords(req: Request, res: Response): Promise<void> {
+  searchRecords: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId(req);
 
@@ -236,13 +236,13 @@ class SearchController {
         error instanceof Error ? error.message : 'Unknown error'
       );
     }
-  }
+  },
 
   /**
    * Get search suggestions
    * GET /api/v1/search/suggestions
    */
-  async getSearchSuggestions(req: Request, res: Response): Promise<void> {
+  getSearchSuggestions: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId(req);
 
@@ -283,13 +283,13 @@ class SearchController {
         error instanceof Error ? error.message : 'Unknown error'
       );
     }
-  }
+  },
 
   /**
    * Get recent searches
    * GET /api/v1/search/recent
    */
-  async getRecentSearches(req: Request, res: Response): Promise<void> {
+  getRecentSearches: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = getUserId(req);
 
@@ -325,13 +325,13 @@ class SearchController {
         error instanceof Error ? error.message : 'Unknown error'
       );
     }
-  }
+  },
 
   /**
    * Get URL glimpse data
    * GET /api/v1/search/glimpse
    */
-  async getGlimpse(req: Request, res: Response): Promise<void> {
+  getGlimpse: async (req: Request, res: Response): Promise<void> => {
     try {
       const { url } = req.query;
 
@@ -358,7 +358,9 @@ class SearchController {
       const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
       const ogTitleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
       const descriptionMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
-      const ogDescriptionMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i);
+      const ogDescriptionMatch = html.match(
+        /<meta[^>]*property="og:description"[^>]*content="([^"]+)"/i
+      );
       const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i);
 
       const data = {
@@ -378,7 +380,4 @@ class SearchController {
       );
     }
   }
-}
-
-export const searchController = new SearchController();
-export default searchController;
+};

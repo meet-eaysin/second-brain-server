@@ -8,8 +8,3 @@ export * from './types/search.types';
 
 // Models
 export { SearchHistoryModel } from './models/search-history.model';
-
-// Re-export for convenience
-export { default as SearchService } from './services/search.service';
-export { default as SearchController } from './controllers/search.controller';
-export { default as SearchRoutes } from './routes/search.routes';

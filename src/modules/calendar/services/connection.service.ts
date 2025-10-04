@@ -272,10 +272,10 @@ export const testCalendarConnection = async (
     throw createAppError('Calendar connection not found', 404);
   }
 
-  const { ExternalCalendarProviderFactory } = await import('./external-calendar.service');
+  const { externalCalendarProviderFactory } = await import('./external-calendar.service');
 
   try {
-    const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
+    const provider = externalCalendarProviderFactory.getProvider(connection.provider);
     const calendars = await provider.getCalendars(connection);
 
     return {

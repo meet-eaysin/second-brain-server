@@ -33,9 +33,9 @@ export interface IExternalCalendarProvider {
   ): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }>;
 }
 
-// Google CalendarTypes Provider
-class GoogleCalendarProvider implements IExternalCalendarProvider {
-  private getAuth(connection: ICalendarConnection) {
+// Google Calendar Provider
+const googleCalendarProvider = {
+  getAuth: function (connection: ICalendarConnection) {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -49,9 +49,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     });
 
     return oauth2Client;
-  }
+  },
 
-  async getCalendars(connection: ICalendarConnection): Promise<any[]> {
+  getCalendars: async function (connection: ICalendarConnection): Promise<any[]> {
     try {
       const auth = this.getAuth(connection);
       const calendar = google.calendar({ version: 'v3', auth });
@@ -61,9 +61,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Google Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async getEvents(
+  getEvents: async function (
     connection: ICalendarConnection,
     calendarId: string,
     startDate?: Date,
@@ -91,9 +91,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Google Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async createEvent(
+  createEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     event: ICreateEventRequest
@@ -112,9 +112,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Google Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async updateEvent(
+  updateEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     eventId: string,
@@ -135,9 +135,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Google Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async deleteEvent(
+  deleteEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     eventId: string
@@ -153,9 +153,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Google Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async refreshToken(
+  refreshToken: async function (
     connection: ICalendarConnection
   ): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }> {
     try {
@@ -172,9 +172,9 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Google token refresh error: ${error}`, 500);
     }
-  }
+  },
 
-  private convertToGoogleEvent(event: ICreateEventRequest | IUpdateEventRequest): any {
+  convertToGoogleEvent: function (event: ICreateEventRequest | IUpdateEventRequest): any {
     const googleEvent: any = {
       summary: event.title,
       description: event.description,
@@ -217,19 +217,19 @@ class GoogleCalendarProvider implements IExternalCalendarProvider {
 
     return googleEvent;
   }
-}
+};
 
 // Microsoft Outlook Provider
-class OutlookCalendarProvider implements IExternalCalendarProvider {
-  private getClient(connection: ICalendarConnection): Client {
+const outlookCalendarProvider = {
+  getClient: function (connection: ICalendarConnection): Client {
     const authProvider: AuthenticationProvider = {
       getAccessToken: async () => connection.accessToken
     };
 
     return Client.initWithMiddleware({ authProvider });
-  }
+  },
 
-  async getCalendars(connection: ICalendarConnection): Promise<any[]> {
+  getCalendars: async function (connection: ICalendarConnection): Promise<any[]> {
     try {
       const client = this.getClient(connection);
       const calendars = await client.api('/me/calendars').get();
@@ -237,9 +237,9 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Outlook Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async getEvents(
+  getEvents: async function (
     connection: ICalendarConnection,
     calendarId: string,
     startDate?: Date,
@@ -265,9 +265,9 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Outlook Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async createEvent(
+  createEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     event: ICreateEventRequest
@@ -281,9 +281,9 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Outlook Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async updateEvent(
+  updateEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     eventId: string,
@@ -300,9 +300,9 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Outlook Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async deleteEvent(
+  deleteEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     eventId: string
@@ -313,9 +313,9 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Outlook Calendar API error: ${error}`, 500);
     }
-  }
+  },
 
-  async refreshToken(
+  refreshToken: async function (
     connection: ICalendarConnection
   ): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }> {
     try {
@@ -340,9 +340,9 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`Outlook token refresh error: ${error}`, 500);
     }
-  }
+  },
 
-  private convertToOutlookEvent(event: ICreateEventRequest | IUpdateEventRequest): any {
+  convertToOutlookEvent: function (event: ICreateEventRequest | IUpdateEventRequest): any {
     const outlookEvent: any = {
       subject: event.title,
       body: {
@@ -389,16 +389,16 @@ class OutlookCalendarProvider implements IExternalCalendarProvider {
 
     return outlookEvent;
   }
-}
+};
 
-// CalDAV Provider (for Apple CalendarTypes, etc.)
-class CalDAVProvider implements IExternalCalendarProvider {
-  async getCalendars(connection: ICalendarConnection): Promise<any[]> {
+// CalDAV Provider (for Apple Calendar, etc.)
+const calDAVProvider = {
+  getCalendars: async function (connection: ICalendarConnection): Promise<any[]> {
     // CalDAV implementation would go here
     throw createAppError('CalDAV provider not yet implemented', 501);
-  }
+  },
 
-  async getEvents(
+  getEvents: async function (
     connection: ICalendarConnection,
     calendarId: string,
     startDate?: Date,
@@ -406,43 +406,43 @@ class CalDAVProvider implements IExternalCalendarProvider {
   ): Promise<any[]> {
     // CalDAV implementation would go here
     throw createAppError('CalDAV provider not yet implemented', 501);
-  }
+  },
 
-  async createEvent(
+  createEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     event: ICreateEventRequest
   ): Promise<any> {
     throw createAppError('CalDAV provider not yet implemented', 501);
-  }
+  },
 
-  async updateEvent(
+  updateEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     eventId: string,
     event: IUpdateEventRequest
   ): Promise<any> {
     throw createAppError('CalDAV provider not yet implemented', 501);
-  }
+  },
 
-  async deleteEvent(
+  deleteEvent: async function (
     connection: ICalendarConnection,
     calendarId: string,
     eventId: string
   ): Promise<void> {
     throw createAppError('CalDAV provider not yet implemented', 501);
-  }
+  },
 
-  async refreshToken(
+  refreshToken: async function (
     connection: ICalendarConnection
   ): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }> {
     throw createAppError('CalDAV provider not yet implemented', 501);
   }
-}
+};
 
 // iCal Provider (for read-only calendar subscriptions)
-class ICalProvider implements IExternalCalendarProvider {
-  async getCalendars(connection: ICalendarConnection): Promise<any[]> {
+const iCalProvider = {
+  getCalendars: async function (connection: ICalendarConnection): Promise<any[]> {
     // iCal subscriptions don't have multiple calendars
     return [
       {
@@ -451,9 +451,9 @@ class ICalProvider implements IExternalCalendarProvider {
         description: 'iCal subscription calendar'
       }
     ];
-  }
+  },
 
-  async getEvents(
+  getEvents: async function (
     connection: ICalendarConnection,
     calendarId: string,
     startDate?: Date,
@@ -498,21 +498,21 @@ class ICalProvider implements IExternalCalendarProvider {
     } catch (error) {
       throw createAppError(`iCal fetch error: ${error}`, 500);
     }
-  }
+  },
 
-  async createEvent(): Promise<any> {
+  createEvent: async function (): Promise<any> {
     throw createAppError('iCal subscriptions are read-only', 400);
-  }
+  },
 
-  async updateEvent(): Promise<any> {
+  updateEvent: async function (): Promise<any> {
     throw createAppError('iCal subscriptions are read-only', 400);
-  }
+  },
 
-  async deleteEvent(): Promise<void> {
+  deleteEvent: async function (): Promise<void> {
     throw createAppError('iCal subscriptions are read-only', 400);
-  }
+  },
 
-  async refreshToken(): Promise<{
+  refreshToken: async function (): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresIn?: number;
@@ -520,25 +520,25 @@ class ICalProvider implements IExternalCalendarProvider {
     // iCal doesn't use OAuth tokens
     throw createAppError('iCal subscriptions do not use tokens', 400);
   }
-}
+};
 
 // Provider Factory
-export class ExternalCalendarProviderFactory {
-  static getProvider(provider: ECalendarProvider): IExternalCalendarProvider {
+export const externalCalendarProviderFactory = {
+  getProvider: function (provider: ECalendarProvider): IExternalCalendarProvider {
     switch (provider) {
       case ECalendarProvider.GOOGLE:
-        return new GoogleCalendarProvider();
+        return googleCalendarProvider;
       case ECalendarProvider.OUTLOOK:
-        return new OutlookCalendarProvider();
+        return outlookCalendarProvider;
       case ECalendarProvider.CALDAV:
       case ECalendarProvider.APPLE:
-        return new CalDAVProvider();
+        return calDAVProvider;
       case ECalendarProvider.ICAL:
-        return new ICalProvider();
+        return iCalProvider;
       default:
         throw createAppError(`Unsupported calendar provider: ${provider}`, 400);
     }
   }
-}
+};
 
-export { GoogleCalendarProvider, OutlookCalendarProvider, CalDAVProvider, ICalProvider };
+export { googleCalendarProvider, outlookCalendarProvider, calDAVProvider, iCalProvider };

@@ -14,7 +14,7 @@ import {
 } from '../models/connection.model';
 import { CalendarModel } from '../models/calendar.model';
 import { CalendarEventModel } from '../models/event.model';
-import { ExternalCalendarProviderFactory } from './external-calendar.service';
+import { externalCalendarProviderFactory } from './external-calendar.service';
 import { createNotification } from '@/modules/system/services/notifications.service';
 import {
   ENotificationType,
@@ -97,7 +97,7 @@ const syncConnection = async (connection: ICalendarConnectionDocument): Promise<
   });
 
   try {
-    const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
+    const provider = externalCalendarProviderFactory.getProvider(connection.provider);
 
     // Get external calendars
     const externalCalendars = await provider.getCalendars(connection);
@@ -478,7 +478,7 @@ export const refreshExpiredTokens = async (): Promise<void> => {
 
     for (const connection of expiredConnections) {
       try {
-        const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
+        const provider = externalCalendarProviderFactory.getProvider(connection.provider);
         const tokens = await provider.refreshToken(connection);
 
         await connection.updateTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn);

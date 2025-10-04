@@ -1,7 +1,6 @@
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { TemplateModel } from '@/modules/templates/models/template.model';
-import { SearchHistoryModel } from '../models/search-history.model';
 import { permissionService } from '../../permissions/services/permission.service';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import {
@@ -13,15 +12,16 @@ import {
   ISearchAnalytics,
   ESearchScope,
   ESearchResultType,
-  ISearchFilters
-} from '../types/search.types';
+  ISearchFilters,
+  SearchHistoryModel
+} from '@/modules/search';
 import { EDatabaseType } from '@/modules/database';
 
-class SearchService {
+export const searchService = {
   /**
    * Global search across all resources
    */
-  async globalSearch(
+  globalSearch: async function (
     query: string,
     options: ISearchOptions = {},
     userId: string
@@ -112,22 +112,19 @@ class SearchService {
       suggestions: suggestions.slice(0, 5), // Limit suggestions
       executionTime
     };
-  }
+  },
 
   /**
    * Search databases
    */
-  private async searchDatabases(
+  searchDatabases: async function (
     searchRegex: RegExp,
     options: Required<ISearchOptions>,
     userId: string
   ): Promise<ISearchResultItem[]> {
     const query: any = {
       isDeleted: { $ne: true },
-      $or: [
-        { name: searchRegex },
-        { description: searchRegex }
-      ]
+      $or: [{ name: searchRegex }, { description: searchRegex }]
     };
 
     // Apply filters
@@ -164,10 +161,9 @@ class SearchService {
         title: db.name,
         description: db.description,
         score,
-        highlights: options.includeHighlights ? this.generateHighlights(
-          { name: db.name, description: db.description },
-          searchRegex
-        ) : undefined,
+        highlights: options.includeHighlights
+          ? this.generateHighlights({ name: db.name, description: db.description }, searchRegex)
+          : undefined,
         metadata: {
           databaseId: db.id,
           databaseName: db.name,
@@ -185,12 +181,12 @@ class SearchService {
     }
 
     return results;
-  }
+  },
 
   /**
    * Search records
    */
-  private async searchRecords(
+  searchRecords: async function (
     searchRegex: RegExp,
     options: Required<ISearchOptions>,
     userId: string
@@ -259,10 +255,9 @@ class SearchService {
         content: content.substring(0, 500), // Limit content preview
         preview: this.generatePreview([title, description, content].join(' '), searchRegex),
         score,
-        highlights: options.includeHighlights ? this.generateHighlights(
-          { title, description, content },
-          searchRegex
-        ) : undefined,
+        highlights: options.includeHighlights
+          ? this.generateHighlights({ title, description, content }, searchRegex)
+          : undefined,
         metadata: {
           databaseId: database.id,
           databaseName: database.name,
@@ -280,12 +275,12 @@ class SearchService {
     }
 
     return results;
-  }
+  },
 
   /**
    * Search blocks (content within records)
    */
-  private async searchBlocks(
+  searchBlocks: async function (
     searchRegex: RegExp,
     options: Required<ISearchOptions>,
     userId: string
@@ -345,10 +340,9 @@ class SearchService {
           content: content.substring(0, 500),
           preview: this.generatePreview(content, searchRegex),
           score,
-          highlights: options.includeHighlights ? this.generateHighlights(
-            { content },
-            searchRegex
-          ) : undefined,
+          highlights: options.includeHighlights
+            ? this.generateHighlights({ content }, searchRegex)
+            : undefined,
           metadata: {
             databaseId: database.id,
             databaseName: database.name,
@@ -365,12 +359,12 @@ class SearchService {
     }
 
     return results;
-  }
+  },
 
   /**
    * Search templates
    */
-  private async searchTemplates(
+  searchTemplates: async function (
     searchRegex: RegExp,
     options: Required<ISearchOptions>,
     userId: string
@@ -388,10 +382,7 @@ class SearchService {
     // Apply filters
     this.applyFilters(query, options.filters);
 
-    const templates = await TemplateModel.find(query)
-      .sort({ updatedAt: -1 })
-      .limit(200)
-      .exec();
+    const templates = await TemplateModel.find(query).sort({ updatedAt: -1 }).limit(200).exec();
 
     const results: ISearchResultItem[] = [];
 
@@ -414,10 +405,12 @@ class SearchService {
         title: template.name,
         description: template.description,
         score,
-        highlights: options.includeHighlights ? this.generateHighlights(
-          { name: template.name, description: template.description },
-          searchRegex
-        ) : undefined,
+        highlights: options.includeHighlights
+          ? this.generateHighlights(
+              { name: template.name, description: template.description },
+              searchRegex
+            )
+          : undefined,
         metadata: {
           workspaceId: templateAny.workspaceId || 'global',
           createdBy: template.createdBy,
@@ -431,12 +424,12 @@ class SearchService {
     }
 
     return results;
-  }
+  },
 
   /**
    * Get search suggestions
    */
-  async getSearchSuggestions(
+  getSearchSuggestions: async function (
     query: string,
     scope: ESearchScope = ESearchScope.ALL,
     userId: string,
@@ -471,12 +464,12 @@ class SearchService {
     });
 
     return suggestions.slice(0, limit);
-  }
+  },
 
   /**
    * Get recent searches for user
    */
-  async getRecentSearches(
+  getRecentSearches: async function (
     userId: string,
     limit: number = 10,
     scope?: ESearchScope
@@ -486,22 +479,19 @@ class SearchService {
       query.scope = scope;
     }
 
-    return SearchHistoryModel.find(query)
-      .sort({ searchedAt: -1 })
-      .limit(limit)
-      .exec();
-  }
+    return SearchHistoryModel.find(query).sort({ searchedAt: -1 }).limit(limit).exec();
+  },
 
   // Helper methods
-  private buildFuzzyPattern(query: string): string {
+  buildFuzzyPattern: function (query: string): string {
     return query.split('').join('.*?');
-  }
+  },
 
-  private escapeRegex(text: string): string {
+  escapeRegex: function (text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
+  },
 
-  private applyFilters(query: any, filters: ISearchFilters): void {
+  applyFilters: function (query: any, filters: ISearchFilters): void {
     if (filters.workspaceId) {
       query.workspaceId = filters.workspaceId;
     }
@@ -532,9 +522,9 @@ class SearchService {
     if (filters.isTemplate !== undefined) {
       query.isTemplate = filters.isTemplate;
     }
-  }
+  },
 
-  private calculateRelevanceScore(text: string, searchRegex: RegExp): number {
+  calculateRelevanceScore: function (text: string, searchRegex: RegExp): number {
     const matches = text.match(searchRegex);
     if (!matches) return 0;
 
@@ -547,9 +537,9 @@ class SearchService {
     }
 
     return Math.min(score, 100);
-  }
+  },
 
-  private sortResults(
+  sortResults: function (
     results: ISearchResultItem[],
     sortBy: string,
     sortOrder: string
@@ -562,7 +552,8 @@ class SearchService {
           comparison = b.score - a.score;
           break;
         case 'date':
-          comparison = new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime();
+          comparison =
+            new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime();
           break;
         case 'name':
           comparison = a.title.localeCompare(b.title);
@@ -574,9 +565,9 @@ class SearchService {
 
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }
+  },
 
-  private calculateFacets(results: ISearchResultItem[]) {
+  calculateFacets: function (results: ISearchResultItem[]) {
     const facets = {
       types: [] as Array<{ type: ESearchResultType; count: number }>,
       databases: [] as Array<{ id: string; name: string; count: number }>,
@@ -631,9 +622,9 @@ class SearchService {
     facets.tags = Array.from(tagCounts.entries()).map(([tag, count]) => ({ tag, count }));
 
     return facets;
-  }
+  },
 
-  private generateHighlights(
+  generateHighlights: function (
     fields: Record<string, any>,
     searchRegex: RegExp
   ): Array<{ field: string; value: string; highlighted: string }> {
@@ -650,9 +641,9 @@ class SearchService {
     });
 
     return highlights;
-  }
+  },
 
-  private generatePreview(text: string, searchRegex: RegExp, maxLength: number = 200): string {
+  generatePreview: function (text: string, searchRegex: RegExp, maxLength: number = 200): string {
     const match = text.match(searchRegex);
     if (!match) return text.substring(0, maxLength);
 
@@ -665,20 +656,22 @@ class SearchService {
     if (end < text.length) preview = preview + '...';
 
     return preview;
-  }
+  },
 
-  private extractContentText(content: any[]): string {
+  extractContentText: function (content: any[]): string {
     if (!content || !Array.isArray(content)) return '';
 
-    return content.map(block => {
-      if (block.content && Array.isArray(block.content)) {
-        return block.content.map((item: any) => item.text?.content || '').join(' ');
-      }
-      return '';
-    }).join(' ');
-  }
+    return content
+      .map(block => {
+        if (block.content && Array.isArray(block.content)) {
+          return block.content.map((item: any) => item.text?.content || '').join(' ');
+        }
+        return '';
+      })
+      .join(' ');
+  },
 
-  private async saveSearchHistory(
+  saveSearchHistory: async function (
     userId: string,
     query: string,
     options: Required<ISearchOptions>,
@@ -697,9 +690,9 @@ class SearchService {
       // Log error but don't fail the search
       console.error('Failed to save search history:', error);
     }
-  }
+  },
 
-  private async generateSuggestions(
+  generateSuggestions: async function (
     query: string,
     scope: ESearchScope,
     userId: string
@@ -715,7 +708,4 @@ class SearchService {
 
     return suggestions;
   }
-}
-
-export const searchService = new SearchService();
-export default searchService;
+};
