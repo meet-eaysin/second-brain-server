@@ -4,9 +4,9 @@ import {
   IUpdateDatabaseRequest,
   IDatabaseQueryParams,
   IDatabaseStats,
-  IDatabaseTemplate,
-  EDatabaseType
-} from '@/modules/core/types/database.types';
+  IDatabaseTemplate
+} from '@/modules/database/types/database.types';
+import { EDatabaseType } from '@/modules/core/types/database.types';
 import {
   createAppError,
   createNotFoundError,

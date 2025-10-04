@@ -14,7 +14,7 @@ import {
   getFinanceSummary,
   getRecentlyVisited
 } from '../controllers/dashboard.controllers';
-import { DashboardQuerySchema } from '@/modules/dashboard/types/dashboard.types';
+import { DashboardQuerySchema } from '@/modules/dashboard/validators/dashboard.validators';
 
 const router = Router();
 

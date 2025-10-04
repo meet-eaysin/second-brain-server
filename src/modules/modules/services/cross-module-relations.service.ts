@@ -4,7 +4,7 @@ import { PropertyModel } from '@/modules/database/models/property.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { relationService } from '@/modules/database/services/relation.service';
 import { ERelationType } from '@/modules/database/models/relation.model';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { moduleConfigService } from './module-config.service';
 import { IModuleRelation } from '@/modules/modules/types/module.types';
 

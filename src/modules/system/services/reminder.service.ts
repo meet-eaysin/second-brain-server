@@ -8,7 +8,7 @@ import {
   ENotificationMethod
 } from '../types/notifications.types';
 import { EStatus } from '@/modules/core/types/common.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 
 // Reminder configuration interface
 export interface IReminderConfig {

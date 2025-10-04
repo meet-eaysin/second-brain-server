@@ -1,5 +1,5 @@
 import { Schema, model, Document, Model } from 'mongoose';
-import {ECalendarAccessLevel, ECalendarProvider, ECalendarType} from "@/modules/calendar";
+import { ECalendarAccessLevel, ECalendarProvider, ECalendarType } from '../types/enums.types';
 
 export interface ICalendarDocument extends Document {
   name: string;

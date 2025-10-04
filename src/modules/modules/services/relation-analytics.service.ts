@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { crossModuleRelationsService } from './cross-module-relations.service';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 
 export interface IRelationAnalytics {
   overview: {

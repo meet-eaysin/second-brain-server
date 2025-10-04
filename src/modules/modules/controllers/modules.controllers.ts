@@ -20,7 +20,7 @@ import {
   validateWorkspaceModules
 } from '@/modules/modules/services/modules.service';
 import { IModuleInitRequest } from '@/modules/modules/types/module.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
 export const initializeModules = catchAsync(

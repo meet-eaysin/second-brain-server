@@ -1,5 +1,11 @@
-import { Request, Response, NextFunction } from 'express';
-import { financeService } from '../services/finance.service';
+import { Request, Response } from 'express';
+import {
+  createTransaction,
+  getTransactions,
+  getTransactionById,
+  updateTransaction,
+  deleteTransaction
+} from '../services/finance.service';
 import { getUserId } from '@/modules/auth';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
 import {
@@ -12,70 +18,65 @@ import {
 
 // ===== TRANSACTION CONTROLLERS =====
 
-export const createTransaction = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const createTransactionController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const data: ICreateTransactionRequest = req.body;
     const userId = getUserId(req);
 
-    const transaction = await financeService.createTransaction(data, userId);
+    const transaction = await createTransaction(data, userId);
 
     sendSuccessResponse(res, 'Transaction created successfully', transaction, 201);
   }
 );
 
-export const getTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const params: ITransactionQueryParams = req.query as any;
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Transactions retrieved successfully',
-      result.transactions,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Transactions retrieved successfully', result.transactions, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
-export const getTransactionById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getTransactionByIdController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const transaction = await financeService.getTransactionById(id, userId);
+    const transaction = await getTransactionById(id, userId);
 
     sendSuccessResponse(res, 'Transaction retrieved successfully', transaction);
   }
 );
 
-export const updateTransaction = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const updateTransactionController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const data: IUpdateTransactionRequest = req.body;
     const userId = getUserId(req);
 
-    const transaction = await financeService.updateTransaction(id, data, userId);
+    const transaction = await updateTransaction(id, data, userId);
 
     sendSuccessResponse(res, 'Transaction updated successfully', transaction);
   }
 );
 
-export const deleteTransaction = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const deleteTransactionController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { permanent } = req.query;
     const userId = getUserId(req);
 
-    await financeService.deleteTransaction(id, userId, permanent === 'true');
+    await deleteTransaction(id, userId, permanent === 'true');
 
     sendSuccessResponse(res, 'Transaction deleted successfully', null, 204);
   }
@@ -83,68 +84,58 @@ export const deleteTransaction = catchAsync(
 
 // ===== TRANSACTION ANALYTICS =====
 
-export const getIncomeTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: ITransactionQueryParams = { 
-      ...req.query as any, 
+export const getIncomeTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const params: ITransactionQueryParams = {
+      ...(req.query as any),
       type: [ETransactionType.INCOME]
     };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Income transactions retrieved successfully',
-      result.transactions,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Income transactions retrieved successfully', result.transactions, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
-export const getExpenseTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: ITransactionQueryParams = { 
-      ...req.query as any, 
+export const getExpenseTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const params: ITransactionQueryParams = {
+      ...(req.query as any),
       type: [ETransactionType.EXPENSE]
     };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Expense transactions retrieved successfully',
-      result.transactions,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Expense transactions retrieved successfully', result.transactions, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
-export const getTransactionsByCategory = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getTransactionsByCategoryController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { category } = req.params;
-    const params: ITransactionQueryParams = { 
-      ...req.query as any, 
+    const params: ITransactionQueryParams = {
+      ...(req.query as any),
       category: [category as ETransactionCategory]
     };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
     sendPaginatedResponse(
       res,
@@ -162,42 +153,37 @@ export const getTransactionsByCategory = catchAsync(
   }
 );
 
-export const getTransactionsByAccount = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getTransactionsByAccountController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { accountId } = req.params;
-    const params: ITransactionQueryParams = { 
-      ...req.query as any, 
+    const params: ITransactionQueryParams = {
+      ...(req.query as any),
       accountId
     };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Account transactions retrieved successfully',
-      result.transactions,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Account transactions retrieved successfully', result.transactions, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
-export const getRecurringTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: ITransactionQueryParams = { 
-      ...req.query as any, 
+export const getRecurringTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const params: ITransactionQueryParams = {
+      ...(req.query as any),
       isRecurring: true
     };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
     sendPaginatedResponse(
       res,
@@ -215,15 +201,15 @@ export const getRecurringTransactions = catchAsync(
   }
 );
 
-export const getUnverifiedTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: ITransactionQueryParams = { 
-      ...req.query as any, 
+export const getUnverifiedTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const params: ITransactionQueryParams = {
+      ...(req.query as any),
       isVerified: false
     };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
     sendPaginatedResponse(
       res,
@@ -241,49 +227,44 @@ export const getUnverifiedTransactions = catchAsync(
   }
 );
 
-export const searchTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const searchTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { q: search } = req.query;
-    const params: ITransactionQueryParams = { ...req.query as any, search: search as string };
+    const params: ITransactionQueryParams = { ...(req.query as any), search: search as string };
     const userId = getUserId(req);
 
-    const result = await financeService.getTransactions(params, userId);
+    const result = await getTransactions(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Transaction search completed successfully',
-      result.transactions,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Transaction search completed successfully', result.transactions, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
-export const verifyTransaction = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const verifyTransactionController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const transaction = await financeService.updateTransaction(id, { isVerified: true }, userId);
+    const transaction = await updateTransaction(id, { isVerified: true }, userId);
 
     sendSuccessResponse(res, 'Transaction verified successfully', transaction);
   }
 );
 
-export const duplicateTransaction = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const duplicateTransactionController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const { date, amount, description } = req.body;
     const userId = getUserId(req);
 
     // Get the original transaction
-    const originalTransaction = await financeService.getTransactionById(id, userId);
+    const originalTransaction = await getTransactionById(id, userId);
 
     // Create duplicate with new values
     const duplicateData: ICreateTransactionRequest = {
@@ -306,20 +287,20 @@ export const duplicateTransaction = catchAsync(
       projectId: originalTransaction.projectId
     };
 
-    const duplicatedTransaction = await financeService.createTransaction(duplicateData, userId);
+    const duplicatedTransaction = await createTransaction(duplicateData, userId);
 
     sendSuccessResponse(res, 'Transaction duplicated successfully', duplicatedTransaction, 201);
   }
 );
 
-export const bulkUpdateTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const bulkUpdateTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { transactionIds, updates } = req.body;
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      transactionIds.map((transactionId: string) => 
-        financeService.updateTransaction(transactionId, updates, userId)
+      transactionIds.map((transactionId: string) =>
+        updateTransaction(transactionId, updates, userId)
       )
     );
 
@@ -340,14 +321,14 @@ export const bulkUpdateTransactions = catchAsync(
   }
 );
 
-export const bulkDeleteTransactions = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const bulkDeleteTransactionsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { transactionIds, permanent } = req.body;
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      transactionIds.map((transactionId: string) => 
-        financeService.deleteTransaction(transactionId, userId, permanent)
+      transactionIds.map((transactionId: string) =>
+        deleteTransaction(transactionId, userId, permanent)
       )
     );
 
@@ -364,8 +345,8 @@ export const bulkDeleteTransactions = catchAsync(
 
 // ===== STATISTICS =====
 
-export const getFinanceStats = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getFinanceStatsController = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, period } = req.query;
     const userId = getUserId(req);
 

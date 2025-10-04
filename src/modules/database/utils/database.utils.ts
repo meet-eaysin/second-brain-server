@@ -1,11 +1,7 @@
 import { createNotFoundError } from '@/utils/error.utils';
 import { RecordModel, ViewModel } from '../index';
-import {
-  IDatabase,
-  IDatabaseQueryParams,
-  IDatabaseStats,
-  EDatabaseType
-} from '@/modules/core/types/database.types';
+import { IDatabase, IDatabaseQueryParams, IDatabaseStats } from '../types/database.types';
+import { EDatabaseType } from '@/modules/core/types/database.types';
 import { DatabaseModel } from '../models/database.model';
 import { PropertyModel } from '../models/property.model';
 import { permissionService } from '../../permissions/services/permission.service';

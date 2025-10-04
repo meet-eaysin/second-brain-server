@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 
 // Search scopes
 export enum ESearchScope {

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { IBaseEntity, TId, TUserId, TWorkspaceId } from './common.types';
 
-// Permission Types - Access control for databases and records
 export enum EPermissionLevel {
   NONE = 'none',
   READ = 'read',
@@ -25,7 +24,6 @@ export enum EShareScope {
   WORKSPACE = 'workspace'
 }
 
-// Permission conditions for advanced access control
 export interface IPermissionConditions {
   ipWhitelist?: string[];
   timeRestrictions?: {
@@ -37,21 +35,17 @@ export interface IPermissionConditions {
   deviceRestrictions?: string[];
 }
 
-// Individual permission entry
 export interface IPermission extends IBaseEntity {
   resourceType: EShareScope;
-  resourceId: TId; // databaseId, recordId, or viewId
+  resourceId: TId;
 
-  // Permission target
   type: EPermissionType;
-  userId?: TUserId; // for user permissions
-  workspaceId?: TWorkspaceId; // for workspace permissions
-  linkId?: string; // for link sharing
+  userId?: TUserId;
+  workspaceId?: TWorkspaceId;
+  linkId?: string;
 
-  // Permission level
   level: EPermissionLevel;
 
-  // Specific capabilities
   canRead: boolean;
   canComment: boolean;
   canEdit: boolean;
@@ -60,89 +54,72 @@ export interface IPermission extends IBaseEntity {
   canExport: boolean;
   canImport: boolean;
   canCreateRecords: boolean;
-  canEditSchema: boolean; // properties, views
+  canEditSchema: boolean;
   canManagePermissions: boolean;
 
-  // Restrictions
-  allowedViews?: TId[]; // Restrict to specific views
-  allowedProperties?: TId[]; // Restrict to specific properties
+  allowedViews?: TId[];
+  allowedProperties?: TId[];
 
-  // Metadata
   grantedBy: TUserId;
   grantedAt?: Date;
   lastUsedAt?: Date;
   expiresAt?: Date;
   isActive: boolean;
 
-  // Advanced access control
   conditions?: IPermissionConditions;
 
-  // Link sharing specific
   linkPassword?: string;
   linkExpiresAt?: Date;
   linkViewCount?: number;
   linkMaxViews?: number;
 }
 
-// Permission configuration for a resource
 export interface IPermissionConfig {
   resourceType: EShareScope;
   resourceId: TId;
 
-  // Default permissions
   defaultLevel: EPermissionLevel;
   allowPublicAccess: boolean;
   allowLinkSharing: boolean;
 
-  // Inheritance
-  inheritFromParent: boolean; // inherit from database if this is a record
+  inheritFromParent: boolean;
 
-  // Restrictions
   requireAuthentication: boolean;
-  allowedDomains?: string[]; // Email domain restrictions
+  allowedDomains?: string[];
 
-  // Collaboration settings
   allowComments: boolean;
   allowMentions: boolean;
   enableNotifications: boolean;
 
-  // Export/Import restrictions
   allowExport: boolean;
   allowImport: boolean;
   exportFormats?: string[];
 }
 
-// Share link configuration
 export interface IShareLink extends IBaseEntity {
   resourceType: EShareScope;
   resourceId: TId;
-  linkId: string; // Public identifier for the link
+  linkId: string;
 
-  // Access configuration
   level: EPermissionLevel;
   password?: string;
   expiresAt?: Date;
   maxViews?: number;
 
-  // Restrictions
   allowedViews?: TId[];
   allowedProperties?: TId[];
 
-  // Analytics
   viewCount: number;
   lastAccessedAt?: Date;
 
-  // Settings
   isActive: boolean;
   allowDownload: boolean;
   showComments: boolean;
 
-  // Metadata
   createdBy: TUserId;
   description?: string;
 }
 
-// Permission check result
 export interface IPermissionCheck {
   hasAccess: boolean;
   level: EPermissionLevel;
@@ -164,125 +141,6 @@ export interface IPermissionCheck {
   };
   source: 'direct' | 'inherited' | 'workspace' | 'public' | 'link';
 }
-
-// Validation schemas
-export const PermissionLevelSchema = z.enum(EPermissionLevel);
-export const PermissionTypeSchema = z.enum(EPermissionType);
-export const ShareScopeSchema = z.enum(EShareScope);
-
-export const PermissionConditionsSchema = z
-  .object({
-    ipWhitelist: z.array(z.string()).optional(),
-    timeRestrictions: z
-      .object({
-        startTime: z.string(),
-        endTime: z.string(),
-        timezone: z.string(),
-        daysOfWeek: z.array(z.number().min(0).max(6))
-      })
-      .optional(),
-    deviceRestrictions: z.array(z.string()).optional()
-  })
-  .optional();
-
-export const PermissionSchema = z.object({
-  id: z.string(),
-  resourceType: ShareScopeSchema,
-  resourceId: z.string(),
-  type: PermissionTypeSchema,
-  userId: z.string().optional(),
-  workspaceId: z.string().optional(),
-  linkId: z.string().optional(),
-  level: PermissionLevelSchema,
-  canRead: z.boolean().default(false),
-  canComment: z.boolean().default(false),
-  canEdit: z.boolean().default(false),
-  canDelete: z.boolean().default(false),
-  canShare: z.boolean().default(false),
-  canExport: z.boolean().default(false),
-  canImport: z.boolean().default(false),
-  canCreateRecords: z.boolean().default(false),
-  canEditSchema: z.boolean().default(false),
-  canManagePermissions: z.boolean().default(false),
-  allowedViews: z.array(z.string()).optional(),
-  allowedProperties: z.array(z.string()).optional(),
-  grantedBy: z.string(),
-  grantedAt: z.date().optional(),
-  lastUsedAt: z.date().optional(),
-  expiresAt: z.date().optional(),
-  isActive: z.boolean().default(true),
-  conditions: PermissionConditionsSchema,
-  linkPassword: z.string().optional(),
-  linkExpiresAt: z.date().optional(),
-  linkViewCount: z.number().min(0).optional(),
-  linkMaxViews: z.number().positive().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  createdBy: z.string(),
-  updatedBy: z.string().optional()
-});
-
-export const PermissionConfigSchema = z.object({
-  resourceType: ShareScopeSchema,
-  resourceId: z.string(),
-  defaultLevel: PermissionLevelSchema.default(EPermissionLevel.NONE),
-  allowPublicAccess: z.boolean().default(false),
-  allowLinkSharing: z.boolean().default(true),
-  inheritFromParent: z.boolean().default(true),
-  requireAuthentication: z.boolean().default(true),
-  allowedDomains: z.array(z.string()).optional(),
-  allowComments: z.boolean().default(true),
-  allowMentions: z.boolean().default(true),
-  enableNotifications: z.boolean().default(true),
-  allowExport: z.boolean().default(true),
-  allowImport: z.boolean().default(false),
-  exportFormats: z.array(z.string()).optional()
-});
-
-export const ShareLinkSchema = z.object({
-  id: z.string(),
-  resourceType: ShareScopeSchema,
-  resourceId: z.string(),
-  linkId: z.string(),
-  level: PermissionLevelSchema,
-  password: z.string().optional(),
-  expiresAt: z.date().optional(),
-  maxViews: z.number().positive().optional(),
-  allowedViews: z.array(z.string()).optional(),
-  allowedProperties: z.array(z.string()).optional(),
-  viewCount: z.number().min(0).default(0),
-  lastAccessedAt: z.date().optional(),
-  isActive: z.boolean().default(true),
-  allowDownload: z.boolean().default(true),
-  showComments: z.boolean().default(true),
-  createdBy: z.string(),
-  description: z.string().max(500).optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  updatedBy: z.string().optional()
-});
-
-export const PermissionCheckSchema = z.object({
-  hasAccess: z.boolean(),
-  level: PermissionLevelSchema,
-  capabilities: z.object({
-    canRead: z.boolean(),
-    canComment: z.boolean(),
-    canEdit: z.boolean(),
-    canDelete: z.boolean(),
-    canShare: z.boolean(),
-    canExport: z.boolean(),
-    canImport: z.boolean(),
-    canCreateRecords: z.boolean(),
-    canEditSchema: z.boolean(),
-    canManagePermissions: z.boolean()
-  }),
-  restrictions: z.object({
-    allowedViews: z.array(z.string()).optional(),
-    allowedProperties: z.array(z.string()).optional()
-  }),
-  source: z.enum(['direct', 'inherited', 'workspace', 'public', 'link'])
-});
 
 // Request/Response types
 export interface IGrantPermissionRequest {

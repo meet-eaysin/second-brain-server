@@ -1,33 +1,91 @@
 import { z } from 'zod';
-import { EGoalStatus, EGoalCategory, EGoalPriority, EGoalTimeFrame } from '../types/goals.types';
 
-// Base schemas
-export const goalIdSchema = z.object({
-  id: z.string().min(1, 'Goal ID is required')
+// Zod schemas for validation
+export const GoalMilestoneSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  targetDate: z.date().optional(),
+  isCompleted: z.boolean().default(false),
+  completedAt: z.date().optional(),
+  completedBy: z.string().optional(),
+  order: z.number().min(0)
 });
 
-export const categoryParamSchema = z.object({
-  category: z.enum(EGoalCategory)
+export const GoalKeyResultSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1).max(200),
+  description: z.string().max(1000).optional(),
+  targetValue: z.number().min(0),
+  currentValue: z.number().min(0).default(0),
+  unit: z.string().min(1).max(50),
+  isCompleted: z.boolean().default(false),
+  completedAt: z.date().optional()
 });
 
-// Goal CRUD schemas
-export const createGoalSchema = z.object({
+export const GoalSchema = z.object({
+  id: z.string(),
+  databaseId: z.string(),
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  category: z.enum([
+    'personal',
+    'professional',
+    'health',
+    'financial',
+    'learning',
+    'relationships',
+    'creative',
+    'spiritual',
+    'other'
+  ]),
+  status: z.enum(['not_started', 'in_progress', 'completed', 'on_hold', 'cancelled']),
+  priority: z.enum(['low', 'medium', 'high', 'critical']),
+  timeFrame: z.enum(['short_term', 'medium_term', 'long_term']),
+  startDate: z.date().optional(),
+  targetDate: z.date().optional(),
+  completedAt: z.date().optional(),
+  progressPercentage: z.number().min(0).max(100).default(0),
+  milestones: z.array(GoalMilestoneSchema).default([]),
+  keyResults: z.array(GoalKeyResultSchema).default([]),
+  parentGoalId: z.string().optional(),
+  subGoalIds: z.array(z.string()).default([]),
+  relatedTaskIds: z.array(z.string()).default([]),
+  relatedProjectIds: z.array(z.string()).default([]),
+  relatedHabitIds: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]),
+  notes: z.string().max(5000).optional(),
+  isArchived: z.boolean().default(false),
+  archivedAt: z.date().optional(),
+  archivedBy: z.string().optional(),
+  lastReviewedAt: z.date().optional(),
+  nextReviewDate: z.date().optional(),
+  reviewFrequency: z.enum(['weekly', 'monthly', 'quarterly']).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  createdBy: z.string(),
+  updatedBy: z.string()
+});
+
+export const CreateGoalRequestSchema = z.object({
   databaseId: z.string().min(1, 'Database ID is required'),
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   description: z.string().max(2000, 'Description too long').optional(),
-  category: z.enum(EGoalCategory),
-  priority: z.enum(EGoalPriority).default(EGoalPriority.MEDIUM),
-  timeFrame: z.enum(EGoalTimeFrame),
-  startDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
-    .optional(),
-  targetDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
-    .optional(),
+  category: z.enum([
+    'personal',
+    'professional',
+    'health',
+    'financial',
+    'learning',
+    'relationships',
+    'creative',
+    'spiritual',
+    'other'
+  ]),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  timeFrame: z.enum(['short_term', 'medium_term', 'long_term']),
+  startDate: z.date().optional(),
+  targetDate: z.date().optional(),
   tags: z.array(z.string()).default([]),
   notes: z.string().max(5000, 'Notes too long').optional(),
   parentGoalId: z.string().optional(),
@@ -36,11 +94,7 @@ export const createGoalSchema = z.object({
       z.object({
         title: z.string().min(1).max(200),
         description: z.string().max(1000).optional(),
-        targetDate: z
-          .string()
-          .datetime()
-          .transform(val => new Date(val))
-          .optional(),
+        targetDate: z.date().optional(),
         order: z.number().min(0)
       })
     )
@@ -58,128 +112,35 @@ export const createGoalSchema = z.object({
   reviewFrequency: z.enum(['weekly', 'monthly', 'quarterly']).optional()
 });
 
-export const updateGoalSchema = z.object({
+export const UpdateGoalRequestSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
   description: z.string().max(2000, 'Description too long').optional(),
-  category: z.enum(EGoalCategory).optional(),
-  status: z.enum(EGoalStatus).optional(),
-  priority: z.enum(EGoalPriority).optional(),
-  timeFrame: z.enum(EGoalTimeFrame).optional(),
-  startDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
+  category: z
+    .enum([
+      'personal',
+      'professional',
+      'health',
+      'financial',
+      'learning',
+      'relationships',
+      'creative',
+      'spiritual',
+      'other'
+    ])
     .optional(),
-  targetDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
-    .optional(),
+  status: z.enum(['not_started', 'in_progress', 'completed', 'on_hold', 'cancelled']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  timeFrame: z.enum(['short_term', 'medium_term', 'long_term']).optional(),
+  startDate: z.date().optional(),
+  targetDate: z.date().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().max(5000, 'Notes too long').optional(),
   progressPercentage: z.number().min(0).max(100).optional(),
   reviewFrequency: z.enum(['weekly', 'monthly', 'quarterly']).optional(),
-  nextReviewDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
-    .optional()
+  nextReviewDate: z.date().optional()
 });
 
-export const getGoalsQuerySchema = z
-  .object({
-    databaseId: z.string().optional(),
-    status: z
-      .array(z.enum(EGoalStatus))
-      .or(z.string().transform(val => val.split(',').map(s => s.trim() as EGoalStatus)))
-      .optional(),
-    category: z
-      .array(z.enum(EGoalCategory))
-      .or(z.string().transform(val => val.split(',').map(s => s.trim() as EGoalCategory)))
-      .optional(),
-    priority: z
-      .array(z.enum(EGoalPriority))
-      .or(z.string().transform(val => val.split(',').map(s => s.trim() as EGoalPriority)))
-      .optional(),
-    timeFrame: z
-      .array(z.enum(EGoalTimeFrame))
-      .or(z.string().transform(val => val.split(',').map(s => s.trim() as EGoalTimeFrame)))
-      .optional(),
-    tags: z
-      .array(z.string())
-      .or(z.string().transform(val => val.split(',')))
-      .optional(),
-    search: z.string().optional(),
-    parentGoalId: z.string().optional(),
-    isArchived: z
-      .boolean()
-      .or(z.string().transform(val => val === 'true'))
-      .optional(),
-    createdBy: z.string().optional(),
-    startDate: z
-      .string()
-      .datetime()
-      .transform(val => new Date(val))
-      .optional(),
-    endDate: z
-      .string()
-      .datetime()
-      .transform(val => new Date(val))
-      .optional(),
-    page: z
-      .number()
-      .min(1)
-      .default(1)
-      .or(z.string().transform(val => parseInt(val, 10))),
-    limit: z
-      .number()
-      .min(1)
-      .max(100)
-      .default(25)
-      .or(z.string().transform(val => parseInt(val, 10))),
-    sortBy: z
-      .enum(['title', 'createdAt', 'updatedAt', 'targetDate', 'priority', 'progress'])
-      .default('updatedAt'),
-    sortOrder: z.enum(['asc', 'desc']).default('desc'),
-    includeSubGoals: z
-      .boolean()
-      .default(false)
-      .or(z.string().transform(val => val === 'true')),
-    includeStats: z
-      .boolean()
-      .default(false)
-      .or(z.string().transform(val => val === 'true'))
-  })
-  .transform(data => {
-    // Transform date range
-    if (data.startDate || data.endDate) {
-      return {
-        ...data,
-        dueDate: {
-          start: data.startDate,
-          end: data.endDate
-        }
-      };
-    }
-    return data;
-  });
-
-export const duplicateGoalSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
-  databaseId: z.string().min(1, 'Database ID is required').optional()
-});
-
-export const bulkUpdateGoalsSchema = z.object({
-  goalIds: z.array(z.string().min(1)).min(1, 'At least one goal ID is required'),
-  updates: updateGoalSchema
-});
-
-export const bulkDeleteGoalsSchema = z.object({
-  goalIds: z.array(z.string().min(1)).min(1, 'At least one goal ID is required'),
-  permanent: z.boolean().default(false)
-});
-
-export const updateProgressSchema = z.object({
+export const GoalProgressUpdateSchema = z.object({
   progressPercentage: z.number().min(0).max(100),
   notes: z.string().max(1000).optional(),
   milestoneUpdates: z
@@ -200,102 +161,71 @@ export const updateProgressSchema = z.object({
     .optional()
 });
 
-export const addMilestoneSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
-  description: z.string().max(1000, 'Description too long').optional(),
-  targetDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
-    .optional(),
-  order: z.number().min(0).optional()
+// Route validation schemas
+export const goalIdSchema = z.object({
+  id: z.string().min(1, 'Goal ID is required')
 });
 
-export const updateMilestoneSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
-  description: z.string().max(1000, 'Description too long').optional(),
-  targetDate: z
-    .string()
-    .datetime()
-    .transform(val => new Date(val))
-    .optional(),
-  isCompleted: z.boolean().optional(),
-  order: z.number().min(0).optional()
-});
+export const createGoalSchema = CreateGoalRequestSchema;
 
-export const addKeyResultSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
-  description: z.string().max(1000, 'Description too long').optional(),
-  targetValue: z.number().min(0),
-  unit: z.string().min(1, 'Unit is required').max(50, 'Unit too long')
-});
+export const updateGoalSchema = UpdateGoalRequestSchema;
 
-export const updateKeyResultSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long').optional(),
-  description: z.string().max(1000, 'Description too long').optional(),
-  targetValue: z.number().min(0).optional(),
-  currentValue: z.number().min(0).optional(),
-  unit: z.string().min(1, 'Unit is required').max(50, 'Unit too long').optional()
-});
-
-export const milestoneIdSchema = z.object({
-  milestoneId: z.string().min(1, 'Milestone ID is required')
-});
-
-export const keyResultIdSchema = z.object({
-  keyResultId: z.string().min(1, 'Key result ID is required')
-});
-
-// Search schemas
-export const searchGoalsSchema = z.object({
-  q: z.string().min(1, 'Search query is required').max(500, 'Query too long'),
-  databaseId: z.string().optional(),
-  category: z
-    .array(z.enum(EGoalCategory))
-    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EGoalCategory)))
-    .optional(),
-  status: z
-    .array(z.enum(EGoalStatus))
-    .or(z.string().transform(val => val.split(',').map(s => s.trim() as EGoalStatus)))
-    .optional(),
+export const getGoalsQuerySchema = z.object({
   page: z
-    .number()
-    .min(1)
-    .default(1)
-    .or(z.string().transform(val => parseInt(val, 10))),
+    .string()
+    .regex(/^\d+$/)
+    .transform(val => parseInt(val))
+    .optional(),
   limit: z
-    .number()
-    .min(1)
-    .max(100)
-    .default(25)
-    .or(z.string().transform(val => parseInt(val, 10)))
+    .string()
+    .regex(/^\d+$/)
+    .transform(val => parseInt(val))
+    .optional(),
+  status: z.string().optional(),
+  category: z.string().optional(),
+  priority: z.string().optional(),
+  timeFrame: z.string().optional(),
+  search: z.string().optional(),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  includeStats: z
+    .string()
+    .transform(val => val === 'true')
+    .optional(),
+  databaseId: z.string().optional(),
+  createdBy: z.string().optional()
 });
 
-// Export all schemas
-export const goalsValidators = {
-  // Goal CRUD
-  goalIdSchema,
-  createGoalSchema,
-  updateGoalSchema,
-  getGoalsQuerySchema,
-  duplicateGoalSchema,
-  bulkUpdateGoalsSchema,
-  bulkDeleteGoalsSchema,
+export const duplicateGoalSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  databaseId: z.string().optional()
+});
 
-  // Progress tracking
-  updateProgressSchema,
+export const bulkUpdateGoalsSchema = z.object({
+  goalIds: z.array(z.string().min(1)).min(1, 'At least one goal ID is required'),
+  updates: UpdateGoalRequestSchema
+});
 
-  // Milestones
-  milestoneIdSchema,
-  addMilestoneSchema,
-  updateMilestoneSchema,
+export const bulkDeleteGoalsSchema = z.object({
+  goalIds: z.array(z.string().min(1)).min(1, 'At least one goal ID is required'),
+  permanent: z.boolean().default(false)
+});
 
-  // Key results
-  keyResultIdSchema,
-  addKeyResultSchema,
-  updateKeyResultSchema,
+export const searchGoalsSchema = z.object({
+  q: z.string().min(1, 'Search query is required'),
+  ...getGoalsQuerySchema.shape
+});
 
-  // Search
-  searchGoalsSchema,
-  categoryParamSchema
-};
+export const categoryParamSchema = z.object({
+  category: z.enum([
+    'personal',
+    'professional',
+    'health',
+    'financial',
+    'learning',
+    'relationships',
+    'creative',
+    'spiritual',
+    'other'
+  ])
+});

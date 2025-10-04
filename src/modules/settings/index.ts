@@ -4,3 +4,4 @@ export { settingsRoutes };
 export * from './services/settings.service';
 export * from './types/settings.types';
 export * from './models/settings.model';
+export * from './validators/settings.validators';

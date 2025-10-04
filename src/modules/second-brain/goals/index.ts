@@ -4,34 +4,10 @@
 // Routes - Goal-specific operations
 export { default as goalsRoutes } from './routes/goals.routes';
 
-// Controllers - Goal business logic
-export {
-  // Goal CRUD operations
-  createGoal,
-  getGoals,
-  getGoalById,
-  updateGoal,
-  deleteGoal,
-  
-  // Goal actions
-  completeGoal,
-  archiveGoal,
-  getActiveGoals,
-  getCompletedGoals,
-  getOverdueGoals,
-  getGoalsByCategory,
-  searchGoals,
-  getGoalStats,
-  duplicateGoal,
-  bulkUpdateGoals,
-  bulkDeleteGoals
-} from './controllers/goals.controller';
+// Controllers are used by routes and not exported directly
 
 // Services - Goal-specific services
-export {
-  GoalsService,
-  goalsService
-} from './services/goals.service';
+export { goalsService } from './services/goals.service';
 
 // Types
 export type * from './types/goals.types';
@@ -54,19 +30,10 @@ export type {
 
 // Validators
 export {
-  goalsValidators,
-  goalIdSchema,
-  createGoalSchema,
-  updateGoalSchema,
-  getGoalsQuerySchema,
-  duplicateGoalSchema,
-  bulkUpdateGoalsSchema,
-  bulkDeleteGoalsSchema,
-  updateProgressSchema,
-  addMilestoneSchema,
-  updateMilestoneSchema,
-  addKeyResultSchema,
-  updateKeyResultSchema,
-  searchGoalsSchema,
-  categoryParamSchema
+  GoalMilestoneSchema,
+  GoalKeyResultSchema,
+  GoalSchema,
+  CreateGoalRequestSchema,
+  UpdateGoalRequestSchema,
+  GoalProgressUpdateSchema
 } from './validators/goals.validators';

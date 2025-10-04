@@ -29,7 +29,7 @@ import {
   ENotificationPriority,
   ENotificationMethod
 } from '@/modules/system/types/notifications.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { EStatus } from '@/modules/core/types/common.types';
 
 /**

@@ -1,6 +1,6 @@
 import { RecordModel } from '@/modules/database/models/record.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { createNotFoundError } from '@/utils';
 import {
   getStringProperty,

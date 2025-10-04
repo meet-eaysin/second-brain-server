@@ -5,7 +5,7 @@ import {
   IWorkspaceModules,
   IModuleConfig
 } from '@/modules/modules/types/module.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { createAppError } from '@/utils/error.utils';
 import {
   isModuleInitialized,

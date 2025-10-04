@@ -18,7 +18,7 @@ import {
   ITemplateValidationResult,
   ITemplateAnalytics
 } from '../types/template.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { createAppError } from '@/utils';
 import { createNotFoundError } from '@/utils/error.utils';
 import { WorkspaceModel } from '@/modules/workspace/models/workspace.model';

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { crossModuleRelationsService } from '../services/cross-module-relations.service';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/auth/index';
 

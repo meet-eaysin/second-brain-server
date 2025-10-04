@@ -9,7 +9,7 @@ import {
   ETemplateAccess
 } from '../types/template.types';
 import { createBaseSchema, IBaseDocument, ISoftDeleteDocument } from '@/modules/core/models/base.model';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 
 // Template document interface that includes all possible properties
 export interface ITemplateDocument extends IBaseDocument, ISoftDeleteDocument {

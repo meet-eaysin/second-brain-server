@@ -1,6 +1,5 @@
 export * from './property.types';
 export * from './view.types';
-export * from './database.types';
 export * from './record.types';
 export * from './relation.types';
 export * from './permission.types';

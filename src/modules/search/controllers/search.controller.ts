@@ -11,7 +11,7 @@ import {
   ISearchSuggestionsResponse,
   IRecentSearchesResponse
 } from '../types/search.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
 class SearchController {

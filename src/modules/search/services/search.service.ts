@@ -15,7 +15,7 @@ import {
   ESearchResultType,
   ISearchFilters
 } from '../types/search.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 
 class SearchService {
   /**

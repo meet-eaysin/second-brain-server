@@ -1,6 +1,6 @@
 // Type guards for property values and common types
-import { TPropertyValue, TPrimitiveValue } from '../types/property.types';
-import { EStatus, EPriority } from '../types/common.types';
+import { TPropertyValue, TPrimitiveValue } from '@/modules/core/types/property.types';
+import { EStatus, EPriority } from '@/modules/core/types/common.types';
 
 /**
  * Type guard to check if a value is a string
@@ -46,13 +46,7 @@ export function isValidDateValue(value: unknown): value is string | number | Dat
  * Type guard to check if a value is a primitive property value
  */
 export function isPrimitiveValue(value: unknown): value is TPrimitiveValue {
-  return (
-    isString(value) ||
-    isNumber(value) ||
-    isBoolean(value) ||
-    isDate(value) ||
-    value === null
-  );
+  return isString(value) || isNumber(value) || isBoolean(value) || isDate(value) || value === null;
 }
 
 /**
@@ -203,7 +197,7 @@ export function getObjectArrayProperty<T extends Record<string, unknown>>(
   defaultValue: T[] = []
 ): T[] {
   const value = properties?.[key];
-  return isObjectArray(value) ? value as T[] : defaultValue;
+  return isObjectArray(value) ? (value as T[]) : defaultValue;
 }
 
 /**
@@ -218,13 +212,17 @@ export function isTimeEntryArray(value: unknown): value is Array<{
   userId: string;
   createdAt: Date;
 }> {
-  return Array.isArray(value) && value.every(item =>
-    isObject(item) &&
-    isString(item.id) &&
-    isValidDateValue(item.startTime) &&
-    isNumber(item.duration) &&
-    isString(item.userId) &&
-    isValidDateValue(item.createdAt)
+  return (
+    Array.isArray(value) &&
+    value.every(
+      item =>
+        isObject(item) &&
+        isString(item.id) &&
+        isValidDateValue(item.startTime) &&
+        isNumber(item.duration) &&
+        isString(item.userId) &&
+        isValidDateValue(item.createdAt)
+    )
   );
 }
 
@@ -236,10 +234,12 @@ export function isActiveTimeTracking(value: unknown): value is {
   entryId: string;
   startTime: Date;
 } {
-  return isObject(value) &&
+  return (
+    isObject(value) &&
     isString(value.userId) &&
     isString(value.entryId) &&
-    isValidDateValue(value.startTime);
+    isValidDateValue(value.startTime)
+  );
 }
 
 /**
@@ -289,28 +289,32 @@ export function isTaskComment(value: unknown): value is Record<string, unknown> 
   createdBy: string;
   createdByName: string;
 } {
-  return isObject(value) &&
+  return (
+    isObject(value) &&
     isString(value.id) &&
     isString(value.taskId) &&
     Array.isArray(value.content) &&
     isBoolean(value.isResolved) &&
     isValidDateValue(value.createdAt) &&
     isString(value.createdBy) &&
-    isString(value.createdByName);
+    isString(value.createdByName)
+  );
 }
 
 /**
  * Type guard to check if a value is a task comment array
  */
-export function isTaskCommentArray(value: unknown): value is Array<Record<string, unknown> & {
-  id: string;
-  taskId: string;
-  content: unknown[];
-  isResolved: boolean;
-  createdAt: Date | string;
-  createdBy: string;
-  createdByName: string;
-}> {
+export function isTaskCommentArray(value: unknown): value is Array<
+  Record<string, unknown> & {
+    id: string;
+    taskId: string;
+    content: unknown[];
+    isResolved: boolean;
+    createdAt: Date | string;
+    createdBy: string;
+    createdByName: string;
+  }
+> {
   return Array.isArray(value) && value.every(item => isTaskComment(item));
 }
 
@@ -320,15 +324,17 @@ export function isTaskCommentArray(value: unknown): value is Array<Record<string
 export function getTaskCommentsProperty(
   properties: Record<string, TPropertyValue> | undefined,
   key: string = 'comments'
-): Array<Record<string, unknown> & {
-  id: string;
-  taskId: string;
-  content: unknown[];
-  isResolved: boolean;
-  createdAt: Date | string;
-  createdBy: string;
-  createdByName: string;
-}> {
+): Array<
+  Record<string, unknown> & {
+    id: string;
+    taskId: string;
+    content: unknown[];
+    isResolved: boolean;
+    createdAt: Date | string;
+    createdBy: string;
+    createdByName: string;
+  }
+> {
   const value = properties?.[key];
   return isTaskCommentArray(value) ? value : [];
 }

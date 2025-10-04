@@ -4,7 +4,7 @@ import { createAppError } from '@/utils/error.utils';
 import { dashboardService } from '../services/dashboard.services';
 import { IDashboardQueryParams, IDashboardStats } from '../types/dashboard.types';
 import { RecordModel } from '@/modules/database/models/record.model';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { EStatus } from '@/modules/core/types/common.types';
 import {
   getStringProperty,

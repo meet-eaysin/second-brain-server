@@ -33,8 +33,14 @@ export type {
   ICreateDatabaseRequest,
   IUpdateDatabaseRequest,
   IDatabaseQueryParams,
-  IDatabaseTemplate
-} from '@/modules/core/types/database.types';
+  IDatabaseTemplate,
+  IDatabase,
+  IDatabaseStats,
+  IDatabaseIcon,
+  IDatabaseCover
+} from './types/database.types';
+
+export { EDatabaseType } from '@/modules/core/types/database.types';
 
 export {
   createDatabaseSchema,

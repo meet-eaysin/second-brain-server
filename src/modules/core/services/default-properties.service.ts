@@ -1,16 +1,13 @@
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { PropertyModel } from '@/modules/database/models/property.model';
 import { ViewModel } from '@/modules/database/models/view.model';
-import { EViewType } from '../types/view.types';
-import { createDefaultPropertiesForDatabase } from '../config/default-properties.config';
+import { EViewType } from '@/modules/core/types/view.types';
+import { createDefaultPropertiesForDatabase } from '@/modules/core/config/default-properties.config';
 import { createAppError } from '@/utils';
 import { generateId } from '@/utils/id-generator';
-import { EDatabaseType } from '../types';
+import { EDatabaseType } from '@/modules/database';
 import { NOTES_MODULE, TASKS_MODULE } from '@/modules/modules';
 
-/**
- * Initialize default properties and views for a new database
- */
 export const initializeDefaultsForDatabase = async (
   databaseId: string,
   databaseType: EDatabaseType,

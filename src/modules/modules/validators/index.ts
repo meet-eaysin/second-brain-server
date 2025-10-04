@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EModuleCategory } from '@/modules/modules/types/module.types';
-import { EDatabaseType } from '@/modules/core/types';
+import { EDatabaseType } from '@/modules/database';
 import { EPropertyType } from '@/modules/database/types/properties.types';
 import { EViewType } from '@/modules/database/types/views.types';
 

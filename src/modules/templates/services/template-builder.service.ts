@@ -16,7 +16,7 @@ import {
   ITemplateSort,
   ITemplateGroup
 } from '../types/template.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { IFilterGroup, ISortConfig, IGroupConfig } from '@/modules/core/types/view.types';
 import {createAppError, createNotFoundError} from '@/utils';
 

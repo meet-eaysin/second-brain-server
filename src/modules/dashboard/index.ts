@@ -31,6 +31,21 @@ export type {
   IFinanceSummary
 } from './types/dashboard.types';
 
+// Validators
+export {
+  QuickStatsSchema,
+  ActivityFeedItemSchema,
+  UpcomingTaskSchema,
+  RecentNoteSchema,
+  GoalProgressSchema,
+  HabitStreakSchema,
+  FinanceSummarySchema,
+  WorkspaceStatsSchema,
+  RecentlyVisitedItemSchema,
+  DashboardOverviewSchema,
+  DashboardQuerySchema
+} from './validators/dashboard.validators';
+
 // Utils
 export {
   formatDashboardData,

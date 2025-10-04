@@ -7,7 +7,7 @@ import {
   ETemplateCategory,
   ETemplateAccess
 } from '../types/template.types';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { EViewType } from '@/modules/core/types/view.types';
 import { EPropertyType } from '@/modules/core/types/property.types';
 

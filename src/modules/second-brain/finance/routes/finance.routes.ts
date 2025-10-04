@@ -5,27 +5,27 @@ import { validateBody, validateQuery, validateParams } from '@/middlewares/valid
 // Finance controllers
 import {
   // Transaction CRUD
-  createTransaction,
-  getTransactions,
-  getTransactionById,
-  updateTransaction,
-  deleteTransaction,
-  
+  createTransactionController as createTransaction,
+  getTransactionsController as getTransactions,
+  getTransactionByIdController as getTransactionById,
+  updateTransactionController as updateTransaction,
+  deleteTransactionController as deleteTransaction,
+
   // Transaction analytics
-  getIncomeTransactions,
-  getExpenseTransactions,
-  getTransactionsByCategory,
-  getTransactionsByAccount,
-  getRecurringTransactions,
-  getUnverifiedTransactions,
-  searchTransactions,
-  verifyTransaction,
-  duplicateTransaction,
-  bulkUpdateTransactions,
-  bulkDeleteTransactions,
-  
+  getIncomeTransactionsController as getIncomeTransactions,
+  getExpenseTransactionsController as getExpenseTransactions,
+  getTransactionsByCategoryController as getTransactionsByCategory,
+  getTransactionsByAccountController as getTransactionsByAccount,
+  getRecurringTransactionsController as getRecurringTransactions,
+  getUnverifiedTransactionsController as getUnverifiedTransactions,
+  searchTransactionsController as searchTransactions,
+  verifyTransactionController as verifyTransaction,
+  duplicateTransactionController as duplicateTransaction,
+  bulkUpdateTransactionsController as bulkUpdateTransactions,
+  bulkDeleteTransactionsController as bulkDeleteTransactions,
+
   // Statistics
-  getFinanceStats
+  getFinanceStatsController as getFinanceStats
 } from '../controllers/finance.controller';
 
 // Validators
@@ -50,23 +50,11 @@ router.use(authenticateToken);
 
 // ===== TRANSACTION CRUD OPERATIONS =====
 
-router.post(
-  '/transactions',
-  validateBody(createTransactionSchema),
-  createTransaction
-);
+router.post('/transactions', validateBody(createTransactionSchema), createTransaction);
 
-router.get(
-  '/transactions',
-  validateQuery(getTransactionsQuerySchema),
-  getTransactions
-);
+router.get('/transactions', validateQuery(getTransactionsQuerySchema), getTransactions);
 
-router.get(
-  '/transactions/stats',
-  validateQuery(financeStatsQuerySchema),
-  getFinanceStats
-);
+router.get('/transactions/stats', validateQuery(financeStatsQuerySchema), getFinanceStats);
 
 router.get(
   '/transactions/income',
@@ -92,11 +80,7 @@ router.get(
   getUnverifiedTransactions
 );
 
-router.get(
-  '/transactions/search',
-  validateQuery(searchTransactionsSchema),
-  searchTransactions
-);
+router.get('/transactions/search', validateQuery(searchTransactionsSchema), searchTransactions);
 
 router.get(
   '/transactions/category/:category',
@@ -112,11 +96,7 @@ router.get(
   getTransactionsByAccount
 );
 
-router.get(
-  '/transactions/:id',
-  validateParams(transactionIdSchema),
-  getTransactionById
-);
+router.get('/transactions/:id', validateParams(transactionIdSchema), getTransactionById);
 
 router.put(
   '/transactions/:id',
@@ -125,19 +105,11 @@ router.put(
   updateTransaction
 );
 
-router.delete(
-  '/transactions/:id',
-  validateParams(transactionIdSchema),
-  deleteTransaction
-);
+router.delete('/transactions/:id', validateParams(transactionIdSchema), deleteTransaction);
 
 // ===== TRANSACTION ACTIONS =====
 
-router.post(
-  '/transactions/:id/verify',
-  validateParams(transactionIdSchema),
-  verifyTransaction
-);
+router.post('/transactions/:id/verify', validateParams(transactionIdSchema), verifyTransaction);
 
 router.post(
   '/transactions/:id/duplicate',

@@ -17,7 +17,7 @@ import {
 } from '../types/analytics.types';
 import { getUserId } from '@/auth/index';
 import { DatabaseModel } from '@/modules/database/models/database.model';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 
 /**
  * Helper function to create database map

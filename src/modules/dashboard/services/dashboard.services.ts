@@ -13,7 +13,7 @@ import {
 } from '../types/dashboard.types';
 import { DatabaseModel } from '@/modules/database/models/database.model';
 import { RecordModel } from '@/modules/database/models/record.model';
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { EFinanceType, EPriority, EStatus } from '@/modules/core/types/common.types';
 import { createAppError } from '@/utils/error.utils';
 import {

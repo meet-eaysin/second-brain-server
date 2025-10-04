@@ -1,4 +1,4 @@
-import { EDatabaseType } from '@/modules/core/types/database.types';
+import { EDatabaseType } from '@/modules/database';
 import { EPropertyType } from '@/modules/core/types/property.types';
 import { EViewType } from '@/modules/core/types/view.types';
 

@@ -5,7 +5,7 @@ import {
   ICreateDatabaseRequest,
   IUpdateDatabaseRequest,
   IDatabaseQueryParams
-} from '@/modules/core/types/database.types';
+} from '../types/database.types';
 import { getUserId } from '@/auth/index';
 
 export const createDatabase = catchAsync(

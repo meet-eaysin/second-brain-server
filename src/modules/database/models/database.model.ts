@@ -1,5 +1,6 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IDatabase, EDatabaseType } from '@/modules/core/types/database.types';
+import { IDatabase } from '../types/database.types';
+import { EDatabaseType } from '@/modules/core/types/database.types';
 import { createBaseSchema, IBaseDocument, QueryHelpers } from '@/modules/core/models/base.model';
 
 export type TDatabaseDocument = IDatabase &

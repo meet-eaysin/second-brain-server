@@ -1,8 +1,7 @@
 import { TUserRole } from '@/users/types/user.types';
 import { AdminDashboardStats, AdminUserStats, SystemHealthMetrics } from '@/modules/admin';
-import {UserModel } from '@/modules/users';
-import { DatabaseModel, RecordModel } from '@/modules/database';
-import { EDatabaseType } from '@/modules/core/types';
+import { UserModel } from '@/modules/users';
+import { DatabaseModel, RecordModel, EDatabaseType } from '@/modules/database';
 
 /**
  * Get comprehensive admin dashboard statistics

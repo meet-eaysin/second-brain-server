@@ -1,9 +1,23 @@
-import { EPropertyType, IProperty, IPropertyConfig, TPropertyValue, IPropertyOption } from '../types/property.types';
-import { EStatus, EPriority, EMoodScale, EFinanceType, EFinanceCategory, EFrequency, EContentType } from '../types/common.types';
-import { isString, isValidStatus, isValidPriority } from './type-guards';
+import {
+  EPropertyType,
+  IProperty,
+  TPropertyValue,
+  IPropertyOption
+} from '@/modules/core/types/property.types';
+import {
+  EMoodScale,
+  EFinanceType,
+  EFinanceCategory,
+  EFrequency,
+  EContentType
+} from '@/modules/core/types/common.types';
+import { isValidStatus, isValidPriority } from '@/modules/core/utils/type-guards';
 
 // Property validation utilities
-export const validatePropertyValue = (value: TPropertyValue, property: IProperty): { isValid: boolean; error?: string } => {
+export const validatePropertyValue = (
+  value: TPropertyValue,
+  property: IProperty
+): { isValid: boolean; error?: string } => {
   if (value === null || value === undefined) {
     if (property.config.required) {
       return { isValid: false, error: 'This field is required' };
@@ -18,7 +32,10 @@ export const validatePropertyValue = (value: TPropertyValue, property: IProperty
         return { isValid: false, error: 'Value must be a string' };
       }
       if (property.config.maxLength && value.length > property.config.maxLength) {
-        return { isValid: false, error: `Value must be ${property.config.maxLength} characters or less` };
+        return {
+          isValid: false,
+          error: `Value must be ${property.config.maxLength} characters or less`
+        };
       }
       break;
 
@@ -75,7 +92,9 @@ export const validatePropertyValue = (value: TPropertyValue, property: IProperty
       if (!property.config.options) {
         return { isValid: false, error: 'Property configuration is missing options' };
       }
-      const selectOption = property.config.options.find(opt => opt.value === value || opt.id === value);
+      const selectOption = property.config.options.find(
+        opt => opt.value === value || opt.id === value
+      );
       if (!selectOption) {
         return { isValid: false, error: 'Value must be one of the available options' };
       }
@@ -173,7 +192,7 @@ export const formatPropertyValue = (value: TPropertyValue, property: IProperty):
 
     case EPropertyType.NUMBER:
       if (typeof value !== 'number') return String(value);
-      
+
       if (property.config.format === 'currency') {
         return new Intl.NumberFormat('en-US', {
           style: 'currency',
@@ -181,14 +200,14 @@ export const formatPropertyValue = (value: TPropertyValue, property: IProperty):
           minimumFractionDigits: property.config.precision || 2
         }).format(value);
       }
-      
+
       if (property.config.format === 'percentage') {
         return new Intl.NumberFormat('en-US', {
           style: 'percent',
           minimumFractionDigits: property.config.precision || 2
         }).format(value / 100);
       }
-      
+
       return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: property.config.precision || 0,
         maximumFractionDigits: property.config.precision || 2
@@ -215,10 +234,14 @@ export const formatPropertyValue = (value: TPropertyValue, property: IProperty):
     case EPropertyType.MULTI_SELECT:
       if (!Array.isArray(value)) return String(value);
       if (property.config.options) {
-        return value.map(item => {
-          const option = property.config.options!.find(opt => opt.value === item || opt.id === item);
-          return option ? option.label : String(item);
-        }).join(', ');
+        return value
+          .map(item => {
+            const option = property.config.options!.find(
+              opt => opt.value === item || opt.id === item
+            );
+            return option ? option.label : String(item);
+          })
+          .join(', ');
       }
       return value.join(', ');
 
@@ -229,26 +252,33 @@ export const formatPropertyValue = (value: TPropertyValue, property: IProperty):
     case EPropertyType.CONTENT_TYPE:
     case EPropertyType.FINANCE_TYPE:
     case EPropertyType.FINANCE_CATEGORY:
-      return String(value).replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+      return String(value)
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase());
 
     case EPropertyType.FILE:
       if (!Array.isArray(value)) return String(value);
-      return value.map(file => {
-        if (typeof file === 'object' && file !== null && 'name' in file) {
-          return String(file.name) || 'File';
-        }
-        return 'File';
-      }).join(', ');
+      return value
+        .map(file => {
+          if (typeof file === 'object' && file !== null && 'name' in file) {
+            return String(file.name) || 'File';
+          }
+          return 'File';
+        })
+        .join(', ');
 
     case EPropertyType.RELATION:
       if (!Array.isArray(value)) return String(value);
-      return value.map(rel => {
-        if (typeof rel === 'object' && rel !== null) {
-          if ('displayValue' in rel) return String(rel.displayValue);
-          if ('recordId' in rel) return String(rel.recordId);
-        }
-        return String(rel);
-      }).join(', ');
+      return value
+        .map(rel => {
+          if (typeof rel === 'object' && rel !== null) {
+            if ('displayValue' in rel) return String(rel.displayValue);
+            if ('recordId' in rel) return String(rel.recordId);
+          }
+          return String(rel);
+        })
+        .join(', ');
 
     case EPropertyType.ROLLUP:
       if (value && typeof value === 'object' && 'value' in value) {
@@ -319,7 +349,11 @@ export const getPropertyDefaultValue = (property: IProperty): TPropertyValue => 
 };
 
 // Property option utilities
-export const createPropertyOption = (value: string, label?: string, color?: string): IPropertyOption => {
+export const createPropertyOption = (
+  value: string,
+  label?: string,
+  color?: string
+): IPropertyOption => {
   return {
     id: generateOptionId(),
     value,
@@ -334,8 +368,16 @@ export const generateOptionId = (): string => {
 
 export const getRandomColor = (): string => {
   const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#96CEB4',
+    '#FFEAA7',
+    '#DDA0DD',
+    '#98D8C8',
+    '#F7DC6F',
+    '#BB8FCE',
+    '#85C1E9'
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 };
@@ -345,8 +387,8 @@ export const getPropertyTypeDisplayName = (type: EPropertyType): string => {
   const displayNames: Record<EPropertyType, string> = {
     [EPropertyType.TEXT]: 'Text',
     [EPropertyType.RICH_TEXT]: 'Rich Text',
-    [EPropertyType.CURRENCY]: "Currency",
-    [EPropertyType.PERCENT]: "Percent",
+    [EPropertyType.CURRENCY]: 'Currency',
+    [EPropertyType.PERCENT]: 'Percent',
     [EPropertyType.NUMBER]: 'Number',
     [EPropertyType.DATE]: 'Date',
     [EPropertyType.DATE_RANGE]: 'Date Range',
@@ -374,7 +416,7 @@ export const getPropertyTypeDisplayName = (type: EPropertyType): string => {
     [EPropertyType.FILES]: 'Files',
     [EPropertyType.LOOKUP]: 'Lookup'
   };
-  
+
   return displayNames[type] || type;
 };
 

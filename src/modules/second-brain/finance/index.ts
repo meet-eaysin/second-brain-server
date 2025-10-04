@@ -7,33 +7,36 @@ export { default as financeRoutes } from './routes/finance.routes';
 // Controllers - Finance business logic
 export {
   // Transaction CRUD operations
-  createTransaction,
-  getTransactions,
-  getTransactionById,
-  updateTransaction,
-  deleteTransaction,
-  
+  createTransactionController as createTransaction,
+  getTransactionsController as getTransactions,
+  getTransactionByIdController as getTransactionById,
+  updateTransactionController as updateTransaction,
+  deleteTransactionController as deleteTransaction,
+
   // Transaction analytics
-  getIncomeTransactions,
-  getExpenseTransactions,
-  getTransactionsByCategory,
-  getTransactionsByAccount,
-  getRecurringTransactions,
-  getUnverifiedTransactions,
-  searchTransactions,
-  verifyTransaction,
-  duplicateTransaction,
-  bulkUpdateTransactions,
-  bulkDeleteTransactions,
-  
+  getIncomeTransactionsController as getIncomeTransactions,
+  getExpenseTransactionsController as getExpenseTransactions,
+  getTransactionsByCategoryController as getTransactionsByCategory,
+  getTransactionsByAccountController as getTransactionsByAccount,
+  getRecurringTransactionsController as getRecurringTransactions,
+  getUnverifiedTransactionsController as getUnverifiedTransactions,
+  searchTransactionsController as searchTransactions,
+  verifyTransactionController as verifyTransaction,
+  duplicateTransactionController as duplicateTransaction,
+  bulkUpdateTransactionsController as bulkUpdateTransactions,
+  bulkDeleteTransactionsController as bulkDeleteTransactions,
+
   // Statistics
-  getFinanceStats
+  getFinanceStatsController as getFinanceStats
 } from './controllers/finance.controller';
 
 // Services - Finance-specific services
 export {
-  FinanceService,
-  financeService
+  createTransaction as createTransactionService,
+  getTransactions as getTransactionsService,
+  getTransactionById as getTransactionByIdService,
+  updateTransaction as updateTransactionService,
+  deleteTransaction as deleteTransactionService
 } from './services/finance.service';
 
 // Types
