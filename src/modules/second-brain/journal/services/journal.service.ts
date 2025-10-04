@@ -5,18 +5,18 @@ import { createAppError, createNotFoundError } from '@/utils';
 import {
   IJournalEntry,
   IJournalStats,
-  IMoodTrend,
+  IJournalInsights,
   ICreateJournalEntryRequest,
   IUpdateJournalEntryRequest,
   IJournalQueryParams,
-  IJournalSearchParams
+  IMoodTrend
 } from '@/modules/second-brain/journal/types/journal.types';
 
 /**
  * Create a new journal entry
  */
 export const createJournalEntry = async (
-  entryData: Partial<IJournalEntry>,
+  entryData: ICreateJournalEntryRequest,
   userId: string
 ): Promise<IJournalEntry> => {
   // Find or create journal database
@@ -48,18 +48,19 @@ export const createJournalEntry = async (
     properties: {
       Date: entryData.date,
       Title: entryData.title || `Journal Entry - ${entryData.date}`,
+      Content: entryData.content,
       Mood: entryData.mood,
       'Energy Level': entryData.energyLevel,
-      Gratitude: entryData.gratitude,
-      Highlights: entryData.highlights,
-      Challenges: entryData.challenges,
-      'Lessons Learned': entryData.lessonsLearned,
-      'Tomorrow Goals': entryData.tomorrowGoals,
-      Tags: entryData.tags || []
+      Tags: entryData.tags || [],
+      Weather: entryData.weather,
+      Location: entryData.location,
+      'Is Private': entryData.isPrivate,
+      'Word Count': entryData.content ? entryData.content.length : 0,
+      'Reading Time': entryData.content ? Math.ceil(entryData.content.length / 200) : 0
     },
-    content: entryData.content || [],
+    content: [],
     createdBy: userId,
-    lastEditedBy: userId
+    updatedBy: userId
   });
 
   await journalEntry.save();
@@ -72,7 +73,7 @@ export const createJournalEntry = async (
  */
 export const updateJournalEntry = async (
   entryId: string,
-  updateData: Partial<IJournalEntry>,
+  updateData: IUpdateJournalEntryRequest,
   userId: string
 ): Promise<IJournalEntry> => {
   const entry = await RecordModel.findById(entryId);
@@ -82,23 +83,22 @@ export const updateJournalEntry = async (
 
   // Update properties
   const updates: any = {
-    lastEditedAt: new Date(),
-    lastEditedBy: userId
+    updatedAt: new Date(),
+    updatedBy: userId
   };
 
   if (updateData.title !== undefined) updates['properties.Title'] = updateData.title;
+  if (updateData.content !== undefined) updates['properties.Content'] = updateData.content;
   if (updateData.mood !== undefined) updates['properties.Mood'] = updateData.mood;
   if (updateData.energyLevel !== undefined)
     updates['properties.Energy Level'] = updateData.energyLevel;
-  if (updateData.gratitude !== undefined) updates['properties.Gratitude'] = updateData.gratitude;
-  if (updateData.highlights !== undefined) updates['properties.Highlights'] = updateData.highlights;
-  if (updateData.challenges !== undefined) updates['properties.Challenges'] = updateData.challenges;
-  if (updateData.lessonsLearned !== undefined)
-    updates['properties.Lessons Learned'] = updateData.lessonsLearned;
-  if (updateData.tomorrowGoals !== undefined)
-    updates['properties.Tomorrow Goals'] = updateData.tomorrowGoals;
   if (updateData.tags !== undefined) updates['properties.Tags'] = updateData.tags;
-  if (updateData.content !== undefined) updates.content = updateData.content;
+  if (updateData.date !== undefined) updates['properties.Date'] = updateData.date;
+  if (updateData.weather !== undefined) updates['properties.Weather'] = updateData.weather;
+  if (updateData.location !== undefined) updates['properties.Location'] = updateData.location;
+  if (updateData.isPrivate !== undefined) updates['properties.Is Private'] = updateData.isPrivate;
+  if (updateData.attachments !== undefined)
+    updates['properties.Attachments'] = updateData.attachments;
 
   const updatedEntry = await RecordModel.findByIdAndUpdate(
     entryId,
@@ -107,6 +107,30 @@ export const updateJournalEntry = async (
   );
 
   return formatJournalEntry(updatedEntry!);
+};
+
+/**
+ * Delete journal entry
+ */
+export const deleteJournalEntry = async (
+  entryId: string,
+  userId: string,
+  permanent: boolean = false
+): Promise<void> => {
+  const entry = await RecordModel.findById(entryId);
+  if (!entry) {
+    throw createNotFoundError('Journal entry not found');
+  }
+
+  if (permanent) {
+    await RecordModel.findByIdAndDelete(entryId);
+  } else {
+    await RecordModel.findByIdAndUpdate(entryId, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletedBy: userId
+    });
+  }
 };
 
 /**
@@ -318,10 +342,11 @@ export const getMoodTrends = async (
   return entries
     .filter(entry => entry.mood && entry.energyLevel !== undefined)
     .map(entry => ({
-      date: entry.date,
-      mood: entry.mood!,
+      date: entry.date.toString(),
+      moodScore: getMoodScore(entry.mood!.toString()),
       energyLevel: entry.energyLevel!,
-      moodScore: getMoodScore(entry.mood!)
+      wordCount: entry.wordCount || 0,
+      tags: entry.tags || []
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 };
@@ -409,19 +434,23 @@ export const getJournalPrompts = (): string[] => {
 const formatJournalEntry = (entry: any): IJournalEntry => {
   return {
     id: entry._id.toString(),
-    date: entry.properties?.Date,
+    databaseId: entry.databaseId,
     title: entry.properties?.Title,
+    content: entry.properties?.Content || '',
     mood: entry.properties?.Mood,
     energyLevel: entry.properties?.['Energy Level'],
-    gratitude: entry.properties?.Gratitude,
-    highlights: entry.properties?.Highlights,
-    challenges: entry.properties?.Challenges,
-    lessonsLearned: entry.properties?.['Lessons Learned'],
-    tomorrowGoals: entry.properties?.['Tomorrow Goals'],
     tags: entry.properties?.Tags || [],
-    content: entry.content || [],
+    date: entry.properties?.Date,
+    weather: entry.properties?.Weather,
+    location: entry.properties?.Location,
+    isPrivate: entry.properties?.['Is Private'] || false,
+    attachments: entry.properties?.Attachments || [],
+    wordCount: entry.properties?.['Word Count'] || 0,
+    readingTime: entry.properties?.['Reading Time'] || 0,
     createdAt: entry.createdAt,
-    updatedAt: entry.lastEditedAt || entry.createdAt
+    updatedAt: entry.updatedAt || entry.createdAt,
+    createdBy: entry.createdBy,
+    updatedBy: entry.updatedBy || entry.createdBy
   };
 };
 
@@ -543,6 +572,32 @@ const calculateLongestStreak = (entries: any[]): number => {
 };
 
 /**
+ * Generate journal insights based on stats and trends
+ */
+export const generateJournalInsights = async (userId: string): Promise<IJournalInsights> => {
+  const stats = await calculateJournalStats(userId);
+  const trends = await getMoodTrends(userId);
+
+  const moodTrend = analyzeMoodTrend(trends);
+  const energyTrend = analyzeEnergyTrend(trends);
+  const consistencyScore = calculateConsistencyScore(stats);
+  const recommendations = generateRecommendations(stats, trends);
+
+  return {
+    moodTrend,
+    energyTrend,
+    consistencyScore,
+    recommendations,
+    topTags: stats.topTags.slice(0, 5),
+    patterns: {
+      bestWritingDays: [], // TODO: Implement based on entry dates
+      mostProductiveHours: [], // TODO: Implement based on entry times
+      commonThemes: [] // TODO: Implement based on content analysis
+    }
+  };
+};
+
+/**
  * Get numeric score for mood
  */
 const getMoodScore = (mood: string): number => {
@@ -555,4 +610,99 @@ const getMoodScore = (mood: string): number => {
   };
 
   return moodScores[mood] || 3;
+};
+
+/**
+ * Analyze mood trend
+ */
+const analyzeMoodTrend = (trends: IMoodTrend[]): 'improving' | 'declining' | 'stable' => {
+  if (trends.length < 2) return 'stable';
+
+  const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
+  const secondHalf = trends.slice(Math.floor(trends.length / 2));
+
+  const firstAvg = firstHalf.reduce((sum, t) => sum + t.moodScore, 0) / firstHalf.length;
+  const secondAvg = secondHalf.reduce((sum, t) => sum + t.moodScore, 0) / secondHalf.length;
+
+  const diff = secondAvg - firstAvg;
+
+  if (diff > 0.2) return 'improving';
+  if (diff < -0.2) return 'declining';
+  return 'stable';
+};
+
+/**
+ * Analyze energy trend
+ */
+const analyzeEnergyTrend = (trends: IMoodTrend[]): 'improving' | 'declining' | 'stable' => {
+  if (trends.length < 2) return 'stable';
+
+  const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
+  const secondHalf = trends.slice(Math.floor(trends.length / 2));
+
+  const firstAvg = firstHalf.reduce((sum, t) => sum + t.energyLevel, 0) / firstHalf.length;
+  const secondAvg = secondHalf.reduce((sum, t) => sum + t.energyLevel, 0) / secondHalf.length;
+
+  const diff = secondAvg - firstAvg;
+
+  if (diff > 0.5) return 'improving';
+  if (diff < -0.5) return 'declining';
+  return 'stable';
+};
+
+/**
+ * Calculate consistency score
+ */
+const calculateConsistencyScore = (stats: IJournalStats): number => {
+  if (stats.totalEntries === 0) return 0;
+
+  // Calculate based on streak and total entries
+  const streakScore = Math.min(stats.currentStreak / 30, 1) * 50; // Max 50 points for 30-day streak
+  const frequencyScore = Math.min(stats.totalEntries / 365, 1) * 50; // Max 50 points for daily entries for a year
+
+  return Math.round(streakScore + frequencyScore);
+};
+
+/**
+ * Generate recommendations
+ */
+const generateRecommendations = (stats: IJournalStats, trends: IMoodTrend[]): string[] => {
+  const recommendations = [];
+
+  if (stats.currentStreak === 0) {
+    recommendations.push('Start building a journaling habit by writing just one sentence each day');
+  } else if (stats.currentStreak < 7) {
+    recommendations.push("You're building momentum! Try to reach a 7-day streak");
+  }
+
+  if (stats.averageMood < 3) {
+    recommendations.push(
+      'Consider exploring what might be affecting your mood and discuss with a professional if needed'
+    );
+  }
+
+  if (stats.averageEnergyLevel < 5) {
+    recommendations.push(
+      'Low energy levels might indicate need for better sleep, nutrition, or exercise'
+    );
+  }
+
+  if (trends.length > 0) {
+    const moodTrend = analyzeMoodTrend(trends);
+    if (moodTrend === 'declining') {
+      recommendations.push('Your mood trend shows some decline - consider what changes might help');
+    } else if (moodTrend === 'improving') {
+      recommendations.push(
+        "Great job! Your mood has been improving - keep up whatever you're doing"
+      );
+    }
+  }
+
+  if (stats.totalEntries > 30) {
+    recommendations.push(
+      "You've built a great journaling habit! Consider reviewing past entries for patterns"
+    );
+  }
+
+  return recommendations;
 };

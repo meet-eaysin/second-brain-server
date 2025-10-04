@@ -11,22 +11,18 @@ import {
   searchJournalEntries,
   getJournalPrompts,
   getTodaysEntry,
-  createOrUpdateTodaysEntry,
-  getJournalCalendar,
   getJournalInsights
 } from '@/modules/second-brain/journal/controllers/journal.controller';
 
 import {
-  entryIdSchema,
-  dateSchema,
-  createEntrySchema,
-  updateEntrySchema,
-  todaysEntrySchema,
-  entriesQuerySchema,
-  trendsQuerySchema,
-  searchQuerySchema,
-  calendarQuerySchema,
-  insightsQuerySchema
+  journalEntryIdSchema,
+  dateParamSchema,
+  createJournalEntrySchema,
+  updateJournalEntrySchema,
+  getJournalEntriesQuerySchema,
+  moodTrendsQuerySchema,
+  searchJournalEntriesSchema,
+  journalInsightsQuerySchema
 } from '@/modules/second-brain/journal/validators/journal.validators';
 
 const router = Router();
@@ -35,35 +31,31 @@ const router = Router();
 router.use(authenticateToken);
 
 // Core journal entry routes
-router.post('/journal/entries', validateBody(createEntrySchema), createJournalEntry);
+router.post('/journal/entries', validateBody(createJournalEntrySchema), createJournalEntry);
 
 router.put(
   '/journal/entries/:entryId',
-  validateParams(entryIdSchema),
-  validateBody(updateEntrySchema),
+  validateParams(journalEntryIdSchema),
+  validateBody(updateJournalEntrySchema),
   updateJournalEntry
 );
 
-router.get('/journal/entries/:date', validateParams(dateSchema), getJournalEntryByDate);
+router.get('/journal/entries/:date', validateParams(dateParamSchema), getJournalEntryByDate);
 
-router.get('/journal/entries', validateQuery(entriesQuerySchema), getJournalEntries);
+router.get('/journal/entries', validateQuery(getJournalEntriesQuerySchema), getJournalEntries);
 
 // Today's entry routes
 router.get('/journal/today', getTodaysEntry);
 
-router.post('/journal/today', validateBody(todaysEntrySchema), createOrUpdateTodaysEntry);
-
 // Statistics and analytics routes
 router.get('/journal/stats', getJournalStats);
 
-router.get('/journal/mood-trends', validateQuery(trendsQuerySchema), getMoodTrends);
+router.get('/journal/mood-trends', validateQuery(moodTrendsQuerySchema), getMoodTrends);
 
-router.get('/journal/insights', validateQuery(insightsQuerySchema), getJournalInsights);
-
-router.get('/journal/calendar', validateQuery(calendarQuerySchema), getJournalCalendar);
+router.get('/journal/insights', validateQuery(journalInsightsQuerySchema), getJournalInsights);
 
 // Search and utility routes
-router.get('/journal/search', validateQuery(searchQuerySchema), searchJournalEntries);
+router.get('/journal/search', validateQuery(searchJournalEntriesSchema), searchJournalEntries);
 
 router.get('/journal/prompts', getJournalPrompts);
 

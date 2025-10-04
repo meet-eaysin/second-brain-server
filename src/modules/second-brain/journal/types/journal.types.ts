@@ -1,25 +1,27 @@
 // Journal Module Types
 // This file contains all type definitions for the journal module
 
-// Journal Entry Interface
 export interface IJournalEntry {
   id: string;
-  date: string;
+  databaseId: string;
   title?: string;
-  mood?: string;
-  energyLevel?: number;
-  gratitude?: string;
-  highlights?: string;
-  challenges?: string;
-  lessonsLearned?: string;
-  tomorrowGoals?: string;
+  content: string;
+  mood?: number; // 1-10 scale
+  energyLevel?: number; // 1-10 scale
   tags?: string[];
-  content?: any[];
+  date: Date;
+  weather?: string;
+  location?: string;
+  isPrivate?: boolean;
+  attachments?: string[];
+  wordCount?: number;
+  readingTime?: number;
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
+  updatedBy: string;
 }
 
-// Journal Statistics Interface
 export interface IJournalStats {
   totalEntries: number;
   currentStreak: number;
@@ -32,98 +34,88 @@ export interface IJournalStats {
   topTags: Array<{ tag: string; count: number }>;
 }
 
-// Mood Trend Interface
-export interface IMoodTrend {
-  date: string;
-  mood: string;
-  energyLevel: number;
-  moodScore: number; // Numeric representation of mood
+export interface IJournalInsights {
+  moodTrend: 'improving' | 'declining' | 'stable';
+  energyTrend: 'improving' | 'declining' | 'stable';
+  topTags: Array<{ tag: string; count: number }>;
+  consistencyScore: number;
+  recommendations: string[];
+  patterns: {
+    bestWritingDays: string[];
+    mostProductiveHours: number[];
+    commonThemes: string[];
+  };
 }
 
-// Journal Entry Creation Request
 export interface ICreateJournalEntryRequest {
-  date: string;
+  databaseId: string;
   title?: string;
-  mood?: string;
+  content: string;
+  mood?: number;
   energyLevel?: number;
-  gratitude?: string;
-  highlights?: string;
-  challenges?: string;
-  lessonsLearned?: string;
-  tomorrowGoals?: string;
   tags?: string[];
-  content?: any[];
+  date?: Date;
+  weather?: string;
+  location?: string;
+  isPrivate?: boolean;
+  attachments?: string[];
 }
 
-// Journal Entry Update Request
 export interface IUpdateJournalEntryRequest {
   title?: string;
-  mood?: string;
+  content?: string;
+  mood?: number;
   energyLevel?: number;
-  gratitude?: string;
-  highlights?: string;
-  challenges?: string;
-  lessonsLearned?: string;
-  tomorrowGoals?: string;
   tags?: string[];
-  content?: any[];
+  date?: Date;
+  weather?: string;
+  location?: string;
+  isPrivate?: boolean;
+  attachments?: string[];
 }
 
-// Journal Query Parameters
 export interface IJournalQueryParams {
-  startDate?: string;
-  endDate?: string;
-  limit?: number;
-  offset?: number;
+  databaseId?: string;
+  startDate?: Date;
+  endDate?: Date;
   tags?: string[];
-  mood?: string;
-}
-
-// Journal Search Parameters
-export interface IJournalSearchParams {
+  moodMin?: number;
+  moodMax?: number;
+  energyMin?: number;
+  energyMax?: number;
+  search?: string;
+  isPrivate?: boolean;
+  page?: number;
   limit?: number;
-  offset?: number;
+  sortBy?: 'date' | 'mood' | 'energyLevel' | 'wordCount' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+  includeStats?: boolean;
 }
 
-// Mood Types Enum
-export enum EMoodType {
-  TERRIBLE = 'terrible',
-  BAD = 'bad',
-  OKAY = 'okay',
-  GOOD = 'good',
-  AMAZING = 'amazing'
+export interface IJournalPrompt {
+  id: string;
+  category: string;
+  prompt: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  estimatedTime: number; // in minutes
+  tags: string[];
 }
 
-// Journal Insights Period
-export enum EJournalInsightsPeriod {
-  WEEK = 'week',
-  MONTH = 'month',
-  YEAR = 'year'
-}
-
-// Journal Insights Response
-export interface IJournalInsights {
-  period: string;
-  summary: {
-    totalEntries: number;
-    currentStreak: number;
-    averageMood: number;
-    averageEnergyLevel: number;
-  };
-  trends: {
-    moodTrend: 'improving' | 'declining' | 'stable';
-    energyTrend: 'improving' | 'declining' | 'stable';
-    consistencyScore: number;
-  };
-  recommendations: string[];
-  topTags: Array<{ tag: string; count: number }>;
-}
-
-// Journal Calendar Entry
-export interface IJournalCalendarEntry {
+export interface IMoodTrend {
   date: string;
-  hasEntry: boolean;
-  mood?: string;
-  energyLevel?: number;
+  moodScore: number;
+  energyLevel: number;
+  wordCount: number;
+  tags: string[];
+}
+
+export interface IJournalEntrySummary {
+  id: string;
+  date: Date;
   title?: string;
+  mood?: number;
+  energyLevel?: number;
+  wordCount?: number;
+  tags?: string[];
+  preview: string;
 }

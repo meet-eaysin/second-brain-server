@@ -27,7 +27,7 @@ import {
   getNoteStats,
   bulkUpdateNotes,
   bulkDeleteNotes
-} from '../controllers/notes.controller';
+} from '@/modules/second-brain/notes/controllers/notes.controller';
 
 // Template controllers
 import {
@@ -40,21 +40,21 @@ import {
   duplicateNoteTemplate,
   getPopularNoteTemplates,
   getFeaturedNoteTemplates
-} from '../controllers/note-templates.controller';
+} from '@/modules/second-brain/notes/controllers/note-templates.controller';
 
 // Collaboration controllers
 import {
-  addComment,
-  getComments,
-  updateComment,
-  deleteComment,
-  addReaction,
-  removeReaction,
-  resolveComment,
-  unresolveComment,
-  shareNote,
-  unshareNote
-} from '../controllers/note-collaboration.controller';
+  addCommentController,
+  getCommentsController,
+  updateCommentController,
+  deleteCommentController,
+  addReactionController,
+  removeReactionController,
+  resolveCommentController,
+  unresolveCommentController,
+  shareNoteController,
+  unshareNoteController
+} from '@/modules/second-brain/notes/controllers/note-collaboration.controller';
 
 // Validators
 import {
@@ -80,7 +80,7 @@ import {
   unshareNoteSchema,
   searchNotesSchema,
   tagParamSchema
-} from '../validators/notes.validators';
+} from '@/modules/second-brain/notes/validators/notes.validators';
 
 const router = Router();
 
@@ -198,13 +198,13 @@ router.post(
   '/:noteId/comments',
   validateParams(noteIdSchema.extend({ noteId: noteIdSchema.shape.id })),
   validateBody(addCommentSchema),
-  addComment
+  addCommentController
 );
 
 router.get(
   '/:noteId/comments',
   validateParams(noteIdSchema.extend({ noteId: noteIdSchema.shape.id })),
-  getComments
+  getCommentsController
 );
 
 router.put(
@@ -216,7 +216,7 @@ router.put(
     })
   ),
   validateBody(updateCommentSchema),
-  updateComment
+  updateCommentController
 );
 
 router.delete(
@@ -227,7 +227,7 @@ router.delete(
       commentId: commentIdSchema.shape.commentId
     })
   ),
-  deleteComment
+  deleteCommentController
 );
 
 // Comment reactions
@@ -240,7 +240,7 @@ router.post(
     })
   ),
   validateBody(addReactionSchema),
-  addReaction
+  addReactionController
 );
 
 router.delete(
@@ -252,7 +252,7 @@ router.delete(
     })
   ),
   validateBody(addReactionSchema),
-  removeReaction
+  removeReactionController
 );
 
 // Comment resolution
@@ -264,7 +264,7 @@ router.post(
       commentId: commentIdSchema.shape.commentId
     })
   ),
-  resolveComment
+  resolveCommentController
 );
 
 router.post(
@@ -275,7 +275,7 @@ router.post(
       commentId: commentIdSchema.shape.commentId
     })
   ),
-  unresolveComment
+  unresolveCommentController
 );
 
 // Sharing
@@ -283,14 +283,14 @@ router.post(
   '/:noteId/share',
   validateParams(noteIdSchema.extend({ noteId: noteIdSchema.shape.id })),
   validateBody(shareNoteSchema),
-  shareNote
+  shareNoteController
 );
 
 router.post(
   '/:noteId/unshare',
   validateParams(noteIdSchema.extend({ noteId: noteIdSchema.shape.id })),
   validateBody(unshareNoteSchema),
-  unshareNote
+  unshareNoteController
 );
 
 export default router;

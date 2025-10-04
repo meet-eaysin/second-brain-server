@@ -10,7 +10,7 @@ import {
   getMoodEntryById,
   updateMoodEntry,
   deleteMoodEntry,
-  
+
   // Mood analytics
   getMoodAnalytics,
   getMoodsByScale,
@@ -22,11 +22,11 @@ import {
   getWeeklyMoods,
   getMonthlyMoods,
   searchMoodEntries,
-  
+
   // Quick actions
   quickMoodEntry,
   moodCheckIn
-} from '../controllers/mood.controller';
+} from '@/modules/second-brain/mood/controllers/mood.controller';
 
 // Validators
 import {
@@ -41,7 +41,7 @@ import {
   scaleParamSchema,
   categoryParamSchema,
   triggerParamSchema
-} from '../validators/mood.validators';
+} from '@/modules/second-brain/mood/validators/mood.validators';
 
 const router = Router();
 
@@ -50,59 +50,23 @@ router.use(authenticateToken);
 
 // ===== MOOD ENTRY CRUD OPERATIONS =====
 
-router.post(
-  '/',
-  validateBody(createMoodEntrySchema),
-  createMoodEntry
-);
+router.post('/', validateBody(createMoodEntrySchema), createMoodEntry);
 
-router.get(
-  '/',
-  validateQuery(getMoodEntriesQuerySchema),
-  getMoodEntries
-);
+router.get('/', validateQuery(getMoodEntriesQuerySchema), getMoodEntries);
 
-router.get(
-  '/analytics',
-  validateQuery(moodAnalyticsQuerySchema),
-  getMoodAnalytics
-);
+router.get('/analytics', validateQuery(moodAnalyticsQuerySchema), getMoodAnalytics);
 
-router.get(
-  '/search',
-  validateQuery(searchMoodEntriesSchema),
-  searchMoodEntries
-);
+router.get('/search', validateQuery(searchMoodEntriesSchema), searchMoodEntries);
 
-router.get(
-  '/today',
-  validateQuery(getMoodEntriesQuerySchema),
-  getTodaysMood
-);
+router.get('/today', validateQuery(getMoodEntriesQuerySchema), getTodaysMood);
 
-router.get(
-  '/weekly',
-  validateQuery(getMoodEntriesQuerySchema),
-  getWeeklyMoods
-);
+router.get('/weekly', validateQuery(getMoodEntriesQuerySchema), getWeeklyMoods);
 
-router.get(
-  '/monthly',
-  validateQuery(getMoodEntriesQuerySchema),
-  getMonthlyMoods
-);
+router.get('/monthly', validateQuery(getMoodEntriesQuerySchema), getMonthlyMoods);
 
-router.get(
-  '/positive',
-  validateQuery(getMoodEntriesQuerySchema),
-  getPositiveMoods
-);
+router.get('/positive', validateQuery(getMoodEntriesQuerySchema), getPositiveMoods);
 
-router.get(
-  '/negative',
-  validateQuery(getMoodEntriesQuerySchema),
-  getNegativeMoods
-);
+router.get('/negative', validateQuery(getMoodEntriesQuerySchema), getNegativeMoods);
 
 router.get(
   '/scale/:scale',
@@ -125,11 +89,7 @@ router.get(
   getMoodsByTrigger
 );
 
-router.get(
-  '/:id',
-  validateParams(moodEntryIdSchema),
-  getMoodEntryById
-);
+router.get('/:id', validateParams(moodEntryIdSchema), getMoodEntryById);
 
 router.put(
   '/:id',
@@ -138,24 +98,12 @@ router.put(
   updateMoodEntry
 );
 
-router.delete(
-  '/:id',
-  validateParams(moodEntryIdSchema),
-  deleteMoodEntry
-);
+router.delete('/:id', validateParams(moodEntryIdSchema), deleteMoodEntry);
 
 // ===== QUICK MOOD ACTIONS =====
 
-router.post(
-  '/quick',
-  validateBody(quickMoodEntrySchema),
-  quickMoodEntry
-);
+router.post('/quick', validateBody(quickMoodEntrySchema), quickMoodEntry);
 
-router.post(
-  '/checkin',
-  validateBody(moodCheckInSchema),
-  moodCheckIn
-);
+router.post('/checkin', validateBody(moodCheckInSchema), moodCheckIn);
 
 export default router;

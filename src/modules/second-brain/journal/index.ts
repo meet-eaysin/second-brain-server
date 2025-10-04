@@ -11,30 +11,29 @@ export {
   updateJournalEntry,
   getJournalEntryByDate,
   getJournalEntries,
-  getTodaysEntry,
-  createOrUpdateTodaysEntry,
+  deleteJournalEntry,
 
-  // Journal analytics and insights
+  // Journal analytics
   getJournalStats,
   getMoodTrends,
-  getJournalInsights,
-  getJournalCalendar,
-
-  // Journal utilities
   searchJournalEntries,
-  getJournalPrompts
+  getJournalPrompts,
+  getTodaysEntry,
+  getJournalInsights
 } from '@/modules/second-brain/journal/controllers/journal.controller';
 
 // Services - Journal-specific services
 export {
   createJournalEntry as createJournalEntryService,
-  updateJournalEntry as updateJournalEntryService,
-  getJournalEntryByDate as getJournalEntryByDateService,
   getJournalEntries as getJournalEntriesService,
+  getJournalEntryByDate as getJournalEntryByDateService,
+  updateJournalEntry as updateJournalEntryService,
+  deleteJournalEntry as deleteJournalEntryService,
   calculateJournalStats as calculateJournalStatsService,
   getMoodTrends as getMoodTrendsService,
   searchJournalEntries as searchJournalEntriesService,
-  getJournalPrompts as getJournalPromptsService
+  getJournalPrompts as getJournalPromptsService,
+  generateJournalInsights as generateJournalInsightsService
 } from '@/modules/second-brain/journal/services/journal.service';
 
 // Types
@@ -44,28 +43,25 @@ export type * from '@/modules/second-brain/journal/types/journal.types';
 export type {
   IJournalEntry,
   IJournalStats,
-  IMoodTrend,
+  IJournalInsights,
   ICreateJournalEntryRequest,
   IUpdateJournalEntryRequest,
   IJournalQueryParams,
-  IJournalSearchParams,
-  IJournalInsights,
-  IJournalCalendarEntry,
-  EMoodType,
-  EJournalInsightsPeriod
+  IJournalPrompt,
+  IMoodTrend,
+  IJournalEntrySummary
 } from '@/modules/second-brain/journal/types/journal.types';
 
 // Validators
 export {
   journalValidators,
-  entryIdSchema,
-  dateSchema,
-  createEntrySchema,
-  updateEntrySchema,
-  todaysEntrySchema,
-  entriesQuerySchema,
-  trendsQuerySchema,
-  searchQuerySchema,
-  calendarQuerySchema,
-  insightsQuerySchema
+  journalEntryIdSchema,
+  dateParamSchema,
+  createJournalEntrySchema,
+  updateJournalEntrySchema,
+  getJournalEntriesQuerySchema,
+  journalStatsQuerySchema,
+  moodTrendsQuerySchema,
+  searchJournalEntriesSchema,
+  journalInsightsQuerySchema
 } from '@/modules/second-brain/journal/validators/journal.validators';

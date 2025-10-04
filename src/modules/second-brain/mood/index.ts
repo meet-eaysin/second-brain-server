@@ -2,7 +2,7 @@
 // This module provides comprehensive mood tracking with AI insights, pattern recognition, and detailed analytics
 
 // Routes - Mood-specific operations
-export { default as moodRoutes } from './routes/mood.routes';
+export { default as moodRoutes } from '@/modules/second-brain/mood/routes/mood.routes';
 
 // Controllers - Mood business logic
 export {
@@ -12,7 +12,7 @@ export {
   getMoodEntryById,
   updateMoodEntry,
   deleteMoodEntry,
-  
+
   // Mood analytics
   getMoodAnalytics,
   getMoodsByScale,
@@ -24,20 +24,25 @@ export {
   getWeeklyMoods,
   getMonthlyMoods,
   searchMoodEntries,
-  
+
   // Quick actions
   quickMoodEntry,
   moodCheckIn
-} from './controllers/mood.controller';
+} from '@/modules/second-brain/mood/controllers/mood.controller';
 
 // Services - Mood-specific services
 export {
-  MoodService,
-  moodService
-} from './services/mood.service';
+  createMoodEntry as createMoodEntryService,
+  updateMoodEntry as updateMoodEntryService,
+  getMoodEntryById as getMoodEntryByIdService,
+  getMoodEntries as getMoodEntriesService,
+  deleteMoodEntry as deleteMoodEntryService,
+  getMoodAnalytics as getMoodAnalyticsService,
+  getMoodEntries as searchMoodEntriesService
+} from '@/modules/second-brain/mood/services/mood.service';
 
 // Types
-export type * from './types/mood.types';
+export type * from '@/modules/second-brain/mood/types/mood.types';
 
 // Types - Specific exports for better IDE support
 export type {
@@ -52,7 +57,7 @@ export type {
   EMoodCategory,
   EMoodTrigger,
   EMoodFrequency
-} from './types/mood.types';
+} from '@/modules/second-brain/mood/types/mood.types';
 
 // Validators
 export {
@@ -82,4 +87,4 @@ export {
   scaleParamSchema,
   categoryParamSchema,
   triggerParamSchema
-} from './validators/mood.validators';
+} from '@/modules/second-brain/mood/validators/mood.validators';

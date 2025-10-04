@@ -4,10 +4,12 @@ import {
   updateJournalEntry as updateJournalEntryService,
   getJournalEntryByDate as getJournalEntryByDateService,
   getJournalEntries as getJournalEntriesService,
+  deleteJournalEntry as deleteJournalEntryService,
   calculateJournalStats as calculateJournalStatsService,
   getMoodTrends as getMoodTrendsService,
   searchJournalEntries as searchJournalEntriesService,
-  getJournalPrompts as getJournalPromptsService
+  getJournalPrompts as getJournalPromptsService,
+  generateJournalInsights as generateJournalInsightsService
 } from '@/modules/second-brain/journal/services/journal.service';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/modules/auth';
@@ -34,6 +36,19 @@ export const updateJournalEntry = catchAsync(
     const entry = await updateJournalEntryService(entryId, updateData, userId);
 
     sendSuccessResponse(res, 'Journal entry updated successfully', entry);
+  }
+);
+
+// Delete journal entry
+export const deleteJournalEntry = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { entryId } = req.params;
+    const { permanent } = req.query;
+    const userId = getUserId(req);
+
+    await deleteJournalEntryService(entryId, userId, permanent === 'true');
+
+    sendSuccessResponse(res, 'Journal entry deleted successfully', null, 204);
   }
 );
 

@@ -1,5 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { noteTemplatesService } from '../services/note-templates.service';
+import {
+  createNoteTemplate as createNoteTemplateService,
+  getNoteTemplates as getNoteTemplatesService,
+  getNoteTemplateById as getNoteTemplateByIdService,
+  updateNoteTemplate as updateNoteTemplateService,
+  deleteNoteTemplate as deleteNoteTemplateService,
+  applyNoteTemplate as applyNoteTemplateService,
+  duplicateNoteTemplate as duplicateNoteTemplateService,
+  getPopularNoteTemplates as getPopularNoteTemplatesService,
+  getFeaturedNoteTemplates as getFeaturedNoteTemplatesService
+} from '@/modules/second-brain/notes/services/note-templates.service';
 import { getUserId } from '@/modules/auth';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
 
@@ -8,7 +18,7 @@ export const createNoteTemplate = catchAsync(
     const data = req.body;
     const userId = getUserId(req);
 
-    const template = await noteTemplatesService.createNoteTemplate(data, userId);
+    const template = await createNoteTemplateService(data, userId);
 
     sendSuccessResponse(res, 'Note template created successfully', template, 201);
   }
@@ -19,21 +29,16 @@ export const getNoteTemplates = catchAsync(
     const params = req.query as any;
     const userId = getUserId(req);
 
-    const result = await noteTemplatesService.getNoteTemplates(params, userId);
+    const result = await getNoteTemplatesService(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Note templates retrieved successfully',
-      result.templates,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Note templates retrieved successfully', result.templates, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -42,7 +47,7 @@ export const getNoteTemplateById = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const template = await noteTemplatesService.getNoteTemplateById(id, userId);
+    const template = await getNoteTemplateByIdService(id, userId);
 
     sendSuccessResponse(res, 'Note template retrieved successfully', template);
   }
@@ -54,7 +59,7 @@ export const updateNoteTemplate = catchAsync(
     const data = req.body;
     const userId = getUserId(req);
 
-    const template = await noteTemplatesService.updateNoteTemplate(id, data, userId);
+    const template = await updateNoteTemplateService(id, data, userId);
 
     sendSuccessResponse(res, 'Note template updated successfully', template);
   }
@@ -66,7 +71,7 @@ export const deleteNoteTemplate = catchAsync(
     const { permanent } = req.query;
     const userId = getUserId(req);
 
-    await noteTemplatesService.deleteNoteTemplate(id, userId, permanent === 'true');
+    await deleteNoteTemplateService(id, userId, permanent === 'true');
 
     sendSuccessResponse(res, 'Note template deleted successfully', null, 204);
   }
@@ -78,7 +83,7 @@ export const applyNoteTemplate = catchAsync(
     const data = req.body;
     const userId = getUserId(req);
 
-    const note = await noteTemplatesService.applyNoteTemplate(id, data, userId);
+    const note = await applyNoteTemplateService(id, data, userId);
 
     sendSuccessResponse(res, 'Note template applied successfully', note, 201);
   }
@@ -90,7 +95,7 @@ export const duplicateNoteTemplate = catchAsync(
     const data = req.body;
     const userId = getUserId(req);
 
-    const template = await noteTemplatesService.duplicateNoteTemplate(id, data, userId);
+    const template = await duplicateNoteTemplateService(id, data, userId);
 
     sendSuccessResponse(res, 'Note template duplicated successfully', template, 201);
   }
@@ -100,9 +105,7 @@ export const getPopularNoteTemplates = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { limit } = req.query;
 
-    const templates = await noteTemplatesService.getPopularNoteTemplates(
-      limit ? parseInt(limit as string) : 10
-    );
+    const templates = await getPopularNoteTemplatesService(limit ? parseInt(limit as string) : 10);
 
     sendSuccessResponse(res, 'Popular note templates retrieved successfully', templates);
   }
@@ -112,9 +115,7 @@ export const getFeaturedNoteTemplates = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { limit } = req.query;
 
-    const templates = await noteTemplatesService.getFeaturedNoteTemplates(
-      limit ? parseInt(limit as string) : 10
-    );
+    const templates = await getFeaturedNoteTemplatesService(limit ? parseInt(limit as string) : 10);
 
     sendSuccessResponse(res, 'Featured note templates retrieved successfully', templates);
   }

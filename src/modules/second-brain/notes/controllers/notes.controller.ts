@@ -1,5 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import { notesService } from '../services/notes.service';
+import {
+  createNote as createNoteService,
+  getNotes as getNotesService,
+  getNoteById as getNoteByIdService,
+  updateNote as updateNoteService,
+  updateNoteContent as updateNoteContentService,
+  deleteNote as deleteNoteService,
+  getNoteStats as getNoteStatsService
+} from '@/modules/second-brain/notes/services/notes.service';
 import { getUserId } from '@/modules/auth';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
 import {
@@ -7,14 +15,14 @@ import {
   IUpdateNoteRequest,
   IUpdateNoteContentRequest,
   INoteQueryParams
-} from '../types/notes.types';
+} from '@/modules/second-brain/notes/types/notes.types';
 
 export const createNote = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const data: ICreateNoteRequest = req.body;
     const userId = getUserId(req);
 
-    const note = await notesService.createNote(data, userId);
+    const note = await createNoteService(data, userId);
 
     sendSuccessResponse(res, 'Note created successfully', note, 201);
   }
@@ -25,7 +33,7 @@ export const getNotes = catchAsync(
     const params: INoteQueryParams = req.query as any;
     const userId = getUserId(req);
 
-    const result = await notesService.getNotes(params, userId);
+    const result = await getNotesService(params, userId);
 
     sendPaginatedResponse(
       res,
@@ -49,7 +57,7 @@ export const getNoteById = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const note = await notesService.getNoteById(id, userId);
+    const note = await getNoteByIdService(id, userId);
 
     sendSuccessResponse(res, 'Note retrieved successfully', note);
   }
@@ -61,7 +69,7 @@ export const updateNote = catchAsync(
     const data: IUpdateNoteRequest = req.body;
     const userId = getUserId(req);
 
-    const note = await notesService.updateNote(id, data, userId);
+    const note = await updateNoteService(id, data, userId);
 
     sendSuccessResponse(res, 'Note updated successfully', note);
   }
@@ -73,7 +81,7 @@ export const updateNoteContent = catchAsync(
     const data: IUpdateNoteContentRequest = req.body;
     const userId = getUserId(req);
 
-    const note = await notesService.updateNoteContent(id, data, userId);
+    const note = await updateNoteContentService(id, data, userId);
 
     sendSuccessResponse(res, 'Note content updated successfully', note);
   }
@@ -85,7 +93,7 @@ export const deleteNote = catchAsync(
     const { permanent } = req.query;
     const userId = getUserId(req);
 
-    await notesService.deleteNote(id, userId, permanent === 'true');
+    await deleteNoteService(id, userId, permanent === 'true');
 
     sendSuccessResponse(res, 'Note deleted successfully', null, 204);
   }
@@ -96,7 +104,7 @@ export const publishNote = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const note = await notesService.updateNote(id, { isPublished: true }, userId);
+    const note = await updateNoteService(id, { isPublished: true }, userId);
 
     sendSuccessResponse(res, 'Note published successfully', note);
   }
@@ -107,7 +115,7 @@ export const unpublishNote = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const note = await notesService.updateNote(id, { isPublished: false }, userId);
+    const note = await updateNoteService(id, { isPublished: false }, userId);
 
     sendSuccessResponse(res, 'Note unpublished successfully', note);
   }
@@ -118,7 +126,7 @@ export const bookmarkNote = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const note = await notesService.updateNote(id, { isBookmarked: true }, userId);
+    const note = await updateNoteService(id, { isBookmarked: true }, userId);
 
     sendSuccessResponse(res, 'Note bookmarked successfully', note);
   }
@@ -129,7 +137,7 @@ export const unbookmarkNote = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const note = await notesService.updateNote(id, { isBookmarked: false }, userId);
+    const note = await updateNoteService(id, { isBookmarked: false }, userId);
 
     sendSuccessResponse(res, 'Note unbookmarked successfully', note);
   }
@@ -137,95 +145,75 @@ export const unbookmarkNote = catchAsync(
 
 export const getPublishedNotes = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: INoteQueryParams = { ...req.query as any, isPublished: true };
+    const params: INoteQueryParams = { ...(req.query as any), isPublished: true };
     const userId = getUserId(req);
 
-    const result = await notesService.getNotes(params, userId);
+    const result = await getNotesService(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Published notes retrieved successfully',
-      result.notes,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Published notes retrieved successfully', result.notes, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getBookmarkedNotes = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: INoteQueryParams = { ...req.query as any, isBookmarked: true };
+    const params: INoteQueryParams = { ...(req.query as any), isBookmarked: true };
     const userId = getUserId(req);
 
-    const result = await notesService.getNotes(params, userId);
+    const result = await getNotesService(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Bookmarked notes retrieved successfully',
-      result.notes,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Bookmarked notes retrieved successfully', result.notes, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getNotesByTag = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { tag } = req.params;
-    const params: INoteQueryParams = { ...req.query as any, tags: [tag] };
+    const params: INoteQueryParams = { ...(req.query as any), tags: [tag] };
     const userId = getUserId(req);
 
-    const result = await notesService.getNotes(params, userId);
+    const result = await getNotesService(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      `Notes with tag "${tag}" retrieved successfully`,
-      result.notes,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, `Notes with tag "${tag}" retrieved successfully`, result.notes, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const searchNotes = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { q: search } = req.query;
-    const params: INoteQueryParams = { ...req.query as any, search: search as string };
+    const params: INoteQueryParams = { ...(req.query as any), search: search as string };
     const userId = getUserId(req);
 
-    const result = await notesService.getNotes(params, userId);
+    const result = await getNotesService(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Notes search completed successfully',
-      result.notes,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Notes search completed successfully', result.notes, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -236,7 +224,7 @@ export const duplicateNote = catchAsync(
     const userId = getUserId(req);
 
     // Get the original note
-    const originalNote = await notesService.getNoteById(id, userId);
+    const originalNote = await getNoteByIdService(id, userId);
 
     // Create duplicate with new title
     const duplicateData: ICreateNoteRequest = {
@@ -249,7 +237,7 @@ export const duplicateNote = catchAsync(
       allowComments: originalNote.allowComments
     };
 
-    const duplicatedNote = await notesService.createNote(duplicateData, userId);
+    const duplicatedNote = await createNoteService(duplicateData, userId);
 
     sendSuccessResponse(res, 'Note duplicated successfully', duplicatedNote, 201);
   }
@@ -260,7 +248,7 @@ export const getNoteStats = catchAsync(
     const { databaseId } = req.query;
     const userId = getUserId(req);
 
-    const stats = await (notesService as any).getNoteStats(userId, databaseId as string);
+    const stats = await getNoteStatsService(userId, databaseId as string);
 
     sendSuccessResponse(res, 'Note statistics retrieved successfully', stats);
   }
@@ -272,9 +260,7 @@ export const bulkUpdateNotes = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      noteIds.map((noteId: string) => 
-        notesService.updateNote(noteId, updates, userId)
-      )
+      noteIds.map((noteId: string) => updateNoteService(noteId, updates, userId))
     );
 
     const successful = results.filter(result => result.status === 'fulfilled').length;
@@ -300,9 +286,7 @@ export const bulkDeleteNotes = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      noteIds.map((noteId: string) => 
-        notesService.deleteNote(noteId, userId, permanent)
-      )
+      noteIds.map((noteId: string) => deleteNoteService(noteId, userId, permanent))
     );
 
     const successful = results.filter(result => result.status === 'fulfilled').length;

@@ -1,6 +1,5 @@
-import { INote, INoteContentBlock, IRichTextElement } from '../types/notes.types';
+import { INoteContentBlock, IRichTextElement } from '../types/notes.types';
 import { EContentBlockType } from '@/modules/core/types/record.types';
-import { generateId } from '@/utils/id-generator';
 
 // Extract plain text from rich content blocks
 export const extractTextFromContent = (content: INoteContentBlock[]): string => {
@@ -13,16 +12,18 @@ export const extractTextFromContent = (content: INoteContentBlock[]): string => 
     }
 
     // Add newlines for certain block types
-    if ([
-      EContentBlockType.PARAGRAPH,
-      EContentBlockType.HEADING_1,
-      EContentBlockType.HEADING_2,
-      EContentBlockType.HEADING_3,
-      EContentBlockType.BULLETED_LIST_ITEM,
-      EContentBlockType.NUMBERED_LIST_ITEM,
-      EContentBlockType.TO_DO,
-      EContentBlockType.QUOTE
-    ].includes(block.type)) {
+    if (
+      [
+        EContentBlockType.PARAGRAPH,
+        EContentBlockType.HEADING_1,
+        EContentBlockType.HEADING_2,
+        EContentBlockType.HEADING_3,
+        EContentBlockType.BULLETED_LIST_ITEM,
+        EContentBlockType.NUMBERED_LIST_ITEM,
+        EContentBlockType.TO_DO,
+        EContentBlockType.QUOTE
+      ].includes(block.type)
+    ) {
       text += '\n';
     }
 
@@ -54,7 +55,10 @@ export const calculateReadingTime = (wordCount: number): number => {
 };
 
 // Generate note preview (first few sentences)
-export const generateNotePreview = (content: INoteContentBlock[], maxLength: number = 200): string => {
+export const generateNotePreview = (
+  content: INoteContentBlock[],
+  maxLength: number = 200
+): string => {
   const text = extractTextFromContent(content);
   if (!text) return '';
 
@@ -277,7 +281,10 @@ export const searchInContent = (
         blockId: block.id,
         blockType: block.type,
         content: blockText,
-        context: contextStart > 0 ? '...' + context : context + (contextEnd < blockText.length ? '...' : '')
+        context:
+          contextStart > 0
+            ? '...' + context
+            : context + (contextEnd < blockText.length ? '...' : '')
       });
     }
 
@@ -312,7 +319,9 @@ export const extractMentions = (content: INoteContentBlock[]): string[] => {
 };
 
 // Extract links from content
-export const extractLinks = (content: INoteContentBlock[]): Array<{
+export const extractLinks = (
+  content: INoteContentBlock[]
+): Array<{
   url: string;
   text: string;
   blockId: string;
@@ -352,7 +361,9 @@ export const extractLinks = (content: INoteContentBlock[]): Array<{
 };
 
 // Generate note outline from headings
-export const generateNoteOutline = (content: INoteContentBlock[]): Array<{
+export const generateNoteOutline = (
+  content: INoteContentBlock[]
+): Array<{
   id: string;
   level: number;
   text: string;
@@ -367,13 +378,19 @@ export const generateNoteOutline = (content: INoteContentBlock[]): Array<{
 
   const extractHeadings = (blocks: INoteContentBlock[]): void => {
     blocks.forEach(block => {
-      if ([
-        EContentBlockType.HEADING_1,
-        EContentBlockType.HEADING_2,
-        EContentBlockType.HEADING_3
-      ].includes(block.type)) {
-        const level = block.type === EContentBlockType.HEADING_1 ? 1 :
-                     block.type === EContentBlockType.HEADING_2 ? 2 : 3;
+      if (
+        [
+          EContentBlockType.HEADING_1,
+          EContentBlockType.HEADING_2,
+          EContentBlockType.HEADING_3
+        ].includes(block.type)
+      ) {
+        const level =
+          block.type === EContentBlockType.HEADING_1
+            ? 1
+            : block.type === EContentBlockType.HEADING_2
+              ? 2
+              : 3;
         const text = block.content.map(element => element.plain_text || '').join('');
 
         outline.push({
@@ -395,7 +412,9 @@ export const generateNoteOutline = (content: INoteContentBlock[]): Array<{
 };
 
 // Validate note content structure
-export const validateNoteContent = (content: INoteContentBlock[]): {
+export const validateNoteContent = (
+  content: INoteContentBlock[]
+): {
   isValid: boolean;
   errors: string[];
 } => {
@@ -450,10 +469,7 @@ export const generateBlockId = (): string => {
 };
 
 // Create empty content block
-export const createEmptyBlock = (
-  type: EContentBlockType,
-  userId: string
-): INoteContentBlock => {
+export const createEmptyBlock = (type: EContentBlockType, userId: string): INoteContentBlock => {
   const now = new Date();
 
   const richTextElement: IRichTextElement = {
@@ -480,5 +496,3 @@ export const createEmptyBlock = (
     lastEditedBy: userId
   };
 };
-
-

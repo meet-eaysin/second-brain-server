@@ -3,7 +3,7 @@
 // Basic CRUD operations should use the unified database APIs: /api/v1/databases/{id}/records
 
 // Routes - Note-specific operations only
-export { default as notesRoutes } from './routes/notes.routes';
+export { default as notesRoutes } from '@/modules/second-brain/notes/routes/notes.routes';
 
 // Controllers - Note-specific business logic
 export {
@@ -28,7 +28,7 @@ export {
   getNoteStats,
   bulkUpdateNotes,
   bulkDeleteNotes
-} from './controllers/notes.controller';
+} from '@/modules/second-brain/notes/controllers/notes.controller';
 
 export {
   // Template operations
@@ -41,40 +41,60 @@ export {
   duplicateNoteTemplate,
   getPopularNoteTemplates,
   getFeaturedNoteTemplates
-} from './controllers/note-templates.controller';
+} from '@/modules/second-brain/notes/controllers/note-templates.controller';
 
 export {
   // Collaboration operations
-  addComment,
-  getComments,
-  updateComment,
-  deleteComment,
-  addReaction,
-  removeReaction,
-  resolveComment,
-  unresolveComment,
-  shareNote,
-  unshareNote
-} from './controllers/note-collaboration.controller';
+  addCommentController,
+  getCommentsController,
+  updateCommentController,
+  deleteCommentController,
+  addReactionController,
+  removeReactionController,
+  resolveCommentController,
+  unresolveCommentController,
+  shareNoteController,
+  unshareNoteController
+} from '@/modules/second-brain/notes/controllers/note-collaboration.controller';
 
 // Services - Note-specific services
 export {
-  NotesService,
-  notesService
-} from './services/notes.service';
+  createNote as createNoteService,
+  getNotes as getNotesService,
+  getNoteById as getNoteByIdService,
+  updateNote as updateNoteService,
+  updateNoteContent as updateNoteContentService,
+  deleteNote as deleteNoteService,
+  getNoteStats as getNoteStatsService
+} from '@/modules/second-brain/notes/services/notes.service';
 
 export {
-  NoteTemplatesService,
-  noteTemplatesService
-} from './services/note-templates.service';
+  createNoteTemplate as createNoteTemplateService,
+  getNoteTemplates as getNoteTemplatesService,
+  getNoteTemplateById as getNoteTemplateByIdService,
+  updateNoteTemplate as updateNoteTemplateService,
+  deleteNoteTemplate as deleteNoteTemplateService,
+  applyNoteTemplate as applyNoteTemplateService,
+  duplicateNoteTemplate as duplicateNoteTemplateService,
+  getPopularNoteTemplates as getPopularNoteTemplatesService,
+  getFeaturedNoteTemplates as getFeaturedNoteTemplatesService
+} from '@/modules/second-brain/notes/services/note-templates.service';
 
 export {
-  NoteCollaborationService,
-  noteCollaborationService
-} from './services/note-collaboration.service';
+  addComment as addCommentService,
+  getComments as getCommentsService,
+  updateComment as updateCommentService,
+  deleteComment as deleteCommentService,
+  addReaction as addReactionService,
+  removeReaction as removeReactionService,
+  resolveComment as resolveCommentService,
+  unresolveComment as unresolveCommentService,
+  shareNote as shareNoteService,
+  unshareNote as unshareNoteService
+} from '@/modules/second-brain/notes/services/note-collaboration.service';
 
 // Types
-export type * from './types/notes.types';
+export type * from '@/modules/second-brain/notes/types/notes.types';
 
 // Types - Specific exports for better IDE support
 export type {
@@ -90,7 +110,7 @@ export type {
   INoteQueryParams,
   EContentBlockType,
   ECollaboratorRole
-} from './types/notes.types';
+} from '@/modules/second-brain/notes/types/notes.types';
 
 // Validators
 export {
@@ -117,7 +137,7 @@ export {
   unshareNoteSchema,
   searchNotesSchema,
   tagParamSchema
-} from './validators/notes.validators';
+} from '@/modules/second-brain/notes/validators/notes.validators';
 
 // Utils - Note-specific utilities
 export {
@@ -130,4 +150,4 @@ export {
   validateNoteContent,
   generateBlockId,
   createEmptyBlock
-} from './utils/notes.utils';
+} from '@/modules/second-brain/notes/utils/notes.utils';

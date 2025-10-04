@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { EContentBlockType, ECollaboratorRole } from '../types/notes.types';
+import {
+  EContentBlockType,
+  ECollaboratorRole
+} from '@/modules/second-brain/notes/types/notes.types';
 
 // Base schemas
 export const noteIdSchema = z.object({

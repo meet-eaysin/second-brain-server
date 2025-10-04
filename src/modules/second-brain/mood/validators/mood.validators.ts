@@ -2,17 +2,79 @@ import { z } from 'zod';
 import {
   EMoodScale,
   EMoodCategory,
-  EMoodTrigger,
-  SocialInteractionSchema,
-  MediaConsumedSchema,
-  CreateMoodEntryRequestSchema,
-  UpdateMoodEntryRequestSchema
-} from '../types/mood.types';
+  EMoodTrigger
+} from '@/modules/second-brain/mood/types/mood.types';
 
 // Base schemas
 export const moodEntryIdSchema = z.object({
   id: z.string().min(1, 'Mood entry ID is required')
 });
+
+// Component schemas
+export const MoodCategorySchema = z.object({
+  category: z.enum(EMoodCategory),
+  intensity: z.enum(EMoodScale),
+  notes: z.string().max(500).optional()
+});
+
+export const SocialInteractionSchema = z.object({
+  person: z.string().max(100).optional(),
+  type: z.enum(['family', 'friend', 'colleague', 'stranger', 'romantic', 'other']),
+  quality: z.enum(EMoodScale),
+  duration: z.number().min(0).max(1440).optional(), // max 24 hours
+  notes: z.string().max(300).optional()
+});
+
+export const MediaConsumedSchema = z.object({
+  type: z.enum(['book', 'movie', 'tv', 'podcast', 'music', 'news', 'social_media', 'other']),
+  title: z.string().max(200).optional(),
+  duration: z.number().min(0).max(1440).optional(), // max 24 hours
+  impact: z.enum(EMoodScale)
+});
+
+export const CreateMoodEntryRequestSchema = z.object({
+  databaseId: z.string().min(1, 'Database ID is required'),
+  overallMood: z.enum(EMoodScale),
+  categories: z.array(MoodCategorySchema).default([]),
+  triggers: z.array(z.enum(EMoodTrigger)).default([]),
+  customTriggers: z.array(z.string().max(100)).default([]),
+  location: z.string().max(200).optional(),
+  weather: z.string().max(100).optional(),
+  energyLevel: z.enum(EMoodScale).optional(),
+  stressLevel: z.enum(EMoodScale).optional(),
+  anxietyLevel: z.enum(EMoodScale).optional(),
+  focusLevel: z.enum(EMoodScale).optional(),
+  socialLevel: z.enum(EMoodScale).optional(),
+  sleepQuality: z.enum(EMoodScale).optional(),
+  sleepHours: z.number().min(0).max(24).optional(),
+  exerciseMinutes: z.number().min(0).max(1440).optional(),
+  exerciseType: z.string().max(100).optional(),
+  activities: z.array(z.string().max(100)).default([]),
+  significantEvents: z.array(z.string().max(200)).default([]),
+  notes: z.string().max(2000).optional(),
+  gratitude: z.array(z.string().max(200)).default([]),
+  improvements: z.string().max(1000).optional(),
+  tomorrowGoals: z.array(z.string().max(200)).default([]),
+  socialInteractions: z.array(SocialInteractionSchema).default([]),
+  mediaConsumed: z.array(MediaConsumedSchema).default([]),
+  habitsCompleted: z.array(z.string().max(100)).default([]),
+  routineAdherence: z.enum(EMoodScale).optional(),
+  predictedMood: z.enum(EMoodScale).optional(),
+  moodGoal: z.enum(EMoodScale).optional(),
+  entryTime: z
+    .string()
+    .datetime()
+    .transform(val => new Date(val))
+    .optional(),
+  timezone: z.string().max(50).default('UTC'),
+  isPrivate: z.boolean().default(false),
+  tags: z.array(z.string().max(50)).default([]),
+  customFields: z.record(z.string(), z.any()).default({})
+});
+
+export const UpdateMoodEntryRequestSchema = CreateMoodEntryRequestSchema.omit({
+  databaseId: true
+}).partial();
 
 export const scaleParamSchema = z.object({
   scale: z
