@@ -10,11 +10,11 @@ export {
 
 // Services
 export {
-  EmailService,
   emailService,
   sendEmail,
   sendPasswordResetEmail,
-  sendWelcomeEmail
+  sendWelcomeEmail,
+  sendPasswordResetConfirmation
 } from './services/email.services';
 
 // Types
