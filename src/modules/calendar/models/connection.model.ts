@@ -1,5 +1,6 @@
 import { Schema, model, Document, Model } from 'mongoose';
-import { ICalendarConnection, ECalendarProvider } from '../types/calendar.types';
+import { ICalendarConnection } from '../types/connection.types';
+import { ECalendarProvider } from '../types/enums.types';
 
 // CalendarTypes Connection Document Interface with instance methods
 export interface ICalendarConnectionDocument extends Document {

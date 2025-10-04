@@ -1,61 +1,31 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync } from '@/utils/catch-async';
 import { sendSuccessResponse } from '@/utils/response.utils';
-import { createAppError } from '@/utils/error.utils';
-import { generateId } from '@/utils/id-generator';
 import { getUserId } from '@/auth/index';
+import { manualSyncConnection } from '@/modules/calendar';
+import { ECalendarProvider } from '../types/enums.types';
+import { IConnectCalendarRequest } from '../types/request.types';
 import {
-  ECalendarProvider,
-  ExternalCalendarProviderFactory,
-  IConnectCalendarRequest,
-  manualSyncConnection
-} from "@/modules/calendar";
-import {CalendarConnectionModel, CalendarSyncLogModel} from "@/modules/calendar/models/connection.model";
+  createCalendarConnection,
+  getCalendarConnections,
+  getCalendarConnectionById,
+  updateCalendarConnection,
+  disconnectCalendarConnection,
+  getCalendarSyncLogs,
+  resetCalendarConnectionErrors,
+  getCalendarConnectionStats,
+  testCalendarConnection
+} from '../services/connection.service';
 
 /**
  * Connect external calendar
  */
 export const connectCalendarController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const request: IConnectCalendarRequest = req.body;
 
-    const existingConnection = await CalendarConnectionModel.findOne({
-      userId,
-      provider: request.provider,
-      accountEmail: request.accountEmail
-    });
-
-    if (existingConnection) throw createAppError('Calendar connection already exists for this account', 409);
-
-    if (!Object.values(ECalendarProvider).includes(request.provider)) {
-      throw createAppError('Invalid calendar provider', 400);
-    }
-
-    const connection = new CalendarConnectionModel({
-      id: generateId(),
-      userId,
-      provider: request.provider,
-      accountEmail: request.accountEmail,
-      accountName: request.accountEmail,
-      accessToken: request.accessToken || '',
-      refreshToken: request.refreshToken,
-      isActive: true,
-      syncEnabled: true,
-      syncFrequency: 15,
-      syncSettings: {
-        importEvents: true,
-        exportEvents: false,
-        bidirectionalSync: false,
-        syncPastDays: 30,
-        syncFutureDays: 365,
-        conflictResolution: 'remote',
-        ...request.syncSettings
-      },
-      errorCount: 0
-    });
-
-    await connection.save();
+    const connection = await createCalendarConnection(userId, request);
 
     try {
       await manualSyncConnection(connection.id, userId);
@@ -64,13 +34,18 @@ export const connectCalendarController = catchAsync(
       console.warn('Initial sync failed, but connection was created:', errorMessage);
     }
 
-    sendSuccessResponse(res, 'Calendar connected successfully', {
-      id: connection.id,
-      provider: connection.provider,
-      accountEmail: connection.accountEmail,
-      syncEnabled: connection.syncEnabled,
-      syncSettings: connection.syncSettings
-    }, 201);
+    sendSuccessResponse(
+      res,
+      'Calendar connected successfully',
+      {
+        id: connection.id,
+        provider: connection.provider,
+        accountEmail: connection.accountEmail,
+        syncEnabled: connection.syncEnabled,
+        syncSettings: connection.syncSettings
+      },
+      201
+    );
   }
 );
 
@@ -78,30 +53,13 @@ export const connectCalendarController = catchAsync(
  * Get calendar connections
  */
 export const getCalendarConnectionsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const activeOnly = req.query.activeOnly !== 'false';
 
-    const connections = await CalendarConnectionModel.findByUser(userId, activeOnly);
+    const connections = await getCalendarConnections(userId, activeOnly);
 
-    const connectionsData = connections.map(conn => ({
-      id: conn.id,
-      provider: conn.provider,
-      accountEmail: conn.accountEmail,
-      accountName: conn.accountName,
-      isActive: conn.isActive,
-      syncEnabled: conn.syncEnabled,
-      syncFrequency: conn.syncFrequency,
-      lastSyncAt: conn.lastSyncAt,
-      syncStatus: conn.syncStatus,
-      syncSettings: conn.syncSettings,
-      errorCount: conn.errorCount,
-      lastError: conn.lastError,
-      createdAt: conn.createdAt,
-      updatedAt: conn.updatedAt
-    }));
-
-    sendSuccessResponse(res, 'Calendar connections retrieved successfully', connectionsData);
+    sendSuccessResponse(res, 'Calendar connections retrieved successfully', connections);
   }
 );
 
@@ -109,35 +67,13 @@ export const getCalendarConnectionsController = catchAsync(
  * Get calendar connection by ID
  */
 export const getCalendarConnectionByIdController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
 
-    const connection = await CalendarConnectionModel.findOne({
-      _id: connectionId,
-      userId
-    });
+    const connection = await getCalendarConnectionById(connectionId, userId);
 
-    if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
-    }
-
-    sendSuccessResponse(res, 'Calendar connection retrieved successfully', {
-      id: connection.id,
-      provider: connection.provider,
-      accountEmail: connection.accountEmail,
-      accountName: connection.accountName,
-      isActive: connection.isActive,
-      syncEnabled: connection.syncEnabled,
-      syncFrequency: connection.syncFrequency,
-      lastSyncAt: connection.lastSyncAt,
-      syncStatus: connection.syncStatus,
-      syncSettings: connection.syncSettings,
-      errorCount: connection.errorCount,
-      lastError: connection.lastError,
-      createdAt: connection.createdAt,
-      updatedAt: connection.updatedAt
-    });
+    sendSuccessResponse(res, 'Calendar connection retrieved successfully', connection);
   }
 );
 
@@ -145,22 +81,16 @@ export const getCalendarConnectionByIdController = catchAsync(
  * Update calendar connection
  */
 export const updateCalendarConnectionController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
     const { syncEnabled, syncFrequency, syncSettings } = req.body;
 
-    const connection = await CalendarConnectionModel.findOne({
-      _id: connectionId,
-      userId
+    const connection = await updateCalendarConnection(connectionId, userId, {
+      syncEnabled,
+      syncFrequency,
+      syncSettings
     });
-
-    if (!connection) throw createAppError('Calendar connection not found', 404);
-    if (typeof syncEnabled === 'boolean') connection.syncEnabled = syncEnabled;
-    if (typeof syncFrequency === 'number' && syncFrequency >= 5 && syncFrequency <= 1440) connection.syncFrequency = syncFrequency;
-    if (syncSettings && typeof syncSettings === 'object') connection.syncSettings = { ...connection.syncSettings, ...syncSettings };
-
-    await connection.save();
 
     sendSuccessResponse(res, 'Calendar connection updated successfully', {
       id: connection.id,
@@ -175,17 +105,11 @@ export const updateCalendarConnectionController = catchAsync(
  * Disconnect calendar
  */
 export const disconnectCalendarController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
 
-    const connection = await CalendarConnectionModel.findOne({
-      _id: connectionId,
-      userId
-    });
-
-    if (!connection) throw createAppError('Calendar connection not found', 404);
-    await connection.disconnect();
+    await disconnectCalendarConnection(connectionId, userId);
 
     sendSuccessResponse(res, 'Calendar disconnected successfully');
   }
@@ -195,7 +119,7 @@ export const disconnectCalendarController = catchAsync(
  * Manually sync calendar connection
  */
 export const syncCalendarConnectionController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
 
@@ -209,27 +133,14 @@ export const syncCalendarConnectionController = catchAsync(
  * Get calendar sync logs
  */
 export const getCalendarSyncLogsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
 
-    const connection = await CalendarConnectionModel.findOne({
-      _id: connectionId,
-      userId
-    });
+    const result = await getCalendarSyncLogs(connectionId, userId, limit);
 
-    if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
-    }
-
-    const logs = await CalendarSyncLogModel.findByConnection(connectionId, limit);
-
-    sendSuccessResponse(res, 'Sync logs retrieved successfully', {
-      logs,
-      connectionId,
-      total: logs.length
-    });
+    sendSuccessResponse(res, 'Sync logs retrieved successfully', result);
   }
 );
 
@@ -237,26 +148,13 @@ export const getCalendarSyncLogsController = catchAsync(
  * Reset calendar connection errors
  */
 export const resetCalendarConnectionErrorsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
 
-    const connection = await CalendarConnectionModel.findOne({
-      _id: connectionId,
-      userId
-    });
+    const result = await resetCalendarConnectionErrors(connectionId, userId);
 
-    if (!connection) {
-      throw createAppError('Calendar connection not found', 404);
-    }
-
-    await connection.resetErrors();
-
-    sendSuccessResponse(res, 'Connection errors reset successfully', {
-      id: connection.id,
-      errorCount: connection.errorCount,
-      syncEnabled: connection.syncEnabled
-    });
+    sendSuccessResponse(res, 'Connection errors reset successfully', result);
   }
 );
 
@@ -264,7 +162,7 @@ export const resetCalendarConnectionErrorsController = catchAsync(
  * Get available calendar providers
  */
 export const getCalendarProvidersController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const providers = [
       {
         id: ECalendarProvider.GOOGLE,
@@ -280,7 +178,8 @@ export const getCalendarProvidersController = catchAsync(
         description: 'Connect your Outlook/Office 365 calendar',
         authType: 'oauth2',
         features: ['import', 'export', 'bidirectional'],
-        setupInstructions: 'You will be redirected to Microsoft to authorize access to your calendar.'
+        setupInstructions:
+          'You will be redirected to Microsoft to authorize access to your calendar.'
       },
       {
         id: ECalendarProvider.APPLE,
@@ -288,7 +187,8 @@ export const getCalendarProvidersController = catchAsync(
         description: 'Connect your Apple iCloud calendar',
         authType: 'caldav',
         features: ['import', 'export'],
-        setupInstructions: 'You will need to provide your iCloud credentials and enable app-specific passwords.'
+        setupInstructions:
+          'You will need to provide your iCloud credentials and enable app-specific passwords.'
       },
       {
         id: ECalendarProvider.CALDAV,
@@ -316,35 +216,16 @@ export const getCalendarProvidersController = catchAsync(
  * Test calendar connection
  */
 export const testCalendarConnectionController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { connectionId } = req.params;
 
-    const connection = await CalendarConnectionModel.findOne({
-      _id: connectionId,
-      userId
-    }).select('+accessToken +refreshToken');
+    const result = await testCalendarConnection(connectionId, userId);
 
-    if (!connection) throw createAppError('Calendar connection not found', 404);
-
-    try {
-      const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
-      const calendars = await provider.getCalendars(connection);
-
-      sendSuccessResponse(res, 'Calendar connection test successful', {
-        status: 'connected',
-        calendarsFound: calendars.length,
-        provider: connection.provider,
-        accountEmail: connection.accountEmail
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      sendSuccessResponse(res, 'Calendar connection test failed', {
-        status: 'error',
-        error: errorMessage,
-        provider: connection.provider,
-        accountEmail: connection.accountEmail
-      }, 200);
+    if (result.status === 'connected') {
+      sendSuccessResponse(res, 'Calendar connection test successful', result);
+    } else {
+      sendSuccessResponse(res, 'Calendar connection test failed', result, 200);
     }
   }
 );
@@ -353,42 +234,10 @@ export const testCalendarConnectionController = catchAsync(
  * Get calendar connection statistics
  */
 export const getCalendarConnectionStatsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
 
-    const [
-      totalConnections,
-      activeConnections,
-      syncEnabledConnections,
-      recentSyncLogs
-    ] = await Promise.all([
-      CalendarConnectionModel.countDocuments({ userId }),
-      CalendarConnectionModel.countDocuments({ userId, isActive: true }),
-      CalendarConnectionModel.countDocuments({ userId, isActive: true, syncEnabled: true }),
-      CalendarSyncLogModel.find({}).sort({ startedAt: -1 }).limit(10)
-    ]);
-
-    const connectionsByProvider = await CalendarConnectionModel.aggregate([
-      { $match: { userId, isActive: true } },
-      { $group: { _id: '$provider', count: { $sum: 1 } } }
-    ]);
-
-    const stats = {
-      totalConnections,
-      activeConnections,
-      syncEnabledConnections,
-      connectionsByProvider: connectionsByProvider.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {} as Record<string, number>),
-      recentSyncActivity: recentSyncLogs.map(log => ({
-        connectionId: log.connectionId,
-        status: log.status,
-        startedAt: log.startedAt,
-        completedAt: log.completedAt,
-        eventsProcessed: log.eventsProcessed
-      }))
-    };
+    const stats = await getCalendarConnectionStats(userId);
 
     sendSuccessResponse(res, 'Calendar connection statistics retrieved successfully', stats);
   }

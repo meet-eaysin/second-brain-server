@@ -36,13 +36,9 @@ import {
   testCalendarConnectionController,
   getCalendarConnectionStatsController
 } from '@/modules/calendar/controllers/connection.controller';
-import {
-  CalendarSchema,
-  EventSchema,
-  CalendarConnectionSchema,
-  EEventStatus,
-  EEventVisibility
-} from '@/modules/calendar/types/calendar.types';
+import { CalendarSchema, EventSchema } from '../validators/calendar.validators';
+import { CalendarConnectionSchema } from '../validators/connection.validators';
+import { EEventStatus, EEventVisibility } from '../types/enums.types';
 import { authenticateToken, validateRequest } from '@/middlewares';
 import {
   resolveWorkspaceContext,

@@ -4,12 +4,14 @@ import {
   IEventOrganizer,
   IEventAttendee,
   IEventReminder,
-  IEventAttachment,
+  IEventAttachment
+} from '../types/calendar.types';
+import {
   EEventType,
   EEventStatus,
   EEventVisibility,
   ERecurrenceFrequency
-} from '../types/calendar.types';
+} from '../types/enums.types';
 
 // Event Document Interface
 export interface ICalendarEventDocument extends Document {

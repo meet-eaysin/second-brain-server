@@ -1,19 +1,21 @@
 import {
   ICalendar,
   ICalendarEvent,
+  ICalendarEventQuery,
+  ICalendarView,
+  ICalendarStats
+} from '../types/calendar.types';
+import {
   ICreateCalendarRequest,
   IUpdateCalendarRequest,
   ICreateEventRequest,
-  IUpdateEventRequest,
-  ICalendarEventQuery,
-  ICalendarView,
-  ICalendarStats,
-  ECalendarProvider,
-  EEventType,
-  EEventStatus,
+  IUpdateEventRequest
+} from '../types/request.types';
+import {
   ICalendarPreferences,
   IUpdateCalendarPreferencesRequest
-} from '../types/calendar.types';
+} from '../types/preferences.types';
+import { ECalendarProvider, EEventType, EEventStatus } from '../types/enums.types';
 import { CalendarModel, ICalendarDocument } from '../models/calendar.model';
 import { CalendarEventModel } from '../models/event.model';
 import { CalendarPreferencesModel } from '../models/calendar-preferences.model';

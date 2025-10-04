@@ -1,11 +1,11 @@
-import {TAppError} from "@/types";
+import { TAppError } from '@/types';
 import {
   createAppError,
   createForbiddenError,
   createNotFoundError,
   createUnauthorizedError,
   createValidationError
-} from "@/utils";
+} from '@/utils';
 
 export const AUTH_ERROR_MESSAGES = {
   INVALID_CREDENTIALS: 'Invalid email or password',

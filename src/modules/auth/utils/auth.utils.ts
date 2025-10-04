@@ -5,9 +5,9 @@ import crypto from 'crypto';
 import { createAppError } from '@/utils';
 import { Request } from 'express';
 import googleConfig from '@/config/google/google';
-import {jwtConfig} from "@/config";
-import {TGoogleTokenResponse, TGoogleUserProfile, TRefreshTokenPayload} from "@/modules/auth";
-import {TJwtPayload} from "@/users/types/user.types";
+import { jwtConfig } from '@/config';
+import { TGoogleTokenResponse, TGoogleUserProfile, TRefreshTokenPayload } from '@/modules/auth';
+import { TJwtPayload } from '@/users/types/user.types';
 
 export const generateGoogleLoginUrl = (): { url: string } => {
   const statePayload = {

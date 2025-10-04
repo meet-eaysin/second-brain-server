@@ -19,17 +19,15 @@ import {
   getCalendarPreferences,
   updateCalendarPreferences
 } from '@/modules/calendar/services/calendar.service';
+import { ICalendarEventQuery, ICalendarView } from '../types/calendar.types';
 import {
   ICreateCalendarRequest,
   IUpdateCalendarRequest,
   ICreateEventRequest,
-  IUpdateEventRequest,
-  ICalendarEventQuery,
-  ICalendarView,
-  EEventStatus,
-  ECalendarType,
-  IUpdateCalendarPreferencesRequest
-} from '@/modules/calendar/types/calendar.types';
+  IUpdateEventRequest
+} from '../types/request.types';
+import { IUpdateCalendarPreferencesRequest } from '../types/preferences.types';
+import { EEventStatus, ECalendarType } from '../types/enums.types';
 import { getUserId } from '@/auth/index';
 import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middleware';
 
@@ -348,7 +346,8 @@ export const searchEventsController = catchAsync(
     const workspaceId = getWorkspaceId(req);
     const { q: searchQuery } = req.query;
 
-    if (!searchQuery || typeof searchQuery !== 'string') throw createAppError('Search query is required', 400);
+    if (!searchQuery || typeof searchQuery !== 'string')
+      throw createAppError('Search query is required', 400);
 
     const events = await getEvents(
       userId,

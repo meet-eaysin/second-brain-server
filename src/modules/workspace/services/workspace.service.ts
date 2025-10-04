@@ -5,7 +5,7 @@ import {
   EWorkspaceType,
   EWorkspaceMemberRole
 } from '../types/workspace.types';
-import { ECalendarType } from '@/modules/calendar/types/calendar.types';
+import { ECalendarType } from '@/modules/calendar/types/enums.types';
 import { WorkspaceModel } from '../models/workspace.model';
 import { WorkspaceMemberModel } from '../models/workspace-member.model';
 import { createAppError, createNotFoundError, createForbiddenError } from '@/utils/error.utils';

@@ -1,12 +1,12 @@
 import cron from 'node-cron';
+import { ICalendarEvent } from '../types/calendar.types';
+import { ICalendarConnection } from '../types/connection.types';
 import {
-  ICalendarConnection,
-  ICalendarEvent,
   ECalendarProvider,
   EEventType,
   EEventStatus,
   EEventVisibility
-} from '../types/calendar.types';
+} from '../types/enums.types';
 import {
   CalendarConnectionModel,
   CalendarSyncLogModel,
@@ -16,7 +16,11 @@ import { CalendarModel } from '../models/calendar.model';
 import { CalendarEventModel } from '../models/event.model';
 import { ExternalCalendarProviderFactory } from './external-calendar.service';
 import { createNotification } from '@/modules/system/services/notifications.service';
-import { ENotificationType, ENotificationPriority, ENotificationMethod } from '@/modules/system/types/notifications.types';
+import {
+  ENotificationType,
+  ENotificationPriority,
+  ENotificationMethod
+} from '@/modules/system/types/notifications.types';
 import { generateId } from '@/utils/id-generator';
 
 /**
@@ -125,7 +129,9 @@ const syncConnection = async (connection: ICalendarConnectionDocument): Promise<
       eventsDeleted: totalDeleted
     });
 
-    console.log(`✅ Synced connection ${connection.accountEmail}: ${totalProcessed} events processed`);
+    console.log(
+      `✅ Synced connection ${connection.accountEmail}: ${totalProcessed} events processed`
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     await connection.recordSyncError(errorMessage);
@@ -168,7 +174,8 @@ const syncCalendarMetadata = async (
       await internalCalendar.save();
     } else {
       // Update existing calendar
-      internalCalendar.name = externalCalendar.summary || externalCalendar.name || internalCalendar.name;
+      internalCalendar.name =
+        externalCalendar.summary || externalCalendar.name || internalCalendar.name;
       internalCalendar.description = externalCalendar.description;
       internalCalendar.color = externalCalendar.backgroundColor || internalCalendar.color;
       internalCalendar.externalData = externalCalendar;
@@ -202,8 +209,12 @@ const syncCalendarEvents = async (
 
     // Calculate sync date range
     const now = new Date();
-    const startDate = new Date(now.getTime() - connection.syncSettings.syncPastDays * 24 * 60 * 60 * 1000);
-    const endDate = new Date(now.getTime() + connection.syncSettings.syncFutureDays * 24 * 60 * 60 * 1000);
+    const startDate = new Date(
+      now.getTime() - connection.syncSettings.syncPastDays * 24 * 60 * 60 * 1000
+    );
+    const endDate = new Date(
+      now.getTime() + connection.syncSettings.syncFutureDays * 24 * 60 * 60 * 1000
+    );
 
     // Get external events
     const externalEvents = await provider.getEvents(
@@ -296,7 +307,10 @@ const syncEvent = async (
 /**
  * Convert external event to internal format
  */
-const convertExternalEventToInternal = (provider: ECalendarProvider, externalEvent: any): Partial<ICalendarEvent> => {
+const convertExternalEventToInternal = (
+  provider: ECalendarProvider,
+  externalEvent: any
+): Partial<ICalendarEvent> => {
   const baseEvent: Partial<ICalendarEvent> = {
     type: EEventType.EVENT,
     status: EEventStatus.CONFIRMED,
@@ -315,10 +329,12 @@ const convertExternalEventToInternal = (provider: ECalendarProvider, externalEve
         isAllDay: !!externalEvent.start?.date,
         timeZone: externalEvent.start?.timeZone || 'UTC',
         status: mapGoogleStatus(externalEvent.status),
-        organizer: externalEvent.organizer ? {
-          email: externalEvent.organizer.email,
-          name: externalEvent.organizer.displayName
-        } : undefined,
+        organizer: externalEvent.organizer
+          ? {
+              email: externalEvent.organizer.email,
+              name: externalEvent.organizer.displayName
+            }
+          : undefined,
         attendees: externalEvent.attendees?.map((attendee: any) => ({
           email: attendee.email,
           name: attendee.displayName,
@@ -338,10 +354,12 @@ const convertExternalEventToInternal = (provider: ECalendarProvider, externalEve
         isAllDay: externalEvent.isAllDay,
         timeZone: externalEvent.start.timeZone || 'UTC',
         status: mapOutlookStatus(externalEvent.showAs),
-        organizer: externalEvent.organizer ? {
-          email: externalEvent.organizer.emailAddress.address,
-          name: externalEvent.organizer.emailAddress.name
-        } : undefined,
+        organizer: externalEvent.organizer
+          ? {
+              email: externalEvent.organizer.emailAddress.address,
+              name: externalEvent.organizer.emailAddress.name
+            }
+          : undefined,
         attendees: externalEvent.attendees?.map((attendee: any) => ({
           email: attendee.emailAddress.address,
           name: attendee.emailAddress.name,
@@ -370,10 +388,14 @@ const parseGoogleDateTime = (dateTime: any): Date => {
  */
 const mapGoogleStatus = (status: string): EEventStatus => {
   switch (status) {
-    case 'confirmed': return EEventStatus.CONFIRMED;
-    case 'tentative': return EEventStatus.TENTATIVE;
-    case 'cancelled': return EEventStatus.CANCELLED;
-    default: return EEventStatus.CONFIRMED;
+    case 'confirmed':
+      return EEventStatus.CONFIRMED;
+    case 'tentative':
+      return EEventStatus.TENTATIVE;
+    case 'cancelled':
+      return EEventStatus.CANCELLED;
+    default:
+      return EEventStatus.CONFIRMED;
   }
 };
 
@@ -382,11 +404,16 @@ const mapGoogleStatus = (status: string): EEventStatus => {
  */
 const mapGoogleAttendeeStatus = (status: string): string => {
   switch (status) {
-    case 'accepted': return 'accepted';
-    case 'declined': return 'declined';
-    case 'tentative': return 'tentative';
-    case 'needsAction': return 'needs_action';
-    default: return 'needs_action';
+    case 'accepted':
+      return 'accepted';
+    case 'declined':
+      return 'declined';
+    case 'tentative':
+      return 'tentative';
+    case 'needsAction':
+      return 'needs_action';
+    default:
+      return 'needs_action';
   }
 };
 
@@ -395,10 +422,14 @@ const mapGoogleAttendeeStatus = (status: string): string => {
  */
 const mapOutlookStatus = (showAs: string): EEventStatus => {
   switch (showAs) {
-    case 'busy': return EEventStatus.CONFIRMED;
-    case 'tentative': return EEventStatus.TENTATIVE;
-    case 'free': return EEventStatus.CONFIRMED;
-    default: return EEventStatus.CONFIRMED;
+    case 'busy':
+      return EEventStatus.CONFIRMED;
+    case 'tentative':
+      return EEventStatus.TENTATIVE;
+    case 'free':
+      return EEventStatus.CONFIRMED;
+    default:
+      return EEventStatus.CONFIRMED;
   }
 };
 
@@ -407,11 +438,16 @@ const mapOutlookStatus = (showAs: string): EEventStatus => {
  */
 const mapOutlookAttendeeStatus = (response: string): string => {
   switch (response) {
-    case 'accepted': return 'accepted';
-    case 'declined': return 'declined';
-    case 'tentativelyAccepted': return 'tentative';
-    case 'notResponded': return 'needs_action';
-    default: return 'needs_action';
+    case 'accepted':
+      return 'accepted';
+    case 'declined':
+      return 'declined';
+    case 'tentativelyAccepted':
+      return 'tentative';
+    case 'notResponded':
+      return 'needs_action';
+    default:
+      return 'needs_action';
   }
 };
 
@@ -423,7 +459,9 @@ const getEventLastModified = (provider: ECalendarProvider, externalEvent: any): 
     case ECalendarProvider.GOOGLE:
       return externalEvent.updated ? new Date(externalEvent.updated) : null;
     case ECalendarProvider.OUTLOOK:
-      return externalEvent.lastModifiedDateTime ? new Date(externalEvent.lastModifiedDateTime) : null;
+      return externalEvent.lastModifiedDateTime
+        ? new Date(externalEvent.lastModifiedDateTime)
+        : null;
     default:
       return null;
   }
@@ -443,11 +481,7 @@ export const refreshExpiredTokens = async (): Promise<void> => {
         const provider = ExternalCalendarProviderFactory.getProvider(connection.provider);
         const tokens = await provider.refreshToken(connection);
 
-        await connection.updateTokens(
-          tokens.accessToken,
-          tokens.refreshToken,
-          tokens.expiresIn
-        );
+        await connection.updateTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn);
 
         console.log(`✅ Refreshed token for ${connection.accountEmail}`);
       } catch (error) {
@@ -538,8 +572,4 @@ export const manualSyncConnection = async (connectionId: string, userId: string)
   }
 };
 
-export {
-  syncConnection,
-  syncCalendarEvents,
-  convertExternalEventToInternal
-};
+export { syncConnection, syncCalendarEvents, convertExternalEventToInternal };

@@ -2,12 +2,9 @@ import { google } from 'googleapis';
 import { Client, AuthenticationProvider } from '@microsoft/microsoft-graph-client';
 import axios from 'axios';
 import ical from 'ical';
-import {
-  ECalendarProvider,
-  ICalendarConnection,
-  ICreateEventRequest,
-  IUpdateEventRequest
-} from '../types/calendar.types';
+import { ECalendarProvider } from '../types/enums.types';
+import { ICalendarConnection } from '../types/connection.types';
+import { ICreateEventRequest, IUpdateEventRequest } from '../types/request.types';
 import { createAppError } from '@/utils/error.utils';
 
 // External CalendarTypes Provider Interface
