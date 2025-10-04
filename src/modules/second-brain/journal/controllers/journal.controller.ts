@@ -1,5 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { journalService } from '../services/journal.service';
+import {
+  createJournalEntry as createJournalEntryService,
+  updateJournalEntry as updateJournalEntryService,
+  getJournalEntryByDate as getJournalEntryByDateService,
+  getJournalEntries as getJournalEntriesService,
+  calculateJournalStats as calculateJournalStatsService,
+  getMoodTrends as getMoodTrendsService,
+  searchJournalEntries as searchJournalEntriesService,
+  getJournalPrompts as getJournalPromptsService
+} from '@/modules/second-brain/journal/services/journal.service';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/modules/auth';
 
@@ -9,7 +18,7 @@ export const createJournalEntry = catchAsync(
     const userId = getUserId(req);
     const entryData = req.body;
 
-    const entry = await journalService.createJournalEntry(entryData, userId);
+    const entry = await createJournalEntryService(entryData, userId);
 
     sendSuccessResponse(res, 'Journal entry created successfully', entry, 201);
   }
@@ -22,7 +31,7 @@ export const updateJournalEntry = catchAsync(
     const userId = getUserId(req);
     const updateData = req.body;
 
-    const entry = await journalService.updateJournalEntry(entryId, updateData, userId);
+    const entry = await updateJournalEntryService(entryId, updateData, userId);
 
     sendSuccessResponse(res, 'Journal entry updated successfully', entry);
   }
@@ -34,7 +43,7 @@ export const getJournalEntryByDate = catchAsync(
     const { date } = req.params;
     const userId = getUserId(req);
 
-    const entry = await journalService.getJournalEntryByDate(date, userId);
+    const entry = await getJournalEntryByDateService(date, userId);
 
     if (entry) {
       sendSuccessResponse(res, 'Journal entry retrieved successfully', entry);
@@ -59,7 +68,7 @@ export const getJournalEntries = catchAsync(
       mood: mood as string
     };
 
-    const result = await journalService.getJournalEntries(userId, options);
+    const result = await getJournalEntriesService(userId, options);
 
     sendSuccessResponse(res, 'Journal entries retrieved successfully', result);
   }
@@ -70,7 +79,7 @@ export const getJournalStats = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
 
-    const stats = await journalService.calculateJournalStats(userId);
+    const stats = await calculateJournalStatsService(userId);
 
     sendSuccessResponse(res, 'Journal statistics calculated successfully', stats);
   }
@@ -82,11 +91,7 @@ export const getMoodTrends = catchAsync(
     const userId = getUserId(req);
     const { startDate, endDate } = req.query;
 
-    const trends = await journalService.getMoodTrends(
-      userId,
-      startDate as string,
-      endDate as string
-    );
+    const trends = await getMoodTrendsService(userId, startDate as string, endDate as string);
 
     sendSuccessResponse(res, 'Mood trends retrieved successfully', trends);
   }
@@ -108,7 +113,7 @@ export const searchJournalEntries = catchAsync(
       offset: offset ? parseInt(offset as string) : undefined
     };
 
-    const result = await journalService.searchJournalEntries(userId, q as string, options);
+    const result = await searchJournalEntriesService(userId, q as string, options);
 
     sendSuccessResponse(res, 'Journal search completed successfully', result);
   }
@@ -117,7 +122,7 @@ export const searchJournalEntries = catchAsync(
 // Get journal prompts
 export const getJournalPrompts = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const prompts = journalService.getJournalPrompts();
+    const prompts = getJournalPromptsService();
 
     sendSuccessResponse(res, 'Journal prompts retrieved successfully', prompts);
   }
@@ -129,9 +134,9 @@ export const getTodaysEntry = catchAsync(
     const userId = getUserId(req);
     const today = new Date().toISOString().split('T')[0];
 
-    const entry = await journalService.getJournalEntryByDate(today, userId);
+    const entry = await getJournalEntryByDateService(today, userId);
 
-    sendSuccessResponse(res, 'Today\'s journal entry retrieved successfully', entry);
+    sendSuccessResponse(res, "Today's journal entry retrieved successfully", entry);
   }
 );
 
@@ -143,15 +148,15 @@ export const createOrUpdateTodaysEntry = catchAsync(
     const entryData = { ...req.body, date: today };
 
     // Check if entry exists for today
-    const existingEntry = await journalService.getJournalEntryByDate(today, userId);
+    const existingEntry = await getJournalEntryByDateService(today, userId);
 
     let entry;
     if (existingEntry) {
-      entry = await journalService.updateJournalEntry(existingEntry.id, entryData, userId);
-      sendSuccessResponse(res, 'Today\'s journal entry updated successfully', entry);
+      entry = await updateJournalEntryService(existingEntry.id, entryData, userId);
+      sendSuccessResponse(res, "Today's journal entry updated successfully", entry);
     } else {
-      entry = await journalService.createJournalEntry(entryData, userId);
-      sendSuccessResponse(res, 'Today\'s journal entry created successfully', entry, 201);
+      entry = await createJournalEntryService(entryData, userId);
+      sendSuccessResponse(res, "Today's journal entry created successfully", entry, 201);
     }
   }
 );
@@ -169,7 +174,7 @@ export const getJournalCalendar = catchAsync(
     const startDate = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`;
     const endDate = new Date(targetYear, targetMonth, 0).toISOString().split('T')[0];
 
-    const { entries } = await journalService.getJournalEntries(userId, {
+    const { entries } = await getJournalEntriesService(userId, {
       startDate,
       endDate
     });
@@ -193,12 +198,12 @@ export const getJournalInsights = catchAsync(
     const userId = getUserId(req);
     const { period } = req.query; // 'week', 'month', 'year'
 
-    const stats = await journalService.calculateJournalStats(userId);
-    
+    const stats = await calculateJournalStatsService(userId);
+
     // Calculate date range based on period
     const now = new Date();
     let startDate: string;
-    
+
     switch (period) {
       case 'week':
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -214,7 +219,7 @@ export const getJournalInsights = catchAsync(
         startDate = `${now.getFullYear()}-01-01`;
     }
 
-    const trends = await journalService.getMoodTrends(userId, startDate);
+    const trends = await getMoodTrendsService(userId, startDate);
 
     // Generate insights
     const insights = {
@@ -241,15 +246,15 @@ export const getJournalInsights = catchAsync(
 // Helper functions for insights
 function analyzeMoodTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
   if (trends.length < 2) return 'stable';
-  
+
   const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
   const secondHalf = trends.slice(Math.floor(trends.length / 2));
-  
+
   const firstAvg = firstHalf.reduce((sum, t) => sum + t.moodScore, 0) / firstHalf.length;
   const secondAvg = secondHalf.reduce((sum, t) => sum + t.moodScore, 0) / secondHalf.length;
-  
+
   const diff = secondAvg - firstAvg;
-  
+
   if (diff > 0.2) return 'improving';
   if (diff < -0.2) return 'declining';
   return 'stable';
@@ -257,15 +262,15 @@ function analyzeMoodTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
 
 function analyzeEnergyTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
   if (trends.length < 2) return 'stable';
-  
+
   const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
   const secondHalf = trends.slice(Math.floor(trends.length / 2));
-  
+
   const firstAvg = firstHalf.reduce((sum, t) => sum + t.energyLevel, 0) / firstHalf.length;
   const secondAvg = secondHalf.reduce((sum, t) => sum + t.energyLevel, 0) / secondHalf.length;
-  
+
   const diff = secondAvg - firstAvg;
-  
+
   if (diff > 0.5) return 'improving';
   if (diff < -0.5) return 'declining';
   return 'stable';
@@ -273,43 +278,51 @@ function analyzeEnergyTrend(trends: any[]): 'improving' | 'declining' | 'stable'
 
 function calculateConsistencyScore(stats: any): number {
   if (stats.totalEntries === 0) return 0;
-  
+
   // Calculate based on streak and total entries
   const streakScore = Math.min(stats.currentStreak / 30, 1) * 50; // Max 50 points for 30-day streak
   const frequencyScore = Math.min(stats.totalEntries / 365, 1) * 50; // Max 50 points for daily entries for a year
-  
+
   return Math.round(streakScore + frequencyScore);
 }
 
 function generateRecommendations(stats: any, trends: any[]): string[] {
   const recommendations = [];
-  
+
   if (stats.currentStreak === 0) {
     recommendations.push('Start building a journaling habit by writing just one sentence each day');
   } else if (stats.currentStreak < 7) {
-    recommendations.push('You\'re building momentum! Try to reach a 7-day streak');
+    recommendations.push("You're building momentum! Try to reach a 7-day streak");
   }
-  
+
   if (stats.averageMood < 3) {
-    recommendations.push('Consider exploring what might be affecting your mood and discuss with a professional if needed');
+    recommendations.push(
+      'Consider exploring what might be affecting your mood and discuss with a professional if needed'
+    );
   }
-  
+
   if (stats.averageEnergyLevel < 5) {
-    recommendations.push('Low energy levels might indicate need for better sleep, nutrition, or exercise');
+    recommendations.push(
+      'Low energy levels might indicate need for better sleep, nutrition, or exercise'
+    );
   }
-  
+
   if (trends.length > 0) {
     const moodTrend = analyzeMoodTrend(trends);
     if (moodTrend === 'declining') {
       recommendations.push('Your mood trend shows some decline - consider what changes might help');
     } else if (moodTrend === 'improving') {
-      recommendations.push('Great job! Your mood has been improving - keep up whatever you\'re doing');
+      recommendations.push(
+        "Great job! Your mood has been improving - keep up whatever you're doing"
+      );
     }
   }
-  
+
   if (stats.totalEntries > 30) {
-    recommendations.push('You\'ve built a great journaling habit! Consider reviewing past entries for patterns');
+    recommendations.push(
+      "You've built a great journaling habit! Consider reviewing past entries for patterns"
+    );
   }
-  
+
   return recommendations;
 }
