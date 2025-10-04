@@ -6,17 +6,17 @@ import {
   EFormulaDataType,
   IFormulaFunction
 } from '../types/formula.types';
-import { formulaParserService, FormulaParserService } from './formula-parser.service';
+import { formulaParserService } from './formula-parser.service';
 import { formulaFunctionsService } from './formula-functions.service';
 import { EPropertyType } from '@/modules/core/types/property.types';
 
-export class FormulaValidatorService {
+export const formulaValidatorService = {
   // Validate formula expression
-  validate(
+  validate: (
     expression: string,
     availableProperties: Array<{ name: string; type: EPropertyType }> = [],
     maxComplexity: number = 100
-  ): IFormulaValidationResult {
+  ): IFormulaValidationResult => {
     const errors: IFormulaError[] = [];
     const warnings: IFormulaWarning[] = [];
     let dependencies: string[] = [];
@@ -43,35 +43,42 @@ export class FormulaValidatorService {
       }
 
       // Extract dependencies
-      dependencies = FormulaParserService.getPropertyReferences(parseResult.ast);
+      dependencies = formulaParserService.getPropertyReferences(parseResult.ast);
 
       // Validate property references
-      this.validatePropertyReferences(dependencies, availableProperties, errors);
+      formulaValidatorService.validatePropertyReferences(dependencies, availableProperties, errors);
 
       // Validate function calls
-      this.validateFunctionCalls(parseResult.ast, errors, warnings);
+      formulaValidatorService.validateFunctionCalls(parseResult.ast, errors, warnings);
 
       // Validate data types
-      returnType = this.validateDataTypes(parseResult.ast, availableProperties, errors, warnings);
+      returnType = formulaValidatorService.validateDataTypes(
+        parseResult.ast,
+        availableProperties,
+        errors,
+        warnings
+      );
 
       // Calculate complexity
-      estimatedComplexity = FormulaParserService.calculateComplexity(parseResult.ast);
+      estimatedComplexity = formulaParserService.calculateComplexity(parseResult.ast);
 
       // Check complexity limit
       if (estimatedComplexity > maxComplexity) {
         warnings.push({
           type: 'performance',
           message: `Formula complexity (${estimatedComplexity}) exceeds recommended limit (${maxComplexity})`,
-          suggestions: ['Consider breaking down the formula into smaller parts', 'Use simpler functions where possible']
+          suggestions: [
+            'Consider breaking down the formula into smaller parts',
+            'Use simpler functions where possible'
+          ]
         });
       }
 
       // Check for circular dependencies
-      this.checkCircularDependencies(dependencies, expression, errors);
+      formulaValidatorService.checkCircularDependencies(dependencies, expression, errors);
 
       // Performance warnings
-      this.checkPerformanceIssues(parseResult.ast, warnings);
-
+      formulaValidatorService.checkPerformanceIssues(parseResult.ast, warnings);
     } catch (error) {
       errors.push({
         type: 'syntax',
@@ -88,19 +95,28 @@ export class FormulaValidatorService {
       returnType,
       estimatedComplexity
     };
-  }
+  },
 
   // Validate property references
-  private validatePropertyReferences(
+  validatePropertyReferences: (
     dependencies: string[],
     availableProperties: Array<{ name: string; type: EPropertyType }>,
     errors: IFormulaError[]
-  ): void {
+  ): void => {
     const propertyMap = new Map(availableProperties.map(p => [p.name.toLowerCase(), p]));
 
     dependencies.forEach(propName => {
       // Skip special properties
-      const specialProps = ['id', 'recordid', 'databaseid', 'currentuser', 'currentuserid', 'currentuseremail', 'now', 'today'];
+      const specialProps = [
+        'id',
+        'recordid',
+        'databaseid',
+        'currentuser',
+        'currentuserid',
+        'currentuseremail',
+        'now',
+        'today'
+      ];
       if (specialProps.includes(propName.toLowerCase())) {
         return;
       }
@@ -112,16 +128,20 @@ export class FormulaValidatorService {
           suggestions: [
             'Check property name spelling',
             'Verify the property exists in this database',
-            ...this.suggestSimilarProperties(propName, availableProperties)
+            ...formulaValidatorService.suggestSimilarProperties(propName, availableProperties)
           ]
         });
       }
     });
-  }
+  },
 
   // Validate function calls
-  private validateFunctionCalls(ast: IFormulaASTNode, errors: IFormulaError[], warnings: IFormulaWarning[]): void {
-    this.traverseAST(ast, (node) => {
+  validateFunctionCalls: (
+    ast: IFormulaASTNode,
+    errors: IFormulaError[],
+    warnings: IFormulaWarning[]
+  ): void => {
+    formulaValidatorService.traverseAST(ast, (node: IFormulaASTNode) => {
       if (node.type === 'function' && node.functionName) {
         const func = formulaFunctionsService.getFunction(node.functionName);
 
@@ -130,7 +150,7 @@ export class FormulaValidatorService {
             type: 'semantic',
             message: `Unknown function: ${node.functionName}`,
             position: node.position,
-            suggestions: this.suggestSimilarFunctions(node.functionName)
+            suggestions: formulaValidatorService.suggestSimilarFunctions(node.functionName)
           });
           return;
         }
@@ -158,7 +178,10 @@ export class FormulaValidatorService {
           });
         }
 
-        if (argCount > func.parameters.length && !func.parameters.some(p => Array.isArray(p.type))) {
+        if (
+          argCount > func.parameters.length &&
+          !func.parameters.some(p => Array.isArray(p.type))
+        ) {
           errors.push({
             type: 'semantic',
             message: `Function ${node.functionName} accepts at most ${func.parameters.length} arguments, got ${argCount}`,
@@ -168,27 +191,27 @@ export class FormulaValidatorService {
         }
       }
     });
-  }
+  },
 
   // Validate data types and infer return type
-  private validateDataTypes(
+  validateDataTypes: (
     ast: IFormulaASTNode,
     availableProperties: Array<{ name: string; type: EPropertyType }>,
     errors: IFormulaError[],
     warnings: IFormulaWarning[]
-  ): EFormulaDataType {
+  ): EFormulaDataType => {
     const propertyTypeMap = new Map(availableProperties.map(p => [p.name.toLowerCase(), p.type]));
 
-    return this.inferNodeType(ast, propertyTypeMap, errors, warnings);
-  }
+    return formulaValidatorService.inferNodeType(ast, propertyTypeMap, errors, warnings);
+  },
 
   // Infer data type of AST node
-  private inferNodeType(
+  inferNodeType: (
     node: IFormulaASTNode,
     propertyTypeMap: Map<string, EPropertyType>,
     errors: IFormulaError[],
     warnings: IFormulaWarning[]
-  ): EFormulaDataType {
+  ): EFormulaDataType => {
     switch (node.type) {
       case 'literal':
         if (typeof node.value === 'number') return EFormulaDataType.NUMBER;
@@ -200,7 +223,7 @@ export class FormulaValidatorService {
       case 'property':
         if (node.propertyName) {
           const propType = propertyTypeMap.get(node.propertyName.toLowerCase());
-          return this.propertyTypeToFormulaType(propType || EPropertyType.TEXT);
+          return formulaValidatorService.propertyTypeToFormulaType(propType || EPropertyType.TEXT);
         }
         return EFormulaDataType.ANY;
 
@@ -212,7 +235,12 @@ export class FormulaValidatorService {
         return EFormulaDataType.ANY;
 
       case 'operator':
-        return this.inferOperatorReturnType(node, propertyTypeMap, errors, warnings);
+        return formulaValidatorService.inferOperatorReturnType(
+          node,
+          propertyTypeMap,
+          errors,
+          warnings
+        );
 
       case 'array':
         return EFormulaDataType.ARRAY;
@@ -220,15 +248,15 @@ export class FormulaValidatorService {
       default:
         return EFormulaDataType.ANY;
     }
-  }
+  },
 
   // Infer operator return type
-  private inferOperatorReturnType(
+  inferOperatorReturnType: (
     node: IFormulaASTNode,
     propertyTypeMap: Map<string, EPropertyType>,
     errors: IFormulaError[],
     warnings: IFormulaWarning[]
-  ): EFormulaDataType {
+  ): EFormulaDataType => {
     if (!node.operator || !node.children) {
       return EFormulaDataType.ANY;
     }
@@ -259,10 +287,10 @@ export class FormulaValidatorService {
       default:
         return EFormulaDataType.ANY;
     }
-  }
+  },
 
   // Convert property type to formula data type
-  private propertyTypeToFormulaType(propertyType: EPropertyType): EFormulaDataType {
+  propertyTypeToFormulaType: (propertyType: EPropertyType): EFormulaDataType => {
     switch (propertyType) {
       case EPropertyType.NUMBER:
       case EPropertyType.CURRENCY:
@@ -291,27 +319,34 @@ export class FormulaValidatorService {
       default:
         return EFormulaDataType.TEXT;
     }
-  }
+  },
 
   // Check for circular dependencies
-  private checkCircularDependencies(dependencies: string[], currentFormula: string, errors: IFormulaError[]): void {
+  checkCircularDependencies: (
+    dependencies: string[],
+    currentFormula: string,
+    errors: IFormulaError[]
+  ): void => {
     // This would require access to other formulas in the database
     // For now, we'll implement a basic check
 
     // Check if formula references itself (basic case)
-    if (dependencies.some(dep => dep.toLowerCase().includes('formula') || dep.toLowerCase().includes('calculated'))) {
+    if (
+      dependencies.some(
+        dep => dep.toLowerCase().includes('formula') || dep.toLowerCase().includes('calculated')
+      )
+    ) {
       errors.push({
         type: 'circular_dependency',
         message: 'Potential circular dependency detected',
         suggestions: ['Review formula dependencies', 'Avoid self-referencing formulas']
       });
     }
-  }
+  },
 
   // Check for performance issues
-  private checkPerformanceIssues(ast: IFormulaASTNode, warnings: IFormulaWarning[]): void {
+  checkPerformanceIssues: (ast: IFormulaASTNode, warnings: IFormulaWarning[]): void => {
     let functionCallCount = 0;
-    const nestedDepth = 0;
     let maxDepth = 0;
 
     const checkNode = (node: IFormulaASTNode, depth: number) => {
@@ -343,10 +378,13 @@ export class FormulaValidatorService {
         suggestions: ['Break down complex expressions', 'Use intermediate calculations']
       });
     }
-  }
+  },
 
   // Suggest similar properties
-  private suggestSimilarProperties(propName: string, availableProperties: Array<{ name: string; type: EPropertyType }>): string[] {
+  suggestSimilarProperties: (
+    propName: string,
+    availableProperties: Array<{ name: string; type: EPropertyType }>
+  ): string[] => {
     const suggestions: string[] = [];
     const lowerPropName = propName.toLowerCase();
 
@@ -360,21 +398,26 @@ export class FormulaValidatorService {
       }
 
       // Contains match
-      if (lowerAvailableName.includes(lowerPropName) || lowerPropName.includes(lowerAvailableName)) {
+      if (
+        lowerAvailableName.includes(lowerPropName) ||
+        lowerPropName.includes(lowerAvailableName)
+      ) {
         suggestions.push(`Did you mean '${prop.name}'?`);
       }
 
       // Levenshtein distance check (simple implementation)
-      if (this.calculateLevenshteinDistance(lowerPropName, lowerAvailableName) <= 2) {
+      if (
+        formulaValidatorService.calculateLevenshteinDistance(lowerPropName, lowerAvailableName) <= 2
+      ) {
         suggestions.push(`Did you mean '${prop.name}'?`);
       }
     });
 
     return suggestions.slice(0, 3); // Limit to 3 suggestions
-  }
+  },
 
   // Suggest similar functions
-  private suggestSimilarFunctions(functionName: string): string[] {
+  suggestSimilarFunctions: (functionName: string): string[] => {
     const suggestions: string[] = [];
     const lowerFuncName = functionName.toLowerCase();
     const allFunctions = formulaFunctionsService.getAllFunctions();
@@ -383,7 +426,10 @@ export class FormulaValidatorService {
       const lowerAvailableName = func.name.toLowerCase();
 
       // Contains match
-      if (lowerAvailableName.includes(lowerFuncName) || lowerFuncName.includes(lowerAvailableName)) {
+      if (
+        lowerAvailableName.includes(lowerFuncName) ||
+        lowerFuncName.includes(lowerAvailableName)
+      ) {
         suggestions.push(`Did you mean '${func.name}'?`);
       }
 
@@ -398,11 +444,13 @@ export class FormulaValidatorService {
     });
 
     return suggestions.slice(0, 3); // Limit to 3 suggestions
-  }
+  },
 
   // Calculate Levenshtein distance
-  private calculateLevenshteinDistance(str1: string, str2: string): number {
-    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+  calculateLevenshteinDistance: (str1: string, str2: string): number => {
+    const matrix = Array(str2.length + 1)
+      .fill(null)
+      .map(() => Array(str1.length + 1).fill(null));
 
     for (let i = 0; i <= str1.length; i++) {
       matrix[0][i] = i;
@@ -424,22 +472,26 @@ export class FormulaValidatorService {
     }
 
     return matrix[str2.length][str1.length];
-  }
+  },
 
   // Traverse AST and apply function to each node
-  private traverseAST(node: IFormulaASTNode, fn: (node: IFormulaASTNode) => void): void {
+  traverseAST: (node: IFormulaASTNode, fn: (node: IFormulaASTNode) => void): void => {
     fn(node);
     if (node.children) {
-      node.children.forEach(child => this.traverseAST(child, fn));
+      node.children.forEach(child => formulaValidatorService.traverseAST(child, fn));
     }
-  }
+  },
 
   // Validate formula against specific return type
-  validateReturnType(expression: string, expectedType: EPropertyType, availableProperties: Array<{ name: string; type: EPropertyType }>): IFormulaValidationResult {
-    const result = this.validate(expression, availableProperties);
+  validateReturnType: (
+    expression: string,
+    expectedType: EPropertyType,
+    availableProperties: Array<{ name: string; type: EPropertyType }>
+  ): IFormulaValidationResult => {
+    const result = formulaValidatorService.validate(expression, availableProperties);
 
     if (result.isValid) {
-      const expectedFormulaType = this.propertyTypeToFormulaType(expectedType);
+      const expectedFormulaType = formulaValidatorService.propertyTypeToFormulaType(expectedType);
 
       if (result.returnType !== expectedFormulaType && result.returnType !== EFormulaDataType.ANY) {
         result.warnings.push({
@@ -452,6 +504,4 @@ export class FormulaValidatorService {
 
     return result;
   }
-}
-
-export const formulaValidatorService = new FormulaValidatorService();
+};

@@ -1,6 +1,6 @@
-import { 
-  IFormulaASTNode, 
-  IFormulaContext, 
+import {
+  IFormulaASTNode,
+  IFormulaContext,
   IFormulaExecutionResult,
   EFormulaDataType,
   EFormulaOperator,
@@ -26,7 +26,9 @@ export class FormulaEvaluatorService {
         warnings
       };
     } catch (error) {
-      throw new Error(`Formula evaluation error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Formula evaluation error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -65,39 +67,43 @@ export class FormulaEvaluatorService {
       case 'id':
       case 'recordid':
         return context.recordId;
-      
+
       case 'databaseid':
         return context.databaseId;
-      
+
       case 'currentuser':
         return context.currentUser?.name || '';
-      
+
       case 'currentuserid':
         return context.currentUser?.id || '';
-      
+
       case 'currentuseremail':
         return context.currentUser?.email || '';
-      
+
       case 'now':
         return new Date();
-      
+
       case 'today':
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return today;
-      
+
       default:
         // Check variables
         if (context.variables && context.variables.hasOwnProperty(propertyName)) {
           return context.variables[propertyName];
         }
-        
+
         throw new Error(`Property not found: ${propertyName}`);
     }
   }
 
   // Evaluate function call
-  private async evaluateFunction(functionName: string, argNodes: IFormulaASTNode[], context: IFormulaContext): Promise<any> {
+  private async evaluateFunction(
+    functionName: string,
+    argNodes: IFormulaASTNode[],
+    context: IFormulaContext
+  ): Promise<any> {
     // Evaluate all arguments
     const args = await Promise.all(argNodes.map(arg => this.evaluateNode(arg, context)));
 
@@ -106,7 +112,11 @@ export class FormulaEvaluatorService {
   }
 
   // Evaluate operator
-  private async evaluateOperator(operator: EFormulaOperator, operands: IFormulaASTNode[], context: IFormulaContext): Promise<any> {
+  private async evaluateOperator(
+    operator: EFormulaOperator,
+    operands: IFormulaASTNode[],
+    context: IFormulaContext
+  ): Promise<any> {
     if (operands.length === 1) {
       // Unary operator
       const operand = await this.evaluateNode(operands[0], context);
@@ -126,10 +136,10 @@ export class FormulaEvaluatorService {
     switch (operator) {
       case EFormulaOperator.NOT:
         return !this.toBoolean(operand);
-      
+
       case EFormulaOperator.SUBTRACT:
         return -this.toNumber(operand);
-      
+
       default:
         throw new Error(`Unknown unary operator: ${operator}`);
     }
@@ -141,49 +151,49 @@ export class FormulaEvaluatorService {
       // Arithmetic
       case EFormulaOperator.ADD:
         return this.toNumber(left) + this.toNumber(right);
-      
+
       case EFormulaOperator.SUBTRACT:
         return this.toNumber(left) - this.toNumber(right);
-      
+
       case EFormulaOperator.MULTIPLY:
         return this.toNumber(left) * this.toNumber(right);
-      
+
       case EFormulaOperator.DIVIDE:
         const rightNum = this.toNumber(right);
         if (rightNum === 0) {
           throw new Error('Division by zero');
         }
         return this.toNumber(left) / rightNum;
-      
+
       case EFormulaOperator.MODULO:
         return this.toNumber(left) % this.toNumber(right);
-      
+
       case EFormulaOperator.POWER:
         return Math.pow(this.toNumber(left), this.toNumber(right));
 
       // Comparison
       case EFormulaOperator.EQUAL:
         return this.compareValues(left, right) === 0;
-      
+
       case EFormulaOperator.NOT_EQUAL:
         return this.compareValues(left, right) !== 0;
-      
+
       case EFormulaOperator.GREATER_THAN:
         return this.compareValues(left, right) > 0;
-      
+
       case EFormulaOperator.GREATER_THAN_OR_EQUAL:
         return this.compareValues(left, right) >= 0;
-      
+
       case EFormulaOperator.LESS_THAN:
         return this.compareValues(left, right) < 0;
-      
+
       case EFormulaOperator.LESS_THAN_OR_EQUAL:
         return this.compareValues(left, right) <= 0;
 
       // Logical
       case EFormulaOperator.AND:
         return this.toBoolean(left) && this.toBoolean(right);
-      
+
       case EFormulaOperator.OR:
         return this.toBoolean(left) || this.toBoolean(right);
 
@@ -201,20 +211,20 @@ export class FormulaEvaluatorService {
     if (typeof value === 'number') {
       return isNaN(value) ? 0 : value;
     }
-    
+
     if (typeof value === 'string') {
       const num = parseFloat(value);
       return isNaN(num) ? 0 : num;
     }
-    
+
     if (typeof value === 'boolean') {
       return value ? 1 : 0;
     }
-    
+
     if (value instanceof Date) {
       return value.getTime();
     }
-    
+
     return 0;
   }
 
@@ -222,23 +232,23 @@ export class FormulaEvaluatorService {
     if (value === null || value === undefined) {
       return '';
     }
-    
+
     if (typeof value === 'string') {
       return value;
     }
-    
+
     if (typeof value === 'number') {
       return value.toString();
     }
-    
+
     if (typeof value === 'boolean') {
       return value ? 'true' : 'false';
     }
-    
+
     if (value instanceof Date) {
       return value.toISOString();
     }
-    
+
     return String(value);
   }
 
@@ -246,19 +256,19 @@ export class FormulaEvaluatorService {
     if (typeof value === 'boolean') {
       return value;
     }
-    
+
     if (typeof value === 'number') {
       return value !== 0 && !isNaN(value);
     }
-    
+
     if (typeof value === 'string') {
       return value.trim() !== '';
     }
-    
+
     if (value instanceof Date) {
       return !isNaN(value.getTime());
     }
-    
+
     return value !== null && value !== undefined;
   }
 
@@ -266,7 +276,7 @@ export class FormulaEvaluatorService {
     if (value instanceof Date) {
       return value;
     }
-    
+
     if (typeof value === 'string' || typeof value === 'number') {
       const date = new Date(value);
       if (isNaN(date.getTime())) {
@@ -274,7 +284,7 @@ export class FormulaEvaluatorService {
       }
       return date;
     }
-    
+
     throw new Error(`Cannot convert to date: ${value}`);
   }
 
@@ -297,7 +307,7 @@ export class FormulaEvaluatorService {
         return left.localeCompare(right);
       }
       if (typeof left === 'boolean') {
-        return left === right ? 0 : (left ? 1 : -1);
+        return left === right ? 0 : left ? 1 : -1;
       }
       if (left instanceof Date && right instanceof Date) {
         return left.getTime() - right.getTime();
@@ -315,27 +325,27 @@ export class FormulaEvaluatorService {
     if (value === null || value === undefined) {
       return EFormulaDataType.NULL;
     }
-    
+
     if (typeof value === 'number') {
       return EFormulaDataType.NUMBER;
     }
-    
+
     if (typeof value === 'string') {
       return EFormulaDataType.TEXT;
     }
-    
+
     if (typeof value === 'boolean') {
       return EFormulaDataType.BOOLEAN;
     }
-    
+
     if (value instanceof Date) {
       return EFormulaDataType.DATE;
     }
-    
+
     if (Array.isArray(value)) {
       return EFormulaDataType.ARRAY;
     }
-    
+
     return EFormulaDataType.ANY;
   }
 
@@ -369,11 +379,11 @@ export class FormulaEvaluatorService {
           case 'short':
             return value.toLocaleDateString();
           case 'long':
-            return value.toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            return value.toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             });
           case 'time':
             return value.toLocaleTimeString();

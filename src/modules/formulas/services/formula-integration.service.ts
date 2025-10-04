@@ -1,6 +1,10 @@
 import { ObjectId } from 'mongodb';
-import { formulaEngineService } from './formula-engine.service';
-import { FormulaPropertyModel, FormulaCacheModel, FormulaPerformanceModel } from '../models/formula.model';
+import { formulaEngine } from './formula-engine';
+import {
+  FormulaPropertyModel,
+  FormulaCacheModel,
+  FormulaPerformanceModel
+} from '../models/formula.model';
 import { RecordModel } from '@/modules/database/models/record.model';
 import { PropertyModel } from '@/modules/database/models/property.model';
 import { DatabaseModel } from '@/modules/database/models/database.model';
@@ -47,23 +51,23 @@ export class FormulaIntegrationService {
 
     // Add related records if needed
     if (formula.dependencies.some(dep => this.isRelationProperty(dep, propertyMap))) {
-      context.relatedRecords = await this.getRelatedRecords(record, formula.dependencies, propertyMap);
+      context.relatedRecords = await this.getRelatedRecords(
+        record,
+        formula.dependencies,
+        propertyMap
+      );
     }
 
     try {
       // Execute formula
-      const result = await formulaEngineService.executeFormula(
-        formula.expression,
-        context,
-        {
-          cacheEnabled: formula.cacheEnabled,
-          cacheTTL: formula.cacheTTL,
-          errorHandling: formula.errorHandling,
-          defaultValue: formula.defaultValue,
-          precision: formula.precision,
-          format: formula.format
-        }
-      );
+      const result = await formulaEngine.executeFormula(formula.expression, context, {
+        cacheEnabled: formula.cacheEnabled,
+        cacheTTL: formula.cacheTTL,
+        errorHandling: formula.errorHandling,
+        defaultValue: formula.defaultValue,
+        precision: formula.precision,
+        format: formula.format
+      });
 
       // Record performance metrics
       await FormulaPerformanceModel.recordExecution(
@@ -73,14 +77,9 @@ export class FormulaIntegrationService {
       );
 
       return result.value;
-
     } catch (error) {
       // Record error in performance metrics
-      await FormulaPerformanceModel.recordExecution(
-        formula.id.toString(),
-        0,
-        false
-      );
+      await FormulaPerformanceModel.recordExecution(formula.id.toString(), 0, false);
 
       throw error;
     }
@@ -101,9 +100,10 @@ export class FormulaIntegrationService {
     const formulas = await FormulaPropertyModel.findByDatabase(record.databaseId.toString());
 
     // Filter formulas that depend on changed properties
-    const affectedFormulas = formulas.filter(formula =>
-      changedProperties.length === 0 ||
-      formula.dependencies.some(dep => changedProperties.includes(dep))
+    const affectedFormulas = formulas.filter(
+      formula =>
+        changedProperties.length === 0 ||
+        formula.dependencies.some(dep => changedProperties.includes(dep))
     );
 
     const results: Record<string, any> = {};
@@ -125,7 +125,6 @@ export class FormulaIntegrationService {
           lastEditedAt: new Date(),
           lastEditedBy: new ObjectId(userId)
         });
-
       } catch (error) {
         console.error(`Error calculating formula ${formula.propertyName}:`, error);
         results[formula.propertyName] = formula.defaultValue || null;
@@ -158,14 +157,13 @@ export class FormulaIntegrationService {
     }));
 
     // Validate formula expression
-    const validation = formulaEngineService.validateFormula(
-      expression,
-      availableProperties,
-      returnType
-    );
+    const validation = formulaEngine.validateFormula(expression, availableProperties, returnType);
 
     if (!validation.isValid) {
-      throw createAppError(`Formula validation failed: ${validation.errors.map(e => e.message).join(', ')}`, 400);
+      throw createAppError(
+        `Formula validation failed: ${validation.errors.map(e => e.message).join(', ')}`,
+        400
+      );
     }
 
     // Create formula property configuration
@@ -175,7 +173,7 @@ export class FormulaIntegrationService {
       expression,
       returnType,
       dependencies: validation.dependencies,
-      complexity: validation.estimatedComplexity,
+      complexity: validation.complexity,
       ...config,
       createdBy: new ObjectId(userId),
       updatedBy: new ObjectId(userId)
@@ -255,10 +253,7 @@ export class FormulaIntegrationService {
     await FormulaCacheModel.deleteMany({ propertyName });
 
     // Remove property values from all records
-    await RecordModel.updateMany(
-      { databaseId },
-      { $unset: { [`properties.${propertyName}`]: 1 } }
-    );
+    await RecordModel.updateMany({ databaseId }, { $unset: { [`properties.${propertyName}`]: 1 } });
   }
 
   // Recalculate formula for all records in database
@@ -295,10 +290,7 @@ export class FormulaIntegrationService {
   }
 
   // Get formula property suggestions for database
-  async getFormulaSuggestions(
-    databaseId: string,
-    context?: string
-  ): Promise<any[]> {
+  async getFormulaSuggestions(databaseId: string, context?: string): Promise<any[]> {
     const properties = await PropertyModel.find({ databaseId });
     const database = await DatabaseModel.findById(databaseId);
 
@@ -313,7 +305,10 @@ export class FormulaIntegrationService {
     if (numericProps.length >= 2) {
       suggestions.push({
         name: 'Total',
-        expression: `SUM(${numericProps.slice(0, 2).map(p => `[${p.name}]`).join(', ')})`,
+        expression: `SUM(${numericProps
+          .slice(0, 2)
+          .map(p => `[${p.name}]`)
+          .join(', ')})`,
         description: 'Sum of numeric properties',
         category: 'math',
         confidence: 0.8
@@ -321,7 +316,10 @@ export class FormulaIntegrationService {
 
       suggestions.push({
         name: 'Average',
-        expression: `AVERAGE(${numericProps.slice(0, 2).map(p => `[${p.name}]`).join(', ')})`,
+        expression: `AVERAGE(${numericProps
+          .slice(0, 2)
+          .map(p => `[${p.name}]`)
+          .join(', ')})`,
         description: 'Average of numeric properties',
         category: 'math',
         confidence: 0.7
@@ -336,7 +334,10 @@ export class FormulaIntegrationService {
     if (textProps.length >= 2) {
       suggestions.push({
         name: 'Full Name',
-        expression: `CONCAT(${textProps.slice(0, 2).map(p => `[${p.name}]`).join(', " ", ')})`,
+        expression: `CONCAT(${textProps
+          .slice(0, 2)
+          .map(p => `[${p.name}]`)
+          .join(', " ", ')})`,
         description: 'Concatenate text properties',
         category: 'text',
         confidence: 0.6
@@ -381,7 +382,10 @@ export class FormulaIntegrationService {
   // Private helper methods
   private isRelationProperty(propertyName: string, propertyMap: Map<string, any>): boolean {
     const property = propertyMap.get(propertyName);
-    return property && [EPropertyType.RELATION, EPropertyType.ROLLUP, EPropertyType.LOOKUP].includes(property.type);
+    return (
+      property &&
+      [EPropertyType.RELATION, EPropertyType.ROLLUP, EPropertyType.LOOKUP].includes(property.type)
+    );
   }
 
   private async getRelatedRecords(
@@ -422,11 +426,7 @@ export class FormulaIntegrationService {
 
     for (const record of records) {
       try {
-        await this.recalculateRecordFormulas(
-          record.id.toString(),
-          propertyNames,
-          userId
-        );
+        await this.recalculateRecordFormulas(record.id.toString(), propertyNames, userId);
         updated++;
       } catch (error) {
         console.error(`Error recalculating formulas for record ${record._id}:`, error);

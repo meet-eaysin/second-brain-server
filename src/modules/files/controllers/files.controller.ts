@@ -16,7 +16,7 @@ export const uploadFile = catchAsync(
     }
 
     const { description, category, isPublic } = req.body;
-    
+
     const fileData = {
       buffer: req.file.buffer,
       originalName: req.file.originalname,
@@ -46,7 +46,7 @@ export const bulkUploadFiles = catchAsync(
     }
 
     const { category, isPublic } = req.body;
-    
+
     const filesData = files.map(file => ({
       buffer: file.buffer,
       originalName: file.originalname,
@@ -85,11 +85,11 @@ export const downloadFile = catchAsync(
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const fileData = await filesService.downloadFile(id, userId);
-    
+
     res.setHeader('Content-Type', fileData.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${fileData.originalName}"`);
     res.setHeader('Content-Length', fileData.size.toString());
-    
+
     res.send(fileData.buffer);
   }
 );

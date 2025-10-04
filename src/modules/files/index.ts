@@ -13,7 +13,6 @@ export {
 
 // Services
 export {
-  FilesService,
   filesService,
   uploadFile as uploadFileService,
   bulkUploadFiles as bulkUploadFilesService,

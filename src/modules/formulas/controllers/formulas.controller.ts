@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { formulaEngineService } from '../services/formula-engine.service';
-import { FormulaPropertyModel, FormulaCacheModel, FormulaPerformanceModel } from '../models/formula.model';
+import { formulaEngine } from '../services/formula-engine';
+import {
+  FormulaPropertyModel,
+  FormulaCacheModel,
+  FormulaPerformanceModel
+} from '../models/formula.model';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { getUserId } from '@/auth/index';
 
@@ -9,7 +13,7 @@ export const validateFormula = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { expression, availableProperties, expectedReturnType, maxComplexity } = req.body;
 
-    const validation = formulaEngineService.validateFormula(
+    const validation = formulaEngine.validateFormula(
       expression,
       availableProperties || [],
       expectedReturnType,
@@ -25,7 +29,7 @@ export const testFormula = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { expression, sampleData, availableProperties } = req.body;
 
-    const result = await formulaEngineService.testFormula(
+    const result = await formulaEngine.testFormula(
       expression,
       sampleData || {},
       availableProperties || []
@@ -52,7 +56,7 @@ export const executeFormula = catchAsync(
       currentDate: new Date()
     };
 
-    const result = await formulaEngineService.executeFormula(expression, enrichedContext, config);
+    const result = await formulaEngine.executeFormula(expression, enrichedContext, config);
 
     sendSuccessResponse(res, 'Formula executed successfully', result);
   }
@@ -63,9 +67,9 @@ export const getFormulaDependencies = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { expression } = req.body;
 
-    const dependencies = formulaEngineService.getFormulaDependencies(expression);
-    const functions = formulaEngineService.getFormulaFunctions(expression);
-    const complexity = formulaEngineService.calculateComplexity(expression);
+    const dependencies = formulaEngine.getFormulaDependencies(expression);
+    const functions = formulaEngine.getFormulaFunctions(expression);
+    const complexity = formulaEngine.calculateComplexity(expression);
 
     sendSuccessResponse(res, 'Formula analysis completed', {
       dependencies,
@@ -82,11 +86,11 @@ export const getAvailableFunctions = catchAsync(
 
     let functions;
     if (search) {
-      functions = formulaEngineService.searchFunctions(search as string);
+      functions = formulaEngine.searchFunctions(search as string);
     } else if (category) {
-      functions = formulaEngineService.getFunctionsByCategory(category as string);
+      functions = formulaEngine.getFunctionsByCategory(category as string);
     } else {
-      functions = formulaEngineService.getAvailableFunctions();
+      functions = formulaEngine.getAvailableFunctions();
     }
 
     sendSuccessResponse(res, 'Available functions retrieved', functions);
@@ -104,7 +108,7 @@ export const createFormulaProperty = catchAsync(
     };
 
     // Validate formula before creating
-    const validation = formulaEngineService.validateFormula(
+    const validation = formulaEngine.validateFormula(
       formulaData.expression,
       formulaData.availableProperties || [],
       formulaData.returnType
@@ -116,7 +120,7 @@ export const createFormulaProperty = catchAsync(
 
     // Extract dependencies and complexity
     formulaData.dependencies = validation.dependencies;
-    formulaData.complexity = validation.estimatedComplexity;
+    formulaData.complexity = validation.complexity;
 
     const formula = new FormulaPropertyModel(formulaData);
     await formula.save();
@@ -139,7 +143,7 @@ export const updateFormulaProperty = catchAsync(
 
     // Validate updated expression if provided
     if (updates.expression) {
-      const validation = formulaEngineService.validateFormula(
+      const validation = formulaEngine.validateFormula(
         updates.expression,
         updates.availableProperties || [],
         updates.returnType || formula.returnType
@@ -150,18 +154,16 @@ export const updateFormulaProperty = catchAsync(
       }
 
       updates.dependencies = validation.dependencies;
-      updates.complexity = validation.estimatedComplexity;
+      updates.complexity = validation.complexity;
       updates.lastValidated = new Date();
     }
 
     updates.updatedBy = userId;
     updates.updatedAt = new Date();
 
-    const updatedFormula = await FormulaPropertyModel.findByIdAndUpdate(
-      formulaId,
-      updates,
-      { new: true }
-    );
+    const updatedFormula = await FormulaPropertyModel.findByIdAndUpdate(formulaId, updates, {
+      new: true
+    });
 
     // Invalidate cache for this formula
     await FormulaCacheModel.deleteMany({
@@ -230,7 +232,7 @@ export const optimizeFormula = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { expression } = req.body;
 
-    const optimization = formulaEngineService.optimizeFormula(expression);
+    const optimization = formulaEngine.optimizeFormula(expression);
 
     sendSuccessResponse(res, 'Formula optimization completed', optimization);
   }
@@ -281,7 +283,7 @@ export const getErrorProneFormulas = catchAsync(
 export const getCacheStats = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const cacheStats = await FormulaCacheModel.getCacheStats();
-    const engineStats = formulaEngineService.getCacheStats();
+    const engineStats = formulaEngine.getCacheStats();
 
     sendSuccessResponse(res, 'Cache statistics retrieved successfully', {
       database: cacheStats,
@@ -304,7 +306,7 @@ export const clearFormulaCache = catchAsync(
     } else {
       // Clear all cache
       await FormulaCacheModel.deleteMany({});
-      formulaEngineService.clearCache();
+      formulaEngine.clearCache();
     }
 
     sendSuccessResponse(res, 'Formula cache cleared successfully');
@@ -326,10 +328,7 @@ export const recalculateFormulas = catchAsync(
     const { recordId } = req.params;
     const { changedProperties } = req.body;
 
-    const results = await formulaEngineService.recalculateFormulas(
-      recordId,
-      changedProperties || []
-    );
+    const results = await formulaEngine.recalculateFormulas(recordId, changedProperties || []);
 
     sendSuccessResponse(res, 'Formulas recalculated successfully', { results });
   }
@@ -372,7 +371,7 @@ export const formatFormulaResult = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { value, format } = req.body;
 
-    const formattedValue = formulaEngineService.formatFormulaResult(value, format);
+    const formattedValue = formulaEngine.formatFormulaResult(value, format);
 
     sendSuccessResponse(res, 'Formula result formatted', { formattedValue });
   }

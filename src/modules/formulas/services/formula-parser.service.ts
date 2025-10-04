@@ -1,60 +1,77 @@
-import { 
-  IFormulaToken, 
-  IFormulaASTNode, 
-  ETokenType, 
+import {
+  IFormulaToken,
+  IFormulaASTNode,
+  ETokenType,
   EFormulaOperator,
   EFormulaDataType,
-  IFormulaError 
+  IFormulaError
 } from '../types/formula.types';
 import { formulaLexerService } from './formula-lexer.service';
 
-export class FormulaParserService {
-  private tokens: IFormulaToken[] = [];
-  private position: number = 0;
-  private currentToken: IFormulaToken | null = null;
-  private errors: IFormulaError[] = [];
+// Parser state interface
+interface IParserState {
+  tokens: IFormulaToken[];
+  position: number;
+  currentToken: IFormulaToken | null;
+  errors: IFormulaError[];
+}
 
+export const formulaParserService = {
   // Parse formula expression into AST
-  parse(expression: string): { ast: IFormulaASTNode | null; errors: IFormulaError[] } {
+  parse: (expression: string): { ast: IFormulaASTNode | null; errors: IFormulaError[] } => {
     const lexResult = formulaLexerService.tokenize(expression);
-    this.tokens = lexResult.tokens;
-    this.errors = [...lexResult.errors];
-    this.position = 0;
-    this.currentToken = this.tokens[0] || null;
+    const state: IParserState = {
+      tokens: lexResult.tokens,
+      position: 0,
+      currentToken: lexResult.tokens[0] || null,
+      errors: [...lexResult.errors]
+    };
 
-    if (this.errors.length > 0) {
-      return { ast: null, errors: this.errors };
+    if (state.errors.length > 0) {
+      return { ast: null, errors: state.errors };
     }
 
     try {
-      const ast = this.parseExpression();
-      
+      const ast = formulaParserService.parseExpression(state);
+
       // Check if we've consumed all tokens (except EOF)
-      if (this.currentToken && this.currentToken.type !== ETokenType.EOF) {
-        this.addError('syntax', 'Unexpected token after expression', this.currentToken.position, this.currentToken.length);
+      if (state.currentToken && state.currentToken.type !== ETokenType.EOF) {
+        formulaParserService.addError(
+          state,
+          'syntax',
+          'Unexpected token after expression',
+          state.currentToken.position,
+          state.currentToken.length
+        );
       }
 
-      return { ast, errors: this.errors };
+      return { ast, errors: state.errors };
     } catch (error) {
-      this.addError('syntax', error instanceof Error ? error.message : 'Parse error', 0, 1);
-      return { ast: null, errors: this.errors };
+      formulaParserService.addError(
+        state,
+        'syntax',
+        error instanceof Error ? error.message : 'Parse error',
+        0,
+        1
+      );
+      return { ast: null, errors: state.errors };
     }
-  }
+  },
 
   // Parse expression (lowest precedence)
-  private parseExpression(): IFormulaASTNode {
-    return this.parseLogicalOr();
-  }
+  parseExpression: (state: IParserState): IFormulaASTNode => {
+    return formulaParserService.parseLogicalOr(state);
+  },
 
   // Parse logical OR (||)
-  private parseLogicalOr(): IFormulaASTNode {
-    let left = this.parseLogicalAnd();
+  parseLogicalOr: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseLogicalAnd(state);
 
-    while (this.currentToken && this.currentToken.value === '||') {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseLogicalAnd();
-      
+    while (state.currentToken && state.currentToken.value === '||') {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseLogicalAnd(state);
+
       left = {
         type: 'operator',
         operator,
@@ -65,17 +82,17 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse logical AND (&&)
-  private parseLogicalAnd(): IFormulaASTNode {
-    let left = this.parseEquality();
+  parseLogicalAnd: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseEquality(state);
 
-    while (this.currentToken && this.currentToken.value === '&&') {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseEquality();
-      
+    while (state.currentToken && state.currentToken.value === '&&') {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseEquality(state);
+
       left = {
         type: 'operator',
         operator,
@@ -86,17 +103,17 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse equality (==, !=)
-  private parseEquality(): IFormulaASTNode {
-    let left = this.parseComparison();
+  parseEquality: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseComparison(state);
 
-    while (this.currentToken && ['==', '!='].includes(this.currentToken.value)) {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseComparison();
-      
+    while (state.currentToken && ['==', '!='].includes(state.currentToken.value)) {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseComparison(state);
+
       left = {
         type: 'operator',
         operator,
@@ -107,17 +124,17 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse comparison (<, <=, >, >=)
-  private parseComparison(): IFormulaASTNode {
-    let left = this.parseStringConcatenation();
+  parseComparison: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseStringConcatenation(state);
 
-    while (this.currentToken && ['<', '<=', '>', '>='].includes(this.currentToken.value)) {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseStringConcatenation();
-      
+    while (state.currentToken && ['<', '<=', '>', '>='].includes(state.currentToken.value)) {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseStringConcatenation(state);
+
       left = {
         type: 'operator',
         operator,
@@ -128,17 +145,17 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse string concatenation (&)
-  private parseStringConcatenation(): IFormulaASTNode {
-    let left = this.parseAddition();
+  parseStringConcatenation: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseAddition(state);
 
-    while (this.currentToken && this.currentToken.value === '&') {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseAddition();
-      
+    while (state.currentToken && state.currentToken.value === '&') {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseAddition(state);
+
       left = {
         type: 'operator',
         operator,
@@ -149,17 +166,17 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse addition and subtraction (+, -)
-  private parseAddition(): IFormulaASTNode {
-    let left = this.parseMultiplication();
+  parseAddition: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseMultiplication(state);
 
-    while (this.currentToken && ['+', '-'].includes(this.currentToken.value)) {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseMultiplication();
-      
+    while (state.currentToken && ['+', '-'].includes(state.currentToken.value)) {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseMultiplication(state);
+
       left = {
         type: 'operator',
         operator,
@@ -170,17 +187,17 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse multiplication, division, and modulo (*, /, %)
-  private parseMultiplication(): IFormulaASTNode {
-    let left = this.parseExponentiation();
+  parseMultiplication: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseExponentiation(state);
 
-    while (this.currentToken && ['*', '/', '%'].includes(this.currentToken.value)) {
-      const operator = this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseExponentiation();
-      
+    while (state.currentToken && ['*', '/', '%'].includes(state.currentToken.value)) {
+      const operator = state.currentToken.value as EFormulaOperator;
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseExponentiation(state);
+
       left = {
         type: 'operator',
         operator,
@@ -191,18 +208,21 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse exponentiation (^, **)
-  private parseExponentiation(): IFormulaASTNode {
-    let left = this.parseUnary();
+  parseExponentiation: (state: IParserState): IFormulaASTNode => {
+    let left = formulaParserService.parseUnary(state);
 
     // Right associative
-    if (this.currentToken && ['^', '**'].includes(this.currentToken.value)) {
-      const operator = this.currentToken.value === '**' ? EFormulaOperator.POWER : this.currentToken.value as EFormulaOperator;
-      this.advance();
-      const right = this.parseExponentiation(); // Right associative recursion
-      
+    if (state.currentToken && ['^', '**'].includes(state.currentToken.value)) {
+      const operator =
+        state.currentToken.value === '**'
+          ? EFormulaOperator.POWER
+          : (state.currentToken.value as EFormulaOperator);
+      formulaParserService.advance(state);
+      const right = formulaParserService.parseExponentiation(state); // Right associative recursion
+
       left = {
         type: 'operator',
         operator,
@@ -213,16 +233,16 @@ export class FormulaParserService {
     }
 
     return left;
-  }
+  },
 
   // Parse unary operators (-, !)
-  private parseUnary(): IFormulaASTNode {
-    if (this.currentToken && ['-', '!'].includes(this.currentToken.value)) {
-      const operator = this.currentToken.value as EFormulaOperator;
-      const position = this.currentToken.position;
-      this.advance();
-      const operand = this.parseUnary();
-      
+  parseUnary: (state: IParserState): IFormulaASTNode => {
+    if (state.currentToken && ['-', '!'].includes(state.currentToken.value)) {
+      const operator = state.currentToken.value as EFormulaOperator;
+      const position = state.currentToken.position;
+      formulaParserService.advance(state);
+      const operand = formulaParserService.parseUnary(state);
+
       return {
         type: 'operator',
         operator,
@@ -232,21 +252,21 @@ export class FormulaParserService {
       };
     }
 
-    return this.parsePrimary();
-  }
+    return formulaParserService.parsePrimary(state);
+  },
 
   // Parse primary expressions (literals, properties, functions, parentheses)
-  private parsePrimary(): IFormulaASTNode {
-    if (!this.currentToken) {
+  parsePrimary: (state: IParserState): IFormulaASTNode => {
+    if (!state.currentToken) {
       throw new Error('Unexpected end of expression');
     }
 
     // Numbers
-    if (this.currentToken.type === ETokenType.NUMBER) {
-      const value = parseFloat(this.currentToken.value);
-      const position = this.currentToken.position;
-      this.advance();
-      
+    if (state.currentToken.type === ETokenType.NUMBER) {
+      const value = parseFloat(state.currentToken.value);
+      const position = state.currentToken.position;
+      formulaParserService.advance(state);
+
       return {
         type: 'literal',
         value,
@@ -256,11 +276,11 @@ export class FormulaParserService {
     }
 
     // Strings
-    if (this.currentToken.type === ETokenType.STRING) {
-      const value = this.currentToken.value;
-      const position = this.currentToken.position;
-      this.advance();
-      
+    if (state.currentToken.type === ETokenType.STRING) {
+      const value = state.currentToken.value;
+      const position = state.currentToken.position;
+      formulaParserService.advance(state);
+
       return {
         type: 'literal',
         value,
@@ -270,11 +290,11 @@ export class FormulaParserService {
     }
 
     // Booleans
-    if (this.currentToken.type === ETokenType.BOOLEAN) {
-      const value = this.currentToken.value === 'true';
-      const position = this.currentToken.position;
-      this.advance();
-      
+    if (state.currentToken.type === ETokenType.BOOLEAN) {
+      const value = state.currentToken.value === 'true';
+      const position = state.currentToken.position;
+      formulaParserService.advance(state);
+
       return {
         type: 'literal',
         value,
@@ -284,16 +304,16 @@ export class FormulaParserService {
     }
 
     // Functions
-    if (this.currentToken.type === ETokenType.FUNCTION) {
-      return this.parseFunction();
+    if (state.currentToken.type === ETokenType.FUNCTION) {
+      return formulaParserService.parseFunction(state);
     }
 
     // Properties
-    if (this.currentToken.type === ETokenType.PROPERTY) {
-      const propertyName = this.currentToken.value;
-      const position = this.currentToken.position;
-      this.advance();
-      
+    if (state.currentToken.type === ETokenType.PROPERTY) {
+      const propertyName = state.currentToken.value;
+      const position = state.currentToken.position;
+      formulaParserService.advance(state);
+
       return {
         type: 'property',
         propertyName,
@@ -303,57 +323,57 @@ export class FormulaParserService {
     }
 
     // Parentheses
-    if (this.currentToken.type === ETokenType.PARENTHESIS_OPEN) {
-      this.advance(); // Skip '('
-      const expression = this.parseExpression();
+    if (state.currentToken.type === ETokenType.PARENTHESIS_OPEN) {
+      formulaParserService.advance(state); // Skip '('
+      const expression = formulaParserService.parseExpression(state);
 
-      if (!this.isCurrentTokenType(ETokenType.PARENTHESIS_CLOSE)) {
+      if (!formulaParserService.isCurrentTokenType(state, ETokenType.PARENTHESIS_CLOSE)) {
         throw new Error('Expected closing parenthesis');
       }
 
-      this.advance(); // Skip ')'
+      formulaParserService.advance(state); // Skip ')'
       return expression;
     }
 
-    throw new Error(`Unexpected token: ${this.currentToken.value}`);
-  }
+    throw new Error(`Unexpected token: ${state.currentToken.value}`);
+  },
 
   // Parse function call
-  private parseFunction(): IFormulaASTNode {
-    const functionName = this.currentToken!.value;
-    const position = this.currentToken!.position;
-    this.advance(); // Skip function name
+  parseFunction: (state: IParserState): IFormulaASTNode => {
+    const functionName = state.currentToken!.value;
+    const position = state.currentToken!.position;
+    formulaParserService.advance(state); // Skip function name
 
-    if (!this.currentToken || this.currentToken.type !== ETokenType.PARENTHESIS_OPEN) {
+    if (!state.currentToken || state.currentToken.type !== ETokenType.PARENTHESIS_OPEN) {
       throw new Error('Expected opening parenthesis after function name');
     }
 
-    this.advance(); // Skip '('
+    formulaParserService.advance(state); // Skip '('
 
     const args: IFormulaASTNode[] = [];
 
     // Parse arguments
-    while (this.currentToken) {
-      if (this.isCurrentTokenType(ETokenType.PARENTHESIS_CLOSE)) {
+    while (state.currentToken) {
+      if (formulaParserService.isCurrentTokenType(state, ETokenType.PARENTHESIS_CLOSE)) {
         break;
       }
 
-      args.push(this.parseExpression());
+      args.push(formulaParserService.parseExpression(state));
 
-      if (this.isCurrentTokenType(ETokenType.COMMA)) {
-        this.advance(); // Skip ','
-      } else if (this.isCurrentTokenType(ETokenType.PARENTHESIS_CLOSE)) {
+      if (formulaParserService.isCurrentTokenType(state, ETokenType.COMMA)) {
+        formulaParserService.advance(state); // Skip ','
+      } else if (formulaParserService.isCurrentTokenType(state, ETokenType.PARENTHESIS_CLOSE)) {
         break;
       } else {
         throw new Error('Expected comma or closing parenthesis in function arguments');
       }
     }
 
-    if (!this.isCurrentTokenType(ETokenType.PARENTHESIS_CLOSE)) {
+    if (!formulaParserService.isCurrentTokenType(state, ETokenType.PARENTHESIS_CLOSE)) {
       throw new Error('Expected closing parenthesis after function arguments');
     }
 
-    this.advance(); // Skip ')'
+    formulaParserService.advance(state); // Skip ')'
 
     return {
       type: 'function',
@@ -362,32 +382,38 @@ export class FormulaParserService {
       position,
       dataType: EFormulaDataType.ANY // Will be resolved during validation
     };
-  }
+  },
 
   // Move to next token
-  private advance(): void {
-    this.position++;
-    this.currentToken = this.position < this.tokens.length ? this.tokens[this.position] : null;
-  }
+  advance: (state: IParserState): void => {
+    state.position++;
+    state.currentToken = state.position < state.tokens.length ? state.tokens[state.position] : null;
+  },
 
-  // Helper method to check current token type (fixes TypeScript control flow issues)
-  private isCurrentTokenType(type: ETokenType): boolean {
-    return this.currentToken !== null && this.currentToken.type === type;
-  }
+  // Helper method to check current token type
+  isCurrentTokenType: (state: IParserState, type: ETokenType): boolean => {
+    return state.currentToken !== null && state.currentToken.type === type;
+  },
 
   // Add error to errors array
-  private addError(type: 'syntax' | 'semantic', message: string, position: number, length: number): void {
-    this.errors.push({
+  addError: (
+    state: IParserState,
+    type: 'syntax' | 'semantic',
+    message: string,
+    position: number,
+    length: number
+  ): void => {
+    state.errors.push({
       type,
       message,
       position,
       length,
       suggestions: []
     });
-  }
+  },
 
   // Get all property references from AST
-  static getPropertyReferences(ast: IFormulaASTNode): string[] {
+  getPropertyReferences: (ast: IFormulaASTNode): string[] => {
     const properties: string[] = [];
 
     function traverse(node: IFormulaASTNode): void {
@@ -402,10 +428,10 @@ export class FormulaParserService {
 
     traverse(ast);
     return [...new Set(properties)]; // Remove duplicates
-  }
+  },
 
   // Get all function calls from AST
-  static getFunctionCalls(ast: IFormulaASTNode): string[] {
+  getFunctionCalls: (ast: IFormulaASTNode): string[] => {
     const functions: string[] = [];
 
     function traverse(node: IFormulaASTNode): void {
@@ -420,10 +446,10 @@ export class FormulaParserService {
 
     traverse(ast);
     return [...new Set(functions)]; // Remove duplicates
-  }
+  },
 
   // Calculate AST complexity score
-  static calculateComplexity(ast: IFormulaASTNode): number {
+  calculateComplexity: (ast: IFormulaASTNode): number => {
     let complexity = 0;
 
     function traverse(node: IFormulaASTNode): void {
@@ -449,10 +475,10 @@ export class FormulaParserService {
 
     traverse(ast);
     return complexity;
-  }
+  },
 
   // Convert AST back to string (for debugging/optimization)
-  static astToString(ast: IFormulaASTNode): string {
+  astToString: (ast: IFormulaASTNode): string => {
     switch (ast.type) {
       case 'literal':
         if (typeof ast.value === 'string') {
@@ -463,29 +489,31 @@ export class FormulaParserService {
       case 'property':
         return `[${ast.propertyName}]`;
 
-      case 'function':
-        const args = ast.children?.map(child => this.astToString(child)).join(', ') || '';
+      case 'function': {
+        const args =
+          ast.children?.map(child => formulaParserService.astToString(child)).join(', ') || '';
         return `${ast.functionName}(${args})`;
+      }
 
       case 'operator':
         if (ast.children?.length === 1) {
           // Unary operator
-          return `${ast.operator}${this.astToString(ast.children[0])}`;
+          return `${ast.operator}${formulaParserService.astToString(ast.children[0])}`;
         } else if (ast.children?.length === 2) {
           // Binary operator
-          const left = this.astToString(ast.children[0]);
-          const right = this.astToString(ast.children[1]);
+          const left = formulaParserService.astToString(ast.children[0]);
+          const right = formulaParserService.astToString(ast.children[1]);
           return `(${left} ${ast.operator} ${right})`;
         }
         break;
 
-      case 'array':
-        const elements = ast.children?.map(child => this.astToString(child)).join(', ') || '';
+      case 'array': {
+        const elements =
+          ast.children?.map(child => formulaParserService.astToString(child)).join(', ') || '';
         return `[${elements}]`;
+      }
     }
 
     return '';
   }
-}
-
-export const formulaParserService = new FormulaParserService();
+};
