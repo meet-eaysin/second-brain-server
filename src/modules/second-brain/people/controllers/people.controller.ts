@@ -30,19 +30,14 @@ export const getPeople = catchAsync(
 
     const result = await peopleService.getPeople(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'People retrieved successfully',
-      result.people,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'People retrieved successfully', result.people, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -85,88 +80,73 @@ export const deletePerson = catchAsync(
 
 export const getFavorites = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IPeopleQueryParams = { 
-      ...req.query as any, 
+    const params: IPeopleQueryParams = {
+      ...(req.query as any),
       isFavorite: true
     };
     const userId = getUserId(req);
 
     const result = await peopleService.getPeople(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Favorite people retrieved successfully',
-      result.people,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Favorite people retrieved successfully', result.people, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getPeopleByType = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { type } = req.params;
-    const params: IPeopleQueryParams = { 
-      ...req.query as any, 
+    const params: IPeopleQueryParams = {
+      ...(req.query as any),
       type: [type as EContactType]
     };
     const userId = getUserId(req);
 
     const result = await peopleService.getPeople(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      `People of type "${type}" retrieved successfully`,
-      result.people,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, `People of type "${type}" retrieved successfully`, result.people, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getPeopleByCompany = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { company } = req.params;
-    const params: IPeopleQueryParams = { 
-      ...req.query as any, 
+    const params: IPeopleQueryParams = {
+      ...(req.query as any),
       company: decodeURIComponent(company)
     };
     const userId = getUserId(req);
 
     const result = await peopleService.getPeople(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      `People from "${company}" retrieved successfully`,
-      result.people,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, `People from "${company}" retrieved successfully`, result.people, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getUpcomingFollowUps = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IPeopleQueryParams = { 
-      ...req.query as any, 
+    const params: IPeopleQueryParams = {
+      ...(req.query as any),
       hasUpcomingFollowUp: true
     };
     const userId = getUserId(req);
@@ -191,8 +171,8 @@ export const getUpcomingFollowUps = catchAsync(
 
 export const getOverdueFollowUps = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IPeopleQueryParams = { 
-      ...req.query as any, 
+    const params: IPeopleQueryParams = {
+      ...(req.query as any),
       hasOverdueFollowUp: true
     };
     const userId = getUserId(req);
@@ -218,8 +198,8 @@ export const getOverdueFollowUps = catchAsync(
 export const getUpcomingBirthdays = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const currentMonth = new Date().getMonth() + 1;
-    const params: IPeopleQueryParams = { 
-      ...req.query as any, 
+    const params: IPeopleQueryParams = {
+      ...(req.query as any),
       birthdayMonth: currentMonth
     };
     const userId = getUserId(req);
@@ -245,24 +225,19 @@ export const getUpcomingBirthdays = catchAsync(
 export const searchPeople = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { q: search } = req.query;
-    const params: IPeopleQueryParams = { ...req.query as any, search: search as string };
+    const params: IPeopleQueryParams = { ...(req.query as any), search: search as string };
     const userId = getUserId(req);
 
     const result = await peopleService.getPeople(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'People search completed successfully',
-      result.people,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'People search completed successfully', result.people, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -293,10 +268,14 @@ export const archivePerson = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const person = await peopleService.updatePerson(id, { 
-      isArchived: true,
-      status: ERelationshipStatus.ARCHIVED 
-    }, userId);
+    const person = await peopleService.updatePerson(
+      id,
+      {
+        isArchived: true,
+        status: ERelationshipStatus.ARCHIVED
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Person archived successfully', person);
   }
@@ -307,10 +286,14 @@ export const unarchivePerson = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const person = await peopleService.updatePerson(id, { 
-      isArchived: false,
-      status: ERelationshipStatus.ACTIVE 
-    }, userId);
+    const person = await peopleService.updatePerson(
+      id,
+      {
+        isArchived: false,
+        status: ERelationshipStatus.ACTIVE
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Person unarchived successfully', person);
   }
@@ -368,9 +351,7 @@ export const bulkUpdatePeople = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      personIds.map((personId: string) => 
-        peopleService.updatePerson(personId, updates, userId)
-      )
+      personIds.map((personId: string) => peopleService.updatePerson(personId, updates, userId))
     );
 
     const successful = results.filter(result => result.status === 'fulfilled').length;
@@ -396,9 +377,7 @@ export const bulkDeletePeople = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      personIds.map((personId: string) => 
-        peopleService.deletePerson(personId, userId, permanent)
-      )
+      personIds.map((personId: string) => peopleService.deletePerson(personId, userId, permanent))
     );
 
     const successful = results.filter(result => result.status === 'fulfilled').length;
@@ -441,3 +420,26 @@ export const getPeopleStats = catchAsync(
     sendSuccessResponse(res, 'People statistics retrieved successfully', stats);
   }
 );
+
+export const peopleController = {
+  createPerson,
+  getPeople,
+  getPersonById,
+  updatePerson,
+  deletePerson,
+  getFavorites,
+  getPeopleByType,
+  getPeopleByCompany,
+  getUpcomingFollowUps,
+  getOverdueFollowUps,
+  getUpcomingBirthdays,
+  searchPeople,
+  addToFavorites,
+  removeFromFavorites,
+  archivePerson,
+  unarchivePerson,
+  duplicatePerson,
+  bulkUpdatePeople,
+  bulkDeletePeople,
+  getPeopleStats
+};

@@ -25,11 +25,167 @@ import { generateId } from '@/utils/id-generator';
 import { permissionService } from '../../../permissions/services/permission.service';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 
-export class PeopleService {
+// ===== HELPER METHODS =====
 
+function buildPeopleQuery(params: IPeopleQueryParams, userId: string): any {
+  const query: any = {
+    isDeleted: { $ne: true }
+  };
+
+  if (params.databaseId) {
+    query.databaseId = params.databaseId;
+  }
+
+  if (params.type && params.type.length > 0) {
+    query['properties.Type'] = { $in: params.type };
+  }
+
+  if (params.status && params.status.length > 0) {
+    query['properties.Status'] = { $in: params.status };
+  }
+
+  if (params.company) {
+    query['properties.Company'] = { $regex: params.company, $options: 'i' };
+  }
+
+  if (params.industry) {
+    query['properties.Industry'] = { $regex: params.industry, $options: 'i' };
+  }
+
+  if (params.tags && params.tags.length > 0) {
+    query['properties.Tags'] = { $in: params.tags };
+  }
+
+  if (params.search) {
+    query.$or = [
+      { 'properties.First Name': { $regex: params.search, $options: 'i' } },
+      { 'properties.Last Name': { $regex: params.search, $options: 'i' } },
+      { 'properties.Full Name': { $regex: params.search, $options: 'i' } },
+      { 'properties.Company': { $regex: params.search, $options: 'i' } },
+      { 'properties.Position': { $regex: params.search, $options: 'i' } },
+      { 'properties.Personal Notes': { $regex: params.search, $options: 'i' } }
+    ];
+  }
+
+  if (params.isFavorite !== undefined) {
+    query['properties.Is Favorite'] = params.isFavorite;
+  }
+
+  if (params.isArchived !== undefined) {
+    query['properties.Is Archived'] = params.isArchived;
+  }
+
+  if (params.hasUpcomingFollowUp) {
+    query['properties.Next Follow Up Date'] = { $gte: new Date() };
+  }
+
+  if (params.hasOverdueFollowUp) {
+    query['properties.Next Follow Up Date'] = { $lt: new Date() };
+  }
+
+  if (params.birthdayMonth) {
+    const startOfMonth = new Date();
+    startOfMonth.setMonth(params.birthdayMonth - 1, 1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date(startOfMonth);
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    query['properties.Birthday'] = { $gte: startOfMonth, $lte: endOfMonth };
+  }
+
+  if (params.lastContactBefore || params.lastContactAfter) {
+    const dateQuery: any = {};
+    if (params.lastContactBefore) {
+      dateQuery.$lt = params.lastContactBefore;
+    }
+    if (params.lastContactAfter) {
+      dateQuery.$gt = params.lastContactAfter;
+    }
+    query['properties.Last Contact Date'] = dateQuery;
+  }
+
+  return query;
+}
+
+function mapSortField(sortBy: string): string {
+  const fieldMap: Record<string, string> = {
+    firstName: 'properties.First Name',
+    lastName: 'properties.Last Name',
+    company: 'properties.Company',
+    lastContactDate: 'properties.Last Contact Date',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+  return fieldMap[sortBy] || 'properties.Last Name';
+}
+
+function formatPersonResponse(record: any): IPerson {
+  return {
+    id: record._id.toString(),
+    databaseId: record.databaseId,
+    firstName: record.properties['First Name'] || '',
+    lastName: record.properties['Last Name'] || '',
+    fullName: record.properties['Full Name'] || '',
+    nickname: record.properties.Nickname,
+    title: record.properties.Title,
+    company: record.properties.Company,
+    department: record.properties.Department,
+    position: record.properties.Position,
+    contactInfo: record.properties['Contact Info'] || {},
+    type: record.properties.Type || EContactType.OTHER,
+    status: record.properties.Status || ERelationshipStatus.ACTIVE,
+    relationshipNotes: record.properties['Relationship Notes'],
+    howWeMet: record.properties['How We Met'],
+    metDate: record.properties['Met Date'],
+    communicationPreference: record.properties['Communication Preference'] || [],
+    timezone: record.properties.Timezone,
+    birthday: record.properties.Birthday,
+    anniversary: record.properties.Anniversary,
+    interests: record.properties.Interests || [],
+    skills: record.properties.Skills || [],
+    goals: record.properties.Goals || [],
+    challenges: record.properties.Challenges || [],
+    personalNotes: record.properties['Personal Notes'],
+    industry: record.properties.Industry,
+    experience: record.properties.Experience,
+    expertise: record.properties.Expertise || [],
+    lastContactDate: record.properties['Last Contact Date'],
+    contactFrequency: record.properties['Contact Frequency'],
+    nextFollowUpDate: record.properties['Next Follow Up Date'],
+    connectedPeople: record.properties['Connected People'] || [],
+    mutualConnections: record.properties['Mutual Connections'] || [],
+    introducedBy: record.properties['Introduced By'],
+    sharedProjects: record.properties['Shared Projects'] || [],
+    sharedGoals: record.properties['Shared Goals'] || [],
+    tags: record.properties.Tags || [],
+    customFields: record.properties['Custom Fields'] || {},
+    isArchived: record.properties['Is Archived'] || false,
+    isFavorite: record.properties['Is Favorite'] || false,
+    reminderEnabled: record.properties['Reminder Enabled'] !== false,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    createdBy: record.createdBy,
+    updatedBy: record.updatedBy
+  };
+}
+
+async function getNextOrder(databaseId: string): Promise<number> {
+  const lastRecord = await RecordModel.findOne(
+    { databaseId, isDeleted: { $ne: true } },
+    { order: 1 }
+  )
+    .sort({ order: -1 })
+    .exec();
+
+  return (lastRecord?.order || 0) + 1;
+}
+
+export const peopleService = {
   // ===== PERSON OPERATIONS =====
 
-  async createPerson(data: ICreatePersonRequest, userId: string): Promise<IPerson> {
+  createPerson: async (data: ICreatePersonRequest, userId: string): Promise<IPerson> => {
     try {
       // Verify the database exists and is a people database
       const database = await DatabaseModel.findOne({
@@ -108,52 +264,48 @@ export class PeopleService {
         content: [],
         createdBy: userId,
         updatedBy: userId,
-        order: await this.getNextOrder(data.databaseId)
+        order: await getNextOrder(data.databaseId)
       });
 
       const savedRecord = await personRecord.save();
 
       // Update database record count and activity
-      await DatabaseModel.findByIdAndUpdate(
-        data.databaseId,
-        {
-          $inc: { recordCount: 1 },
-          lastActivityAt: new Date()
-        }
-      );
+      await DatabaseModel.findByIdAndUpdate(data.databaseId, {
+        $inc: { recordCount: 1 },
+        lastActivityAt: new Date()
+      });
 
-      return this.formatPersonResponse(savedRecord);
+      return formatPersonResponse(savedRecord);
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to create person: ${error.message}`, 500);
     }
-  }
+  },
 
-  async getPeople(params: IPeopleQueryParams, userId: string): Promise<{
+  getPeople: async (
+    params: IPeopleQueryParams,
+    userId: string
+  ): Promise<{
     people: IPerson[];
     total: number;
     page: number;
     limit: number;
     hasNext: boolean;
     hasPrev: boolean;
-  }> {
+  }> => {
     try {
-      const query = this.buildPeopleQuery(params, userId);
+      const query = buildPeopleQuery(params, userId);
       const { page = 1, limit = 25, sortBy = 'lastName', sortOrder = 'asc' } = params;
 
       const skip = (page - 1) * limit;
-      const sortOptions: any = { [this.mapSortField(sortBy)]: sortOrder === 'desc' ? -1 : 1 };
+      const sortOptions: any = { [mapSortField(sortBy)]: sortOrder === 'desc' ? -1 : 1 };
 
       const [people, total] = await Promise.all([
-        RecordModel.find(query)
-          .sort(sortOptions)
-          .skip(skip)
-          .limit(limit)
-          .exec(),
+        RecordModel.find(query).sort(sortOptions).skip(skip).limit(limit).exec(),
         RecordModel.countDocuments(query)
       ]);
 
-      const formattedPeople = people.map(person => this.formatPersonResponse(person));
+      const formattedPeople = people.map(person => formatPersonResponse(person));
 
       const hasNext = skip + limit < total;
       const hasPrev = page > 1;
@@ -170,9 +322,9 @@ export class PeopleService {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to get people: ${error.message}`, 500);
     }
-  }
+  },
 
-  async getPersonById(id: string, userId: string): Promise<IPerson> {
+  getPersonById: async (id: string, userId: string): Promise<IPerson> => {
     try {
       const person = await RecordModel.findOne({
         _id: id,
@@ -195,14 +347,18 @@ export class PeopleService {
         throw createForbiddenError('Insufficient permissions to view this person');
       }
 
-      return this.formatPersonResponse(person);
+      return formatPersonResponse(person);
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to get person: ${error.message}`, 500);
     }
-  }
+  },
 
-  async updatePerson(id: string, data: IUpdatePersonRequest, userId: string): Promise<IPerson> {
+  updatePerson: async (
+    id: string,
+    data: IUpdatePersonRequest,
+    userId: string
+  ): Promise<IPerson> => {
     try {
       const person = await RecordModel.findOne({
         _id: id,
@@ -333,30 +489,28 @@ export class PeopleService {
         updateData['properties.Reminder Enabled'] = data.reminderEnabled;
       }
 
-      const updatedPerson = await RecordModel.findByIdAndUpdate(
-        id,
-        updateData,
-        { new: true, runValidators: true }
-      ).exec();
+      const updatedPerson = await RecordModel.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true
+      }).exec();
 
       if (!updatedPerson) {
         throw createNotFoundError('Person', id);
       }
 
       // Update database activity
-      await DatabaseModel.findByIdAndUpdate(
-        updatedPerson.databaseId,
-        { lastActivityAt: new Date() }
-      );
+      await DatabaseModel.findByIdAndUpdate(updatedPerson.databaseId, {
+        lastActivityAt: new Date()
+      });
 
-      return this.formatPersonResponse(updatedPerson);
+      return formatPersonResponse(updatedPerson);
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to update person: ${error.message}`, 500);
     }
-  }
+  },
 
-  async deletePerson(id: string, userId: string, permanent: boolean = false): Promise<void> {
+  deletePerson: async (id: string, userId: string, permanent: boolean = false): Promise<void> => {
     try {
       const person = await RecordModel.findOne({
         _id: id,
@@ -390,174 +544,13 @@ export class PeopleService {
       }
 
       // Update database record count
-      await DatabaseModel.findByIdAndUpdate(
-        person.databaseId,
-        {
-          $inc: { recordCount: -1 },
-          lastActivityAt: new Date()
-        }
-      );
+      await DatabaseModel.findByIdAndUpdate(person.databaseId, {
+        $inc: { recordCount: -1 },
+        lastActivityAt: new Date()
+      });
     } catch (error: any) {
       if (error.statusCode) throw error;
       throw createAppError(`Failed to delete person: ${error.message}`, 500);
     }
   }
-
-  // ===== HELPER METHODS =====
-
-  private buildPeopleQuery(params: IPeopleQueryParams, userId: string): any {
-    const query: any = {
-      isDeleted: { $ne: true }
-    };
-
-    if (params.databaseId) {
-      query.databaseId = params.databaseId;
-    }
-
-    if (params.type && params.type.length > 0) {
-      query['properties.Type'] = { $in: params.type };
-    }
-
-    if (params.status && params.status.length > 0) {
-      query['properties.Status'] = { $in: params.status };
-    }
-
-    if (params.company) {
-      query['properties.Company'] = { $regex: params.company, $options: 'i' };
-    }
-
-    if (params.industry) {
-      query['properties.Industry'] = { $regex: params.industry, $options: 'i' };
-    }
-
-    if (params.tags && params.tags.length > 0) {
-      query['properties.Tags'] = { $in: params.tags };
-    }
-
-    if (params.search) {
-      query.$or = [
-        { 'properties.First Name': { $regex: params.search, $options: 'i' } },
-        { 'properties.Last Name': { $regex: params.search, $options: 'i' } },
-        { 'properties.Full Name': { $regex: params.search, $options: 'i' } },
-        { 'properties.Company': { $regex: params.search, $options: 'i' } },
-        { 'properties.Position': { $regex: params.search, $options: 'i' } },
-        { 'properties.Personal Notes': { $regex: params.search, $options: 'i' } }
-      ];
-    }
-
-    if (params.isFavorite !== undefined) {
-      query['properties.Is Favorite'] = params.isFavorite;
-    }
-
-    if (params.isArchived !== undefined) {
-      query['properties.Is Archived'] = params.isArchived;
-    }
-
-    if (params.hasUpcomingFollowUp) {
-      query['properties.Next Follow Up Date'] = { $gte: new Date() };
-    }
-
-    if (params.hasOverdueFollowUp) {
-      query['properties.Next Follow Up Date'] = { $lt: new Date() };
-    }
-
-    if (params.birthdayMonth) {
-      const startOfMonth = new Date();
-      startOfMonth.setMonth(params.birthdayMonth - 1, 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      const endOfMonth = new Date(startOfMonth);
-      endOfMonth.setMonth(endOfMonth.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-
-      query['properties.Birthday'] = { $gte: startOfMonth, $lte: endOfMonth };
-    }
-
-    if (params.lastContactBefore || params.lastContactAfter) {
-      const dateQuery: any = {};
-      if (params.lastContactBefore) {
-        dateQuery.$lt = params.lastContactBefore;
-      }
-      if (params.lastContactAfter) {
-        dateQuery.$gt = params.lastContactAfter;
-      }
-      query['properties.Last Contact Date'] = dateQuery;
-    }
-
-    return query;
-  }
-
-  private mapSortField(sortBy: string): string {
-    const fieldMap: Record<string, string> = {
-      'firstName': 'properties.First Name',
-      'lastName': 'properties.Last Name',
-      'company': 'properties.Company',
-      'lastContactDate': 'properties.Last Contact Date',
-      'createdAt': 'createdAt',
-      'updatedAt': 'updatedAt'
-    };
-    return fieldMap[sortBy] || 'properties.Last Name';
-  }
-
-  private formatPersonResponse(record: any): IPerson {
-    return {
-      id: record._id.toString(),
-      databaseId: record.databaseId,
-      firstName: record.properties['First Name'] || '',
-      lastName: record.properties['Last Name'] || '',
-      fullName: record.properties['Full Name'] || '',
-      nickname: record.properties.Nickname,
-      title: record.properties.Title,
-      company: record.properties.Company,
-      department: record.properties.Department,
-      position: record.properties.Position,
-      contactInfo: record.properties['Contact Info'] || {},
-      type: record.properties.Type || EContactType.OTHER,
-      status: record.properties.Status || ERelationshipStatus.ACTIVE,
-      relationshipNotes: record.properties['Relationship Notes'],
-      howWeMet: record.properties['How We Met'],
-      metDate: record.properties['Met Date'],
-      communicationPreference: record.properties['Communication Preference'] || [],
-      timezone: record.properties.Timezone,
-      birthday: record.properties.Birthday,
-      anniversary: record.properties.Anniversary,
-      interests: record.properties.Interests || [],
-      skills: record.properties.Skills || [],
-      goals: record.properties.Goals || [],
-      challenges: record.properties.Challenges || [],
-      personalNotes: record.properties['Personal Notes'],
-      industry: record.properties.Industry,
-      experience: record.properties.Experience,
-      expertise: record.properties.Expertise || [],
-      lastContactDate: record.properties['Last Contact Date'],
-      contactFrequency: record.properties['Contact Frequency'],
-      nextFollowUpDate: record.properties['Next Follow Up Date'],
-      connectedPeople: record.properties['Connected People'] || [],
-      mutualConnections: record.properties['Mutual Connections'] || [],
-      introducedBy: record.properties['Introduced By'],
-      sharedProjects: record.properties['Shared Projects'] || [],
-      sharedGoals: record.properties['Shared Goals'] || [],
-      tags: record.properties.Tags || [],
-      customFields: record.properties['Custom Fields'] || {},
-      isArchived: record.properties['Is Archived'] || false,
-      isFavorite: record.properties['Is Favorite'] || false,
-      reminderEnabled: record.properties['Reminder Enabled'] !== false,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-      createdBy: record.createdBy,
-      updatedBy: record.updatedBy
-    };
-  }
-
-  private async getNextOrder(databaseId: string): Promise<number> {
-    const lastRecord = await RecordModel.findOne(
-      { databaseId, isDeleted: { $ne: true } },
-      { order: 1 }
-    ).sort({ order: -1 }).exec();
-
-    return (lastRecord?.order || 0) + 1;
-  }
-}
-
-export const peopleService = new PeopleService();
-export default peopleService;
+};

@@ -7,37 +7,7 @@ import {
 } from '@/modules/workspace/middleware/workspace.middleware';
 
 // Project controllers
-import {
-  // Project CRUD
-  createProject,
-  getProjects,
-  getProjectById,
-  updateProject,
-  deleteProject,
-
-  // Project analytics
-  getActiveProjects,
-  getCompletedProjects,
-  getProjectsByStatus,
-  getProjectsByCategory,
-  getProjectsByPriority,
-  getMyProjects,
-  getProjectsImInvolvedIn,
-  getProjectTemplates,
-  searchProjects,
-
-  // Project actions
-  startProject,
-  completeProject,
-  pauseProject,
-  archiveProject,
-  duplicateProject,
-  bulkUpdateProjects,
-  bulkDeleteProjects,
-
-  // Statistics
-  getProjectStats
-} from '../controllers/projects.controller';
+import { projectsController } from '../controllers/projects.controller';
 
 // Validators
 import {
@@ -64,77 +34,97 @@ router.use(ensureDefaultWorkspace);
 
 // ===== PROJECT CRUD OPERATIONS =====
 
-router.post('/', validateBody(createProjectSchema), createProject);
+router.post('/', validateBody(createProjectSchema), projectsController.createProject);
 
-router.get('/', validateQuery(getProjectsQuerySchema), getProjects);
+router.get('/', validateQuery(getProjectsQuerySchema), projectsController.getProjects);
 
-router.get('/stats', validateQuery(projectStatsQuerySchema), getProjectStats);
+router.get('/stats', validateQuery(projectStatsQuerySchema), projectsController.getProjectStats);
 
-router.get('/active', validateQuery(getProjectsQuerySchema), getActiveProjects);
+router.get('/active', validateQuery(getProjectsQuerySchema), projectsController.getActiveProjects);
 
-router.get('/completed', validateQuery(getProjectsQuerySchema), getCompletedProjects);
+router.get(
+  '/completed',
+  validateQuery(getProjectsQuerySchema),
+  projectsController.getCompletedProjects
+);
 
-router.get('/my-projects', validateQuery(getProjectsQuerySchema), getMyProjects);
+router.get('/my-projects', validateQuery(getProjectsQuerySchema), projectsController.getMyProjects);
 
-router.get('/involved-in', validateQuery(getProjectsQuerySchema), getProjectsImInvolvedIn);
+router.get(
+  '/involved-in',
+  validateQuery(getProjectsQuerySchema),
+  projectsController.getProjectsImInvolvedIn
+);
 
-router.get('/templates', validateQuery(getProjectsQuerySchema), getProjectTemplates);
+router.get(
+  '/templates',
+  validateQuery(getProjectsQuerySchema),
+  projectsController.getProjectTemplates
+);
 
-router.get('/search', validateQuery(searchProjectsSchema), searchProjects);
+router.get('/search', validateQuery(searchProjectsSchema), projectsController.searchProjects);
 
 router.get(
   '/status/:status',
   validateParams(statusParamSchema),
   validateQuery(getProjectsQuerySchema),
-  getProjectsByStatus
+  projectsController.getProjectsByStatus
 );
 
 router.get(
   '/category/:category',
   validateParams(categoryParamSchema),
   validateQuery(getProjectsQuerySchema),
-  getProjectsByCategory
+  projectsController.getProjectsByCategory
 );
 
 router.get(
   '/priority/:priority',
   validateParams(priorityParamSchema),
   validateQuery(getProjectsQuerySchema),
-  getProjectsByPriority
+  projectsController.getProjectsByPriority
 );
 
-router.get('/:id', validateParams(projectIdSchema), getProjectById);
+router.get('/:id', validateParams(projectIdSchema), projectsController.getProjectById);
 
 router.put(
   '/:id',
   validateParams(projectIdSchema),
   validateBody(updateProjectSchema),
-  updateProject
+  projectsController.updateProject
 );
 
-router.delete('/:id', validateParams(projectIdSchema), deleteProject);
+router.delete('/:id', validateParams(projectIdSchema), projectsController.deleteProject);
 
 // ===== PROJECT ACTIONS =====
 
-router.post('/:id/start', validateParams(projectIdSchema), startProject);
+router.post('/:id/start', validateParams(projectIdSchema), projectsController.startProject);
 
-router.post('/:id/complete', validateParams(projectIdSchema), completeProject);
+router.post('/:id/complete', validateParams(projectIdSchema), projectsController.completeProject);
 
-router.post('/:id/pause', validateParams(projectIdSchema), pauseProject);
+router.post('/:id/pause', validateParams(projectIdSchema), projectsController.pauseProject);
 
-router.post('/:id/archive', validateParams(projectIdSchema), archiveProject);
+router.post('/:id/archive', validateParams(projectIdSchema), projectsController.archiveProject);
 
 router.post(
   '/:id/duplicate',
   validateParams(projectIdSchema),
   validateBody(duplicateProjectSchema),
-  duplicateProject
+  projectsController.duplicateProject
 );
 
 // ===== BULK OPERATIONS =====
 
-router.post('/bulk/update', validateBody(bulkUpdateProjectsSchema), bulkUpdateProjects);
+router.post(
+  '/bulk/update',
+  validateBody(bulkUpdateProjectsSchema),
+  projectsController.bulkUpdateProjects
+);
 
-router.post('/bulk/delete', validateBody(bulkDeleteProjectsSchema), bulkDeleteProjects);
+router.post(
+  '/bulk/delete',
+  validateBody(bulkDeleteProjectsSchema),
+  projectsController.bulkDeleteProjects
+);
 
 export default router;

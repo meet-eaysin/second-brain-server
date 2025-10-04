@@ -5,43 +5,10 @@
 export { default as projectsRoutes } from './routes/projects.routes';
 
 // Controllers - Project business logic
-export {
-  // Project CRUD operations
-  createProject,
-  getProjects,
-  getProjectById,
-  updateProject,
-  deleteProject,
-  
-  // Project analytics
-  getActiveProjects,
-  getCompletedProjects,
-  getProjectsByStatus,
-  getProjectsByCategory,
-  getProjectsByPriority,
-  getMyProjects,
-  getProjectsImInvolvedIn,
-  getProjectTemplates,
-  searchProjects,
-  
-  // Project actions
-  startProject,
-  completeProject,
-  pauseProject,
-  archiveProject,
-  duplicateProject,
-  bulkUpdateProjects,
-  bulkDeleteProjects,
-  
-  // Statistics
-  getProjectStats
-} from './controllers/projects.controller';
+export { projectsController } from './controllers/projects.controller';
 
 // Services - Project-specific services
-export {
-  ProjectsService,
-  projectsService
-} from './services/projects.service';
+export { projectsService } from './services/projects.service';
 
 // Types
 export type * from './types/projects.types';

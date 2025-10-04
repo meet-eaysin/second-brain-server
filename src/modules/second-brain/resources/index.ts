@@ -5,45 +5,10 @@
 export { default as resourcesRoutes } from './routes/resources.routes';
 
 // Controllers - Resource business logic
-export {
-  // Resource CRUD operations
-  createResource,
-  getResources,
-  getResourceById,
-  updateResource,
-  deleteResource,
-  
-  // Resource analytics
-  getResourcesByType,
-  getResourcesByCategory,
-  getResourcesByStatus,
-  getFavoriteResources,
-  getBookmarkedResources,
-  getArchivedResources,
-  getSharedResources,
-  getResourcesByFolder,
-  searchResources,
-  
-  // Resource actions
-  addToFavorites,
-  removeFromFavorites,
-  addBookmark,
-  removeBookmark,
-  archiveResource,
-  unarchiveResource,
-  duplicateResource,
-  bulkUpdateResources,
-  bulkDeleteResources,
-  
-  // Statistics
-  getResourceStats
-} from './controllers/resources.controller';
+export { resourcesController } from './controllers/resources.controller';
 
 // Services - Resource-specific services
-export {
-  ResourcesService,
-  resourcesService
-} from './services/resources.service';
+export { resourcesService } from './services/resources.service';
 
 // Types
 export type * from './types/resources.types';

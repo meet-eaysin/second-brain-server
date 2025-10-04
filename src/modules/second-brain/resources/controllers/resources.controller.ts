@@ -32,19 +32,14 @@ export const getResources = catchAsync(
 
     const result = await resourcesService.getResources(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Resources retrieved successfully',
-      result.resources,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Resources retrieved successfully', result.resources, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -88,8 +83,8 @@ export const deleteResource = catchAsync(
 export const getResourcesByType = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { type } = req.params;
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       type: [type as EResourceType]
     };
     const userId = getUserId(req);
@@ -115,8 +110,8 @@ export const getResourcesByType = catchAsync(
 export const getResourcesByCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { category } = req.params;
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       category: [category as EResourceCategory]
     };
     const userId = getUserId(req);
@@ -142,8 +137,8 @@ export const getResourcesByCategory = catchAsync(
 export const getResourcesByStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { status } = req.params;
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       status: [status as EResourceStatus]
     };
     const userId = getUserId(req);
@@ -168,113 +163,93 @@ export const getResourcesByStatus = catchAsync(
 
 export const getFavoriteResources = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       isFavorite: true
     };
     const userId = getUserId(req);
 
     const result = await resourcesService.getResources(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Favorite resources retrieved successfully',
-      result.resources,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Favorite resources retrieved successfully', result.resources, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getBookmarkedResources = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       isBookmarked: true
     };
     const userId = getUserId(req);
 
     const result = await resourcesService.getResources(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Bookmarked resources retrieved successfully',
-      result.resources,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Bookmarked resources retrieved successfully', result.resources, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getArchivedResources = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       isArchived: true
     };
     const userId = getUserId(req);
 
     const result = await resourcesService.getResources(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Archived resources retrieved successfully',
-      result.resources,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Archived resources retrieved successfully', result.resources, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getSharedResources = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       isShared: true
     };
     const userId = getUserId(req);
 
     const result = await resourcesService.getResources(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Shared resources retrieved successfully',
-      result.resources,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Shared resources retrieved successfully', result.resources, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getResourcesByFolder = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { folderPath } = req.params;
-    const params: IResourceQueryParams = { 
-      ...req.query as any, 
+    const params: IResourceQueryParams = {
+      ...(req.query as any),
       folderPath: decodeURIComponent(folderPath)
     };
     const userId = getUserId(req);
@@ -300,24 +275,19 @@ export const getResourcesByFolder = catchAsync(
 export const searchResources = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { q: search } = req.query;
-    const params: IResourceQueryParams = { ...req.query as any, search: search as string };
+    const params: IResourceQueryParams = { ...(req.query as any), search: search as string };
     const userId = getUserId(req);
 
     const result = await resourcesService.getResources(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Resource search completed successfully',
-      result.resources,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Resource search completed successfully', result.resources, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -328,9 +298,13 @@ export const addToFavorites = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const resource = await resourcesService.updateResource(id, { 
-      isFavorite: true
-    }, userId);
+    const resource = await resourcesService.updateResource(
+      id,
+      {
+        isFavorite: true
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Resource added to favorites successfully', resource);
   }
@@ -341,9 +315,13 @@ export const removeFromFavorites = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const resource = await resourcesService.updateResource(id, { 
-      isFavorite: false
-    }, userId);
+    const resource = await resourcesService.updateResource(
+      id,
+      {
+        isFavorite: false
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Resource removed from favorites successfully', resource);
   }
@@ -354,9 +332,13 @@ export const addBookmark = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const resource = await resourcesService.updateResource(id, { 
-      isBookmarked: true
-    }, userId);
+    const resource = await resourcesService.updateResource(
+      id,
+      {
+        isBookmarked: true
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Resource bookmarked successfully', resource);
   }
@@ -367,9 +349,13 @@ export const removeBookmark = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const resource = await resourcesService.updateResource(id, { 
-      isBookmarked: false
-    }, userId);
+    const resource = await resourcesService.updateResource(
+      id,
+      {
+        isBookmarked: false
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Resource bookmark removed successfully', resource);
   }
@@ -380,10 +366,14 @@ export const archiveResource = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const resource = await resourcesService.updateResource(id, { 
-      isArchived: true,
-      status: EResourceStatus.ARCHIVED
-    }, userId);
+    const resource = await resourcesService.updateResource(
+      id,
+      {
+        isArchived: true,
+        status: EResourceStatus.ARCHIVED
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Resource archived successfully', resource);
   }
@@ -394,10 +384,14 @@ export const unarchiveResource = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const resource = await resourcesService.updateResource(id, { 
-      isArchived: false,
-      status: EResourceStatus.ACTIVE
-    }, userId);
+    const resource = await resourcesService.updateResource(
+      id,
+      {
+        isArchived: false,
+        status: EResourceStatus.ACTIVE
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Resource unarchived successfully', resource);
   }
@@ -458,7 +452,7 @@ export const bulkUpdateResources = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      resourceIds.map((resourceId: string) => 
+      resourceIds.map((resourceId: string) =>
         resourcesService.updateResource(resourceId, updates, userId)
       )
     );
@@ -486,7 +480,7 @@ export const bulkDeleteResources = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      resourceIds.map((resourceId: string) => 
+      resourceIds.map((resourceId: string) =>
         resourcesService.deleteResource(resourceId, userId, permanent)
       )
     );
@@ -533,3 +527,30 @@ export const getResourceStats = catchAsync(
     sendSuccessResponse(res, 'Resource statistics retrieved successfully', stats);
   }
 );
+
+export const resourcesController = {
+  createResource,
+  getResources,
+  getResourceById,
+  updateResource,
+  deleteResource,
+  getResourcesByType,
+  getResourcesByCategory,
+  getResourcesByStatus,
+  getFavoriteResources,
+  getBookmarkedResources,
+  getArchivedResources,
+  getSharedResources,
+  getResourcesByFolder,
+  searchResources,
+  addToFavorites,
+  removeFromFavorites,
+  addBookmark,
+  removeBookmark,
+  archiveResource,
+  unarchiveResource,
+  duplicateResource,
+  bulkUpdateResources,
+  bulkDeleteResources,
+  getResourceStats
+};

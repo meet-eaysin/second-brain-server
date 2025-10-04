@@ -32,19 +32,14 @@ export const getProjects = catchAsync(
 
     const result = await projectsService.getProjects(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Projects retrieved successfully',
-      result.projects,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Projects retrieved successfully', result.projects, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -87,61 +82,51 @@ export const deleteProject = catchAsync(
 
 export const getActiveProjects = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       status: [EProjectStatus.ACTIVE, EProjectStatus.PLANNING]
     };
     const userId = getUserId(req);
 
     const result = await projectsService.getProjects(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Active projects retrieved successfully',
-      result.projects,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Active projects retrieved successfully', result.projects, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getCompletedProjects = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       status: [EProjectStatus.COMPLETED]
     };
     const userId = getUserId(req);
 
     const result = await projectsService.getProjects(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Completed projects retrieved successfully',
-      result.projects,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Completed projects retrieved successfully', result.projects, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getProjectsByStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { status } = req.params;
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       status: [status as EProjectStatus]
     };
     const userId = getUserId(req);
@@ -167,8 +152,8 @@ export const getProjectsByStatus = catchAsync(
 export const getProjectsByCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { category } = req.params;
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       category: [category as EProjectCategory]
     };
     const userId = getUserId(req);
@@ -194,8 +179,8 @@ export const getProjectsByCategory = catchAsync(
 export const getProjectsByPriority = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { priority } = req.params;
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       priority: [priority as EProjectPriority]
     };
     const userId = getUserId(req);
@@ -221,34 +206,29 @@ export const getProjectsByPriority = catchAsync(
 export const getMyProjects = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       ownerId: userId
     };
 
     const result = await projectsService.getProjects(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'My projects retrieved successfully',
-      result.projects,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'My projects retrieved successfully', result.projects, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const getProjectsImInvolvedIn = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = getUserId(req);
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       teamMemberId: userId
     };
 
@@ -272,51 +252,41 @@ export const getProjectsImInvolvedIn = catchAsync(
 
 export const getProjectTemplates = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IProjectQueryParams = { 
-      ...req.query as any, 
+    const params: IProjectQueryParams = {
+      ...(req.query as any),
       isTemplate: true
     };
     const userId = getUserId(req);
 
     const result = await projectsService.getProjects(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Project templates retrieved successfully',
-      result.projects,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Project templates retrieved successfully', result.projects, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
 export const searchProjects = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { q: search } = req.query;
-    const params: IProjectQueryParams = { ...req.query as any, search: search as string };
+    const params: IProjectQueryParams = { ...(req.query as any), search: search as string };
     const userId = getUserId(req);
 
     const result = await projectsService.getProjects(params, userId);
 
-    sendPaginatedResponse(
-      res,
-      'Project search completed successfully',
-      result.projects,
-      {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: Math.ceil(result.total / result.limit),
-        hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
-    );
+    sendPaginatedResponse(res, 'Project search completed successfully', result.projects, {
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: Math.ceil(result.total / result.limit),
+      hasNext: result.hasNext,
+      hasPrev: result.hasPrev
+    });
   }
 );
 
@@ -327,10 +297,14 @@ export const startProject = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const project = await projectsService.updateProject(id, { 
-      status: EProjectStatus.ACTIVE,
-      phase: EProjectPhase.EXECUTION
-    }, userId);
+    const project = await projectsService.updateProject(
+      id,
+      {
+        status: EProjectStatus.ACTIVE,
+        phase: EProjectPhase.EXECUTION
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Project started successfully', project);
   }
@@ -341,11 +315,15 @@ export const completeProject = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const project = await projectsService.updateProject(id, { 
-      status: EProjectStatus.COMPLETED,
-      phase: EProjectPhase.CLOSURE,
-      progressPercentage: 100
-    }, userId);
+    const project = await projectsService.updateProject(
+      id,
+      {
+        status: EProjectStatus.COMPLETED,
+        phase: EProjectPhase.CLOSURE,
+        progressPercentage: 100
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Project completed successfully', project);
   }
@@ -356,9 +334,13 @@ export const pauseProject = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const project = await projectsService.updateProject(id, { 
-      status: EProjectStatus.ON_HOLD
-    }, userId);
+    const project = await projectsService.updateProject(
+      id,
+      {
+        status: EProjectStatus.ON_HOLD
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Project paused successfully', project);
   }
@@ -369,9 +351,13 @@ export const archiveProject = catchAsync(
     const { id } = req.params;
     const userId = getUserId(req);
 
-    const project = await projectsService.updateProject(id, { 
-      isArchived: true
-    }, userId);
+    const project = await projectsService.updateProject(
+      id,
+      {
+        isArchived: true
+      },
+      userId
+    );
 
     sendSuccessResponse(res, 'Project archived successfully', project);
   }
@@ -402,17 +388,21 @@ export const duplicateProject = catchAsync(
       objectives: [...originalProject.objectives],
       tags: [...originalProject.tags],
       customFields: { ...originalProject.customFields },
-      budget: originalProject.budget ? {
-        totalBudget: originalProject.budget.totalBudget,
-        currency: originalProject.budget.currency,
-        categories: originalProject.budget.categories.map(cat => ({
-          name: cat.name,
-          budgeted: cat.budgeted
-        }))
-      } : undefined,
-      timeTracking: originalProject.timeTracking ? {
-        estimatedHours: originalProject.timeTracking.estimatedHours
-      } : undefined,
+      budget: originalProject.budget
+        ? {
+            totalBudget: originalProject.budget.totalBudget,
+            currency: originalProject.budget.currency,
+            categories: originalProject.budget.categories.map(cat => ({
+              name: cat.name,
+              budgeted: cat.budgeted
+            }))
+          }
+        : undefined,
+      timeTracking: originalProject.timeTracking
+        ? {
+            estimatedHours: originalProject.timeTracking.estimatedHours
+          }
+        : undefined,
       milestones: originalProject.milestones.map(milestone => ({
         title: milestone.title,
         description: milestone.description,
@@ -443,7 +433,7 @@ export const bulkUpdateProjects = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      projectIds.map((projectId: string) => 
+      projectIds.map((projectId: string) =>
         projectsService.updateProject(projectId, updates, userId)
       )
     );
@@ -471,7 +461,7 @@ export const bulkDeleteProjects = catchAsync(
     const userId = getUserId(req);
 
     const results = await Promise.allSettled(
-      projectIds.map((projectId: string) => 
+      projectIds.map((projectId: string) =>
         projectsService.deleteProject(projectId, userId, permanent)
       )
     );
@@ -523,3 +513,28 @@ export const getProjectStats = catchAsync(
     sendSuccessResponse(res, 'Project statistics retrieved successfully', stats);
   }
 );
+
+export const projectsController = {
+  createProject,
+  getProjects,
+  getProjectById,
+  updateProject,
+  deleteProject,
+  getActiveProjects,
+  getCompletedProjects,
+  getProjectsByStatus,
+  getProjectsByCategory,
+  getProjectsByPriority,
+  getMyProjects,
+  getProjectsImInvolvedIn,
+  getProjectTemplates,
+  searchProjects,
+  startProject,
+  completeProject,
+  pauseProject,
+  archiveProject,
+  duplicateProject,
+  bulkUpdateProjects,
+  bulkDeleteProjects,
+  getProjectStats
+};

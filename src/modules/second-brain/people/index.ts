@@ -5,39 +5,10 @@
 export { default as peopleRoutes } from './routes/people.routes';
 
 // Controllers - People business logic
-export {
-  // Person CRUD operations
-  createPerson,
-  getPeople,
-  getPersonById,
-  updatePerson,
-  deletePerson,
-  
-  // People analytics
-  getFavorites,
-  getPeopleByType,
-  getPeopleByCompany,
-  getUpcomingFollowUps,
-  getOverdueFollowUps,
-  getUpcomingBirthdays,
-  searchPeople,
-  addToFavorites,
-  removeFromFavorites,
-  archivePerson,
-  unarchivePerson,
-  duplicatePerson,
-  bulkUpdatePeople,
-  bulkDeletePeople,
-  
-  // Statistics
-  getPeopleStats
-} from './controllers/people.controller';
+export { peopleController } from './controllers/people.controller';
 
 // Services - People-specific services
-export {
-  PeopleService,
-  peopleService
-} from './services/people.service';
+export { peopleService } from './services/people.service';
 
 // Types
 export type * from './types/people.types';

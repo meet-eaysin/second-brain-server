@@ -3,33 +3,7 @@ import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
 
 // People controllers
-import {
-  // Person CRUD
-  createPerson,
-  getPeople,
-  getPersonById,
-  updatePerson,
-  deletePerson,
-  
-  // People analytics
-  getFavorites,
-  getPeopleByType,
-  getPeopleByCompany,
-  getUpcomingFollowUps,
-  getOverdueFollowUps,
-  getUpcomingBirthdays,
-  searchPeople,
-  addToFavorites,
-  removeFromFavorites,
-  archivePerson,
-  unarchivePerson,
-  duplicatePerson,
-  bulkUpdatePeople,
-  bulkDeletePeople,
-  
-  // Statistics
-  getPeopleStats
-} from '../controllers/people.controller';
+import { peopleController } from '../controllers/people.controller';
 
 // Validators
 import {
@@ -53,118 +27,78 @@ router.use(authenticateToken);
 
 // ===== PEOPLE CRUD OPERATIONS =====
 
-router.post(
-  '/',
-  validateBody(createPersonSchema),
-  createPerson
-);
+router.post('/', validateBody(createPersonSchema), peopleController.createPerson);
 
-router.get(
-  '/',
-  validateQuery(getPeopleQuerySchema),
-  getPeople
-);
+router.get('/', validateQuery(getPeopleQuerySchema), peopleController.getPeople);
 
-router.get(
-  '/stats',
-  validateQuery(peopleStatsQuerySchema),
-  getPeopleStats
-);
+router.get('/stats', validateQuery(peopleStatsQuerySchema), peopleController.getPeopleStats);
 
-router.get(
-  '/favorites',
-  validateQuery(getPeopleQuerySchema),
-  getFavorites
-);
+router.get('/favorites', validateQuery(getPeopleQuerySchema), peopleController.getFavorites);
 
 router.get(
   '/follow-ups/upcoming',
   validateQuery(getPeopleQuerySchema),
-  getUpcomingFollowUps
+  peopleController.getUpcomingFollowUps
 );
 
 router.get(
   '/follow-ups/overdue',
   validateQuery(getPeopleQuerySchema),
-  getOverdueFollowUps
+  peopleController.getOverdueFollowUps
 );
 
 router.get(
   '/birthdays/upcoming',
   validateQuery(getPeopleQuerySchema),
-  getUpcomingBirthdays
+  peopleController.getUpcomingBirthdays
 );
 
-router.get(
-  '/search',
-  validateQuery(searchPeopleSchema),
-  searchPeople
-);
+router.get('/search', validateQuery(searchPeopleSchema), peopleController.searchPeople);
 
 router.get(
   '/type/:type',
   validateParams(contactTypeParamSchema),
   validateQuery(getPeopleQuerySchema),
-  getPeopleByType
+  peopleController.getPeopleByType
 );
 
 router.get(
   '/company/:company',
   validateParams(companyParamSchema),
   validateQuery(getPeopleQuerySchema),
-  getPeopleByCompany
+  peopleController.getPeopleByCompany
 );
 
-router.get(
-  '/:id',
-  validateParams(personIdSchema),
-  getPersonById
-);
+router.get('/:id', validateParams(personIdSchema), peopleController.getPersonById);
 
 router.put(
   '/:id',
   validateParams(personIdSchema),
   validateBody(updatePersonSchema),
-  updatePerson
+  peopleController.updatePerson
 );
 
-router.delete(
-  '/:id',
-  validateParams(personIdSchema),
-  deletePerson
-);
+router.delete('/:id', validateParams(personIdSchema), peopleController.deletePerson);
 
 // ===== PERSON ACTIONS =====
 
-router.post(
-  '/:id/favorite',
-  validateParams(personIdSchema),
-  addToFavorites
-);
+router.post('/:id/favorite', validateParams(personIdSchema), peopleController.addToFavorites);
 
 router.delete(
   '/:id/favorite',
   validateParams(personIdSchema),
-  removeFromFavorites
+  peopleController.removeFromFavorites
 );
 
-router.post(
-  '/:id/archive',
-  validateParams(personIdSchema),
-  archivePerson
-);
+router.post('/:id/archive', validateParams(personIdSchema), peopleController.archivePerson);
 
-router.post(
-  '/:id/unarchive',
-  validateParams(personIdSchema),
-  unarchivePerson
-);
+router.post('/:id/unarchive', validateParams(personIdSchema), peopleController.unarchivePerson);
 
 router.post(
   '/:id/duplicate',
   validateParams(personIdSchema),
   validateBody(duplicatePersonSchema),
-  duplicatePerson
+  peopleController.duplicatePerson
 );
 
 // ===== BULK OPERATIONS =====
@@ -172,13 +106,13 @@ router.post(
 router.post(
   '/bulk/update',
   validateBody(bulkUpdatePeopleSchema),
-  bulkUpdatePeople
+  peopleController.bulkUpdatePeople
 );
 
 router.post(
   '/bulk/delete',
   validateBody(bulkDeletePeopleSchema),
-  bulkDeletePeople
+  peopleController.bulkDeletePeople
 );
 
 export default router;

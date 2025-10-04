@@ -3,39 +3,7 @@ import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateQuery, validateParams } from '@/middlewares/validation';
 
 // Resource controllers
-import {
-  // Resource CRUD
-  createResource,
-  getResources,
-  getResourceById,
-  updateResource,
-  deleteResource,
-  
-  // Resource analytics
-  getResourcesByType,
-  getResourcesByCategory,
-  getResourcesByStatus,
-  getFavoriteResources,
-  getBookmarkedResources,
-  getArchivedResources,
-  getSharedResources,
-  getResourcesByFolder,
-  searchResources,
-  
-  // Resource actions
-  addToFavorites,
-  removeFromFavorites,
-  addBookmark,
-  removeBookmark,
-  archiveResource,
-  unarchiveResource,
-  duplicateResource,
-  bulkUpdateResources,
-  bulkDeleteResources,
-  
-  // Statistics
-  getResourceStats
-} from '../controllers/resources.controller';
+import { resourcesController } from '../controllers/resources.controller';
 
 // Validators
 import {
@@ -61,144 +29,108 @@ router.use(authenticateToken);
 
 // ===== RESOURCE CRUD OPERATIONS =====
 
-router.post(
-  '/',
-  validateBody(createResourceSchema),
-  createResource
-);
+router.post('/', validateBody(createResourceSchema), resourcesController.createResource);
 
-router.get(
-  '/',
-  validateQuery(getResourcesQuerySchema),
-  getResources
-);
+router.get('/', validateQuery(getResourcesQuerySchema), resourcesController.getResources);
 
-router.get(
-  '/stats',
-  validateQuery(resourceStatsQuerySchema),
-  getResourceStats
-);
+router.get('/stats', validateQuery(resourceStatsQuerySchema), resourcesController.getResourceStats);
 
 router.get(
   '/favorites',
   validateQuery(getResourcesQuerySchema),
-  getFavoriteResources
+  resourcesController.getFavoriteResources
 );
 
 router.get(
   '/bookmarks',
   validateQuery(getResourcesQuerySchema),
-  getBookmarkedResources
+  resourcesController.getBookmarkedResources
 );
 
 router.get(
   '/archived',
   validateQuery(getResourcesQuerySchema),
-  getArchivedResources
+  resourcesController.getArchivedResources
 );
 
 router.get(
   '/shared',
   validateQuery(getResourcesQuerySchema),
-  getSharedResources
+  resourcesController.getSharedResources
 );
 
-router.get(
-  '/search',
-  validateQuery(searchResourcesSchema),
-  searchResources
-);
+router.get('/search', validateQuery(searchResourcesSchema), resourcesController.searchResources);
 
 router.get(
   '/type/:type',
   validateParams(typeParamSchema),
   validateQuery(getResourcesQuerySchema),
-  getResourcesByType
+  resourcesController.getResourcesByType
 );
 
 router.get(
   '/category/:category',
   validateParams(categoryParamSchema),
   validateQuery(getResourcesQuerySchema),
-  getResourcesByCategory
+  resourcesController.getResourcesByCategory
 );
 
 router.get(
   '/status/:status',
   validateParams(statusParamSchema),
   validateQuery(getResourcesQuerySchema),
-  getResourcesByStatus
+  resourcesController.getResourcesByStatus
 );
 
 router.get(
   '/folder/:folderPath',
   validateParams(folderPathParamSchema),
   validateQuery(getResourcesQuerySchema),
-  getResourcesByFolder
+  resourcesController.getResourcesByFolder
 );
 
-router.get(
-  '/:id',
-  validateParams(resourceIdSchema),
-  getResourceById
-);
+router.get('/:id', validateParams(resourceIdSchema), resourcesController.getResourceById);
 
 router.put(
   '/:id',
   validateParams(resourceIdSchema),
   validateBody(updateResourceSchema),
-  updateResource
+  resourcesController.updateResource
 );
 
-router.delete(
-  '/:id',
-  validateParams(resourceIdSchema),
-  deleteResource
-);
+router.delete('/:id', validateParams(resourceIdSchema), resourcesController.deleteResource);
 
 // ===== RESOURCE ACTIONS =====
 
-router.post(
-  '/:id/favorite',
-  validateParams(resourceIdSchema),
-  addToFavorites
-);
+router.post('/:id/favorite', validateParams(resourceIdSchema), resourcesController.addToFavorites);
 
 router.delete(
   '/:id/favorite',
   validateParams(resourceIdSchema),
-  removeFromFavorites
+  resourcesController.removeFromFavorites
 );
 
-router.post(
-  '/:id/bookmark',
-  validateParams(resourceIdSchema),
-  addBookmark
-);
+router.post('/:id/bookmark', validateParams(resourceIdSchema), resourcesController.addBookmark);
 
 router.delete(
   '/:id/bookmark',
   validateParams(resourceIdSchema),
-  removeBookmark
+  resourcesController.removeBookmark
 );
 
-router.post(
-  '/:id/archive',
-  validateParams(resourceIdSchema),
-  archiveResource
-);
+router.post('/:id/archive', validateParams(resourceIdSchema), resourcesController.archiveResource);
 
 router.post(
   '/:id/unarchive',
   validateParams(resourceIdSchema),
-  unarchiveResource
+  resourcesController.unarchiveResource
 );
 
 router.post(
   '/:id/duplicate',
   validateParams(resourceIdSchema),
   validateBody(duplicateResourceSchema),
-  duplicateResource
+  resourcesController.duplicateResource
 );
 
 // ===== BULK OPERATIONS =====
@@ -206,13 +138,13 @@ router.post(
 router.post(
   '/bulk/update',
   validateBody(bulkUpdateResourcesSchema),
-  bulkUpdateResources
+  resourcesController.bulkUpdateResources
 );
 
 router.post(
   '/bulk/delete',
   validateBody(bulkDeleteResourcesSchema),
-  bulkDeleteResources
+  resourcesController.bulkDeleteResources
 );
 
 export default router;
