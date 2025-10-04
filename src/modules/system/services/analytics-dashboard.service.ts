@@ -1,7 +1,4 @@
-import {
-  IActivityResponse,
-  EActivityType
-} from '../types/activity.types';
+import { IActivityResponse, EActivityType } from '../types/activity.types';
 import { getActivities } from './activity.service';
 
 // Dashboard analytics interfaces
@@ -99,7 +96,7 @@ export const getDashboardMetrics = async (
 ): Promise<IDashboardMetrics> => {
   const now = new Date();
   let startDate: Date;
-  
+
   switch (period) {
     case 'day':
       startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -187,7 +184,8 @@ export const getWorkspaceOverview = async (workspaceId: string): Promise<IWorksp
     const current = activityByType.get(activity.type) || { count: 0, lastActivity: new Date(0) };
     activityByType.set(activity.type, {
       count: current.count + 1,
-      lastActivity: activity.timestamp > current.lastActivity ? activity.timestamp : current.lastActivity
+      lastActivity:
+        activity.timestamp > current.lastActivity ? activity.timestamp : current.lastActivity
     });
   });
 
@@ -203,10 +201,10 @@ export const getWorkspaceOverview = async (workspaceId: string): Promise<IWorksp
   // Calculate top users
   const userActivity = new Map<string, { userName: string; count: number; lastActive: Date }>();
   activities.forEach(activity => {
-    const current = userActivity.get(activity.userId) || { 
-      userName: activity.userName, 
-      count: 0, 
-      lastActive: new Date(0) 
+    const current = userActivity.get(activity.userId) || {
+      userName: activity.userName,
+      count: 0,
+      lastActive: new Date(0)
     };
     userActivity.set(activity.userId, {
       userName: activity.userName,
@@ -279,29 +277,29 @@ export const getUserActivityProfile = async (
   });
 
   const favoriteActions = Array.from(actionCounts.entries())
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([type]) => type);
 
   // Calculate activity pattern
   const hourCounts = new Map<number, number>();
   const dayCounts = new Map<string, number>();
-  
+
   activities.forEach(activity => {
     const hour = activity.timestamp.getHours();
     const day = activity.timestamp.toLocaleDateString('en-US', { weekday: 'long' });
-    
+
     hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
     dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
   });
 
   const peakHours = Array.from(hourCounts.entries())
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([hour]) => hour);
 
   const activeDays = Array.from(dayCounts.entries())
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([day]) => day);
 
@@ -351,8 +349,9 @@ export const generateAuditTrail = async (
   const activities = activitiesResponse.activities;
 
   // Calculate summary
-  const totalChanges = activities.reduce((sum, activity) => 
-    sum + (activity.changes?.length || 0), 0
+  const totalChanges = activities.reduce(
+    (sum, activity) => sum + (activity.changes?.length || 0),
+    0
   );
 
   const affectedEntities = new Set(
@@ -365,15 +364,19 @@ export const generateAuditTrail = async (
   };
 
   // Assess risk level
-  const highRiskActivities = activities.filter(activity => 
-    activity.type.includes('DELETED') || 
-    activity.type.includes('SETTINGS') ||
-    activity.entityType === 'workspace'
+  const highRiskActivities = activities.filter(
+    activity =>
+      activity.type.includes('DELETED') ||
+      activity.type.includes('SETTINGS') ||
+      activity.entityType === 'workspace'
   );
 
-  const riskLevel: 'low' | 'medium' | 'high' = 
-    highRiskActivities.length > activities.length * 0.3 ? 'high' :
-    highRiskActivities.length > activities.length * 0.1 ? 'medium' : 'low';
+  const riskLevel: 'low' | 'medium' | 'high' =
+    highRiskActivities.length > activities.length * 0.3
+      ? 'high'
+      : highRiskActivities.length > activities.length * 0.1
+        ? 'medium'
+        : 'low';
 
   // Compliance analysis
   const complianceStatus = analyzeCompliance(activities);
@@ -397,12 +400,18 @@ const calculateActivityTrend = async (
 ): Promise<Array<{ date: string; count: number; change: number }>> => {
   const trend: Array<{ date: string; count: number; change: number }> = [];
   const now = new Date();
-  
+
   let days: number;
   switch (period) {
-    case 'day': days = 7; break;
-    case 'week': days = 4; break;
-    case 'month': days = 12; break;
+    case 'day':
+      days = 7;
+      break;
+    case 'week':
+      days = 4;
+      break;
+    case 'month':
+      days = 12;
+      break;
   }
 
   for (let i = days - 1; i >= 0; i--) {
@@ -410,10 +419,8 @@ const calculateActivityTrend = async (
     const dateStr = date.toISOString().split('T')[0];
     const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-    
-    const count = activities.filter(a => 
-      a.timestamp >= dayStart && a.timestamp < dayEnd
-    ).length;
+
+    const count = activities.filter(a => a.timestamp >= dayStart && a.timestamp < dayEnd).length;
 
     // Calculate change from previous period (simplified)
     const change = i === days - 1 ? 0 : Math.random() * 20 - 10; // Mock change
@@ -424,10 +431,7 @@ const calculateActivityTrend = async (
   return trend;
 };
 
-const calculateUserEngagement = async (
-  workspaceId: string,
-  period: 'day' | 'week' | 'month'
-) => {
+const calculateUserEngagement = async (workspaceId: string, period: 'day' | 'week' | 'month') => {
   // Mock implementation - would calculate from actual data
   return {
     dailyActiveUsers: 25,
@@ -437,12 +441,14 @@ const calculateUserEngagement = async (
   };
 };
 
-const calculateUserTrend = (activities: readonly IActivityResponse[]): 'increasing' | 'decreasing' | 'stable' => {
+const calculateUserTrend = (
+  activities: readonly IActivityResponse[]
+): 'increasing' | 'decreasing' | 'stable' => {
   if (activities.length < 7) return 'stable';
-  
+
   const recentWeek = activities.slice(0, Math.floor(activities.length / 2));
   const previousWeek = activities.slice(Math.floor(activities.length / 2));
-  
+
   if (recentWeek.length > previousWeek.length * 1.1) return 'increasing';
   if (recentWeek.length < previousWeek.length * 0.9) return 'decreasing';
   return 'stable';

@@ -1,10 +1,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
-import {
-  INotificationResponse,
-  ENotificationType
-} from '../types/notifications.types';
+import { INotificationResponse, ENotificationType } from '../types/notifications.types';
 import { TJwtPayload } from '@/users/types/user.types';
 
 // Connected users map
@@ -37,13 +34,18 @@ export const initializeRealtimeNotifications = (server: HTTPServer): SocketIOSer
   // Authentication middleware
   io.use(async (socket: Socket, next) => {
     try {
-      const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+      const token =
+        socket.handshake.auth.token ||
+        socket.handshake.headers.authorization?.replace('Bearer ', '');
 
       if (!token) {
         return next(new Error('Authentication token required'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as TJwtPayload & { workspaceId?: string };
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'fallback-secret'
+      ) as TJwtPayload & { workspaceId?: string };
       socket.userId = decoded.userId;
       socket.workspaceId = decoded.workspaceId || 'default';
 
@@ -128,7 +130,7 @@ const handleConnection = (socket: Socket): void => {
   });
 
   // Handle errors
-  socket.on('error', (error) => {
+  socket.on('error', error => {
     console.error(`Socket error for user ${userId}:`, error);
   });
 };
@@ -174,7 +176,9 @@ export const sendRealtimeNotification = async (
 
     // Also send to workspace room for collaborative notifications
     if (notification.metadata?.workspaceId) {
-      const workspaceRoom = NOTIFICATION_ROOMS.WORKSPACE(notification.metadata.workspaceId as string);
+      const workspaceRoom = NOTIFICATION_ROOMS.WORKSPACE(
+        notification.metadata.workspaceId as string
+      );
       io.to(workspaceRoom).emit('notification:workspace', {
         ...notification,
         timestamp: new Date().toISOString(),
@@ -220,14 +224,12 @@ export const sendRealtimeNotificationToUsers = async (
 /**
  * Broadcast system-wide notification
  */
-export const broadcastSystemNotification = async (
-  notification: {
-    type: ENotificationType;
-    title: string;
-    message: string;
-    data?: Record<string, unknown>;
-  }
-): Promise<void> => {
+export const broadcastSystemNotification = async (notification: {
+  type: ENotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+}): Promise<void> => {
   if (!io) {
     console.warn('Real-time notification system not initialized');
     return;
@@ -323,7 +325,10 @@ const handlePreferencesUpdate = async (socket: Socket, preferences: any): Promis
 /**
  * Handle typing start
  */
-const handleTypingStart = (socket: Socket, data: { entityId: string; entityType: string }): void => {
+const handleTypingStart = (
+  socket: Socket,
+  data: { entityId: string; entityType: string }
+): void => {
   const room = `${data.entityType}:${data.entityId}`;
   socket.to(room).emit('typing:start', {
     userId: socket.userId,
@@ -370,7 +375,11 @@ export const isUserConnected = (userId: string): boolean => {
 /**
  * Send notification to specific socket
  */
-export const sendToSocket = (socketId: string, event: string, data: Record<string, unknown>): void => {
+export const sendToSocket = (
+  socketId: string,
+  event: string,
+  data: Record<string, unknown>
+): void => {
   if (io) {
     io.to(socketId).emit(event, data);
   }

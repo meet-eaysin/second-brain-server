@@ -41,23 +41,17 @@ export const getAnalyticsDashboard = async (
   const databaseMap = createDatabaseMap(databases);
 
   // Calculate all analytics in parallel
-  const [
-    productivity,
-    tasks,
-    timeTracking,
-    goals,
-    finance,
-    content,
-    workspace
-  ] = await Promise.all([
-    getProductivityAnalytics(databaseMap, options),
-    getTaskAnalytics(databaseMap, options),
-    getTimeTrackingAnalytics(databaseMap, options),
-    getGoalAnalytics(databaseMap, options),
-    getFinanceAnalytics(databaseMap, options),
-    getContentAnalytics(databaseMap, options),
-    getWorkspaceAnalytics(workspaceId, options)
-  ]);
+  const [productivity, tasks, timeTracking, goals, finance, content, workspace] = await Promise.all(
+    [
+      getProductivityAnalytics(databaseMap, options),
+      getTaskAnalytics(databaseMap, options),
+      getTimeTrackingAnalytics(databaseMap, options),
+      getGoalAnalytics(databaseMap, options),
+      getFinanceAnalytics(databaseMap, options),
+      getContentAnalytics(databaseMap, options),
+      getWorkspaceAnalytics(workspaceId, options)
+    ]
+  );
 
   // Generate insights and recommendations
   const insights = generateInsights({
@@ -127,9 +121,7 @@ export const getProductivityAnalytics = async (
     createdAt: { $gte: startDate, $lte: endDate }
   }).exec();
 
-  const completedTasks = tasks.filter(task =>
-    task.properties?.status === EStatus.COMPLETED
-  );
+  const completedTasks = tasks.filter(task => task.properties?.status === EStatus.COMPLETED);
 
   const tasksCreated = tasks.length;
   const tasksCompleted = completedTasks.length;
@@ -146,16 +138,20 @@ export const getProductivityAnalytics = async (
       return (completedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60); // hours
     });
 
-  const averageCompletionTime = completionTimes.length > 0
-    ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
-    : 0;
+  const averageCompletionTime =
+    completionTimes.length > 0
+      ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
+      : 0;
 
   // Calculate productivity score (0-100)
-  const productivityScore = Math.min(100, Math.round(
-    (completionRate * 0.4) +
-    (Math.min(100, tasksCompleted * 2) * 0.3) +
-    (Math.max(0, 100 - averageCompletionTime * 2) * 0.3)
-  ));
+  const productivityScore = Math.min(
+    100,
+    Math.round(
+      completionRate * 0.4 +
+        Math.min(100, tasksCompleted * 2) * 0.3 +
+        Math.max(0, 100 - averageCompletionTime * 2) * 0.3
+    )
+  );
 
   // Generate burndown data
   const burndownData = generateBurndownData(tasks, startDate, endDate);
@@ -166,7 +162,7 @@ export const getProductivityAnalytics = async (
   // Find most/least productive days - for now use empty data
   const dayProductivity: Record<string, number> = {};
 
-  const sortedDays = Object.entries(dayProductivity).sort(([,a], [,b]) => b - a);
+  const sortedDays = Object.entries(dayProductivity).sort(([, a], [, b]) => b - a);
   const mostProductiveDay = sortedDays[0]?.[0] || '';
   const leastProductiveDay = sortedDays[sortedDays.length - 1]?.[0] || '';
 
@@ -223,21 +219,20 @@ export const getTaskAnalytics = async (
   const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   // Calculate average completion time
-  const completedTasksWithTime = tasks.filter(t =>
-    t.properties?.status === EStatus.COMPLETED &&
-    t.properties?.completed_at &&
-    t.createdAt
+  const completedTasksWithTime = tasks.filter(
+    t => t.properties?.status === EStatus.COMPLETED && t.properties?.completed_at && t.createdAt
   );
 
-  const averageCompletionTime = completedTasksWithTime.length > 0
-    ? completedTasksWithTime.reduce((sum, task) => {
-        const completedAtValue = getDateProperty(task.properties, 'completed_at');
-        const createdAt = new Date(task.createdAt);
-        if (!completedAtValue) return sum;
-        const completedAt = new Date(completedAtValue);
-        return sum + (completedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-      }, 0) / completedTasksWithTime.length
-    : 0;
+  const averageCompletionTime =
+    completedTasksWithTime.length > 0
+      ? completedTasksWithTime.reduce((sum, task) => {
+          const completedAtValue = getDateProperty(task.properties, 'completed_at');
+          const createdAt = new Date(task.createdAt);
+          if (!completedAtValue) return sum;
+          const completedAt = new Date(completedAtValue);
+          return sum + (completedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        }, 0) / completedTasksWithTime.length
+      : 0;
 
   // Count by priority
   const tasksByPriority: Record<EPriority, number> = {
@@ -317,7 +312,7 @@ export const getTimeTrackingAnalytics = async (
 
   tasks.forEach(task => {
     const timeEntries = getTimeEntriesProperty(task.properties);
-    timeEntries.forEach((entry) => {
+    timeEntries.forEach(entry => {
       if (entry.duration) {
         totalHoursLogged += entry.duration / 60; // Convert minutes to hours
         totalTimeEntries++;
@@ -495,83 +490,126 @@ interface IAnalyticsOptions {
 }
 
 // Placeholder implementations for complex data generation functions
-const generateBurndownData = (_tasks: ITaskRecord[], _startDate: Date, _endDate: Date): readonly {
+const generateBurndownData = (
+  _tasks: ITaskRecord[],
+  _startDate: Date,
+  _endDate: Date
+): readonly {
   readonly date: string;
   readonly remaining: number;
   readonly completed: number;
 }[] => [];
 
-const generateDailyProductivityData = (_tasks: ITaskRecord[], _startDate: Date, _endDate: Date): readonly {
+const generateDailyProductivityData = (
+  _tasks: ITaskRecord[],
+  _startDate: Date,
+  _endDate: Date
+): readonly {
   readonly date: string;
   readonly tasksCompleted: number;
   readonly hoursWorked: number;
   readonly productivityScore: number;
 }[] => [];
 
-const generatePeakHoursData = (_tasks: ITaskRecord[]): readonly {
+const generatePeakHoursData = (
+  _tasks: ITaskRecord[]
+): readonly {
   readonly hour: number;
   readonly taskCount: number;
 }[] => [];
 
-const calculateVelocityTrend = (_dailyData: readonly {
-  readonly date: string;
-  readonly tasksCompleted: number;
-  readonly hoursWorked: number;
-  readonly productivityScore: number;
-}[]): 'increasing' | 'decreasing' | 'stable' => 'stable';
+const calculateVelocityTrend = (
+  _dailyData: readonly {
+    readonly date: string;
+    readonly tasksCompleted: number;
+    readonly hoursWorked: number;
+    readonly productivityScore: number;
+  }[]
+): 'increasing' | 'decreasing' | 'stable' => 'stable';
 
-const generateTasksByProject = async (_tasks: ITaskRecord[], _databaseMap: IDatabaseMap): Promise<readonly {
-  readonly projectId: string;
-  readonly projectName: string;
-  readonly taskCount: number;
-  readonly completedCount: number;
-  readonly completionRate: number;
-}[]> => [];
+const generateTasksByProject = async (
+  _tasks: ITaskRecord[],
+  _databaseMap: IDatabaseMap
+): Promise<
+  readonly {
+    readonly projectId: string;
+    readonly projectName: string;
+    readonly taskCount: number;
+    readonly completedCount: number;
+    readonly completionRate: number;
+  }[]
+> => [];
 
-const generateTasksByAssignee = async (_tasks: ITaskRecord[]): Promise<readonly {
-  readonly userId: string;
-  readonly userName: string;
-  readonly assignedCount: number;
-  readonly completedCount: number;
-  readonly averageTime: number;
-  readonly efficiency: number;
-}[]> => [];
+const generateTasksByAssignee = async (
+  _tasks: ITaskRecord[]
+): Promise<
+  readonly {
+    readonly userId: string;
+    readonly userName: string;
+    readonly assignedCount: number;
+    readonly completedCount: number;
+    readonly averageTime: number;
+    readonly efficiency: number;
+  }[]
+> => [];
 
-const generateTaskTrends = (_tasks: ITaskRecord[], _startDate: Date, _endDate: Date): readonly {
+const generateTaskTrends = (
+  _tasks: ITaskRecord[],
+  _startDate: Date,
+  _endDate: Date
+): readonly {
   readonly date: string;
   readonly created: number;
   readonly completed: number;
   readonly overdue: number;
 }[] => [];
 
-const generateTimeByProject = async (_tasks: ITaskRecord[], _databaseMap: IDatabaseMap): Promise<readonly {
-  readonly projectId: string;
-  readonly projectName: string;
-  readonly hours: number;
-  readonly percentage: number;
-}[]> => [];
+const generateTimeByProject = async (
+  _tasks: ITaskRecord[],
+  _databaseMap: IDatabaseMap
+): Promise<
+  readonly {
+    readonly projectId: string;
+    readonly projectName: string;
+    readonly hours: number;
+    readonly percentage: number;
+  }[]
+> => [];
 
-const generateTimeByUser = async (_tasks: ITaskRecord[]): Promise<readonly {
-  readonly userId: string;
-  readonly userName: string;
-  readonly hours: number;
-  readonly tasksCompleted: number;
-  readonly efficiency: number;
-}[]> => [];
+const generateTimeByUser = async (
+  _tasks: ITaskRecord[]
+): Promise<
+  readonly {
+    readonly userId: string;
+    readonly userName: string;
+    readonly hours: number;
+    readonly tasksCompleted: number;
+    readonly efficiency: number;
+  }[]
+> => [];
 
-const generateDailyTimeLog = (_tasks: ITaskRecord[], _startDate: Date, _endDate: Date): readonly {
+const generateDailyTimeLog = (
+  _tasks: ITaskRecord[],
+  _startDate: Date,
+  _endDate: Date
+): readonly {
   readonly date: string;
   readonly hours: number;
   readonly tasksWorked: number;
 }[] => [];
 
-const generateHourlyDistribution = (_tasks: ITaskRecord[]): readonly {
+const generateHourlyDistribution = (
+  _tasks: ITaskRecord[]
+): readonly {
   readonly hour: number;
   readonly minutes: number;
 }[] => [];
 
 // Placeholder implementations for other analytics functions
-export const getGoalAnalytics = async (_databaseMap: IDatabaseMap, _options: IAnalyticsOptions): Promise<IGoalAnalytics> => ({
+export const getGoalAnalytics = async (
+  _databaseMap: IDatabaseMap,
+  _options: IAnalyticsOptions
+): Promise<IGoalAnalytics> => ({
   totalGoals: 0,
   completedGoals: 0,
   activeGoals: 0,
@@ -583,7 +621,10 @@ export const getGoalAnalytics = async (_databaseMap: IDatabaseMap, _options: IAn
   goalTrends: []
 });
 
-export const getFinanceAnalytics = async (_databaseMap: IDatabaseMap, _options: IAnalyticsOptions): Promise<IFinanceAnalytics> => ({
+export const getFinanceAnalytics = async (
+  _databaseMap: IDatabaseMap,
+  _options: IAnalyticsOptions
+): Promise<IFinanceAnalytics> => ({
   totalIncome: 0,
   totalExpenses: 0,
   netIncome: 0,
@@ -595,7 +636,10 @@ export const getFinanceAnalytics = async (_databaseMap: IDatabaseMap, _options: 
   topExpenses: []
 });
 
-export const getContentAnalytics = async (_databaseMap: IDatabaseMap, _options: IAnalyticsOptions): Promise<IContentAnalytics> => ({
+export const getContentAnalytics = async (
+  _databaseMap: IDatabaseMap,
+  _options: IAnalyticsOptions
+): Promise<IContentAnalytics> => ({
   totalNotes: 0,
   totalWords: 0,
   averageWordsPerNote: 0,
@@ -606,7 +650,10 @@ export const getContentAnalytics = async (_databaseMap: IDatabaseMap, _options: 
   contentEngagement: []
 });
 
-export const getWorkspaceAnalytics = async (_workspaceId: string, _options: IAnalyticsOptions): Promise<IWorkspaceAnalytics> => ({
+export const getWorkspaceAnalytics = async (
+  _workspaceId: string,
+  _options: IAnalyticsOptions
+): Promise<IWorkspaceAnalytics> => ({
   totalUsers: 0,
   activeUsers: 0,
   totalDatabases: 0,

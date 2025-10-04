@@ -3,11 +3,9 @@ import { authenticateToken, requireAdmin, optionalAuth } from '@/middlewares/aut
 import { validateBody, validateParams, validateQuery } from '@/middlewares/validation';
 import { requirePermission } from '@/middlewares/permission.middleware';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
-import { z } from 'zod';
 import {
   resolveWorkspaceContext,
-  ensureDefaultWorkspace,
-  injectWorkspaceContext
+  ensureDefaultWorkspace
 } from '@/modules/workspace/middleware/workspace.middleware';
 import {
   createTemplate,
@@ -39,8 +37,19 @@ import {
 import {
   CreateTemplateRequestSchema,
   TemplateSearchQuerySchema,
-  TemplateCategorySchema
-} from '../types/template.types';
+  TemplateCategoryParamSchema,
+  ModuleTypeParamSchema,
+  TemplateIdSchema,
+  UpdateTemplateSchema,
+  ApplyRowTemplateSchema,
+  ApplyDatabaseTemplateSchema,
+  ApplyWorkspaceTemplateSchema,
+  RateTemplateSchema,
+  UserTemplateHistoryQuerySchema,
+  DuplicateTemplateSchema,
+  ImportTemplateSchema,
+  DatabaseIdSchema
+} from '../validators/template.validators';
 
 const router = Router();
 
@@ -58,42 +67,18 @@ router.get('/search', validateQuery(TemplateSearchQuerySchema), searchTemplates)
 // Get templates by category (public)
 router.get(
   '/category/:category',
-  validateParams(z.object({ category: TemplateCategorySchema })),
+  validateParams(TemplateCategoryParamSchema),
   getTemplatesByCategory
 );
 
 // Get templates by module (public)
-router.get(
-  '/module/:moduleType',
-  validateParams(
-    z.object({
-      moduleType: z.enum([
-        'dashboard',
-        'tasks',
-        'notes',
-        'projects',
-        'goals',
-        'people',
-        'finance',
-        'habits',
-        'journal',
-        'mood_tracker',
-        'resources',
-        'para_projects',
-        'para_areas',
-        'para_resources',
-        'para_archive'
-      ])
-    })
-  ),
-  getTemplatesByModule
-);
+router.get('/module/:moduleType', validateParams(ModuleTypeParamSchema), getTemplatesByModule);
 
 // Get template by ID (public for public templates, requires auth for private)
 router.get(
   '/:templateId',
   optionalAuth, // Optional authentication
-  validateParams(z.object({ templateId: z.string().min(1) })),
+  validateParams(TemplateIdSchema),
   getTemplate
 );
 
@@ -110,18 +95,8 @@ router.post('/', validateBody(CreateTemplateRequestSchema), createTemplate);
 
 router.put(
   '/:templateId',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  validateBody(
-    z.object({
-      name: z.string().min(1).max(100).optional(),
-      description: z.string().max(500).optional(),
-      tags: z.array(z.string()).optional(),
-      icon: z.string().optional(),
-      color: z.string().optional(),
-      preview: z.string().optional(),
-      access: z.enum(['public', 'private', 'team', 'organization']).optional()
-    })
-  ),
+  validateParams(TemplateIdSchema),
+  validateBody(UpdateTemplateSchema),
   requirePermission(EShareScope.TEMPLATE, EPermissionLevel.EDIT, {
     resourceIdParam: 'templateId',
     allowOwner: true
@@ -131,7 +106,7 @@ router.put(
 
 router.delete(
   '/:templateId',
-  validateParams(z.object({ templateId: z.string().min(1) })),
+  validateParams(TemplateIdSchema),
   requirePermission(EShareScope.TEMPLATE, EPermissionLevel.FULL_ACCESS, {
     resourceIdParam: 'templateId',
     allowOwner: true
@@ -141,103 +116,50 @@ router.delete(
 
 router.post(
   '/:templateId/apply/row',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  validateBody(
-    z.object({
-      databaseId: z.string().min(1),
-      overrideValues: z.record(z.string(), z.any()).optional()
-    })
-  ),
+  validateParams(TemplateIdSchema),
+  validateBody(ApplyRowTemplateSchema),
   applyRowTemplate
 );
 
 router.post(
   '/:templateId/apply/database',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  validateBody(
-    z.object({
-      workspaceId: z.string().min(1),
-      overrides: z
-        .object({
-          name: z.string().optional(),
-          description: z.string().optional()
-        })
-        .optional()
-    })
-  ),
+  validateParams(TemplateIdSchema),
+  validateBody(ApplyDatabaseTemplateSchema),
   applyDatabaseTemplate
 );
 
 router.post(
   '/:templateId/apply/workspace',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  validateBody(
-    z.object({
-      overrides: z
-        .object({
-          name: z.string().optional(),
-          description: z.string().optional()
-        })
-        .optional()
-    })
-  ),
+  validateParams(TemplateIdSchema),
+  validateBody(ApplyWorkspaceTemplateSchema),
   applyWorkspaceTemplate
 );
 
 router.post(
   '/:templateId/rate',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  validateBody(
-    z.object({
-      rating: z.number().min(1).max(5)
-    })
-  ),
+  validateParams(TemplateIdSchema),
+  validateBody(RateTemplateSchema),
   rateTemplate
 );
 
-router.get(
-  '/:templateId/analytics',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  getTemplateAnalytics
-);
+router.get('/:templateId/analytics', validateParams(TemplateIdSchema), getTemplateAnalytics);
 
 router.get('/user/my-templates', getUserTemplates);
 
-router.get(
-  '/user/history',
-  validateQuery(
-    z.object({
-      limit: z.string().regex(/^\d+$/).optional()
-    })
-  ),
-  getUserTemplateHistory
-);
+router.get('/user/history', validateQuery(UserTemplateHistoryQuerySchema), getUserTemplateHistory);
 
-router.get(
-  '/suggestions/:databaseId',
-  validateParams(z.object({ databaseId: z.string().min(1) })),
-  getTemplateSuggestions
-);
+router.get('/suggestions/:databaseId', validateParams(DatabaseIdSchema), getTemplateSuggestions);
 
 router.post(
   '/:templateId/duplicate',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  validateBody(
-    z.object({
-      name: z.string().min(1).max(100).optional(),
-      description: z.string().max(500).optional()
-    })
-  ),
+  validateParams(TemplateIdSchema),
+  validateBody(DuplicateTemplateSchema),
   duplicateTemplate
 );
 
-router.get(
-  '/:templateId/export',
-  validateParams(z.object({ templateId: z.string().min(1) })),
-  exportTemplate
-);
+router.get('/:templateId/export', validateParams(TemplateIdSchema), exportTemplate);
 
-router.post('/import', validateBody(CreateTemplateRequestSchema), importTemplate);
+router.post('/import', validateBody(ImportTemplateSchema), importTemplate);
 
 router.post('/admin/initialize-predefined', requireAdmin, initializePredefinedTemplates);
 

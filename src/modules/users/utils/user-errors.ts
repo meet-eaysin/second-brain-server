@@ -3,8 +3,7 @@ import {
   createValidationError,
   createNotFoundError,
   createConflictError,
-  createForbiddenError,
-  createUnauthorizedError
+  createForbiddenError
 } from '../../../utils/error.utils';
 import { TAppError } from '../../../types/error.types';
 
@@ -143,7 +142,7 @@ export const createCreateFailedError = (reason?: string): TAppError => {
   return createAppError(message, 500);
 };
 
-export const createBulkUpdateFailedError = (errors: string[]): TAppError => {
+export const createBulkUpdateFailedError = (): TAppError => {
   return createAppError(USER_ERROR_MESSAGES.BULK_UPDATE_FAILED, 400, true, undefined);
 };
 

@@ -24,7 +24,7 @@ export {
   changePassword,
   forgotPassword,
   resetPassword,
-  logoutUser,
+  logoutUser
 } from './services/auth.service';
 
 export type {
