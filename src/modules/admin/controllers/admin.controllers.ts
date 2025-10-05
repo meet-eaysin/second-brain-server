@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import {
   getAdminDashboardStats,
   getAdminUserStats,
@@ -9,13 +9,13 @@ import {
   isInitialSetupNeeded
 } from '@/modules/admin/services/admin.services';
 import { getUserId } from '@/modules/auth';
-import {catchAsync, sendSuccessResponse} from '@/utils';
+import { catchAsync, sendSuccessResponse } from '@/utils';
 
 /**
  * Get admin dashboard statistics
  */
 export const getAdminDashboardStatsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const stats = await getAdminDashboardStats();
 
     sendSuccessResponse(res, 'Admin dashboard statistics retrieved successfully', stats);
@@ -26,7 +26,7 @@ export const getAdminDashboardStatsController = catchAsync(
  * Get admin user statistics
  */
 export const getAdminUserStatsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const stats = await getAdminUserStats();
 
     sendSuccessResponse(res, 'Admin user statistics retrieved successfully', stats);
@@ -37,7 +37,7 @@ export const getAdminUserStatsController = catchAsync(
  * Get system health metrics
  */
 export const getSystemHealthMetricsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const metrics = await getSystemHealthMetrics();
 
     sendSuccessResponse(res, 'System health metrics retrieved successfully', metrics);
@@ -48,7 +48,7 @@ export const getSystemHealthMetricsController = catchAsync(
  * Create a super admin user (only callable by existing super admin)
  */
 export const createSuperAdminController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userData = req.body;
 
     const superAdmin = await createSuperAdmin(userData);
@@ -61,7 +61,7 @@ export const createSuperAdminController = catchAsync(
  * Get all users for admin management
  */
 export const getAllUsersForAdminController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { role, isActive, search, page = 1, limit = 10 } = req.query;
 
     const filters: any = {};
@@ -83,7 +83,7 @@ export const getAllUsersForAdminController = catchAsync(
  * Check if initial setup is needed
  */
 export const checkInitialSetupController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const setupNeeded = await isInitialSetupNeeded();
 
     sendSuccessResponse(res, 'Initial setup status checked successfully', {
@@ -99,7 +99,7 @@ export const checkInitialSetupController = catchAsync(
  * Create initial super admin (one-time setup)
  */
 export const createInitialSuperAdminController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { email, username, password, firstName, lastName, setupToken } = req.body;
 
     const superAdmin = await createInitialSuperAdmin({
@@ -126,7 +126,7 @@ export const createInitialSuperAdminController = catchAsync(
  * Get current admin user profile
  */
 export const getCurrentAdminProfileController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
 
     sendSuccessResponse(res, 'Admin profile retrieved successfully', {

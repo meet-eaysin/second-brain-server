@@ -61,7 +61,6 @@ export const getAdminDashboardStats = async (): Promise<AdminDashboardStats> => 
       uptime
     };
   } catch (error) {
-    console.error('Error getting admin dashboard stats:', error);
     throw new Error('Failed to retrieve admin dashboard statistics');
   }
 };
@@ -85,7 +84,6 @@ export const getAdminUserStats = async (): Promise<AdminUserStats> => {
       users
     };
   } catch (error) {
-    console.error('Error getting admin user stats:', error);
     throw new Error('Failed to retrieve user statistics');
   }
 };
@@ -122,7 +120,6 @@ export const getSystemHealthMetrics = async (): Promise<SystemHealthMetrics> => 
       errorRate
     };
   } catch (error) {
-    console.error('Error getting system health metrics:', error);
     throw new Error('Failed to retrieve system health metrics');
   }
 };
@@ -135,7 +132,6 @@ const checkDatabaseHealth = async (): Promise<boolean> => {
     await UserModel.findOne({}).limit(1);
     return true;
   } catch (error) {
-    console.error('Database health check failed:', error);
     return false;
   }
 };
@@ -151,48 +147,43 @@ export const createInitialSuperAdmin = async (userData: {
   lastName?: string;
   setupToken?: string;
 }): Promise<any> => {
-  try {
-    const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
+  const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
 
-    if (existingSuperAdmin) {
-      throw new Error('Super admin already exists. Initial setup has already been completed.');
-    }
-
-    if (userData.setupToken) {
-      const expectedToken = process.env.INITIAL_SETUP_TOKEN;
-      if (expectedToken && userData.setupToken !== expectedToken) {
-        throw new Error('Invalid setup token provided.');
-      }
-    }
-
-    if (!userData.email || !userData.username || !userData.password) {
-      throw new Error('Email, username, and password are required for super admin creation.');
-    }
-
-    const superAdmin = new UserModel({
-      email: userData.email,
-      username: userData.username,
-      password: userData.password,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      role: TUserRole.SUPER_ADMIN,
-      isActive: true,
-      isEmailVerified: true,
-      authProvider: 'local'
-    });
-
-    await superAdmin.save();
-
-    const userObject = superAdmin.toObject();
-    delete userObject.password;
-    delete userObject.passwordResetToken;
-    delete userObject.passwordResetExpires;
-
-    return userObject;
-  } catch (error) {
-    console.error('Error creating initial super admin:', error);
-    throw error;
+  if (existingSuperAdmin) {
+    throw new Error('Super admin already exists. Initial setup has already been completed.');
   }
+
+  if (userData.setupToken) {
+    const expectedToken = process.env.INITIAL_SETUP_TOKEN;
+    if (expectedToken && userData.setupToken !== expectedToken) {
+      throw new Error('Invalid setup token provided.');
+    }
+  }
+
+  if (!userData.email || !userData.username || !userData.password) {
+    throw new Error('Email, username, and password are required for super admin creation.');
+  }
+
+  const superAdmin = new UserModel({
+    email: userData.email,
+    username: userData.username,
+    password: userData.password,
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    role: TUserRole.SUPER_ADMIN,
+    isActive: true,
+    isEmailVerified: true,
+    authProvider: 'local'
+  });
+
+  await superAdmin.save();
+
+  const userObject = superAdmin.toObject();
+  delete userObject.password;
+  delete userObject.passwordResetToken;
+  delete userObject.passwordResetExpires;
+
+  return userObject;
 };
 
 /**
@@ -217,30 +208,25 @@ export const createSuperAdmin = async (userData: {
   firstName?: string;
   lastName?: string;
 }): Promise<any> => {
-  try {
-    const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
+  const existingSuperAdmin = await UserModel.findOne({ role: TUserRole.SUPER_ADMIN });
 
-    if (existingSuperAdmin) {
-      throw new Error('Super admin already exists. Cannot create another super admin.');
-    }
-
-    const superAdmin = new UserModel({
-      ...userData,
-      role: TUserRole.SUPER_ADMIN,
-      isActive: true,
-      isEmailVerified: true,
-      authProvider: 'local'
-    });
-
-    await superAdmin.save();
-
-    const userObject = superAdmin.toObject();
-    delete userObject.password;
-    return userObject;
-  } catch (error) {
-    console.error('Error creating super admin:', error);
-    throw error;
+  if (existingSuperAdmin) {
+    throw new Error('Super admin already exists. Cannot create another super admin.');
   }
+
+  const superAdmin = new UserModel({
+    ...userData,
+    role: TUserRole.SUPER_ADMIN,
+    isActive: true,
+    isEmailVerified: true,
+    authProvider: 'local'
+  });
+
+  await superAdmin.save();
+
+  const userObject = superAdmin.toObject();
+  delete userObject.password;
+  return userObject;
 };
 
 /**
@@ -292,7 +278,6 @@ export const getAllUsersForAdmin = async (filters?: {
       }
     };
   } catch (error) {
-    console.error('Error getting users for admin:', error);
     throw new Error('Failed to retrieve users');
   }
 };
