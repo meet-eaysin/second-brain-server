@@ -259,7 +259,7 @@ export const getJournalInsights = catchAsync(
 );
 
 // Helper functions for insights
-function analyzeMoodTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
+const analyzeMoodTrend = (trends: any[]): 'improving' | 'declining' | 'stable' => {
   if (trends.length < 2) return 'stable';
 
   const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
@@ -273,9 +273,9 @@ function analyzeMoodTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
   if (diff > 0.2) return 'improving';
   if (diff < -0.2) return 'declining';
   return 'stable';
-}
+};
 
-function analyzeEnergyTrend(trends: any[]): 'improving' | 'declining' | 'stable' {
+const analyzeEnergyTrend = (trends: any[]): 'improving' | 'declining' | 'stable' => {
   if (trends.length < 2) return 'stable';
 
   const firstHalf = trends.slice(0, Math.floor(trends.length / 2));
@@ -289,9 +289,9 @@ function analyzeEnergyTrend(trends: any[]): 'improving' | 'declining' | 'stable'
   if (diff > 0.5) return 'improving';
   if (diff < -0.5) return 'declining';
   return 'stable';
-}
+};
 
-function calculateConsistencyScore(stats: any): number {
+const calculateConsistencyScore = (stats: any): number => {
   if (stats.totalEntries === 0) return 0;
 
   // Calculate based on streak and total entries
@@ -299,9 +299,9 @@ function calculateConsistencyScore(stats: any): number {
   const frequencyScore = Math.min(stats.totalEntries / 365, 1) * 50; // Max 50 points for daily entries for a year
 
   return Math.round(streakScore + frequencyScore);
-}
+};
 
-function generateRecommendations(stats: any, trends: any[]): string[] {
+const generateRecommendations = (stats: any, trends: any[]): string[] => {
   const recommendations = [];
 
   if (stats.currentStreak === 0) {
@@ -340,4 +340,4 @@ function generateRecommendations(stats: any, trends: any[]): string[] {
   }
 
   return recommendations;
-}
+};
