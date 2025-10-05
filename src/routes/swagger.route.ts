@@ -3,7 +3,7 @@ import swaggerUi from 'swagger-ui-express';
 // import YAML from 'yamljs'; // Temporarily disabled
 import path from 'path';
 import fs from 'fs';
-import {appConfig} from '@/config';
+import { appConfig } from '@/config';
 
 const router = express.Router();
 
@@ -40,10 +40,12 @@ const loadOpenAPISpec = (): any => {
       },
       servers: [
         {
-          url: process.env.NODE_ENV === 'production'
-            ? `${process.env.BASE_URL || 'https://your-domain.com'}/api/v1`
-            : `http://localhost:${appConfig.port}/api/v1`,
-          description: process.env.NODE_ENV === 'production' ? 'Production Server' : 'Development Server'
+          url:
+            process.env.NODE_ENV === 'production'
+              ? `${process.env.BASE_URL || 'https://your-domain.com'}/api/v1`
+              : `http://localhost:${appConfig.port}/api/v1`,
+          description:
+            process.env.NODE_ENV === 'production' ? 'Production Server' : 'Development Server'
         }
       ],
       paths: {}
@@ -67,10 +69,12 @@ const openapiSpec = loadOpenAPISpec();
 
 const servers = [
   {
-    url: process.env.NODE_ENV === 'production'
-      ? `${process.env.BaseURL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://your-domain.com'}/api/v1`
-      : `http://localhost:${appConfig.port}/api/v1`,
-    description: process.env.NODE_ENV === 'production' ? 'Production Server (Vercel)' : 'Development Server'
+    url:
+      process.env.NODE_ENV === 'production'
+        ? `${process.env.BaseURL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://your-domain.com'}/api/v1`
+        : `http://localhost:${appConfig.port}/api/v1`,
+    description:
+      process.env.NODE_ENV === 'production' ? 'Production Server (Vercel)' : 'Development Server'
   }
 ];
 
@@ -80,7 +84,8 @@ const mergedSpec = {
   info: {
     ...openapiSpec.info,
     title: 'Second Brain Server API',
-    description: 'Comprehensive personal intelligence platform API for knowledge management, creativity, learning, and personal growth.'
+    description:
+      'Comprehensive personal intelligence platform API for knowledge management, creativity, learning, and personal growth.'
   }
 };
 

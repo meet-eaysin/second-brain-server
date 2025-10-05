@@ -1,22 +1,26 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Schema, Model, model } from 'mongoose';
 import {
   createBaseSchema,
   IBaseDocument,
   ISoftDeleteDocument
 } from '@/modules/core/models/base.model';
-import { IWorkspace, EWorkspaceType, IWorkspaceConfig } from '../types/workspace.types';
+import {
+  IWorkspace,
+  EWorkspaceType,
+  IWorkspaceConfig
+} from '@/modules/workspace/types/workspace.types';
 
-export type TWorkspaceDocument = IWorkspace & IBaseDocument & ISoftDeleteDocument;
+export interface IWorkspaceDocument extends IWorkspace, IBaseDocument, ISoftDeleteDocument {}
 
-export type TWorkspaceModel = Model<TWorkspaceDocument> & {
-  findByOwner(ownerId: string): Promise<TWorkspaceDocument[]>;
-  findByMember(userId: string): Promise<TWorkspaceDocument[]>;
-  findPublic(): Promise<TWorkspaceDocument[]>;
+export interface IWorkspaceModel extends Model<IWorkspaceDocument> {
+  findByOwner(ownerId: string): Promise<IWorkspaceDocument[]>;
+  findByMember(userId: string): Promise<IWorkspaceDocument[]>;
+  findPublic(): Promise<IWorkspaceDocument[]>;
   incrementMemberCount(workspaceId: string): Promise<void>;
   decrementMemberCount(workspaceId: string): Promise<void>;
   updateStats(workspaceId: string, stats: Partial<IWorkspace>): Promise<void>;
-  findAccessibleWorkspaces(userId: string): Promise<TWorkspaceDocument[]>;
-};
+  findAccessibleWorkspaces(userId: string): Promise<IWorkspaceDocument[]>;
+}
 
 const WorkspaceConfigSchema = new Schema<IWorkspaceConfig>(
   {
@@ -62,7 +66,7 @@ const WorkspaceConfigSchema = new Schema<IWorkspaceConfig>(
     storageLimit: {
       type: Number,
       min: 0,
-      default: 1073741824
+      default: 1073741824 // 1GB
     },
     allowedIntegrations: [
       {
@@ -88,7 +92,7 @@ const WorkspaceConfigSchema = new Schema<IWorkspaceConfig>(
   { _id: false }
 );
 
-const WorkspaceSchema = createBaseSchema({
+const WorkspaceSchema = createBaseSchema<IWorkspaceDocument, IWorkspaceModel>({
   name: {
     type: String,
     required: true,
@@ -198,86 +202,62 @@ const WorkspaceSchema = createBaseSchema({
   }
 });
 
-// Override toJSON to exclude cover field
 WorkspaceSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.cover;
   return obj;
 };
 
-// Indexes for efficient queries
 WorkspaceSchema.index({ ownerId: 1, isDeleted: 1 });
 WorkspaceSchema.index({ type: 1, isPublic: 1, isDeleted: 1 });
 WorkspaceSchema.index({ isPublic: 1, isArchived: 1, isDeleted: 1 });
 WorkspaceSchema.index({ lastActivityAt: -1 });
 WorkspaceSchema.index({ name: 'text', description: 'text' });
 
-// Static methods
-WorkspaceSchema.statics.findByOwner = function (ownerId: string) {
-  return this.find({
-    ownerId,
-    isDeleted: false
-  })
+WorkspaceSchema.static('findByOwner', function (ownerId: string) {
+  return this.find({ ownerId, isDeleted: false })
     .sort({ lastActivityAt: -1 })
     .exec();
-};
+});
 
-WorkspaceSchema.statics.findByMember = function (userId: string) {
-  // This will be enhanced when we implement workspace members
-  return this.find({
-    ownerId: userId,
-    isDeleted: false
-  })
+WorkspaceSchema.static('findByMember', function (userId: string) {
+  return this.find({ ownerId: userId, isDeleted: false })
     .sort({ lastActivityAt: -1 })
     .exec();
-};
+});
 
-WorkspaceSchema.statics.findPublic = function () {
-  return this.find({
-    isPublic: true,
-    isArchived: false,
-    isDeleted: false
-  })
+WorkspaceSchema.static('findPublic', function () {
+  return this.find({ isPublic: true, isArchived: false, isDeleted: false })
     .sort({ lastActivityAt: -1 })
     .exec();
-};
+});
 
-WorkspaceSchema.statics.findAccessibleWorkspaces = function (userId: string) {
+WorkspaceSchema.static('findAccessibleWorkspaces', function (userId: string) {
   return this.find({
-    $or: [
-      { ownerId: userId },
-      { isPublic: true }
-      // TODO: Add workspace member check when implemented
-    ],
+    $or: [{ ownerId: userId }, { isPublic: true }],
     isDeleted: false,
     isArchived: false
   })
     .sort({ lastActivityAt: -1 })
     .exec();
-};
+});
 
-WorkspaceSchema.statics.incrementMemberCount = function (workspaceId: string) {
+WorkspaceSchema.static('incrementMemberCount', function (workspaceId: string) {
   return this.findByIdAndUpdate(workspaceId, { $inc: { memberCount: 1 } }, { new: true }).exec();
-};
+});
 
-WorkspaceSchema.statics.decrementMemberCount = function (workspaceId: string) {
+WorkspaceSchema.static('decrementMemberCount', function (workspaceId: string) {
   return this.findByIdAndUpdate(workspaceId, { $inc: { memberCount: -1 } }, { new: true }).exec();
-};
+});
 
-WorkspaceSchema.statics.updateStats = function (workspaceId: string, stats: Partial<IWorkspace>) {
+WorkspaceSchema.static('updateStats', function (workspaceId: string, stats: Partial<IWorkspace>) {
   return this.findByIdAndUpdate(
     workspaceId,
-    {
-      $set: {
-        ...stats,
-        lastActivityAt: new Date()
-      }
-    },
+    { $set: { ...stats, lastActivityAt: new Date() } },
     { new: true }
   ).exec();
-};
+});
 
-// Pre-save middleware
 WorkspaceSchema.pre('save', function (next) {
   if (this.isModified() && !this.isModified('lastActivityAt')) {
     this.lastActivityAt = new Date();
@@ -285,10 +265,7 @@ WorkspaceSchema.pre('save', function (next) {
   next();
 });
 
-export const WorkspaceModel = mongoose.model<TWorkspaceDocument, TWorkspaceModel>(
+export const WorkspaceModel = model<IWorkspaceDocument, IWorkspaceModel>(
   'Workspace',
   WorkspaceSchema
 );
-
-// Default export
-export default WorkspaceModel;

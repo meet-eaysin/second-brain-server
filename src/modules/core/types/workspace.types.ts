@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { IBaseEntity, TId, TUserId, ISoftDelete } from './common.types';
 
 // Workspace Types - Hierarchical organization for databases
@@ -171,7 +170,6 @@ export interface IWorkspaceActivity extends IBaseEntity {
   metadata?: Record<string, any>;
 }
 
-// Workspace statistics
 export interface IWorkspaceStats {
   workspaceId: TId;
 
@@ -206,7 +204,6 @@ export interface IWorkspaceStats {
   }>;
 }
 
-// Request/Response types
 export interface ICreateWorkspaceRequest {
   name: string;
   description?: string;
@@ -237,7 +234,7 @@ export interface IUpdateWorkspaceRequest {
   config?: Partial<IWorkspaceConfig>;
   isPublic?: boolean;
   isArchived?: boolean;
-  ownerId?: string; // For ownership transfer
+  ownerId?: string;
 }
 
 export interface IInviteMemberRequest {
@@ -269,6 +266,3 @@ export interface IWorkspaceResponse extends IWorkspace {}
 export interface IWorkspaceMemberResponse extends IWorkspaceMember {}
 export interface IWorkspaceInvitationResponse extends IWorkspaceInvitation {}
 export interface IWorkspaceStatsResponse extends IWorkspaceStats {}
-export type TWorkspaceListResponse = IWorkspaceResponse[];
-export type TWorkspaceMemberListResponse = IWorkspaceMemberResponse[];
-export type TWorkspaceInvitationListResponse = IWorkspaceInvitationResponse[];

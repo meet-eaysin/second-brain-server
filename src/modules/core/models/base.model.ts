@@ -161,7 +161,9 @@ export const addCommonIndexes = (schema: Schema) => {
   return schema;
 };
 
-export const addSoftDeleteQueries = (schema: Schema<any, any, QueryHelpers>) => {
+export const addSoftDeleteQueries = <TDocument, TModel>(
+  schema: Schema<TDocument, TModel, QueryHelpers>
+) => {
   const queryHelpers = schema.query as any;
 
   queryHelpers.notDeleted = function <U>(this: Query<U[], U>) {
@@ -222,7 +224,9 @@ export const addSoftDeleteMethods = (schema: Schema) => {
   return schema;
 };
 
-export const createBaseSchema = (additionalFields?: any): Schema<any, any, QueryHelpers> => {
+export const createBaseSchema = <TDocument, TModel>(
+  additionalFields?: any
+): Schema<TDocument, TModel, QueryHelpers> => {
   const schema = new Schema(additionalFields || {}, {
     timestamps: true,
     toJSON: {

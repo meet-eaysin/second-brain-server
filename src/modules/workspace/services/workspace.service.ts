@@ -1,14 +1,12 @@
 import {
   IWorkspace,
-  ICreateWorkspaceRequest,
-  IUpdateWorkspaceRequest,
   EWorkspaceType,
-  EWorkspaceMemberRole
-} from '../types/workspace.types';
+  EWorkspaceMemberRole, ICreateWorkspaceRequest, IUpdateWorkspaceRequest
+} from '@/modules/workspace/types/workspace.types';
 import { ECalendarType } from '@/modules/calendar/types/enums.types';
-import { WorkspaceModel } from '../models/workspace.model';
 import { WorkspaceMemberModel } from '../models/workspace-member.model';
 import { createAppError, createNotFoundError, createForbiddenError } from '@/utils/error.utils';
+import {WorkspaceModel} from "@/modules/workspace";
 
 const getMemberWorkspaces = async (userId: string): Promise<any[]> => {
   try {
@@ -63,7 +61,7 @@ const createWorkspace = async (
 ): Promise<IWorkspace> => {
   try {
     const existingWorkspaces = await WorkspaceModel.findByOwner(ownerId);
-    const userPlan = 'free'; // TODO: Get from user subscription
+    const userPlan = 'free';
     const maxWorkspaces = userPlan === 'free' ? 3 : userPlan === 'pro' ? 10 : 100;
 
     if (existingWorkspaces.length >= maxWorkspaces) {
@@ -143,7 +141,7 @@ const createWorkspace = async (
       }
     });
 
-    return workspace.toJSON() as IWorkspace;
+    return workspace.toJSON();
   } catch (error: any) {
     if (error.statusCode) throw error;
     throw createAppError(`Failed to create workspace: ${error.message}`, 500);
@@ -158,9 +156,7 @@ const getWorkspaceById = async (workspaceId: string, userId: string): Promise<IW
       isDeleted: false
     });
 
-    if (!workspace) {
-      throw createNotFoundError('Workspace not found');
-    }
+    if (!workspace) throw createNotFoundError('Workspace not found');
 
     // Check if user has access to workspace
     const hasAccess = await hasWorkspaceAccess(workspaceId, userId);
@@ -168,7 +164,7 @@ const getWorkspaceById = async (workspaceId: string, userId: string): Promise<IW
       throw createForbiddenError('Access denied to workspace');
     }
 
-    return workspace.toJSON() as IWorkspace;
+    return workspace.toJSON();
   } catch (error: any) {
     if (error.statusCode) throw error;
     throw createAppError(`Failed to get workspace: ${error.message}`, 500);
@@ -320,7 +316,6 @@ const createDefaultWorkspace = async (
   }
 };
 
-// Get or create default workspace for user
 const getOrCreateDefaultWorkspace = async (
   userId: string,
   userInfo?: { firstName?: string; lastName?: string }
@@ -340,7 +335,6 @@ const getOrCreateDefaultWorkspace = async (
   }
 };
 
-// Get user's primary workspace (first personal workspace or first workspace)
 const getUserPrimaryWorkspace = async (userId: string): Promise<IWorkspace | null> => {
   try {
     const workspaces = await WorkspaceModel.findByOwner(userId);
@@ -349,13 +343,9 @@ const getUserPrimaryWorkspace = async (userId: string): Promise<IWorkspace | nul
       return null;
     }
 
-    // Prefer personal workspace
     const personalWorkspace = workspaces.find(ws => ws.type === EWorkspaceType.PERSONAL);
-    if (personalWorkspace) {
-      return personalWorkspace.toJSON() as IWorkspace;
-    }
+    if (personalWorkspace) return personalWorkspace.toJSON() as IWorkspace;
 
-    // Return first workspace if no personal workspace
     return workspaces[0].toJSON() as IWorkspace;
   } catch (error: any) {
     if (error.statusCode) throw error;
@@ -363,7 +353,6 @@ const getUserPrimaryWorkspace = async (userId: string): Promise<IWorkspace | nul
   }
 };
 
-// Set user's last selected workspace
 const setUserLastSelectedWorkspace = async (userId: string, workspaceId: string): Promise<void> => {
   try {
     const { UserModel } = await import('@/modules/users/models/users.model');
@@ -373,7 +362,6 @@ const setUserLastSelectedWorkspace = async (userId: string, workspaceId: string)
   }
 };
 
-// Get user's last selected workspace if valid, otherwise primary
 const getUserCurrentWorkspace = async (userId: string): Promise<IWorkspace | null> => {
   try {
     const { UserModel } = await import('@/modules/users/models/users.model');
