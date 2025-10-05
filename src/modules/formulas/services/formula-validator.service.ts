@@ -3,8 +3,7 @@ import {
   IFormulaValidationResult,
   IFormulaError,
   IFormulaWarning,
-  EFormulaDataType,
-  IFormulaFunction
+  EFormulaDataType
 } from '../types/formula.types';
 import { formulaParserService } from './formula-parser.service';
 import { formulaFunctionsService } from './formula-functions.service';

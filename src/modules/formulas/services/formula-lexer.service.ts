@@ -1,317 +1,330 @@
 import { IFormulaToken, ETokenType, IFormulaError } from '../types/formula.types';
 
-export class FormulaLexerService {
-  private input: string = '';
-  private position: number = 0;
-  private currentChar: string | null = null;
-  private tokens: IFormulaToken[] = [];
-  private errors: IFormulaError[] = [];
+export const formulaLexerService = {
+  // Internal state
+  input: '',
+  position: 0,
+  currentChar: null as string | null,
+  tokens: [] as IFormulaToken[],
+  errors: [] as IFormulaError[],
 
   // Tokenize formula expression
-  tokenize(expression: string): { tokens: IFormulaToken[]; errors: IFormulaError[] } {
-    this.input = expression;
-    this.position = 0;
-    this.currentChar = this.input[0] || null;
-    this.tokens = [];
-    this.errors = [];
+  tokenize: (expression: string): { tokens: IFormulaToken[]; errors: IFormulaError[] } => {
+    formulaLexerService.input = expression;
+    formulaLexerService.position = 0;
+    formulaLexerService.currentChar = formulaLexerService.input[0] || null;
+    formulaLexerService.tokens = [];
+    formulaLexerService.errors = [];
 
-    while (this.currentChar !== null) {
+    while (formulaLexerService.currentChar !== null) {
       try {
-        this.skipWhitespace();
+        formulaLexerService.skipWhitespace();
 
-        if (this.currentChar === null) break;
+        if (formulaLexerService.currentChar === null) break;
 
         // Numbers
         if (
-          this.isDigit(this.currentChar) ||
-          (this.currentChar === '.' && this.isDigit(this.peek()))
+          formulaLexerService.isDigit(formulaLexerService.currentChar) ||
+          (formulaLexerService.currentChar === '.' &&
+            formulaLexerService.isDigit(formulaLexerService.peek()))
         ) {
-          this.readNumber();
+          formulaLexerService.readNumber();
           continue;
         }
 
         // Strings
-        if (this.currentChar === '"' || this.currentChar === "'") {
-          this.readString();
+        if (formulaLexerService.currentChar === '"' || formulaLexerService.currentChar === "'") {
+          formulaLexerService.readString();
           continue;
         }
 
         // Properties (wrapped in square brackets or alphanumeric starting with letter)
-        if (this.currentChar === '[') {
-          this.readBracketedProperty();
+        if (formulaLexerService.currentChar === '[') {
+          formulaLexerService.readBracketedProperty();
           continue;
         }
 
-        if (this.isLetter(this.currentChar)) {
-          this.readIdentifier();
+        if (formulaLexerService.isLetter(formulaLexerService.currentChar)) {
+          formulaLexerService.readIdentifier();
           continue;
         }
 
         // Operators and special characters
-        if (this.isOperatorStart(this.currentChar)) {
-          this.readOperator();
+        if (formulaLexerService.isOperatorStart(formulaLexerService.currentChar)) {
+          formulaLexerService.readOperator();
           continue;
         }
 
         // Parentheses
-        if (this.currentChar === '(') {
-          this.addToken(ETokenType.PARENTHESIS_OPEN, this.currentChar);
-          this.advance();
+        if (formulaLexerService.currentChar === '(') {
+          formulaLexerService.addToken(
+            ETokenType.PARENTHESIS_OPEN,
+            formulaLexerService.currentChar
+          );
+          formulaLexerService.advance();
           continue;
         }
 
-        if (this.currentChar === ')') {
-          this.addToken(ETokenType.PARENTHESIS_CLOSE, this.currentChar);
-          this.advance();
+        if (formulaLexerService.currentChar === ')') {
+          formulaLexerService.addToken(
+            ETokenType.PARENTHESIS_CLOSE,
+            formulaLexerService.currentChar
+          );
+          formulaLexerService.advance();
           continue;
         }
 
         // Comma
-        if (this.currentChar === ',') {
-          this.addToken(ETokenType.COMMA, this.currentChar);
-          this.advance();
+        if (formulaLexerService.currentChar === ',') {
+          formulaLexerService.addToken(ETokenType.COMMA, formulaLexerService.currentChar);
+          formulaLexerService.advance();
           continue;
         }
 
         // Unknown character
-        this.addError('syntax', `Unexpected character: ${this.currentChar}`, this.position, 1);
-        this.advance();
-      } catch (error) {
-        this.addError(
+        formulaLexerService.addError(
           'syntax',
-          error instanceof Error ? error.message : 'Unknown lexer error',
-          this.position,
+          `Unexpected character: ${formulaLexerService.currentChar}`,
+          formulaLexerService.position,
           1
         );
-        this.advance();
+        formulaLexerService.advance();
+      } catch (error) {
+        formulaLexerService.addError(
+          'syntax',
+          error instanceof Error ? error.message : 'Unknown lexer error',
+          formulaLexerService.position,
+          1
+        );
+        formulaLexerService.advance();
       }
     }
 
     // Add EOF token
-    this.addToken(ETokenType.EOF, '');
+    formulaLexerService.addToken(ETokenType.EOF, '');
 
-    return { tokens: this.tokens, errors: this.errors };
-  }
+    return { tokens: formulaLexerService.tokens, errors: formulaLexerService.errors };
+  },
 
   // Read number token (integer or decimal)
-  private readNumber(): void {
-    const startPos = this.position;
+  readNumber: (): void => {
+    const startPos = formulaLexerService.position;
     let value = '';
     let hasDecimal = false;
 
     while (
-      this.currentChar !== null &&
-      (this.isDigit(this.currentChar) || this.currentChar === '.')
+      formulaLexerService.currentChar !== null &&
+      (formulaLexerService.isDigit(formulaLexerService.currentChar) || formulaLexerService.currentChar === '.')
     ) {
-      if (this.currentChar === '.') {
+      if (formulaLexerService.currentChar === '.') {
         if (hasDecimal) {
-          this.addError(
+          formulaLexerService.addError(
             'syntax',
             'Invalid number format: multiple decimal points',
             startPos,
-            this.position - startPos + 1
+            formulaLexerService.position - startPos + 1
           );
           break;
         }
         hasDecimal = true;
       }
-      value += this.currentChar;
-      this.advance();
+      value += formulaLexerService.currentChar;
+      formulaLexerService.advance();
     }
 
     // Check for scientific notation
-    if (this.isCurrentCharOneOf(['e', 'E'])) {
-      value += this.currentChar!;
-      this.advance();
+    if (formulaLexerService.isCurrentCharOneOf(['e', 'E'])) {
+      value += formulaLexerService.currentChar!;
+      formulaLexerService.advance();
 
       // Check for optional sign after e/E
-      if (this.isCurrentCharOneOf(['+', '-'])) {
-        value += this.currentChar!;
-        this.advance();
+      if (formulaLexerService.isCurrentCharOneOf(['+', '-'])) {
+        value += formulaLexerService.currentChar!;
+        formulaLexerService.advance();
       }
 
-      if (!this.isDigit(this.currentChar)) {
-        this.addError('syntax', 'Invalid scientific notation', startPos, this.position - startPos);
+      if (!formulaLexerService.isDigit(formulaLexerService.currentChar)) {
+        formulaLexerService.addError('syntax', 'Invalid scientific notation', startPos, formulaLexerService.position - startPos);
         return;
       }
 
-      while (this.currentChar !== null && this.isDigit(this.currentChar)) {
-        value += this.currentChar;
-        this.advance();
+      while (formulaLexerService.currentChar !== null && formulaLexerService.isDigit(formulaLexerService.currentChar)) {
+        value += formulaLexerService.currentChar;
+        formulaLexerService.advance();
       }
     }
 
-    this.addToken(ETokenType.NUMBER, value, startPos);
-  }
+    formulaLexerService.addToken(ETokenType.NUMBER, value, startPos);
+  },
 
   // Read string token
-  private readString(): void {
-    const startPos = this.position;
-    const quote = this.currentChar;
+  readString: (): void => {
+    const startPos = formulaLexerService.position;
+    const quote = formulaLexerService.currentChar;
     let value = '';
 
-    this.advance(); // Skip opening quote
+    formulaLexerService.advance(); // Skip opening quote
 
-    while (this.currentChar !== null && this.currentChar !== quote) {
-      if (this.currentChar === '\\') {
-        this.advance();
-        if (this.currentChar === null) {
-          this.addError(
+    while (formulaLexerService.currentChar !== null && formulaLexerService.currentChar !== quote) {
+      if (formulaLexerService.currentChar === '\\') {
+        formulaLexerService.advance();
+        if (formulaLexerService.currentChar === null) {
+          formulaLexerService.addError(
             'syntax',
             'Unterminated string: missing closing quote',
             startPos,
-            this.position - startPos
+            formulaLexerService.position - startPos
           );
           return;
         }
 
         // Handle escape sequences
-        value += this.getEscapeCharValue(this.currentChar);
+        value += formulaLexerService.getEscapeCharValue(formulaLexerService.currentChar);
       } else {
-        value += this.currentChar;
+        value += formulaLexerService.currentChar;
       }
-      this.advance();
+      formulaLexerService.advance();
     }
 
-    if (this.currentChar !== quote) {
-      this.addError(
+    if (formulaLexerService.currentChar !== quote) {
+      formulaLexerService.addError(
         'syntax',
         'Unterminated string: missing closing quote',
         startPos,
-        this.position - startPos
+        formulaLexerService.position - startPos
       );
       return;
     }
 
-    this.advance(); // Skip closing quote
-    this.addToken(ETokenType.STRING, value, startPos);
-  }
+    formulaLexerService.advance(); // Skip closing quote
+    formulaLexerService.addToken(ETokenType.STRING, value, startPos);
+  },
 
   // Read bracketed property [Property Name]
-  private readBracketedProperty(): void {
-    const startPos = this.position;
+  readBracketedProperty: (): void => {
+    const startPos = formulaLexerService.position;
     let value = '';
 
-    this.advance(); // Skip opening bracket
+    formulaLexerService.advance(); // Skip opening bracket
 
-    while (this.currentChar !== null && this.currentChar !== ']') {
-      value += this.currentChar;
-      this.advance();
+    while (formulaLexerService.currentChar !== null && formulaLexerService.currentChar !== ']') {
+      value += formulaLexerService.currentChar;
+      formulaLexerService.advance();
     }
 
-    if (this.currentChar !== ']') {
-      this.addError(
+    if (formulaLexerService.currentChar !== ']') {
+      formulaLexerService.addError(
         'syntax',
         'Unterminated property reference: missing closing bracket',
         startPos,
-        this.position - startPos
+        formulaLexerService.position - startPos
       );
       return;
     }
 
-    this.advance(); // Skip closing bracket
-    this.addToken(ETokenType.PROPERTY, value.trim(), startPos);
-  }
+    formulaLexerService.advance(); // Skip closing bracket
+    formulaLexerService.addToken(ETokenType.PROPERTY, value.trim(), startPos);
+  },
 
   // Read identifier (function name, property name, or keyword)
-  private readIdentifier(): void {
-    const startPos = this.position;
+  readIdentifier: (): void => {
+    const startPos = formulaLexerService.position;
     let value = '';
 
     while (
-      this.currentChar !== null &&
-      (this.isAlphanumeric(this.currentChar) || this.currentChar === '_')
+      formulaLexerService.currentChar !== null &&
+      (formulaLexerService.isAlphanumeric(formulaLexerService.currentChar) || formulaLexerService.currentChar === '_')
     ) {
-      value += this.currentChar;
-      this.advance();
+      value += formulaLexerService.currentChar;
+      formulaLexerService.advance();
     }
 
     // Check if it's a boolean literal
     if (value.toLowerCase() === 'true' || value.toLowerCase() === 'false') {
-      this.addToken(ETokenType.BOOLEAN, value.toLowerCase(), startPos);
+      formulaLexerService.addToken(ETokenType.BOOLEAN, value.toLowerCase(), startPos);
       return;
     }
 
     // Check if followed by parenthesis (function call)
-    this.skipWhitespace();
-    if (this.currentChar === '(') {
-      this.addToken(ETokenType.FUNCTION, value, startPos);
+    formulaLexerService.skipWhitespace();
+    if (formulaLexerService.currentChar === '(') {
+      formulaLexerService.addToken(ETokenType.FUNCTION, value, startPos);
     } else {
-      this.addToken(ETokenType.PROPERTY, value, startPos);
+      formulaLexerService.addToken(ETokenType.PROPERTY, value, startPos);
     }
-  }
+  },
 
   // Read operator token
-  private readOperator(): void {
-    const startPos = this.position;
-    let value = this.currentChar!;
+  readOperator: (): void => {
+    const startPos = formulaLexerService.position;
+    let value = formulaLexerService.currentChar!;
 
-    this.advance();
+    formulaLexerService.advance();
 
     // Check for two-character operators
-    if (this.currentChar !== null) {
-      const twoChar = value + this.currentChar;
-      if (this.isTwoCharOperator(twoChar)) {
+    if (formulaLexerService.currentChar !== null) {
+      const twoChar = value + formulaLexerService.currentChar;
+      if (formulaLexerService.isTwoCharOperator(twoChar)) {
         value = twoChar;
-        this.advance();
+        formulaLexerService.advance();
       }
     }
 
-    this.addToken(ETokenType.OPERATOR, value, startPos);
-  }
+    formulaLexerService.addToken(ETokenType.OPERATOR, value, startPos);
+  },
 
   // Skip whitespace characters
-  private skipWhitespace(): void {
-    while (this.currentChar !== null && this.isWhitespace(this.currentChar)) {
-      this.advance();
+  skipWhitespace: (): void => {
+    while (formulaLexerService.currentChar !== null && formulaLexerService.isWhitespace(formulaLexerService.currentChar)) {
+      formulaLexerService.advance();
     }
-  }
+  },
 
   // Move to next character
-  private advance(): void {
-    this.position++;
-    this.currentChar = this.position < this.input.length ? this.input[this.position] : null;
-  }
+  advance: (): void => {
+    formulaLexerService.position++;
+    formulaLexerService.currentChar = formulaLexerService.position < formulaLexerService.input.length ? formulaLexerService.input[formulaLexerService.position] : null;
+  },
 
   // Peek at next character without advancing
-  private peek(offset: number = 1): string | null {
-    const peekPos = this.position + offset;
-    return peekPos < this.input.length ? this.input[peekPos] : null;
-  }
+  peek: (offset: number = 1): string | null => {
+    const peekPos = formulaLexerService.position + offset;
+    return peekPos < formulaLexerService.input.length ? formulaLexerService.input[peekPos] : null;
+  },
 
   // Add token to tokens array
-  private addToken(type: ETokenType, value: string, position?: number): void {
-    this.tokens.push({
+  addToken: (type: ETokenType, value: string, position?: number): void => {
+    formulaLexerService.tokens.push({
       type,
       value,
-      position: position ?? this.position - value.length,
+      position: position ?? formulaLexerService.position - value.length,
       length: value.length
     });
-  }
+  },
 
   // Add error to errors array
-  private addError(
+  addError: (
     type: 'syntax' | 'semantic' | 'runtime',
     message: string,
     position: number,
     length: number
-  ): void {
-    this.errors.push({
+  ): void => {
+    formulaLexerService.errors.push({
       type,
       message,
       position,
       length,
       suggestions: []
     });
-  }
+  },
 
   // Helper method to check if current character matches any of the given characters
-  private isCurrentCharOneOf(chars: string[]): boolean {
-    return this.currentChar !== null && chars.includes(this.currentChar);
-  }
+  isCurrentCharOneOf: (chars: string[]): boolean => {
+    return formulaLexerService.currentChar !== null && chars.includes(formulaLexerService.currentChar);
+  },
 
   // Helper method to get escape character value
-  private getEscapeCharValue(char: string): string {
+  getEscapeCharValue: (char: string): string => {
     switch (char) {
       case 'n':
         return '\n';
@@ -328,71 +341,71 @@ export class FormulaLexerService {
       default:
         return char;
     }
-  }
+  },
 
   // Character type checking methods
-  private isDigit(char: string | null): boolean {
+  isDigit: (char: string | null): boolean => {
     return char !== null && /[0-9]/.test(char);
-  }
+  },
 
-  private isLetter(char: string | null): boolean {
+  isLetter: (char: string | null): boolean => {
     return char !== null && /[a-zA-Z]/.test(char);
-  }
+  },
 
-  private isAlphanumeric(char: string | null): boolean {
+  isAlphanumeric: (char: string | null): boolean => {
     return char !== null && /[a-zA-Z0-9]/.test(char);
-  }
+  },
 
-  private isWhitespace(char: string | null): boolean {
+  isWhitespace: (char: string | null): boolean => {
     return char !== null && /\s/.test(char);
-  }
+  },
 
-  private isOperatorStart(char: string | null): boolean {
+  isOperatorStart: (char: string | null): boolean => {
     return char !== null && /[+\-*/%^=!<>&|]/.test(char);
-  }
+  },
 
-  private isTwoCharOperator(op: string): boolean {
+  isTwoCharOperator: (op: string): boolean => {
     const twoCharOps = ['==', '!=', '<=', '>=', '&&', '||', '**'];
     return twoCharOps.includes(op);
-  }
+  },
 
   // Get token at specific position
-  getTokenAt(position: number): IFormulaToken | null {
+  getTokenAt: (position: number): IFormulaToken | null => {
     return (
-      this.tokens.find(
+      formulaLexerService.tokens.find(
         token => position >= token.position && position < token.position + token.length
       ) || null
     );
-  }
+  },
 
   // Get all tokens of specific type
-  getTokensByType(type: ETokenType): IFormulaToken[] {
-    return this.tokens.filter(token => token.type === type);
-  }
+  getTokensByType: (type: ETokenType): IFormulaToken[] => {
+    return formulaLexerService.tokens.filter(token => token.type === type);
+  },
 
   // Get property references from tokens
-  getPropertyReferences(): string[] {
-    return this.tokens
+  getPropertyReferences: (): string[] => {
+    return formulaLexerService.tokens
       .filter(token => token.type === ETokenType.PROPERTY)
       .map(token => token.value);
-  }
+  },
 
   // Get function calls from tokens
-  getFunctionCalls(): string[] {
-    return this.tokens
+  getFunctionCalls: (): string[] => {
+    return formulaLexerService.tokens
       .filter(token => token.type === ETokenType.FUNCTION)
       .map(token => token.value);
-  }
+  },
 
   // Validate token sequence
-  validateTokenSequence(): IFormulaError[] {
+  validateTokenSequence: (): IFormulaError[] => {
     const errors: IFormulaError[] = [];
     let parenthesesCount = 0;
 
-    for (let i = 0; i < this.tokens.length; i++) {
-      const token = this.tokens[i];
-      const nextToken = this.tokens[i + 1];
-      const prevToken = this.tokens[i - 1];
+    for (let i = 0; i < formulaLexerService.tokens.length; i++) {
+      const token = formulaLexerService.tokens[i];
+      const nextToken = formulaLexerService.tokens[i + 1];
+      const prevToken = formulaLexerService.tokens[i - 1];
 
       // Check parentheses balance
       if (token.type === ETokenType.PARENTHESIS_OPEN) {
@@ -441,6 +454,4 @@ export class FormulaLexerService {
 
     return errors;
   }
-}
-
-export const formulaLexerService = new FormulaLexerService();
+};

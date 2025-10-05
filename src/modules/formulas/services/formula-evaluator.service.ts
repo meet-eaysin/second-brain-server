@@ -3,20 +3,22 @@ import {
   IFormulaContext,
   IFormulaExecutionResult,
   EFormulaDataType,
-  EFormulaOperator,
-  IFormulaError
+  EFormulaOperator
 } from '../types/formula.types';
 import { formulaFunctionsService } from './formula-functions.service';
 
-export class FormulaEvaluatorService {
+export const formulaEvaluatorService = {
   // Evaluate formula AST with context
-  async evaluate(ast: IFormulaASTNode, context: IFormulaContext): Promise<IFormulaExecutionResult> {
+  evaluate: async (
+    ast: IFormulaASTNode,
+    context: IFormulaContext
+  ): Promise<IFormulaExecutionResult> => {
     const startTime = Date.now();
     const warnings: any[] = [];
 
     try {
-      const value = await this.evaluateNode(ast, context);
-      const dataType = this.inferDataType(value);
+      const value = await formulaEvaluatorService.evaluateNode(ast, context);
+      const dataType = formulaEvaluatorService.inferDataType(value);
       const executionTime = Date.now() - startTime;
 
       return {
@@ -30,35 +32,45 @@ export class FormulaEvaluatorService {
         `Formula evaluation error: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
-  }
+  },
 
   // Evaluate individual AST node
-  private async evaluateNode(node: IFormulaASTNode, context: IFormulaContext): Promise<any> {
+  evaluateNode: async (node: IFormulaASTNode, context: IFormulaContext): Promise<any> => {
     switch (node.type) {
       case 'literal':
         return node.value;
 
       case 'property':
-        return this.evaluateProperty(node.propertyName!, context);
+        return formulaEvaluatorService.evaluateProperty(node.propertyName!, context);
 
       case 'function':
-        return this.evaluateFunction(node.functionName!, node.children || [], context);
+        return formulaEvaluatorService.evaluateFunction(
+          node.functionName!,
+          node.children || [],
+          context
+        );
 
       case 'operator':
-        return this.evaluateOperator(node.operator!, node.children || [], context);
+        return formulaEvaluatorService.evaluateOperator(
+          node.operator!,
+          node.children || [],
+          context
+        );
 
       case 'array':
-        return Promise.all((node.children || []).map(child => this.evaluateNode(child, context)));
+        return Promise.all(
+          (node.children || []).map(child => formulaEvaluatorService.evaluateNode(child, context))
+        );
 
       default:
         throw new Error(`Unknown node type: ${node.type}`);
     }
-  }
+  },
 
   // Evaluate property reference
-  private evaluateProperty(propertyName: string, context: IFormulaContext): any {
+  evaluateProperty: (propertyName: string, context: IFormulaContext): any => {
     // Check if property exists in current record
-    if (context.properties.hasOwnProperty(propertyName)) {
+    if (propertyName in context.properties) {
       return context.properties[propertyName];
     }
 
@@ -83,131 +95,138 @@ export class FormulaEvaluatorService {
       case 'now':
         return new Date();
 
-      case 'today':
+      case 'today': {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return today;
+      }
 
       default:
         // Check variables
-        if (context.variables && context.variables.hasOwnProperty(propertyName)) {
+        if (context.variables && propertyName in context.variables) {
           return context.variables[propertyName];
         }
 
         throw new Error(`Property not found: ${propertyName}`);
     }
-  }
+  },
 
   // Evaluate function call
-  private async evaluateFunction(
+  evaluateFunction: async (
     functionName: string,
     argNodes: IFormulaASTNode[],
     context: IFormulaContext
-  ): Promise<any> {
+  ): Promise<any> => {
     // Evaluate all arguments
-    const args = await Promise.all(argNodes.map(arg => this.evaluateNode(arg, context)));
+    const args = await Promise.all(
+      argNodes.map(arg => formulaEvaluatorService.evaluateNode(arg, context))
+    );
 
     // Execute function
     return formulaFunctionsService.executeFunction(functionName, args, context);
-  }
+  },
 
   // Evaluate operator
-  private async evaluateOperator(
+  evaluateOperator: async (
     operator: EFormulaOperator,
     operands: IFormulaASTNode[],
     context: IFormulaContext
-  ): Promise<any> {
+  ): Promise<any> => {
     if (operands.length === 1) {
       // Unary operator
-      const operand = await this.evaluateNode(operands[0], context);
-      return this.evaluateUnaryOperator(operator, operand);
+      const operand = await formulaEvaluatorService.evaluateNode(operands[0], context);
+      return formulaEvaluatorService.evaluateUnaryOperator(operator, operand);
     } else if (operands.length === 2) {
       // Binary operator
-      const left = await this.evaluateNode(operands[0], context);
-      const right = await this.evaluateNode(operands[1], context);
-      return this.evaluateBinaryOperator(operator, left, right);
+      const left = await formulaEvaluatorService.evaluateNode(operands[0], context);
+      const right = await formulaEvaluatorService.evaluateNode(operands[1], context);
+      return formulaEvaluatorService.evaluateBinaryOperator(operator, left, right);
     } else {
       throw new Error(`Invalid number of operands for operator ${operator}`);
     }
-  }
+  },
 
   // Evaluate unary operator
-  private evaluateUnaryOperator(operator: EFormulaOperator, operand: any): any {
+  evaluateUnaryOperator: (operator: EFormulaOperator, operand: any): any => {
     switch (operator) {
       case EFormulaOperator.NOT:
-        return !this.toBoolean(operand);
+        return !formulaEvaluatorService.toBoolean(operand);
 
       case EFormulaOperator.SUBTRACT:
-        return -this.toNumber(operand);
+        return -formulaEvaluatorService.toNumber(operand);
 
       default:
         throw new Error(`Unknown unary operator: ${operator}`);
     }
-  }
+  },
 
   // Evaluate binary operator
-  private evaluateBinaryOperator(operator: EFormulaOperator, left: any, right: any): any {
+  evaluateBinaryOperator: (operator: EFormulaOperator, left: any, right: any): any => {
     switch (operator) {
       // Arithmetic
       case EFormulaOperator.ADD:
-        return this.toNumber(left) + this.toNumber(right);
+        return formulaEvaluatorService.toNumber(left) + formulaEvaluatorService.toNumber(right);
 
       case EFormulaOperator.SUBTRACT:
-        return this.toNumber(left) - this.toNumber(right);
+        return formulaEvaluatorService.toNumber(left) - formulaEvaluatorService.toNumber(right);
 
       case EFormulaOperator.MULTIPLY:
-        return this.toNumber(left) * this.toNumber(right);
+        return formulaEvaluatorService.toNumber(left) * formulaEvaluatorService.toNumber(right);
 
-      case EFormulaOperator.DIVIDE:
-        const rightNum = this.toNumber(right);
+      case EFormulaOperator.DIVIDE: {
+        const rightNum = formulaEvaluatorService.toNumber(right);
         if (rightNum === 0) {
           throw new Error('Division by zero');
         }
-        return this.toNumber(left) / rightNum;
+        return formulaEvaluatorService.toNumber(left) / rightNum;
+      }
 
       case EFormulaOperator.MODULO:
-        return this.toNumber(left) % this.toNumber(right);
+        return formulaEvaluatorService.toNumber(left) % formulaEvaluatorService.toNumber(right);
 
       case EFormulaOperator.POWER:
-        return Math.pow(this.toNumber(left), this.toNumber(right));
+        return Math.pow(
+          formulaEvaluatorService.toNumber(left),
+          formulaEvaluatorService.toNumber(right)
+        );
 
       // Comparison
       case EFormulaOperator.EQUAL:
-        return this.compareValues(left, right) === 0;
+        return formulaEvaluatorService.compareValues(left, right) === 0;
 
       case EFormulaOperator.NOT_EQUAL:
-        return this.compareValues(left, right) !== 0;
+        return formulaEvaluatorService.compareValues(left, right) !== 0;
 
       case EFormulaOperator.GREATER_THAN:
-        return this.compareValues(left, right) > 0;
+        return formulaEvaluatorService.compareValues(left, right) > 0;
 
       case EFormulaOperator.GREATER_THAN_OR_EQUAL:
-        return this.compareValues(left, right) >= 0;
+        return formulaEvaluatorService.compareValues(left, right) >= 0;
 
       case EFormulaOperator.LESS_THAN:
-        return this.compareValues(left, right) < 0;
+        return formulaEvaluatorService.compareValues(left, right) < 0;
 
       case EFormulaOperator.LESS_THAN_OR_EQUAL:
-        return this.compareValues(left, right) <= 0;
+        return formulaEvaluatorService.compareValues(left, right) <= 0;
 
       // Logical
       case EFormulaOperator.AND:
-        return this.toBoolean(left) && this.toBoolean(right);
+        return formulaEvaluatorService.toBoolean(left) && formulaEvaluatorService.toBoolean(right);
 
       case EFormulaOperator.OR:
-        return this.toBoolean(left) || this.toBoolean(right);
+        return formulaEvaluatorService.toBoolean(left) || formulaEvaluatorService.toBoolean(right);
 
       // String
       case EFormulaOperator.CONCAT:
-        return this.toString(left) + this.toString(right);
+        return formulaEvaluatorService.toString(left) + formulaEvaluatorService.toString(right);
 
       default:
         throw new Error(`Unknown binary operator: ${operator}`);
     }
-  }
+  },
 
   // Type conversion methods
-  private toNumber(value: any): number {
+  toNumber: (value: any): number => {
     if (typeof value === 'number') {
       return isNaN(value) ? 0 : value;
     }
@@ -226,9 +245,9 @@ export class FormulaEvaluatorService {
     }
 
     return 0;
-  }
+  },
 
-  private toString(value: any): string {
+  toString: (value: any): string => {
     if (value === null || value === undefined) {
       return '';
     }
@@ -250,9 +269,9 @@ export class FormulaEvaluatorService {
     }
 
     return String(value);
-  }
+  },
 
-  private toBoolean(value: any): boolean {
+  toBoolean: (value: any): boolean => {
     if (typeof value === 'boolean') {
       return value;
     }
@@ -270,9 +289,9 @@ export class FormulaEvaluatorService {
     }
 
     return value !== null && value !== undefined;
-  }
+  },
 
-  private toDate(value: any): Date {
+  toDate: (value: any): Date => {
     if (value instanceof Date) {
       return value;
     }
@@ -286,10 +305,10 @@ export class FormulaEvaluatorService {
     }
 
     throw new Error(`Cannot convert to date: ${value}`);
-  }
+  },
 
   // Compare values for sorting/comparison operators
-  private compareValues(left: any, right: any): number {
+  compareValues: (left: any, right: any): number => {
     // Handle null/undefined
     if (left === null || left === undefined) {
       return right === null || right === undefined ? 0 : -1;
@@ -315,13 +334,13 @@ export class FormulaEvaluatorService {
     }
 
     // Different type comparison - convert to strings
-    const leftStr = this.toString(left);
-    const rightStr = this.toString(right);
+    const leftStr = formulaEvaluatorService.toString(left);
+    const rightStr = formulaEvaluatorService.toString(right);
     return leftStr.localeCompare(rightStr);
-  }
+  },
 
   // Infer data type from value
-  private inferDataType(value: any): EFormulaDataType {
+  inferDataType: (value: any): EFormulaDataType => {
     if (value === null || value === undefined) {
       return EFormulaDataType.NULL;
     }
@@ -347,10 +366,10 @@ export class FormulaEvaluatorService {
     }
 
     return EFormulaDataType.ANY;
-  }
+  },
 
   // Format value for display
-  formatValue(value: any, format?: string): string {
+  formatValue: (value: any, format?: string): string => {
     if (value === null || value === undefined) {
       return '';
     }
@@ -398,11 +417,11 @@ export class FormulaEvaluatorService {
       return value.toLocaleDateString();
     }
 
-    return this.toString(value);
-  }
+    return formulaEvaluatorService.toString(value);
+  },
 
   // Check if formula result should trigger recalculation
-  shouldRecalculate(oldValue: any, newValue: any): boolean {
+  shouldRecalculate: (oldValue: any, newValue: any): boolean => {
     // Handle null/undefined
     if (oldValue === null || oldValue === undefined) {
       return newValue !== null && newValue !== undefined;
@@ -423,6 +442,4 @@ export class FormulaEvaluatorService {
 
     return oldValue !== newValue;
   }
-}
-
-export const formulaEvaluatorService = new FormulaEvaluatorService();
+};
