@@ -1,10 +1,8 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
-import { collaborationService } from './collaboration.service';
-import { richEditorService } from './rich-editor.service';
-import { IEditorOperation } from './rich-editor.service';
-import { eventEmitter } from './collaboration.service';
+import { collaborationService, eventEmitter } from './collaboration.service';
+import { richEditorService, IEditorOperation } from './rich-editor.service';
 
 export interface ISocketUser {
   userId: string;

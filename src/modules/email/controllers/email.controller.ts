@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { catchAsync, sendSuccessResponse, createNotFoundError } from '../../../utils';
-import { AuthenticatedRequest } from '../../../middlewares/auth';
 import * as emailService from '../services/email.services';
 
 /**

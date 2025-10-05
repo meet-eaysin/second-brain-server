@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateQuery } from '@/middlewares/validation';
-import { z } from 'zod';
 import {
   getRelationAnalytics,
   getProductivityInsights,
@@ -11,10 +10,7 @@ import {
   getRelationImpactAnalysis,
   getRelationHealthMetrics
 } from '../controllers/relation-analytics.controller';
-import {
-  recommendationsQuerySchema,
-  trendsQuerySchema
-} from '../validators';
+import { recommendationsQuerySchema, trendsQuerySchema } from '../validators';
 
 const router = Router();
 
