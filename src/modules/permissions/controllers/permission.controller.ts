@@ -1,12 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  EPermissionLevel,
-  EShareScope
-} from '@/modules/core/types/permission.types';
+import { EPermissionLevel, EShareScope } from '@/modules/core/types/permission.types';
 import { permissionService } from '../services/permission.service';
-import { sendErrorResponse, sendSuccessResponse } from '../../../utils/response.utils';
-import {getUserId} from '@/modules/auth';
-import {catchAsync} from '@/utils';
+import { sendErrorResponse, sendSuccessResponse } from '@/utils/response.utils';
+import { getUserId } from '@/modules/auth';
+import { catchAsync } from '@/utils';
 
 // Grant permission to user
 export const grantPermission = catchAsync(
@@ -148,8 +145,15 @@ export const getEffectivePermissions = catchAsync(
 
     // Check all capabilities
     const capabilities = [
-      'canRead', 'canEdit', 'canDelete', 'canShare', 'canExport',
-      'canImport', 'canCreateRecords', 'canEditSchema', 'canManagePermissions'
+      'canRead',
+      'canEdit',
+      'canDelete',
+      'canShare',
+      'canExport',
+      'canImport',
+      'canCreateRecords',
+      'canEditSchema',
+      'canManagePermissions'
     ];
 
     const effectiveCapabilities: Record<string, boolean> = {};
