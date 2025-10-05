@@ -5,7 +5,6 @@ export interface ICalendarPreferences {
   id?: string;
   userId: TUserId;
 
-  // General Settings
   defaultCalendarId?: string;
   timeZone: string;
   displayPreferences: {
@@ -14,20 +13,18 @@ export interface ICalendarPreferences {
     use24HourFormat: boolean;
   };
 
-  // Sync Settings
   syncSettings: {
     autoSyncEnabled: boolean;
-    syncFrequency: number; // minutes
+    syncFrequency: number;
     conflictResolution: 'local' | 'remote' | 'manual';
   };
 
-  // Notification Settings
   notificationSettings: {
     emailNotifications: boolean;
     pushNotifications: boolean;
     smsNotifications: boolean;
-    defaultEmailReminder: number; // minutes before event
-    defaultPopupReminder: number; // minutes before event
+    defaultEmailReminder: number;
+    defaultPopupReminder: number;
   };
 
   // Metadata
@@ -79,7 +76,6 @@ const CalendarPreferencesSchema = new Schema<ICalendarPreferencesDocument>(
       }
     },
 
-    // Sync Settings
     syncSettings: {
       autoSyncEnabled: {
         type: Boolean,
@@ -140,10 +136,8 @@ const CalendarPreferencesSchema = new Schema<ICalendarPreferencesDocument>(
   }
 );
 
-// Indexes
 CalendarPreferencesSchema.index({ defaultCalendarId: 1 });
 
-// Static methods
 CalendarPreferencesSchema.statics.findByUserId = function (userId: TUserId) {
   return this.findOne({ userId }).exec();
 };

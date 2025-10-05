@@ -26,34 +26,28 @@ import {
   createOAuthCodeInvalidError
 } from '@/auth/utils/auth-errors';
 import { appConfig } from '@/config';
-import {getUserWithWorkspaces} from '@/auth/services/auth.service';
+import { getUserWithWorkspaces } from '@/auth/services/auth.service';
 
-export const register = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userData: TUserCreateRequest = req.body;
-    const user = await createUser(userData);
-    const userWithoutPassword = getUsersWithoutPassword([user])[0];
+export const register = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userData: TUserCreateRequest = req.body;
+  const user = await createUser(userData);
+  const userWithoutPassword = getUsersWithoutPassword([user])[0];
 
-    sendSuccessResponse(res, 'User registered successfully', userWithoutPassword, 201);
-  }
-);
+  sendSuccessResponse(res, 'User registered successfully', userWithoutPassword, 201);
+});
 
-export const login = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const loginData: TLoginRequest = req.body;
-    const authResponse = await authenticateUser(loginData);
+export const login = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const loginData: TLoginRequest = req.body;
+  const authResponse = await authenticateUser(loginData);
 
-    sendSuccessResponse(res, 'Login successful', authResponse);
-  }
-);
+  sendSuccessResponse(res, 'Login successful', authResponse);
+});
 
-export const refreshToken = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { refreshToken } = req.body;
-    const result = await refreshAccessToken(refreshToken);
-    sendSuccessResponse(res, 'Token refreshed successfully', result);
-  }
-);
+export const refreshToken = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { refreshToken } = req.body;
+  const result = await refreshAccessToken(refreshToken);
+  sendSuccessResponse(res, 'Token refreshed successfully', result);
+});
 
 export const changeUserPassword = async (
   req: Request,
@@ -71,48 +65,40 @@ export const changeUserPassword = async (
   }
 };
 
-export const forgotUserPassword = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const forgotPasswordData: TForgotPasswordRequest = req.body;
-    await forgotPassword(forgotPasswordData);
-    sendSuccessResponse(res, 'Password reset email sent successfully', null);
-  }
-);
+export const forgotUserPassword = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const forgotPasswordData: TForgotPasswordRequest = req.body;
+  await forgotPassword(forgotPasswordData);
+  sendSuccessResponse(res, 'Password reset email sent successfully', null);
+});
 
-export const resetUserPassword = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const resetPasswordData: TResetPasswordRequest = req.body;
-    await resetPassword(resetPasswordData);
-    sendSuccessResponse(res, 'Password reset successfully', null);
-  }
-);
+export const resetUserPassword = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const resetPasswordData: TResetPasswordRequest = req.body;
+  await resetPassword(resetPasswordData);
+  sendSuccessResponse(res, 'Password reset successfully', null);
+});
 
-export const logout = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { user } = req as AuthenticatedRequest;
-    await logoutUser(user.userId);
+export const logout = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { user } = req as AuthenticatedRequest;
+  await logoutUser(user.userId);
 
-    sendSuccessResponse(res, 'Logged out successfully', null);
-  }
-);
+  sendSuccessResponse(res, 'Logged out successfully', null);
+});
 
-export const logoutAll = (req: Request, res: Response, next: NextFunction): void => {
+export const logoutAll = (req: Request, res: Response): void => {
   sendSuccessResponse(res, 'Logged out from all devices successfully', null);
 };
 
-export const getProfile = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { user } = req as AuthenticatedRequest;
+export const getProfile = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { user } = req as AuthenticatedRequest;
 
-    const workspaces = await getUserWithWorkspaces(user.userId);
-    const userWithWorkspaces = {
-      ...user,
-      workspaces
-    };
+  const workspaces = await getUserWithWorkspaces(user.userId);
+  const userWithWorkspaces = {
+    ...user,
+    workspaces
+  };
 
-    sendSuccessResponse(res, 'Profile retrieved successfully', userWithWorkspaces);
-  }
-);
+  sendSuccessResponse(res, 'Profile retrieved successfully', userWithWorkspaces);
+});
 
 export const googleLogin = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -126,47 +112,45 @@ export const googleLogin = catchAsync(
   }
 );
 
-export const googleCallback = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { code, state, error, error_description } = req.query;
+export const googleCallback = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { code, state, error, error_description } = req.query;
 
-    if (error) {
-      const errorMessage = String(error_description || 'Google authentication failed');
-      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=${encodeURIComponent(String(error))}&message=${encodeURIComponent(errorMessage)}`;
-      return res.redirect(errorUrl);
-    }
-
-    if (!code || typeof code !== 'string') {
-      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=missing_code&message=Authorization code not received`;
-      return res.redirect(errorUrl);
-    }
-
-    try {
-      if (state && typeof state === 'string') {
-        try {
-          verifyStateToken(state);
-        } catch (error) {
-          const errorUrl = `${appConfig.clientUrl}/auth/callback?error=invalid_state&message=Security validation failed`;
-          return res.redirect(errorUrl);
-        }
-      }
-
-      const authResponse = await handleGoogleCallback(code);
-
-      const redirectUrl =
-        `${appConfig.clientUrl}/auth/callback?` +
-        `accessToken=${encodeURIComponent(authResponse.accessToken)}&` +
-        `refreshToken=${encodeURIComponent(authResponse.refreshToken)}&` +
-        'auth=success';
-
-      res.redirect(redirectUrl);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      const errorUrl = `${appConfig.clientUrl}/auth/callback?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`;
-      return res.redirect(errorUrl);
-    }
+  if (error) {
+    const errorMessage = String(error_description || 'Google authentication failed');
+    const errorUrl = `${appConfig.clientUrl}/auth/callback?error=${encodeURIComponent(String(error))}&message=${encodeURIComponent(errorMessage)}`;
+    return res.redirect(errorUrl);
   }
-);
+
+  if (!code || typeof code !== 'string') {
+    const errorUrl = `${appConfig.clientUrl}/auth/callback?error=missing_code&message=Authorization code not received`;
+    return res.redirect(errorUrl);
+  }
+
+  try {
+    if (state && typeof state === 'string') {
+      try {
+        verifyStateToken(state);
+      } catch (error) {
+        const errorUrl = `${appConfig.clientUrl}/auth/callback?error=invalid_state&message=Security validation failed`;
+        return res.redirect(errorUrl);
+      }
+    }
+
+    const authResponse = await handleGoogleCallback(code);
+
+    const redirectUrl =
+      `${appConfig.clientUrl}/auth/callback?` +
+      `accessToken=${encodeURIComponent(authResponse.accessToken)}&` +
+      `refreshToken=${encodeURIComponent(authResponse.refreshToken)}&` +
+      'auth=success';
+
+    res.redirect(redirectUrl);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+    const errorUrl = `${appConfig.clientUrl}/auth/callback?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`;
+    return res.redirect(errorUrl);
+  }
+});
 
 export const googleLoginSuccess = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

@@ -1,5 +1,9 @@
+import {
+  ECalendarAccessLevel,
+  ECalendarProvider,
+  ECalendarType
+} from '@/modules/calendar/types/enums.types';
 import { Schema, model, Document, Model } from 'mongoose';
-import { ECalendarAccessLevel, ECalendarProvider, ECalendarType } from '../types/enums.types';
 
 export interface ICalendarDocument extends Document {
   name: string;
@@ -86,7 +90,6 @@ const CalendarSchema = new Schema<ICalendarDocument>(
       default: ECalendarType.PERSONAL
     },
 
-    // External calendar data
     externalId: {
       type: String
     },
@@ -95,7 +98,6 @@ const CalendarSchema = new Schema<ICalendarDocument>(
       default: {}
     },
 
-    // Access and sharing
     ownerId: {
       type: String,
       required: true

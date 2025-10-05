@@ -136,125 +136,90 @@ const entityParamsSchema = z.object({
   entityId: z.string().min(1)
 });
 
-// CalendarTypes view and utility routes (must come before parameterized routes)
 router.get('/config', getCalendarConfigController);
-
 router.get('/preferences', getCalendarPreferencesController);
-
 router.put('/preferences', updateCalendarPreferencesController);
-
 router.get('/stats', getCalendarStatsController);
-
 router.get('/view/calendar', getCalendarViewController);
-
 router.get('/view/busy-times', getCalendarBusyTimesController);
-
 router.post('/sync/time-related', syncTimeRelatedModulesController);
-
-// External calendar connection routes (must come before parameterized routes)
 router.get('/connections/providers', getCalendarProvidersController);
-
 router.post('/connections', validateBody(connectCalendarSchema), connectCalendarController);
-
 router.get('/connections', getCalendarConnectionsController);
-
 router.get('/connections/stats', getCalendarConnectionStatsController);
-
 router.get(
   '/connections/:connectionId',
   validateParams(connectionIdSchema),
   getCalendarConnectionByIdController
 );
-
 router.put(
   '/connections/:connectionId',
   validateParams(connectionIdSchema),
   validateBody(updateConnectionSchema),
   updateCalendarConnectionController
 );
-
 router.delete(
   '/connections/:connectionId',
   validateParams(connectionIdSchema),
   disconnectCalendarController
 );
-
 router.post(
   '/connections/:connectionId/sync',
   validateParams(connectionIdSchema),
   syncCalendarConnectionController
 );
-
 router.post(
   '/connections/:connectionId/test',
   validateParams(connectionIdSchema),
   testCalendarConnectionController
 );
-
 router.post(
   '/connections/:connectionId/reset-errors',
   validateParams(connectionIdSchema),
   resetCalendarConnectionErrorsController
 );
-
 router.get(
   '/connections/:connectionId/logs',
   validateParams(connectionIdSchema),
   getCalendarSyncLogsController
 );
-
-// Event CRUD routes (must come before parameterized routes)
 router.post(
   '/events',
   validateBody(createEventSchema),
   injectWorkspaceContext,
   createEventController
 );
-
 router.get('/events', getEventsController);
-
 router.get('/events/upcoming', getUpcomingEventsController);
-
 router.get('/events/today', getTodayEventsController);
-
 router.get('/events/search', searchEventsController);
-
 router.get(
   '/events/entity/:entityType/:entityId',
   validateParams(entityParamsSchema),
   getEventsByEntityController
 );
-
 router.get('/events/:eventId', validateParams(eventIdSchema), getEventByIdController);
-
 router.put(
   '/events/:eventId',
   validateParams(eventIdSchema),
   validateBody(updateEventSchema),
   updateEventController
 );
-
 router.delete('/events/:eventId', validateParams(eventIdSchema), deleteEventController);
-
-// CalendarTypes CRUD routes
 router.post(
   '/',
   validateBody(createCalendarSchema),
   injectWorkspaceContext,
   createCalendarController
 );
-
 router.get('/', getCalendarsController);
-
 router.get('/:calendarId', validateParams(calendarIdSchema), getCalendarByIdController);
-
 router.put(
   '/:calendarId',
   validateParams(calendarIdSchema),
   validateBody(updateCalendarSchema),
   updateCalendarController
 );
-
 router.delete('/:calendarId', validateParams(calendarIdSchema), deleteCalendarController);
 
 export default router;

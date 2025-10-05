@@ -27,61 +27,25 @@ import { generateId } from '@/utils/id-generator';
  * Initialize calendar sync system
  */
 export const initializeCalendarSync = (): void => {
-  console.log('📅 Initializing Calendar Sync System...');
-
-  // Sync external calendars every 15 minutes
-  cron.schedule('*/15 * * * *', async () => {
-    try {
-      await syncAllConnections();
-    } catch (error) {
-      console.error('Error in calendar sync:', error);
-    }
-  });
-
-  // Refresh expired tokens every hour
-  cron.schedule('0 * * * *', async () => {
-    try {
-      await refreshExpiredTokens();
-    } catch (error) {
-      console.error('Error refreshing tokens:', error);
-    }
-  });
-
-  // Sync time-related modules every 30 minutes
-  cron.schedule('*/30 * * * *', async () => {
-    try {
-      await syncTimeRelatedModulesForAllUsers();
-    } catch (error) {
-      console.error('Error syncing time-related modules:', error);
-    }
-  });
-
-  console.log('✅ Calendar Sync System initialized');
+  cron.schedule('*/15 * * * *', async () => await syncAllConnections());
+  cron.schedule('0 * * * *', async () => await refreshExpiredTokens());
+  cron.schedule('*/30 * * * *', async () => await syncTimeRelatedModulesForAllUsers());
 };
 
 /**
  * Sync all active calendar connections
  */
 export const syncAllConnections = async (): Promise<void> => {
-  try {
-    const connectionModel = CalendarConnectionModel;
-    const connections = await connectionModel.findDueForSync();
+  const connectionModel = CalendarConnectionModel;
+  const connections = await connectionModel.findDueForSync();
 
-    console.log(`🔄 Starting sync for ${connections.length} calendar connections`);
-
-    for (const connection of connections) {
-      try {
-        await syncConnection(connection);
-      } catch (error) {
-        console.error(`Failed to sync connection ${connection.id}:`, error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        await connection.recordSyncError(errorMessage);
-      }
+  for (const connection of connections) {
+    try {
+      await syncConnection(connection);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await connection.recordSyncError(errorMessage);
     }
-
-    console.log('✅ Completed calendar sync cycle');
-  } catch (error) {
-    console.error('Error in syncAllConnections:', error);
   }
 };
 
@@ -99,7 +63,6 @@ const syncConnection = async (connection: ICalendarConnectionDocument): Promise<
   try {
     const provider = externalCalendarProviderFactory.getProvider(connection.provider);
 
-    // Get external calendars
     const externalCalendars = await provider.getCalendars(connection);
 
     let totalProcessed = 0;
@@ -108,10 +71,8 @@ const syncConnection = async (connection: ICalendarConnectionDocument): Promise<
     let totalDeleted = 0;
 
     for (const externalCalendar of externalCalendars) {
-      // Sync calendar metadata
       await syncCalendarMetadata(connection, externalCalendar);
 
-      // Sync events for this calendar
       const eventStats = await syncCalendarEvents(connection, provider, externalCalendar);
 
       totalProcessed += eventStats.processed;
@@ -120,7 +81,6 @@ const syncConnection = async (connection: ICalendarConnectionDocument): Promise<
       totalDeleted += eventStats.deleted;
     }
 
-    // Record successful sync
     await connection.recordSyncSuccess();
     await syncLog.complete({
       eventsProcessed: totalProcessed,
@@ -128,10 +88,6 @@ const syncConnection = async (connection: ICalendarConnectionDocument): Promise<
       eventsUpdated: totalUpdated,
       eventsDeleted: totalDeleted
     });
-
-    console.log(
-      `✅ Synced connection ${connection.accountEmail}: ${totalProcessed} events processed`
-    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     await connection.recordSyncError(errorMessage);
@@ -147,44 +103,37 @@ const syncCalendarMetadata = async (
   connection: ICalendarConnection,
   externalCalendar: any
 ): Promise<void> => {
-  try {
-    // Find or create internal calendar
-    let internalCalendar = await CalendarModel.findByExternalId(
-      connection.provider,
-      externalCalendar.id
-    );
+  let internalCalendar = await CalendarModel.findByExternalId(
+    connection.provider,
+    externalCalendar.id
+  );
 
-    if (!internalCalendar) {
-      // Create new internal calendar
-      internalCalendar = new CalendarModel({
-        id: generateId(),
-        name: externalCalendar.summary || externalCalendar.name || 'External Calendar',
-        description: externalCalendar.description,
-        color: externalCalendar.backgroundColor || '#3B82F6',
-        provider: connection.provider,
-        type: 'personal',
-        externalId: externalCalendar.id,
-        externalData: externalCalendar,
-        ownerId: connection.userId,
-        createdBy: connection.userId,
-        timeZone: externalCalendar.timeZone || 'UTC',
-        syncEnabled: true
-      });
+  if (!internalCalendar) {
+    internalCalendar = new CalendarModel({
+      id: generateId(),
+      name: externalCalendar.summary || externalCalendar.name || 'External Calendar',
+      description: externalCalendar.description,
+      color: externalCalendar.backgroundColor || '#3B82F6',
+      provider: connection.provider,
+      type: 'personal',
+      externalId: externalCalendar.id,
+      externalData: externalCalendar,
+      ownerId: connection.userId,
+      createdBy: connection.userId,
+      timeZone: externalCalendar.timeZone || 'UTC',
+      syncEnabled: true
+    });
 
-      await internalCalendar.save();
-    } else {
-      // Update existing calendar
-      internalCalendar.name =
-        externalCalendar.summary || externalCalendar.name || internalCalendar.name;
-      internalCalendar.description = externalCalendar.description;
-      internalCalendar.color = externalCalendar.backgroundColor || internalCalendar.color;
-      internalCalendar.externalData = externalCalendar;
-      internalCalendar.timeZone = externalCalendar.timeZone || internalCalendar.timeZone;
+    await internalCalendar.save();
+  } else {
+    internalCalendar.name =
+      externalCalendar.summary || externalCalendar.name || internalCalendar.name;
+    internalCalendar.description = externalCalendar.description;
+    internalCalendar.color = externalCalendar.backgroundColor || internalCalendar.color;
+    internalCalendar.externalData = externalCalendar;
+    internalCalendar.timeZone = externalCalendar.timeZone || internalCalendar.timeZone;
 
-      await internalCalendar.save();
-    }
-  } catch (error) {
-    console.error('Error syncing calendar metadata:', error);
+    await internalCalendar.save();
   }
 };
 
@@ -197,7 +146,6 @@ const syncCalendarEvents = async (
   externalCalendar: any
 ): Promise<{ processed: number; created: number; updated: number; deleted: number }> => {
   try {
-    // Find internal calendar
     const internalCalendar = await CalendarModel.findByExternalId(
       connection.provider,
       externalCalendar.id
@@ -207,7 +155,6 @@ const syncCalendarEvents = async (
       throw new Error('Internal calendar not found');
     }
 
-    // Calculate sync date range
     const now = new Date();
     const startDate = new Date(
       now.getTime() - connection.syncSettings.syncPastDays * 24 * 60 * 60 * 1000
@@ -216,7 +163,6 @@ const syncCalendarEvents = async (
       now.getTime() + connection.syncSettings.syncFutureDays * 24 * 60 * 60 * 1000
     );
 
-    // Get external events
     const externalEvents = await provider.getEvents(
       connection,
       externalCalendar.id,
@@ -229,24 +175,18 @@ const syncCalendarEvents = async (
     let updated = 0;
     const deleted = 0;
 
-    // Process each external event
     for (const externalEvent of externalEvents) {
-      try {
-        const result = await syncEvent(connection, internalCalendar, externalEvent);
-        processed++;
+      const result = await syncEvent(connection, internalCalendar, externalEvent);
+      processed++;
 
-        if (result === 'created') created++;
-        else if (result === 'updated') updated++;
-      } catch (error) {
-        console.error(`Error syncing event ${externalEvent.id}:`, error);
-      }
+      if (result === 'created') created++;
+      else if (result === 'updated') updated++;
     }
 
     // TODO: Handle deleted events (would need to track which events were not seen in this sync)
 
     return { processed, created, updated, deleted };
   } catch (error) {
-    console.error('Error syncing calendar events:', error);
     return { processed: 0, created: 0, updated: 0, deleted: 0 };
   }
 };
@@ -259,49 +199,40 @@ const syncEvent = async (
   internalCalendar: any,
   externalEvent: any
 ): Promise<'created' | 'updated' | 'skipped'> => {
-  try {
-    // Find existing internal event
-    let internalEvent = await CalendarEventModel.findOne({
+  let internalEvent = await CalendarEventModel.findOne({
+    calendarId: internalCalendar._id.toString(),
+    externalId: externalEvent.id
+  });
+
+  const eventData = convertExternalEventToInternal(connection.provider, externalEvent);
+
+  if (!internalEvent) {
+    internalEvent = new CalendarEventModel({
+      ...eventData,
+      id: generateId(),
       calendarId: internalCalendar._id.toString(),
-      externalId: externalEvent.id
+      externalId: externalEvent.id,
+      externalData: externalEvent,
+      createdBy: connection.userId
     });
 
-    // Convert external event to internal format
-    const eventData = convertExternalEventToInternal(connection.provider, externalEvent);
+    await internalEvent.save();
+    return 'created';
+  } else {
+    const lastModified = getEventLastModified(connection.provider, externalEvent);
+    const internalLastModified = internalEvent.updatedAt;
 
-    if (!internalEvent) {
-      // Create new internal event
-      internalEvent = new CalendarEventModel({
-        ...eventData,
-        id: generateId(),
-        calendarId: internalCalendar._id.toString(),
-        externalId: externalEvent.id,
-        externalData: externalEvent,
-        createdBy: connection.userId
-      });
+    if (!lastModified || !internalLastModified || lastModified > internalLastModified) {
+      Object.assign(internalEvent, eventData);
+      internalEvent.externalData = externalEvent;
+      internalEvent.updatedBy = connection.userId;
 
       await internalEvent.save();
-      return 'created';
-    } else {
-      // Update existing event if modified
-      const lastModified = getEventLastModified(connection.provider, externalEvent);
-      const internalLastModified = internalEvent.updatedAt;
-
-      if (!lastModified || !internalLastModified || lastModified > internalLastModified) {
-        Object.assign(internalEvent, eventData);
-        internalEvent.externalData = externalEvent;
-        internalEvent.updatedBy = connection.userId;
-
-        await internalEvent.save();
-        return 'updated';
-      }
+      return 'updated';
     }
-
-    return 'skipped';
-  } catch (error) {
-    console.error('Error syncing individual event:', error);
-    throw error;
   }
+
+  return 'skipped';
 };
 
 /**
@@ -377,9 +308,8 @@ const convertExternalEventToInternal = (
  * Parse Google Calendar date/time
  */
 const parseGoogleDateTime = (dateTime: any): Date => {
-  if (dateTime.date) {
-    return new Date(dateTime.date);
-  }
+  if (dateTime.date) return new Date(dateTime.date);
+
   return new Date(dateTime.dateTime);
 };
 
@@ -471,27 +401,18 @@ const getEventLastModified = (provider: ECalendarProvider, externalEvent: any): 
  * Refresh expired tokens
  */
 export const refreshExpiredTokens = async (): Promise<void> => {
-  try {
-    const expiredConnections = await CalendarConnectionModel.findExpiredTokens();
+  const expiredConnections = await CalendarConnectionModel.findExpiredTokens();
 
-    console.log(`🔄 Refreshing ${expiredConnections.length} expired tokens`);
+  for (const connection of expiredConnections) {
+    try {
+      const provider = externalCalendarProviderFactory.getProvider(connection.provider);
+      const tokens = await provider.refreshToken(connection);
 
-    for (const connection of expiredConnections) {
-      try {
-        const provider = externalCalendarProviderFactory.getProvider(connection.provider);
-        const tokens = await provider.refreshToken(connection);
-
-        await connection.updateTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn);
-
-        console.log(`✅ Refreshed token for ${connection.accountEmail}`);
-      } catch (error) {
-        console.error(`Failed to refresh token for ${connection.accountEmail}:`, error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        await connection.recordSyncError(`Token refresh failed: ${errorMessage}`);
-      }
+      await connection.updateTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await connection.recordSyncError(`Token refresh failed: ${errorMessage}`);
     }
-  } catch (error) {
-    console.error('Error refreshing expired tokens:', error);
   }
 };
 
@@ -499,22 +420,11 @@ export const refreshExpiredTokens = async (): Promise<void> => {
  * Sync time-related modules for all users
  */
 const syncTimeRelatedModulesForAllUsers = async (): Promise<void> => {
-  try {
-    // Get all users with calendars
-    const users = await CalendarModel.distinct('ownerId');
+  const users = await CalendarModel.distinct('ownerId');
 
-    console.log(`🔄 Syncing time-related modules for ${users.length} users`);
-
-    for (const userId of users) {
-      try {
-        const { syncTimeRelatedModules } = await import('./calendar.service');
-        await syncTimeRelatedModules(userId);
-      } catch (error) {
-        console.error(`Failed to sync time-related modules for user ${userId}:`, error);
-      }
-    }
-  } catch (error) {
-    console.error('Error syncing time-related modules for all users:', error);
+  for (const userId of users) {
+    const { syncTimeRelatedModules } = await import('./calendar.service');
+    await syncTimeRelatedModules(userId);
   }
 };
 
@@ -534,7 +444,6 @@ export const manualSyncConnection = async (connectionId: string, userId: string)
 
     await syncConnection(connection);
 
-    // Send notification about successful sync
     await createNotification({
       type: ENotificationType.SYSTEM_UPDATE,
       priority: ENotificationPriority.LOW,
@@ -551,7 +460,6 @@ export const manualSyncConnection = async (connectionId: string, userId: string)
       methods: [ENotificationMethod.IN_APP]
     });
   } catch (error) {
-    // Send notification about sync failure
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     await createNotification({
       type: ENotificationType.SYSTEM_UPDATE,

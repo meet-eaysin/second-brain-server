@@ -190,7 +190,6 @@ export const deleteCalendar = async (calendarId: string, userId: string): Promis
       throw createAppError('Calendar not found', 404);
     }
 
-    // Don't allow deleting the default calendar if it's the only one
     if (calendar.isDefault) {
       const calendarCount = await CalendarModel.countDocuments({ ownerId: userId });
       if (calendarCount === 1) {
@@ -198,10 +197,8 @@ export const deleteCalendar = async (calendarId: string, userId: string): Promis
       }
     }
 
-    // Delete all events in this calendar
     await CalendarEventModel.deleteMany({ calendarId });
 
-    // Delete the calendar
     await CalendarModel.deleteOne({ _id: calendarId });
   } catch (error) {
     throw createAppError('Failed to delete calendar', 500);
@@ -240,7 +237,6 @@ export const createEvent = async (
 
     await event.save();
 
-    // Create notification for event reminders
     if (request.reminders && request.reminders.length > 0) {
       await createEventReminders(event.toJSON(), userId);
     }
@@ -260,23 +256,17 @@ export const getEvents = async (
   workspaceId?: string
 ): Promise<ICalendarEvent[]> => {
   try {
-    // Get user's calendars
     const userCalendars = await CalendarModel.find({ ownerId: userId });
     const userCalendarIds = userCalendars.map(cal => cal._id.toString());
 
-    // Filter calendar IDs to only include user's calendars
     const calendarIds = query.calendarIds
       ? query.calendarIds.filter(id => userCalendarIds.includes(id))
       : userCalendarIds;
 
     const mongoQuery: any = { calendarId: { $in: calendarIds } };
 
-    // Workspace filter - filter events by workspace if specified
-    if (workspaceId) {
-      mongoQuery['metadata.workspaceId'] = workspaceId;
-    }
+    if (workspaceId) mongoQuery['metadata.workspaceId'] = workspaceId;
 
-    // Date range filter
     if (query.startDate || query.endDate) {
       mongoQuery.$and = [];
       if (query.startDate) {
@@ -287,30 +277,25 @@ export const getEvents = async (
       }
     }
 
-    // Event type filter
     if (query.eventTypes && query.eventTypes.length > 0) {
       mongoQuery.type = { $in: query.eventTypes };
     }
 
-    // Status filter
     if (query.statuses && query.statuses.length > 0) {
       mongoQuery.status = { $in: query.statuses };
     }
 
-    // Related entity filter
     if (query.relatedEntityType && query.relatedEntityId) {
       mongoQuery.relatedEntityType = query.relatedEntityType;
       mongoQuery.relatedEntityId = query.relatedEntityId;
     }
 
-    // Search query
     if (query.searchQuery) {
       mongoQuery.$text = { $search: query.searchQuery };
     }
 
     let eventsQuery = CalendarEventModel.find(mongoQuery).sort({ startTime: 1 });
 
-    // Pagination
     if (query.offset) {
       eventsQuery = eventsQuery.skip(query.offset);
     }
@@ -333,11 +318,8 @@ export const getEventById = async (eventId: string, userId: string): Promise<ICa
   try {
     const event = await CalendarEventModel.findById(eventId).populate('calendarId');
 
-    if (!event) {
-      throw createAppError('Event not found', 404);
-    }
+    if (!event) throw createAppError('Event not found', 404);
 
-    // Check if user owns the calendar
     const calendar = await CalendarModel.findOne({
       _id: event.calendarId,
       ownerId: userId
@@ -364,11 +346,8 @@ export const updateEvent = async (
   try {
     const event = await CalendarEventModel.findById(eventId);
 
-    if (!event) {
-      throw createAppError('Event not found', 404);
-    }
+    if (!event) throw createAppError('Event not found', 404);
 
-    // Check if user owns the calendar
     const calendar = await CalendarModel.findOne({
       _id: event.calendarId,
       ownerId: userId
@@ -395,11 +374,8 @@ export const deleteEvent = async (eventId: string, userId: string): Promise<void
   try {
     const event = await CalendarEventModel.findById(eventId);
 
-    if (!event) {
-      throw createAppError('Event not found', 404);
-    }
+    if (!event) throw createAppError('Event not found', 404);
 
-    // Check if user owns the calendar
     const calendar = await CalendarModel.findOne({
       _id: event.calendarId,
       ownerId: userId
@@ -422,39 +398,27 @@ export const syncTimeRelatedModules = async (
   userId: string,
   workspaceId?: string
 ): Promise<void> => {
-  try {
-    // Get user's default calendar
-    let defaultCalendar = await CalendarModel.findDefault(userId);
+  let defaultCalendar = await CalendarModel.findDefault(userId);
 
-    if (!defaultCalendar) {
-      // Create default calendar if none exists
-      defaultCalendar = await CalendarModel.create({
-        id: generateId(),
-        name: 'My Calendar',
-        color: '#3B82F6',
-        type: 'personal',
-        provider: ECalendarProvider.INTERNAL,
-        ownerId: userId,
-        workspaceId: workspaceId || 'default',
-        createdBy: userId,
-        isDefault: true,
-        timeZone: 'UTC'
-      });
-    }
-
-    // Sync tasks with due dates
-    await syncTasksToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
-
-    // Sync project milestones
-    await syncProjectsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
-
-    await syncHabitsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
-
-    await syncGoalsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
-  } catch (error) {
-    console.error('Failed to sync time-related modules:', error);
-    throw error;
+  if (!defaultCalendar) {
+    defaultCalendar = await CalendarModel.create({
+      id: generateId(),
+      name: 'My Calendar',
+      color: '#3B82F6',
+      type: 'personal',
+      provider: ECalendarProvider.INTERNAL,
+      ownerId: userId,
+      workspaceId: workspaceId || 'default',
+      createdBy: userId,
+      isDefault: true,
+      timeZone: 'UTC'
+    });
   }
+
+  await syncTasksToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
+  await syncProjectsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
+  await syncHabitsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
+  await syncGoalsToCalendar(userId, defaultCalendar._id.toString(), workspaceId);
 };
 
 /**
@@ -465,63 +429,53 @@ const syncTasksToCalendar = async (
   calendarId: string,
   workspaceId?: string
 ): Promise<void> => {
-  try {
-    // Get task databases - filter by workspace if provided
-    const query: any = {
-      type: EDatabaseType.TASKS,
-      createdBy: userId
-    };
+  const query: any = {
+    type: EDatabaseType.TASKS,
+    createdBy: userId
+  };
 
-    if (workspaceId) {
-      query.workspaceId = workspaceId;
-    }
+  if (workspaceId) query.workspaceId = workspaceId;
 
-    const taskDatabases = await DatabaseModel.find(query);
+  const taskDatabases = await DatabaseModel.find(query);
 
-    for (const database of taskDatabases) {
-      // Get tasks with due dates
-      const tasks = await RecordModel.find({
-        databaseId: database.id.toString(),
-        'properties.due_date': { $exists: true, $ne: null },
-        'properties.status': { $ne: EStatus.COMPLETED }
+  for (const database of taskDatabases) {
+    const tasks = await RecordModel.find({
+      databaseId: database.id.toString(),
+      'properties.due_date': { $exists: true, $ne: null },
+      'properties.status': { $ne: EStatus.COMPLETED }
+    });
+
+    for (const task of tasks) {
+      const dueDate = new Date(task.properties.due_date as string);
+
+      const existingEvent = await CalendarEventModel.findOne({
+        relatedEntityType: 'task',
+        relatedEntityId: task.id.toString()
       });
 
-      for (const task of tasks) {
-        const dueDate = new Date(task.properties.due_date as string);
-
-        // Check if event already exists
-        const existingEvent = await CalendarEventModel.findOne({
+      if (!existingEvent) {
+        await CalendarEventModel.create({
+          id: generateId(),
+          calendarId,
+          title: `📋 ${task.properties.name || 'Untitled Task'}`,
+          description: `Task due: ${task.properties.description || ''}`,
+          startTime: new Date(dueDate.getTime() - 60 * 60 * 1000),
+          endTime: dueDate,
+          type: EEventType.TASK,
+          status: EEventStatus.CONFIRMED,
           relatedEntityType: 'task',
-          relatedEntityId: task.id.toString()
+          relatedEntityId: task.id.toString(),
+          createdBy: userId,
+          timeZone: 'UTC',
+          metadata: {
+            priority: task.properties.priority,
+            projectId: task.properties.project_id,
+            workspaceId: database.workspaceId,
+            source: 'task_sync'
+          }
         });
-
-        if (!existingEvent) {
-          // Create calendar event for task
-          await CalendarEventModel.create({
-            id: generateId(),
-            calendarId,
-            title: `📋 ${task.properties.name || 'Untitled Task'}`,
-            description: `Task due: ${task.properties.description || ''}`,
-            startTime: new Date(dueDate.getTime() - 60 * 60 * 1000), // 1 hour before due
-            endTime: dueDate,
-            type: EEventType.TASK,
-            status: EEventStatus.CONFIRMED,
-            relatedEntityType: 'task',
-            relatedEntityId: task.id.toString(),
-            createdBy: userId,
-            timeZone: 'UTC',
-            metadata: {
-              priority: task.properties.priority,
-              projectId: task.properties.project_id,
-              workspaceId: database.workspaceId,
-              source: 'task_sync'
-            }
-          });
-        }
       }
     }
-  } catch (error) {
-    console.error('Failed to sync tasks to calendar:', error);
   }
 };
 
@@ -533,58 +487,52 @@ const syncProjectsToCalendar = async (
   calendarId: string,
   workspaceId?: string
 ): Promise<void> => {
-  try {
-    const query: any = {
-      type: EDatabaseType.PARA_PROJECTS,
-      createdBy: userId
-    };
+  const query: any = {
+    type: EDatabaseType.PARA_PROJECTS,
+    createdBy: userId
+  };
 
-    if (workspaceId) query.workspaceId = workspaceId;
+  if (workspaceId) query.workspaceId = workspaceId;
 
-    const projectDatabases = await DatabaseModel.find(query);
+  const projectDatabases = await DatabaseModel.find(query);
 
-    for (const database of projectDatabases) {
-      const projects = await RecordModel.find({
-        databaseId: database.id.toString(),
-        'properties.deadline': { $exists: true, $ne: null },
-        'properties.status': { $ne: EStatus.COMPLETED }
+  for (const database of projectDatabases) {
+    const projects = await RecordModel.find({
+      databaseId: database.id.toString(),
+      'properties.deadline': { $exists: true, $ne: null },
+      'properties.status': { $ne: EStatus.COMPLETED }
+    });
+
+    for (const project of projects) {
+      const deadline = new Date(project.properties.deadline as string);
+
+      const existingEvent = await CalendarEventModel.findOne({
+        relatedEntityType: 'project',
+        relatedEntityId: project.id.toString()
       });
 
-      for (const project of projects) {
-        const deadline = new Date(project.properties.deadline as string);
-
-        // Check if event already exists
-        const existingEvent = await CalendarEventModel.findOne({
+      if (!existingEvent) {
+        await CalendarEventModel.create({
+          id: generateId(),
+          calendarId,
+          title: `🎯 ${project.properties.name || 'Untitled Project'} Deadline`,
+          description: `Project deadline: ${project.properties.description || ''}`,
+          startTime: deadline,
+          endTime: new Date(deadline.getTime() + 60 * 60 * 1000),
+          type: EEventType.DEADLINE,
+          status: EEventStatus.CONFIRMED,
           relatedEntityType: 'project',
-          relatedEntityId: project.id.toString()
+          relatedEntityId: project.id.toString(),
+          createdBy: userId,
+          timeZone: 'UTC',
+          metadata: {
+            priority: project.properties.priority,
+            workspaceId: database.workspaceId,
+            source: 'project_sync'
+          }
         });
-
-        if (!existingEvent) {
-          // Create calendar event for project deadline
-          await CalendarEventModel.create({
-            id: generateId(),
-            calendarId,
-            title: `🎯 ${project.properties.name || 'Untitled Project'} Deadline`,
-            description: `Project deadline: ${project.properties.description || ''}`,
-            startTime: deadline,
-            endTime: new Date(deadline.getTime() + 60 * 60 * 1000), // 1 hour duration
-            type: EEventType.DEADLINE,
-            status: EEventStatus.CONFIRMED,
-            relatedEntityType: 'project',
-            relatedEntityId: project.id.toString(),
-            createdBy: userId,
-            timeZone: 'UTC',
-            metadata: {
-              priority: project.properties.priority,
-              workspaceId: database.workspaceId,
-              source: 'project_sync'
-            }
-          });
-        }
       }
     }
-  } catch (error) {
-    console.error('Failed to sync projects to calendar:', error);
   }
 };
 
@@ -596,75 +544,65 @@ const syncHabitsToCalendar = async (
   calendarId: string,
   workspaceId?: string
 ): Promise<void> => {
-  try {
-    // Get habit databases - filter by workspace if provided
-    const query: any = {
-      type: EDatabaseType.HABITS,
-      createdBy: userId
-    };
+  const query: any = {
+    type: EDatabaseType.HABITS,
+    createdBy: userId
+  };
 
-    if (workspaceId) {
-      query.workspaceId = workspaceId;
-    }
+  if (workspaceId) query.workspaceId = workspaceId;
 
-    const habitDatabases = await DatabaseModel.find(query);
+  const habitDatabases = await DatabaseModel.find(query);
 
-    for (const database of habitDatabases) {
-      // Get active habits with schedules
-      const habits = await RecordModel.find({
-        databaseId: database.id.toString(),
-        'properties.schedule': { $exists: true, $ne: null },
-        'properties.status': 'active'
-      });
+  for (const database of habitDatabases) {
+    const habits = await RecordModel.find({
+      databaseId: database.id.toString(),
+      'properties.schedule': { $exists: true, $ne: null },
+      'properties.status': 'active'
+    });
 
-      for (const habit of habits) {
-        // Create recurring events for habits (simplified - would need proper recurrence logic)
-        const schedule = habit.properties.schedule as any;
+    for (const habit of habits) {
+      const schedule = habit.properties.schedule as any;
 
-        if (schedule.frequency === 'daily') {
-          // Create today's habit event if it doesn't exist
-          const today = new Date();
-          const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      if (schedule.frequency === 'daily') {
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-          const existingEvent = await CalendarEventModel.findOne({
+        const existingEvent = await CalendarEventModel.findOne({
+          relatedEntityType: 'habit',
+          relatedEntityId: habit.id.toString(),
+          startTime: {
+            $gte: startOfDay,
+            $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+          }
+        });
+
+        if (!existingEvent) {
+          const habitTime = schedule.time
+            ? new Date(`${startOfDay.toDateString()} ${schedule.time}`)
+            : startOfDay;
+
+          await CalendarEventModel.create({
+            id: generateId(),
+            calendarId,
+            title: `🔄 ${habit.properties.name || 'Untitled Habit'}`,
+            description: `Daily habit: ${habit.properties.description || ''}`,
+            startTime: habitTime,
+            endTime: new Date(habitTime.getTime() + 30 * 60 * 1000),
+            type: EEventType.HABIT,
+            status: EEventStatus.CONFIRMED,
             relatedEntityType: 'habit',
             relatedEntityId: habit.id.toString(),
-            startTime: {
-              $gte: startOfDay,
-              $lt: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+            createdBy: userId,
+            timeZone: 'UTC',
+            metadata: {
+              frequency: schedule.frequency,
+              workspaceId: database.workspaceId,
+              source: 'habit_sync'
             }
           });
-
-          if (!existingEvent) {
-            const habitTime = schedule.time
-              ? new Date(`${startOfDay.toDateString()} ${schedule.time}`)
-              : startOfDay;
-
-            await CalendarEventModel.create({
-              id: generateId(),
-              calendarId,
-              title: `🔄 ${habit.properties.name || 'Untitled Habit'}`,
-              description: `Daily habit: ${habit.properties.description || ''}`,
-              startTime: habitTime,
-              endTime: new Date(habitTime.getTime() + 30 * 60 * 1000), // 30 minutes
-              type: EEventType.HABIT,
-              status: EEventStatus.CONFIRMED,
-              relatedEntityType: 'habit',
-              relatedEntityId: habit.id.toString(),
-              createdBy: userId,
-              timeZone: 'UTC',
-              metadata: {
-                frequency: schedule.frequency,
-                workspaceId: database.workspaceId,
-                source: 'habit_sync'
-              }
-            });
-          }
         }
       }
     }
-  } catch (error) {
-    console.error('Failed to sync habits to calendar:', error);
   }
 };
 
@@ -676,62 +614,52 @@ const syncGoalsToCalendar = async (
   calendarId: string,
   workspaceId?: string
 ): Promise<void> => {
-  try {
-    // Get goal databases - filter by workspace if provided
-    const query: any = {
-      type: EDatabaseType.GOALS,
-      createdBy: userId
-    };
+  const query: any = {
+    type: EDatabaseType.GOALS,
+    createdBy: userId
+  };
 
-    if (workspaceId) {
-      query.workspaceId = workspaceId;
-    }
+  if (workspaceId) query.workspaceId = workspaceId;
 
-    const goalDatabases = await DatabaseModel.find(query);
+  const goalDatabases = await DatabaseModel.find(query);
 
-    for (const database of goalDatabases) {
-      // Get goals with target dates
-      const goals = await RecordModel.find({
-        databaseId: database.id.toString(),
-        'properties.target_date': { $exists: true, $ne: null },
-        'properties.status': { $ne: EStatus.COMPLETED }
+  for (const database of goalDatabases) {
+    const goals = await RecordModel.find({
+      databaseId: database.id.toString(),
+      'properties.target_date': { $exists: true, $ne: null },
+      'properties.status': { $ne: EStatus.COMPLETED }
+    });
+
+    for (const goal of goals) {
+      const targetDate = new Date(goal.properties.target_date as string);
+
+      const existingEvent = await CalendarEventModel.findOne({
+        relatedEntityType: 'goal',
+        relatedEntityId: goal.id.toString()
       });
 
-      for (const goal of goals) {
-        const targetDate = new Date(goal.properties.target_date as string);
-
-        // Check if event already exists
-        const existingEvent = await CalendarEventModel.findOne({
+      if (!existingEvent) {
+        await CalendarEventModel.create({
+          id: generateId(),
+          calendarId,
+          title: `🎯 ${goal.properties.name || 'Untitled Goal'} Review`,
+          description: `Goal target date: ${goal.properties.description || ''}`,
+          startTime: targetDate,
+          endTime: new Date(targetDate.getTime() + 60 * 60 * 1000), // 1 hour
+          type: EEventType.GOAL_REVIEW,
+          status: EEventStatus.CONFIRMED,
           relatedEntityType: 'goal',
-          relatedEntityId: goal.id.toString()
+          relatedEntityId: goal.id.toString(),
+          createdBy: userId,
+          timeZone: 'UTC',
+          metadata: {
+            category: goal.properties.category,
+            workspaceId: database.workspaceId,
+            source: 'goal_sync'
+          }
         });
-
-        if (!existingEvent) {
-          // Create calendar event for goal review
-          await CalendarEventModel.create({
-            id: generateId(),
-            calendarId,
-            title: `🎯 ${goal.properties.name || 'Untitled Goal'} Review`,
-            description: `Goal target date: ${goal.properties.description || ''}`,
-            startTime: targetDate,
-            endTime: new Date(targetDate.getTime() + 60 * 60 * 1000), // 1 hour
-            type: EEventType.GOAL_REVIEW,
-            status: EEventStatus.CONFIRMED,
-            relatedEntityType: 'goal',
-            relatedEntityId: goal.id.toString(),
-            createdBy: userId,
-            timeZone: 'UTC',
-            metadata: {
-              category: goal.properties.category,
-              workspaceId: database.workspaceId,
-              source: 'goal_sync'
-            }
-          });
-        }
       }
     }
-  } catch (error) {
-    console.error('Failed to sync goals to calendar:', error);
   }
 };
 
@@ -739,34 +667,30 @@ const syncGoalsToCalendar = async (
  * Create event reminders
  */
 const createEventReminders = async (event: ICalendarEvent, userId: string): Promise<void> => {
-  try {
-    for (const reminder of event.reminders || []) {
-      const reminderTime = new Date(event.startTime.getTime() - reminder.minutes * 60 * 1000);
+  for (const reminder of event.reminders || []) {
+    const reminderTime = new Date(event.startTime.getTime() - reminder.minutes * 60 * 1000);
 
-      await createNotification({
-        type: ENotificationType.TASK_DUE, // Using task due for calendar reminders
-        priority: ENotificationPriority.MEDIUM,
-        title: `📅 Upcoming: ${event.title}`,
-        message: `Your event "${event.title}" starts in ${reminder.minutes} minutes`,
-        userId: userId,
-        workspaceId: 'default',
-        entityId: event.id,
-        entityType: 'calendar_event',
-        scheduledFor: reminderTime,
-        metadata: {
-          eventTitle: event.title,
-          eventLocation: event.location,
-          eventStartTime: event.startTime,
-          reminderMethod: reminder.method
-        },
-        methods: [
-          ENotificationMethod.IN_APP,
-          reminder.method === 'email' ? ENotificationMethod.EMAIL : ENotificationMethod.PUSH
-        ]
-      });
-    }
-  } catch (error) {
-    console.error('Failed to create event reminders:', error);
+    await createNotification({
+      type: ENotificationType.TASK_DUE,
+      priority: ENotificationPriority.MEDIUM,
+      title: `📅 Upcoming: ${event.title}`,
+      message: `Your event "${event.title}" starts in ${reminder.minutes} minutes`,
+      userId: userId,
+      workspaceId: 'default',
+      entityId: event.id,
+      entityType: 'calendar_event',
+      scheduledFor: reminderTime,
+      metadata: {
+        eventTitle: event.title,
+        eventLocation: event.location,
+        eventStartTime: event.startTime,
+        reminderMethod: reminder.method
+      },
+      methods: [
+        ENotificationMethod.IN_APP,
+        reminder.method === 'email' ? ENotificationMethod.EMAIL : ENotificationMethod.PUSH
+      ]
+    });
   }
 };
 
@@ -786,13 +710,9 @@ export const getCalendarStats = async (
     const startOfWeek = new Date(startOfDay.getTime() - startOfDay.getDay() * 24 * 60 * 60 * 1000);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    // Build base query for events
     const baseQuery: any = { calendarId: { $in: calendarIds } };
-    if (workspaceId) {
-      baseQuery['metadata.workspaceId'] = workspaceId;
-    }
+    if (workspaceId) baseQuery['metadata.workspaceId'] = workspaceId;
 
-    // Get event counts
     const [totalEvents, upcomingEvents, todayEvents, weekEvents, monthEvents] = await Promise.all([
       CalendarEventModel.countDocuments(baseQuery),
       CalendarEventModel.countDocuments({
@@ -814,19 +734,16 @@ export const getCalendarStats = async (
       })
     ]);
 
-    // Get events by type
     const eventsByType = await CalendarEventModel.aggregate([
       { $match: baseQuery },
       { $group: { _id: '$type', count: { $sum: 1 } } }
     ]);
 
-    // Get events by status
     const eventsByStatus = await CalendarEventModel.aggregate([
       { $match: baseQuery },
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
-    // Get events by calendar
     const eventsByCalendar = await CalendarEventModel.aggregate([
       { $match: baseQuery },
       { $group: { _id: '$calendarId', count: { $sum: 1 } } }
@@ -862,7 +779,7 @@ export const getCalendarStats = async (
         },
         {} as Record<string, number>
       ),
-      busyHours: [], // Would need more complex aggregation
+      busyHours: [],
       productivity: {
         focusTime: 0,
         meetingTime: 0,
@@ -914,7 +831,6 @@ export const getCalendarPreferences = async (userId: string): Promise<ICalendarP
     const preferences = await CalendarPreferencesModel.findByUserId(userId);
 
     if (!preferences) {
-      // Return default preferences if none exist
       return {
         userId,
         timeZone: 'UTC',

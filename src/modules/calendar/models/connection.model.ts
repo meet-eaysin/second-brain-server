@@ -2,28 +2,22 @@ import { Schema, model, Document, Model } from 'mongoose';
 import { ICalendarConnection } from '../types/connection.types';
 import { ECalendarProvider } from '../types/enums.types';
 
-// CalendarTypes Connection Document Interface with instance methods
 export interface ICalendarConnectionDocument extends Document {
-  // Connection properties (from ICalendarConnection but without id conflict)
   userId: string;
   provider: ECalendarProvider;
 
-  // Connection details
   accountEmail: string;
   accountName?: string;
 
-  // OAuth tokens
   accessToken: string;
   refreshToken?: string;
   tokenExpiresAt?: Date;
 
-  // Connection settings
   isActive: boolean;
   syncEnabled: boolean;
-  syncFrequency: number; // Minutes
+  syncFrequency: number;
   lastSyncAt?: Date;
 
-  // Sync settings
   syncSettings: {
     importEvents: boolean;
     exportEvents: boolean;
@@ -33,28 +27,22 @@ export interface ICalendarConnectionDocument extends Document {
     conflictResolution: 'local' | 'remote' | 'manual';
   };
 
-  // Error tracking
   lastError?: string;
   errorCount: number;
 
-  // Metadata
   metadata?: Record<string, unknown>;
 
-  // Timestamps (from IBaseEntity)
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
   updatedBy?: string;
 
-  // Document _id override
   _id: string;
 
-  // Virtual properties
   readonly id: string;
   readonly syncStatus: 'inactive' | 'disabled' | 'error' | 'expired' | 'active';
   readonly nextSyncAt: Date | null;
 
-  // Instance methods
   updateTokens(accessToken: string, refreshToken?: string, expiresIn?: number): Promise<this>;
   recordSyncSuccess(syncToken?: string): Promise<this>;
   recordSyncError(error: string): Promise<this>;
@@ -64,7 +52,6 @@ export interface ICalendarConnectionDocument extends Document {
   shouldSync(): boolean;
 }
 
-// Static methods interface
 export interface ICalendarConnectionModel extends Model<ICalendarConnectionDocument> {
   findByUser(userId: string, activeOnly?: boolean): Promise<ICalendarConnectionDocument[]>;
   findByProvider(
@@ -79,13 +66,11 @@ export interface ICalendarConnectionModel extends Model<ICalendarConnectionDocum
   ): Promise<ICalendarConnectionDocument | null>;
 }
 
-// CalendarTypes sync log static methods interface
 export interface ICalendarSyncLogModel extends Model<ICalendarSyncLog> {
   findByConnection(connectionId: string, limit?: number): Promise<ICalendarSyncLog[]>;
   findRecentErrors(hours?: number): Promise<ICalendarSyncLog[]>;
 }
 
-// CalendarTypes Connection Schema
 const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
   {
     userId: {
@@ -110,11 +95,10 @@ const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
       trim: true
     },
 
-    // OAuth tokens (encrypted in production)
     accessToken: {
       type: String,
       required: true,
-      select: false // Don't include in queries by default
+      select: false
     },
     refreshToken: {
       type: String,
@@ -124,7 +108,6 @@ const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
       type: Date
     },
 
-    // Connection settings
     isActive: {
       type: Boolean,
       default: true
@@ -135,15 +118,14 @@ const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
     },
     syncFrequency: {
       type: Number,
-      default: 15, // 15 minutes
-      min: 5, // minimum 5 minutes
-      max: 1440 // maximum 24 hours
+      default: 15,
+      min: 5,
+      max: 1440
     },
     lastSyncAt: {
       type: Date
     },
 
-    // Sync settings
     syncSettings: {
       importEvents: {
         type: Boolean,
@@ -167,7 +149,7 @@ const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
         type: Number,
         default: 365,
         min: 1,
-        max: 1095 // 3 years
+        max: 1095
       },
       conflictResolution: {
         type: String,
@@ -176,7 +158,6 @@ const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
       }
     },
 
-    // Error tracking
     lastError: {
       type: String
     },
@@ -186,7 +167,6 @@ const CalendarConnectionSchema = new Schema<ICalendarConnectionDocument>(
       min: 0
     },
 
-    // Metadata
     metadata: {
       type: Schema.Types.Mixed,
       default: {}
@@ -205,21 +185,17 @@ CalendarConnectionSchema.index({ provider: 1, accountEmail: 1 });
 CalendarConnectionSchema.index({ tokenExpiresAt: 1 }, { sparse: true });
 CalendarConnectionSchema.index({ lastSyncAt: 1 });
 
-// Unique constraint for user-provider-account combination
 CalendarConnectionSchema.index({ userId: 1, provider: 1, accountEmail: 1 }, { unique: true });
 
-// Virtual for ID
 CalendarConnectionSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
-// Virtual for token expiry status
 CalendarConnectionSchema.virtual('isTokenExpired').get(function () {
   if (!this.tokenExpiresAt) return false;
   return this.tokenExpiresAt < new Date();
 });
 
-// Virtual for sync status
 CalendarConnectionSchema.virtual('syncStatus').get(function () {
   if (!this.isActive) return 'inactive';
   if (!this.syncEnabled) return 'disabled';
@@ -228,13 +204,11 @@ CalendarConnectionSchema.virtual('syncStatus').get(function () {
   return 'active';
 });
 
-// Virtual for next sync time
 CalendarConnectionSchema.virtual('nextSyncAt').get(function () {
   if (!this.lastSyncAt || !this.syncEnabled) return null;
   return new Date(this.lastSyncAt.getTime() + this.syncFrequency * 60 * 1000);
 });
 
-// Transform output
 CalendarConnectionSchema.set('toJSON', {
   virtuals: true,
   transform: function (_doc, ret) {
@@ -255,9 +229,7 @@ CalendarConnectionSchema.set('toJSON', {
   }
 });
 
-// Pre-save middleware
 CalendarConnectionSchema.pre('save', function (next) {
-  // Reset error count if connection is being reactivated
   if (this.isModified('isActive') && this.isActive) {
     this.errorCount = 0;
     this.lastError = undefined;
@@ -266,7 +238,6 @@ CalendarConnectionSchema.pre('save', function (next) {
   next();
 });
 
-// Static methods
 CalendarConnectionSchema.statics.findByUser = function (userId: string, activeOnly = true) {
   const query: any = { userId };
   if (activeOnly) {
@@ -291,12 +262,12 @@ CalendarConnectionSchema.statics.findDueForSync = function () {
   return this.find({
     isActive: true,
     syncEnabled: true,
-    errorCount: { $lt: 10 }, // Stop syncing after 10 consecutive errors
+    errorCount: { $lt: 10 },
     $or: [
       { lastSyncAt: { $exists: false } },
       {
         lastSyncAt: {
-          $lt: new Date(now.getTime() - 15 * 60 * 1000) // Default 15 minutes
+          $lt: new Date(now.getTime() - 15 * 60 * 1000)
         }
       }
     ]
@@ -318,7 +289,6 @@ CalendarConnectionSchema.statics.findByUserAndProvider = function (
   return this.findOne({ userId, provider, isActive: true });
 };
 
-// Instance methods
 CalendarConnectionSchema.methods.updateTokens = function (
   accessToken: string,
   refreshToken?: string,
@@ -400,7 +370,6 @@ export const CalendarConnectionModel = model<ICalendarConnectionDocument, ICalen
   CalendarConnectionSchema
 );
 
-// CalendarTypes sync log schema for tracking sync history
 export interface ICalendarSyncLog extends Document {
   connectionId: string;
   syncType: 'full' | 'incremental' | 'manual';
@@ -485,25 +454,20 @@ const CalendarSyncLogSchema = new Schema<ICalendarSyncLog>(
   }
 );
 
-// Indexes
 CalendarSyncLogSchema.index({ connectionId: 1, startedAt: -1 });
 CalendarSyncLogSchema.index({ status: 1, startedAt: -1 });
 
-// TTL index to automatically delete old logs after 30 days
 CalendarSyncLogSchema.index({ startedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
-// Virtual for ID
 CalendarSyncLogSchema.virtual('id').get(function () {
   return this._id.toString();
 });
 
-// Virtual for duration
 CalendarSyncLogSchema.virtual('duration').get(function () {
   if (!this.completedAt) return null;
   return this.completedAt.getTime() - this.startedAt.getTime();
 });
 
-// Transform output
 CalendarSyncLogSchema.set('toJSON', {
   virtuals: true,
   transform: function (_doc, ret) {
@@ -518,7 +482,6 @@ CalendarSyncLogSchema.set('toJSON', {
   }
 });
 
-// Static methods
 CalendarSyncLogSchema.statics.findByConnection = function (connectionId: string, limit = 50) {
   return this.find({ connectionId }).sort({ startedAt: -1 }).limit(limit);
 };
@@ -531,7 +494,6 @@ CalendarSyncLogSchema.statics.findRecentErrors = function (hours = 24) {
   }).sort({ startedAt: -1 });
 };
 
-// Instance methods
 CalendarSyncLogSchema.methods.complete = function (stats: {
   eventsProcessed?: number;
   eventsCreated?: number;

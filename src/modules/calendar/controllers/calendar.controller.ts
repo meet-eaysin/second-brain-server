@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync } from '@/utils/catch-async';
 import { sendSuccessResponse } from '@/utils/response.utils';
 import { createAppError } from '@/utils/error.utils';
@@ -35,7 +35,7 @@ import { getWorkspaceId } from '@/modules/workspace/middleware/workspace.middlew
  * Create a new calendar
  */
 export const createCalendarController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const request: ICreateCalendarRequest = req.body;
@@ -50,7 +50,7 @@ export const createCalendarController = catchAsync(
  * Get all calendars for user
  */
 export const getCalendarsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const includeHidden = req.query.includeHidden === 'true';
@@ -58,23 +58,19 @@ export const getCalendarsController = catchAsync(
     let calendars = await getCalendars(userId, includeHidden, workspaceId);
 
     if (calendars.length === 0) {
-      try {
-        await createCalendar(
-          userId,
-          {
-            name: 'My Calendar',
-            color: '#3B82F6',
-            type: ECalendarType.PERSONAL,
-            isDefault: true,
-            timeZone: 'UTC'
-          },
-          workspaceId
-        );
+      await createCalendar(
+        userId,
+        {
+          name: 'My Calendar',
+          color: '#3B82F6',
+          type: ECalendarType.PERSONAL,
+          isDefault: true,
+          timeZone: 'UTC'
+        },
+        workspaceId
+      );
 
-        calendars = await getCalendars(userId, includeHidden, workspaceId);
-      } catch (error) {
-        console.error('Failed to create default calendar:', error);
-      }
+      calendars = await getCalendars(userId, includeHidden, workspaceId);
     }
 
     sendSuccessResponse(res, 'Calendars retrieved successfully', calendars);
@@ -85,7 +81,7 @@ export const getCalendarsController = catchAsync(
  * Get calendar by ID
  */
 export const getCalendarByIdController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { calendarId } = req.params;
 
@@ -99,7 +95,7 @@ export const getCalendarByIdController = catchAsync(
  * Update calendar
  */
 export const updateCalendarController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { calendarId } = req.params;
     const request: IUpdateCalendarRequest = req.body;
@@ -114,7 +110,7 @@ export const updateCalendarController = catchAsync(
  * Delete calendar
  */
 export const deleteCalendarController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { calendarId } = req.params;
 
@@ -128,7 +124,7 @@ export const deleteCalendarController = catchAsync(
  * Create a new event
  */
 export const createEventController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const request: ICreateEventRequest = req.body;
@@ -143,7 +139,7 @@ export const createEventController = catchAsync(
  * Get events with filtering
  */
 export const getEventsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
 
@@ -173,7 +169,7 @@ export const getEventsController = catchAsync(
  * Get event by ID
  */
 export const getEventByIdController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { eventId } = req.params;
 
@@ -187,7 +183,7 @@ export const getEventByIdController = catchAsync(
  * Update event
  */
 export const updateEventController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { eventId } = req.params;
     const request: IUpdateEventRequest = req.body;
@@ -202,7 +198,7 @@ export const updateEventController = catchAsync(
  * Delete event
  */
 export const deleteEventController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { eventId } = req.params;
 
@@ -216,7 +212,7 @@ export const deleteEventController = catchAsync(
  * Get calendar statistics
  */
 export const getCalendarStatsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
 
@@ -230,7 +226,7 @@ export const getCalendarStatsController = catchAsync(
  * Get calendar view data
  */
 export const getCalendarViewController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
 
@@ -263,7 +259,7 @@ export const getCalendarViewController = catchAsync(
  * Sync time-related modules
  */
 export const syncTimeRelatedModulesController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
 
@@ -277,7 +273,7 @@ export const syncTimeRelatedModulesController = catchAsync(
  * Get upcoming events
  */
 export const getUpcomingEventsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
@@ -312,7 +308,7 @@ export const getUpcomingEventsController = catchAsync(
  * Get today's events
  */
 export const getTodayEventsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
 
@@ -341,7 +337,7 @@ export const getTodayEventsController = catchAsync(
  * Search events
  */
 export const searchEventsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const { q: searchQuery } = req.query;
@@ -370,7 +366,7 @@ export const searchEventsController = catchAsync(
  * Get events by related entity
  */
 export const getEventsByEntityController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const { entityType, entityId } = req.params;
@@ -399,7 +395,7 @@ export const getEventsByEntityController = catchAsync(
  * Get calendar busy times
  */
 export const getCalendarBusyTimesController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const workspaceId = getWorkspaceId(req);
     const startDate = new Date(req.query.startDate as string);
@@ -442,7 +438,7 @@ export const getCalendarBusyTimesController = catchAsync(
  * Get calendar configuration data
  */
 export const getCalendarConfigController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const config = {
       timeZones: [
         'UTC',
@@ -503,7 +499,7 @@ export const getCalendarConfigController = catchAsync(
  * Get user calendar preferences
  */
 export const getCalendarPreferencesController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
 
     const preferences = await getCalendarPreferences(userId);
@@ -516,7 +512,7 @@ export const getCalendarPreferencesController = catchAsync(
  * Update user calendar preferences
  */
 export const updateCalendarPreferencesController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const request: IUpdateCalendarPreferencesRequest = req.body;
 

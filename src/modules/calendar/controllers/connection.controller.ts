@@ -27,12 +27,7 @@ export const connectCalendarController = catchAsync(
 
     const connection = await createCalendarConnection(userId, request);
 
-    try {
-      await manualSyncConnection(connection.id, userId);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.warn('Initial sync failed, but connection was created:', errorMessage);
-    }
+    await manualSyncConnection(connection.id, userId);
 
     sendSuccessResponse(
       res,
