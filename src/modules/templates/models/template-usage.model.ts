@@ -51,28 +51,39 @@ TemplateUsageSchema.index({ workspaceId: 1, usedAt: -1 });
 TemplateUsageSchema.index({ usedAt: -1, context: 1 });
 
 // Static methods
-TemplateUsageSchema.statics.findByTemplate = function (templateId: string) {
-  return this.find({ templateId, isDeleted: { $ne: true } })
+TemplateUsageSchema.statics.findByTemplate = function (
+  templateId: string
+): Promise<TTemplateUsageDocument[]> {
+  return (this as TTemplateUsageModel).find({ templateId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .populate('userId', 'name email')
-    .populate('workspaceId', 'name');
+    .populate('workspaceId', 'name')
+    .exec();
 };
 
-TemplateUsageSchema.statics.findByUser = function (userId: string) {
-  return this.find({ userId, isDeleted: { $ne: true } })
+TemplateUsageSchema.statics.findByUser = function (
+  userId: string
+): Promise<TTemplateUsageDocument[]> {
+  return (this as TTemplateUsageModel).find({ userId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .populate('templateId', 'name type category')
-    .populate('workspaceId', 'name');
+    .populate('workspaceId', 'name')
+    .exec();
 };
 
-TemplateUsageSchema.statics.findByWorkspace = function (workspaceId: string) {
-  return this.find({ workspaceId, isDeleted: { $ne: true } })
+TemplateUsageSchema.statics.findByWorkspace = function (
+  workspaceId: string
+): Promise<TTemplateUsageDocument[]> {
+  return (this as TTemplateUsageModel).find({ workspaceId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .populate('templateId', 'name type category')
-    .populate('userId', 'name email');
+    .populate('userId', 'name email')
+    .exec();
 };
 
-TemplateUsageSchema.statics.getUsageStats = async function (templateId: string) {
+TemplateUsageSchema.statics.getUsageStats = async function (
+  templateId: string
+): Promise<any> {
   const pipeline: any[] = [
     { $match: { templateId: new mongoose.Types.ObjectId(templateId), isDeleted: { $ne: true } } },
     {
@@ -121,7 +132,7 @@ TemplateUsageSchema.statics.getUsageStats = async function (templateId: string) 
     }
   ];
 
-  const result = await this.aggregate(pipeline);
+  const result = await (this as TTemplateUsageModel).aggregate(pipeline);
   return (
     result[0] || {
       totalUsage: 0,
@@ -133,7 +144,9 @@ TemplateUsageSchema.statics.getUsageStats = async function (templateId: string) 
   );
 };
 
-TemplateUsageSchema.statics.getPopularTemplates = async function (limit = 10) {
+TemplateUsageSchema.statics.getPopularTemplates = async function (
+  limit = 10
+): Promise<any[]> {
   const pipeline: any[] = [
     { $match: { isDeleted: { $ne: true } } },
     {
@@ -179,15 +192,19 @@ TemplateUsageSchema.statics.getPopularTemplates = async function (limit = 10) {
     }
   ];
 
-  return this.aggregate(pipeline);
+  return (this as TTemplateUsageModel).aggregate(pipeline);
 };
 
-TemplateUsageSchema.statics.getUserTemplateHistory = function (userId: string, limit = 20) {
-  return this.find({ userId, isDeleted: { $ne: true } })
+TemplateUsageSchema.statics.getUserTemplateHistory = function (
+  userId: string,
+  limit = 20
+): Promise<TTemplateUsageDocument[]> {
+  return (this as TTemplateUsageModel).find({ userId, isDeleted: { $ne: true } })
     .sort({ usedAt: -1 })
     .limit(limit)
     .populate('templateId', 'name type category icon color')
-    .populate('workspaceId', 'name');
+    .populate('workspaceId', 'name')
+    .exec();
 };
 
 // Instance methods

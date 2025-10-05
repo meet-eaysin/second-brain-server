@@ -20,7 +20,6 @@ import {
   resetPassword,
   verifyStateToken
 } from '@/modules/auth';
-import { AuthenticatedRequest } from '@/middlewares';
 import {
   createAuthenticationFailedError,
   createOAuthCodeInvalidError
@@ -55,13 +54,13 @@ export const changeUserPassword = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { user } = req as AuthenticatedRequest;
+    const { user } = req;
     const changePasswordData: TChangePasswordRequest = req.body;
 
-    await changePassword(user.userId, changePasswordData);
+    await changePassword(user?.userId || '', changePasswordData);
     sendSuccessResponse(res, 'Password changed successfully', null);
-  } catch (error) {
-    next(error);
+  } catch {
+    next();
   }
 };
 
@@ -78,8 +77,8 @@ export const resetUserPassword = catchAsync(async (req: Request, res: Response):
 });
 
 export const logout = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { user } = req as AuthenticatedRequest;
-  await logoutUser(user.userId);
+  const { user } = req;
+  await logoutUser(user?.userId || '');
 
   sendSuccessResponse(res, 'Logged out successfully', null);
 });
@@ -89,9 +88,9 @@ export const logoutAll = (req: Request, res: Response): void => {
 };
 
 export const getProfile = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { user } = req as AuthenticatedRequest;
+  const { user } = req;
 
-  const workspaces = await getUserWithWorkspaces(user.userId);
+  const workspaces = await getUserWithWorkspaces(user?.userId || '');
   const userWithWorkspaces = {
     ...user,
     workspaces

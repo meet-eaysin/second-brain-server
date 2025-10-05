@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { createAppError } from '@/utils/error.utils';
 import { propertiesService, IReorderPropertiesRequest } from '@/modules/database';
@@ -9,7 +9,7 @@ import {
 import { getUserId } from '@/auth/index';
 
 export const createDatabaseProperty = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId } = req.params;
     const data: ICreatePropertyRequest = req.body;
     const userId = getUserId(req);
@@ -25,7 +25,7 @@ export const createDatabaseProperty = catchAsync(
 );
 
 export const getDatabaseProperties = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId } = req.params;
     const { includeHidden, viewId } = req.query;
     const userId = getUserId(req);
@@ -42,7 +42,7 @@ export const getDatabaseProperties = catchAsync(
 );
 
 export const getDatabasePropertyById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
 
     const property = await propertiesService.getPropertyById(databaseId, propertyId);
@@ -52,7 +52,7 @@ export const getDatabasePropertyById = catchAsync(
 );
 
 export const updateDatabaseProperty = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
     const data: IUpdatePropertyRequest = req.body;
     const userId = getUserId(req);
@@ -64,7 +64,7 @@ export const updateDatabaseProperty = catchAsync(
 );
 
 export const reorderDatabaseProperties = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId } = req.params;
     const data: IReorderPropertiesRequest = req.body;
     const userId = getUserId(req);
@@ -79,7 +79,7 @@ export const reorderDatabaseProperties = catchAsync(
 );
 
 export const deleteDatabaseProperty = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
     const userId = getUserId(req);
 
@@ -90,7 +90,7 @@ export const deleteDatabaseProperty = catchAsync(
 );
 
 export const validatePropertyValue = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
     const { value } = req.body;
 
@@ -108,7 +108,7 @@ export const validatePropertyValue = catchAsync(
 );
 
 export const duplicateDatabaseProperty = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
     const { name } = req.body;
     const userId = getUserId(req);
@@ -124,26 +124,24 @@ export const duplicateDatabaseProperty = catchAsync(
   }
 );
 
-export const changePropertyType = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { databaseId, propertyId } = req.params;
-    const { type, config } = req.body;
-    const userId = getUserId(req);
+export const changePropertyType = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { databaseId, propertyId } = req.params;
+  const { type, config } = req.body;
+  const userId = getUserId(req);
 
-    const property = await propertiesService.changePropertyType(
-      databaseId,
-      propertyId,
-      type,
-      config,
-      userId
-    );
+  const property = await propertiesService.changePropertyType(
+    databaseId,
+    propertyId,
+    type,
+    config,
+    userId
+  );
 
-    sendSuccessResponse(res, 'Property type changed successfully', property);
-  }
-);
+  sendSuccessResponse(res, 'Property type changed successfully', property);
+});
 
 export const insertPropertyAfter = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId } = req.params;
     const { afterPropertyId, ...propertyData } = req.body;
     const userId = getUserId(req);
@@ -160,7 +158,7 @@ export const insertPropertyAfter = catchAsync(
 );
 
 export const getPropertyCalculations = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
 
     const calculations = await propertiesService.getPropertyCalculations(databaseId, propertyId);
@@ -170,7 +168,7 @@ export const getPropertyCalculations = catchAsync(
 );
 
 export const togglePropertyVisibility = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, propertyId } = req.params;
     const { viewId } = req.query;
     const userId = getUserId(req);

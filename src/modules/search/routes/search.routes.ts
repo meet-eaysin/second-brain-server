@@ -1,10 +1,10 @@
 import express from 'express';
-import { authenticateToken } from '@/middlewares';
 import {
   resolveWorkspaceContext,
   ensureDefaultWorkspace
 } from '@/modules/workspace/middleware/workspace.middleware';
 import { searchController } from '@/modules/search';
+import { authenticateToken } from '@/middlewares/auth';
 
 const router = express.Router();
 

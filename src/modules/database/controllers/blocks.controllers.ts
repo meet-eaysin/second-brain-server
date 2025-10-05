@@ -1,28 +1,24 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { blocksService } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
-export const addContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, recordId } = req.params;
-    const block = await blocksService.addBlock(databaseId, recordId, req.body, userId);
-    sendSuccessResponse(res, 'Block created successfully', block, 201);
-  }
-);
+export const addContentBlock = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, recordId } = req.params;
+  const block = await blocksService.addBlock(databaseId, recordId, req.body, userId);
+  sendSuccessResponse(res, 'Block created successfully', block, 201);
+});
 
-export const getContentBlocks = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, recordId } = req.params;
-    const blocks = await blocksService.getBlocks(databaseId, recordId, userId, req.query);
-    sendSuccessResponse(res, 'Blocks retrieved successfully', blocks);
-  }
-);
+export const getContentBlocks = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, recordId } = req.params;
+  const blocks = await blocksService.getBlocks(databaseId, recordId, userId, req.query);
+  sendSuccessResponse(res, 'Blocks retrieved successfully', blocks);
+});
 
 export const getContentBlockById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId, blockId } = req.params;
     const block = await blocksService.getBlockById(databaseId, recordId, blockId, userId);
@@ -30,35 +26,29 @@ export const getContentBlockById = catchAsync(
   }
 );
 
-export const updateContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, recordId, blockId } = req.params;
-    const block = await blocksService.updateBlock(databaseId, recordId, blockId, req.body, userId);
-    sendSuccessResponse(res, 'Block updated successfully', block);
-  }
-);
+export const updateContentBlock = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, recordId, blockId } = req.params;
+  const block = await blocksService.updateBlock(databaseId, recordId, blockId, req.body, userId);
+  sendSuccessResponse(res, 'Block updated successfully', block);
+});
 
-export const deleteContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, recordId, blockId } = req.params;
-    await blocksService.deleteBlock(databaseId, recordId, blockId, userId);
-    sendSuccessResponse(res, 'Block deleted successfully');
-  }
-);
+export const deleteContentBlock = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, recordId, blockId } = req.params;
+  await blocksService.deleteBlock(databaseId, recordId, blockId, userId);
+  sendSuccessResponse(res, 'Block deleted successfully');
+});
 
-export const moveContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, recordId, blockId } = req.params;
-    const block = await blocksService.moveBlock(databaseId, recordId, blockId, req.body, userId);
-    sendSuccessResponse(res, 'Block moved successfully', block);
-  }
-);
+export const moveContentBlock = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, recordId, blockId } = req.params;
+  const block = await blocksService.moveBlock(databaseId, recordId, blockId, req.body, userId);
+  sendSuccessResponse(res, 'Block moved successfully', block);
+});
 
 export const duplicateContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId, blockId } = req.params;
 
@@ -88,7 +78,7 @@ export const duplicateContentBlock = catchAsync(
 );
 
 export const searchContentBlocks = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
     const { query } = req.query;
@@ -104,7 +94,7 @@ export const searchContentBlocks = catchAsync(
 );
 
 export const archiveContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId, blockId } = req.params;
 
@@ -120,7 +110,7 @@ export const archiveContentBlock = catchAsync(
 );
 
 export const restoreContentBlock = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId, blockId } = req.params;
 
@@ -136,7 +126,7 @@ export const restoreContentBlock = catchAsync(
 );
 
 export const bulkBlockOperations = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
     const { operations } = req.body;
@@ -147,7 +137,7 @@ export const bulkBlockOperations = catchAsync(
 );
 
 export const bulkUpdateContentBlocks = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
     const { updates } = req.body;

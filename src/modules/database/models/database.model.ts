@@ -75,111 +75,129 @@ const DatabaseTemplateSchema = new Schema(
   { _id: false }
 );
 
-const DatabaseSchema = createBaseSchema({
-  workspaceId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100,
-    index: true
-  },
-  type: {
-    type: String,
-    enum: Object.values(EDatabaseType),
-    required: true,
-    index: true
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: 1000
-  },
-  icon: DatabaseIconSchema,
-  cover: DatabaseCoverSchema,
-  isPublic: {
-    type: Boolean,
-    default: false
-  },
-  isTemplate: {
-    type: Boolean,
-    default: false
-  },
-  isFrozen: {
-    type: Boolean,
-    default: false
-  },
-  frozenReason: {
-    type: String,
-    trim: true,
-    maxlength: 500
-  },
+const DatabaseSchema = createBaseSchema(
+  {
+    workspaceId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+      index: true
+    },
+    type: {
+      type: String,
+      enum: Object.values(EDatabaseType),
+      required: true,
+      index: true
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 1000
+    },
+    icon: DatabaseIconSchema,
+    cover: DatabaseCoverSchema,
+    isPublic: {
+      type: Boolean,
+      default: false
+    },
+    isTemplate: {
+      type: Boolean,
+      default: false
+    },
+    isFrozen: {
+      type: Boolean,
+      default: false
+    },
+    frozenReason: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
 
-  // Schema references (populated separately for performance)
-  properties: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Property'
+    // Schema references (populated separately for performance)
+    properties: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Property'
+      }
+    ],
+    views: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'View'
+      }
+    ],
+    templates: [DatabaseTemplateSchema],
+
+    // Metadata
+    recordCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true
+    },
+    lastActivityAt: {
+      type: Date,
+      index: true
+    },
+
+    // Settings
+    allowComments: {
+      type: Boolean,
+      default: true
+    },
+    allowDuplicates: {
+      type: Boolean,
+      default: true
+    },
+    enableVersioning: {
+      type: Boolean,
+      default: false
+    },
+    enableAuditLog: {
+      type: Boolean,
+      default: true
+    },
+
+    // AI Features
+    enableAutoTagging: {
+      type: Boolean,
+      default: false
+    },
+    enableSmartSuggestions: {
+      type: Boolean,
+      default: false
+    },
+
+    // Integration settings
+    syncSettings: {
+      type: Schema.Types.Mixed,
+      default: {}
     }
-  ],
-  views: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'View'
+  },
+  {
+    statics: {
+      findByWorkspace(workspaceId: string) {
+        return this.find({ workspaceId, isDeleted: { $ne: true }, isArchived: { $ne: true } }).exec();
+      },
+      findByType(type: EDatabaseType) {
+        return this.find({ type, isDeleted: { $ne: true }, isArchived: { $ne: true } }).exec();
+      },
+      findPublic() {
+        return this.find({ isPublic: true, isDeleted: { $ne: true }, isArchived: { $ne: true } }).exec();
+      },
+      findTemplates() {
+        return this.find({ isTemplate: true, isDeleted: { $ne: true }, isArchived: { $ne: true } }).exec();
+      }
     }
-  ],
-  templates: [DatabaseTemplateSchema],
-
-  // Metadata
-  recordCount: {
-    type: Number,
-    default: 0,
-    min: 0,
-    index: true
-  },
-  lastActivityAt: {
-    type: Date,
-    index: true
-  },
-
-  // Settings
-  allowComments: {
-    type: Boolean,
-    default: true
-  },
-  allowDuplicates: {
-    type: Boolean,
-    default: true
-  },
-  enableVersioning: {
-    type: Boolean,
-    default: false
-  },
-  enableAuditLog: {
-    type: Boolean,
-    default: true
-  },
-
-  // AI Features
-  enableAutoTagging: {
-    type: Boolean,
-    default: false
-  },
-  enableSmartSuggestions: {
-    type: Boolean,
-    default: false
-  },
-
-  // Integration settings
-  syncSettings: {
-    type: Schema.Types.Mixed,
-    default: {}
   }
-});
+);
 
 // Custom toJSON transform to handle ObjectId arrays
 DatabaseSchema.set('toJSON', {
@@ -222,24 +240,7 @@ DatabaseSchema.index({ workspaceId: 1, isTemplate: 1 });
 DatabaseSchema.index({ workspaceId: 1, lastActivityAt: -1 });
 DatabaseSchema.index({ recordCount: -1 });
 
-// Static methods
-DatabaseSchema.statics.findByWorkspace = function (workspaceId: string) {
-  return this.find({ workspaceId }).notDeleted().notArchived().exec();
-};
 
-DatabaseSchema.statics.findByType = function (type: EDatabaseType) {
-  return this.find({ type }).notDeleted().notArchived().exec();
-};
-
-DatabaseSchema.statics.findPublic = function () {
-  return this.find({ isPublic: true }).notDeleted().notArchived().exec();
-};
-
-DatabaseSchema.statics.findTemplates = function () {
-  return this.find({ isTemplate: true }).notDeleted().notArchived().exec();
-};
-
-// Instance methods
 DatabaseSchema.methods.incrementRecordCount = function () {
   this.recordCount += 1;
   this.lastActivityAt = new Date();
@@ -259,7 +260,6 @@ DatabaseSchema.methods.updateActivity = function () {
   return this.save();
 };
 
-// Pre-save middleware
 DatabaseSchema.pre('save', function (next) {
   if (this.isNew) {
     this.lastActivityAt = new Date();
@@ -267,7 +267,6 @@ DatabaseSchema.pre('save', function (next) {
   next();
 });
 
-// Virtual for full database with populated fields
 DatabaseSchema.virtual('fullDatabase', {
   ref: 'Database',
   localField: '_id',

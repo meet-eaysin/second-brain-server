@@ -1,5 +1,4 @@
 import express from 'express';
-import { auth, users, settings } from '../modules';
 import { adminRoutes } from '../modules/admin';
 import { emailRoutes } from '../modules/email';
 import databaseRoutes from '@/modules/database/routes';
@@ -24,15 +23,16 @@ import searchRoutes from '@/modules/search/routes/search.routes';
 import workspaceRoutes from '@/modules/workspace/routes/workspace.routes';
 import permissionRoutes from '../modules/permissions/routes';
 import templateRoutes from '@/modules/templates/routes';
-import swaggerRoute from './swagger.route';
+import { usersRoutes } from '@/modules/users';
+import { authRoutes } from '@/modules/auth';
+import { settingsRoutes } from '@/modules/settings';
 
 const router = express.Router();
 
-router.use('/docs', swaggerRoute);
-router.use('/auth', auth.authRoutes);
-router.use('/users', users.usersRoutes);
+router.use('/auth', authRoutes);
+router.use('/users', usersRoutes);
 router.use('/admin', adminRoutes);
-router.use('/settings', settings.settingsRoutes);
+router.use('/settings', settingsRoutes);
 router.use('/email', emailRoutes);
 
 router.use('/workspaces', workspaceRoutes);

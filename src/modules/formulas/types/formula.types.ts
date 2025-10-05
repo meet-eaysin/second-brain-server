@@ -235,6 +235,8 @@ export interface IFormulaPerformanceMetrics {
   errorRate: number;
   lastExecuted: Date;
   complexityScore: number;
+  totalErrors: number;
+  totalCacheHits: number;
 }
 
 // Formula suggestion

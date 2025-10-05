@@ -31,7 +31,7 @@ import {
   googleCallbackQuerySchema,
   googleCallbackSchema
 } from '@/modules/auth/validators/auth.validaations';
-import { authenticateToken } from '@/middlewares';
+import { authenticateToken } from '@/middlewares/auth';
 
 const router = Router();
 

@@ -29,10 +29,8 @@ const addBlock = async (
   data: ICreateBlockRequest,
   userId: string
 ): Promise<IBlockResponse> => {
-  // Verify record exists and user has access
   const record = await verifyRecordAccess(databaseId, recordId, userId);
 
-  // Validate block content
   const validation = validateBlockContent(data.type, data.content);
   if (!validation.isValid) {
     throw createAppError(`Block validation failed: ${validation.errors.join(', ')}`, 400);
@@ -62,9 +60,8 @@ const addBlock = async (
       page_id: recordId
     },
     ...validation.sanitizedContent
-  } as ICompleteBlock;
+  };
 
-  // Find insertion position
   const content = record.content || [];
   let insertIndex = content.length;
   if (data.afterBlockId) {
@@ -74,7 +71,6 @@ const addBlock = async (
     }
   }
 
-  // Convert the complete block to record content format
   const recordContent: IRecordContent = {
     id: newBlock.id,
     type: newBlock.type as any, // Type conversion needed due to enum differences
@@ -86,7 +82,6 @@ const addBlock = async (
     lastEditedBy: newBlock.last_edited_by.id
   };
 
-  // Insert block at the specified position
   const updatedContent = [...content];
   updatedContent.splice(insertIndex, 0, recordContent);
 

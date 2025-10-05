@@ -115,65 +115,79 @@ const GlobalSettingsSchema = new Schema(
   { _id: false }
 );
 
-const NotificationPreferencesSchema = createBaseSchema({
-  userId: {
-    type: String,
-    required: true
+const NotificationPreferencesSchema = createBaseSchema(
+  {
+    userId: {
+      type: String,
+      required: true
+    },
+    workspaceId: {
+      type: String,
+      required: true
+    },
+    preferences: {
+      type: Map,
+      of: NotificationTypePreferenceSchema,
+      default: {}
+    },
+    globalSettings: {
+      type: GlobalSettingsSchema,
+      default: {
+        enabled: true,
+        weekendNotifications: true,
+        emailDigest: false,
+        digestFrequency: 'daily'
+      }
+    }
   },
-  workspaceId: {
-    type: String,
-    required: true
-  },
-  preferences: {
-    type: Map,
-    of: NotificationTypePreferenceSchema,
-    default: {}
-  },
-  globalSettings: {
-    type: GlobalSettingsSchema,
-    default: {
-      enabled: true,
-      weekendNotifications: true,
-      emailDigest: false,
-      digestFrequency: 'daily'
+  {
+    statics: {
+      findByUserAndWorkspace(
+        userId: string,
+        workspaceId: string
+      ): Promise<TNotificationPreferencesDocument | null> {
+        return this.findOne({
+          userId,
+          workspaceId,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true }
+        }).exec();
+      },
+
+      findByUser(userId: string): Promise<TNotificationPreferencesDocument[]> {
+        return this.find({
+          userId,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true }
+        }).exec();
+      },
+
+      upsert(
+        userId: string,
+        workspaceId: string,
+        preferences: Partial<INotificationPreferences>
+      ): Promise<TNotificationPreferencesDocument> {
+        return this.findOneAndUpdate(
+          { userId, workspaceId },
+          {
+            ...preferences,
+            updatedAt: new Date()
+          },
+          {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true
+          }
+        ).exec();
+      }
     }
   }
-});
+);
 
 // Compound indexes
 NotificationPreferencesSchema.index({ userId: 1, workspaceId: 1 }, { unique: true });
 NotificationPreferencesSchema.index({ userId: 1, createdAt: -1 });
 
-// Static methods
-NotificationPreferencesSchema.statics.findByUserAndWorkspace = function (
-  userId: string,
-  workspaceId: string
-) {
-  return this.findOne({ userId, workspaceId }).notDeleted().notArchived().exec();
-};
-
-NotificationPreferencesSchema.statics.findByUser = function (userId: string) {
-  return this.find({ userId }).notDeleted().notArchived().exec();
-};
-
-NotificationPreferencesSchema.statics.upsert = function (
-  userId: string,
-  workspaceId: string,
-  preferences: Partial<INotificationPreferences>
-) {
-  return this.findOneAndUpdate(
-    { userId, workspaceId },
-    {
-      ...preferences,
-      updatedAt: new Date()
-    },
-    {
-      new: true,
-      upsert: true,
-      setDefaultsOnInsert: true
-    }
-  ).exec();
-};
 
 // Instance methods
 NotificationPreferencesSchema.methods.updatePreferences = function (

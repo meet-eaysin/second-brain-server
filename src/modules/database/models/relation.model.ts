@@ -59,8 +59,16 @@ export type TRelationConnectionModel = Model<TRelationConnectionDocument> & {
   findByRelation(relationId: string): Promise<TRelationConnectionDocument[]>;
   findBySourceRecord(sourceRecordId: string): Promise<TRelationConnectionDocument[]>;
   findByTargetRecord(targetRecordId: string): Promise<TRelationConnectionDocument[]>;
-  findConnection(relationId: string, sourceRecordId: string, targetRecordId: string): Promise<TRelationConnectionDocument | null>;
-  getRelatedRecords(relationId: string, recordId: string, direction: 'source' | 'target'): Promise<TRelationConnectionDocument[]>;
+  findConnection(
+    relationId: string,
+    sourceRecordId: string,
+    targetRecordId: string
+  ): Promise<TRelationConnectionDocument | null>;
+  getRelatedRecords(
+    relationId: string,
+    recordId: string,
+    direction: 'source' | 'target'
+  ): Promise<TRelationConnectionDocument[]>;
 };
 
 // Relation schema
@@ -155,79 +163,95 @@ RelationSchema.index({ type: 1, isActive: 1 });
 RelationConnectionSchema.index({ relationId: 1, isActive: 1 });
 RelationConnectionSchema.index({ sourceRecordId: 1, isActive: 1 });
 RelationConnectionSchema.index({ targetRecordId: 1, isActive: 1 });
-RelationConnectionSchema.index({ relationId: 1, sourceRecordId: 1, targetRecordId: 1 }, { unique: true });
+RelationConnectionSchema.index(
+  { relationId: 1, sourceRecordId: 1, targetRecordId: 1 },
+  { unique: true }
+);
 
 // Static methods for Relation
-RelationSchema.statics.findByProperty = function(propertyId: string) {
-  return this.find({
-    $or: [
-      { sourcePropertyId: propertyId },
-      { targetPropertyId: propertyId }
-    ],
-    isActive: true
-  }).exec();
+RelationSchema.statics.findByProperty = function (
+  propertyId: string
+): Promise<TRelationDocument[]> {
+  return (this as TRelationModel)
+    .find({
+      $or: [{ sourcePropertyId: propertyId }, { targetPropertyId: propertyId }],
+      isActive: true
+    })
+    .exec();
 };
 
-RelationSchema.statics.findByDatabase = function(databaseId: string) {
-  return this.find({
-    $or: [
-      { sourceDatabaseId: databaseId },
-      { targetDatabaseId: databaseId }
-    ],
-    isActive: true
-  }).exec();
+RelationSchema.statics.findByDatabase = function (
+  databaseId: string
+): Promise<TRelationDocument[]> {
+  return (this as TRelationModel)
+    .find({
+      $or: [{ sourceDatabaseId: databaseId }, { targetDatabaseId: databaseId }],
+      isActive: true
+    })
+    .exec();
 };
 
-RelationSchema.statics.findBetweenDatabases = function(sourceDbId: string, targetDbId: string) {
-  return this.find({
-    $or: [
-      { sourceDatabaseId: sourceDbId, targetDatabaseId: targetDbId },
-      { sourceDatabaseId: targetDbId, targetDatabaseId: sourceDbId }
-    ],
-    isActive: true
-  }).exec();
+RelationSchema.statics.findBetweenDatabases = function (
+  sourceDbId: string,
+  targetDbId: string
+): Promise<TRelationDocument[]> {
+  return (this as TRelationModel)
+    .find({
+      $or: [
+        { sourceDatabaseId: sourceDbId, targetDatabaseId: targetDbId },
+        { sourceDatabaseId: targetDbId, targetDatabaseId: sourceDbId }
+      ],
+      isActive: true
+    })
+    .exec();
 };
 
 // Static methods for RelationConnection
-RelationConnectionSchema.statics.findByRelation = function(relationId: string) {
-  return this.find({ relationId, isActive: true }).exec();
+RelationConnectionSchema.statics.findByRelation = function (relationId: string): Promise<TRelationConnectionDocument[]> {
+  return (this as TRelationConnectionModel).find({ relationId, isActive: true }).exec();
 };
 
-RelationConnectionSchema.statics.findBySourceRecord = function(sourceRecordId: string) {
-  return this.find({ sourceRecordId, isActive: true }).exec();
+RelationConnectionSchema.statics.findBySourceRecord = function (sourceRecordId: string): Promise<TRelationConnectionDocument[]> {
+  return (this as TRelationConnectionModel).find({ sourceRecordId, isActive: true }).exec();
 };
 
-RelationConnectionSchema.statics.findByTargetRecord = function(targetRecordId: string) {
-  return this.find({ targetRecordId, isActive: true }).exec();
+RelationConnectionSchema.statics.findByTargetRecord = function (targetRecordId: string): Promise<TRelationConnectionDocument[]> {
+  return (this as TRelationConnectionModel).find({ targetRecordId, isActive: true }).exec();
 };
 
-RelationConnectionSchema.statics.findConnection = function(
+RelationConnectionSchema.statics.findConnection = function (
   relationId: string,
   sourceRecordId: string,
   targetRecordId: string
-) {
-  return this.findOne({
-    relationId,
-    sourceRecordId,
-    targetRecordId,
-    isActive: true
-  }).exec();
+): Promise<TRelationConnectionDocument | null> {
+  return (this as TRelationConnectionModel)
+    .findOne({
+      relationId,
+      sourceRecordId,
+      targetRecordId,
+      isActive: true
+    })
+    .exec();
 };
 
-RelationConnectionSchema.statics.getRelatedRecords = function(
+RelationConnectionSchema.statics.getRelatedRecords = function (
   relationId: string,
   recordId: string,
   direction: 'source' | 'target'
-) {
-  const query = direction === 'source'
-    ? { relationId, sourceRecordId: recordId, isActive: true }
-    : { relationId, targetRecordId: recordId, isActive: true };
+): Promise<TRelationConnectionDocument[]> {
+  const query =
+    direction === 'source'
+      ? { relationId, sourceRecordId: recordId, isActive: true }
+      : { relationId, targetRecordId: recordId, isActive: true };
 
-  return this.find(query).exec();
+  return (this as TRelationConnectionModel).find(query).exec();
 };
 
-export const RelationModel = mongoose.model<TRelationDocument, TRelationModel>('Relation', RelationSchema);
-export const RelationConnectionModel = mongoose.model<TRelationConnectionDocument, TRelationConnectionModel>(
-  'RelationConnection',
-  RelationConnectionSchema
+export const RelationModel = mongoose.model<TRelationDocument, TRelationModel>(
+  'Relation',
+  RelationSchema
 );
+export const RelationConnectionModel = mongoose.model<
+  TRelationConnectionDocument,
+  TRelationConnectionModel
+>('RelationConnection', RelationConnectionSchema);

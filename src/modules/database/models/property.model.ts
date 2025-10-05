@@ -116,69 +116,77 @@ const PropertyConfigSchema = new Schema(
   { _id: false }
 );
 
-const PropertySchema = createBaseSchema({
-  databaseId: {
-    type: String,
-    required: true,
-    index: true
+const PropertySchema = createBaseSchema(
+  {
+    databaseId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    type: {
+      type: String,
+      enum: Object.values(EPropertyType),
+      required: true,
+      index: true
+    },
+    config: {
+      type: PropertyConfigSchema,
+      default: {}
+    },
+    isSystem: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    isVisible: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    order: {
+      type: Number,
+      required: true,
+      min: 0,
+      index: true
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    }
   },
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100
-  },
-  type: {
-    type: String,
-    enum: Object.values(EPropertyType),
-    required: true,
-    index: true
-  },
-  config: {
-    type: PropertyConfigSchema,
-    default: {}
-  },
-  isSystem: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  isVisible: {
-    type: Boolean,
-    default: true,
-    index: true
-  },
-  order: {
-    type: Number,
-    required: true,
-    min: 0,
-    index: true
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: 500
+  {
+    statics: {
+      findByDatabase(databaseId: string) {
+        return this.find({ databaseId, isDeleted: { $ne: true } })
+          .sort({ order: 1 })
+          .exec();
+      },
+      findSystemProperties(databaseId: string) {
+        return this.find({ databaseId, isSystem: true, isDeleted: { $ne: true } })
+          .sort({ order: 1 })
+          .exec();
+      },
+      findVisibleProperties(databaseId: string) {
+        return this.find({ databaseId, isVisible: true, isDeleted: { $ne: true } })
+          .sort({ order: 1 })
+          .exec();
+      }
+    }
   }
-});
+);
 
 // Indexes
 PropertySchema.index({ databaseId: 1, order: 1 });
 PropertySchema.index({ databaseId: 1, name: 1 }, { unique: true });
 PropertySchema.index({ databaseId: 1, isSystem: 1 });
 PropertySchema.index({ databaseId: 1, isVisible: 1 });
-
-// Static methods
-PropertySchema.statics.findByDatabase = function (databaseId: string) {
-  return this.find({ databaseId }).notDeleted().sort({ order: 1 }).exec();
-};
-
-PropertySchema.statics.findSystemProperties = function (databaseId: string) {
-  return this.find({ databaseId, isSystem: true }).notDeleted().sort({ order: 1 }).exec();
-};
-
-PropertySchema.statics.findVisibleProperties = function (databaseId: string) {
-  return this.find({ databaseId, isVisible: true }).notDeleted().sort({ order: 1 }).exec();
-};
 
 // Instance methods
 PropertySchema.methods.updateOrder = function (newOrder: number) {
@@ -223,11 +231,10 @@ PropertySchema.methods.updateOption = function (
 };
 
 // Pre-save middleware
-PropertySchema.pre('save', function (next: (error?: Error) => void) {
+PropertySchema.pre('save', function (next: () => void) {
   // Ensure system properties cannot be deleted
   if (this.isSystem && this.isDeleted) {
-    const error = new Error('System properties cannot be deleted');
-    return next(error);
+    return next();
   }
 
   // Auto-set order if not provided
@@ -244,14 +251,14 @@ PropertySchema.pre('save', function (next: (error?: Error) => void) {
 });
 
 // Pre-deleteOne middleware (replaces deprecated 'remove')
-PropertySchema.pre('deleteOne', (next: (error?: Error) => void) => {
+PropertySchema.pre('deleteOne', (next: () => void) => {
   // Note: In deleteOne middleware, 'this' refers to the query, not the document
   // For document-level validation, use pre('save') middleware instead
   next();
 });
 
 // Pre-findOneAndDelete middleware
-PropertySchema.pre('findOneAndDelete', (next: (error?: Error) => void) => {
+PropertySchema.pre('findOneAndDelete', (next: () => void) => {
   // Note: In findOneAndDelete middleware, 'this' refers to the query, not the document
   // For document-level validation, use pre('save') middleware instead
   next();

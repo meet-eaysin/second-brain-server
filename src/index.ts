@@ -10,9 +10,9 @@ const PORT = appConfig.port || 4000;
 
 const safeMongooseConnection = new SafeMongooseConnection({
   mongoUrl: appConfig.mongoose.url || '',
-  onStartConnection: (url) => logger.info(`Connecting to MongoDB at ${url}`),
+  onStartConnection: url => logger.info(`Connecting to MongoDB at ${url}`),
   onConnectionError: (err, url) => logger.error(`MongoDB connection error at ${url}`, err),
-  onConnectionRetry: (url) => logger.info(`Retrying MongoDB connection at ${url}`)
+  onConnectionRetry: url => logger.info(`Retrying MongoDB connection at ${url}`)
 });
 
 let isInitialized = false;
@@ -52,7 +52,7 @@ const startServer = async () => {
 
   const gracefulShutdown = async (signal: string) => {
     logger.info(`${signal} received. Shutting down gracefully...`);
-    httpServer.close(async (err) => {
+    httpServer.close(async err => {
       if (err) logger.error('Error closing server:', err);
       await safeMongooseConnection.close(true);
       logger.info('Shutdown complete');
@@ -64,7 +64,7 @@ const startServer = async () => {
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 };
 
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', err => {
   logger.error('Uncaught Exception:', err);
   process.exit(1);
 });

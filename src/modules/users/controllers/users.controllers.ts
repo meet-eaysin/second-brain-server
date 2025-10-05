@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { TUserUpdateRequest, TUserRole } from '../types/user.types';
+import { TUserUpdateRequest } from '../types/user.types';
 import {
   getUserById,
   updateUser,
@@ -43,11 +43,14 @@ export const getUser = catchAsync(
   }
 );
 
-export const getProfile = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
     const { user } = req as AuthenticatedRequest;
 
-    // Add workspace information to user
     const workspaces = await getUserWithWorkspaces(user.userId);
     const userWithWorkspaces = {
       ...user,
@@ -55,8 +58,10 @@ export const getProfile = catchAsync(
     };
 
     sendSuccessResponse(res, 'Profile retrieved successfully', userWithWorkspaces);
+  } catch (error) {
+    next(error);
   }
-);
+};
 
 export const updateProfile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -86,44 +91,42 @@ export const deleteAccount = catchAsync(
   }
 );
 
-export const getUsers = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      role,
-      authProvider,
-      isActive,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
-    } = req.query;
+export const getUsers = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    role,
+    authProvider,
+    isActive,
+    sortBy = 'createdAt',
+    sortOrder = 'desc'
+  } = req.query;
 
-    const filters = {
-      search: search as string,
-      role: role as string,
-      authProvider: authProvider as string,
-      isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
-      sortBy: sortBy as string,
-      sortOrder: sortOrder as 'asc' | 'desc'
-    };
+  const filters = {
+    search: search as string,
+    role: role as string,
+    authProvider: authProvider as string,
+    isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+    sortBy: sortBy as string,
+    sortOrder: sortOrder as 'asc' | 'desc'
+  };
 
-    const result = await getAllUsers(parseInt(page as string), parseInt(limit as string), filters);
+  const result = await getAllUsers(parseInt(page as string), parseInt(limit as string), filters);
 
-    const { users, ...paginationData } = result;
-    const hasNext = paginationData.currentPage < paginationData.totalPages;
-    const hasPrev = paginationData.currentPage > 1;
+  const { users, ...paginationData } = result;
+  const hasNext = paginationData.currentPage < paginationData.totalPages;
+  const hasPrev = paginationData.currentPage > 1;
 
-    sendSuccessResponse(res, 'Users retrieved successfully', users, 200, {
-      total: paginationData.total,
-      page: paginationData.currentPage,
-      limit: parseInt(limit as string),
-      totalPages: paginationData.totalPages,
-      hasNext,
-      hasPrev
-    });
-  }
-);
+  sendSuccessResponse(res, 'Users retrieved successfully', users, 200, {
+    total: paginationData.total,
+    page: paginationData.currentPage,
+    limit: parseInt(limit as string),
+    totalPages: paginationData.totalPages,
+    hasNext,
+    hasPrev
+  });
+});
 
 export const getUserDetails = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -202,7 +205,7 @@ export const bulkUpdateUsersController = catchAsync(
 );
 
 export const getUserStatsController = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { period = 'month', startDate, endDate } = req.query;
 
     const start = startDate ? new Date(startDate as string) : undefined;
@@ -240,7 +243,6 @@ export const updateUserRoleController = catchAsync(
     const { role } = req.body;
     const { user } = req as AuthenticatedRequest;
 
-    // Prevent self-role modification
     if (id === user.userId) {
       return next(createCannotChangeOwnRoleError());
     }

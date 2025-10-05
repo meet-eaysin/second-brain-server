@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync, sendSuccessResponse, sendPaginatedResponse } from '@/utils';
 import {
   databaseService,
@@ -8,161 +8,131 @@ import {
 } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
-export const createDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const data: ICreateDatabaseRequest = req.body;
-    const userId = getUserId(req);
+export const createDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const data: ICreateDatabaseRequest = req.body;
+  const userId = getUserId(req);
 
-    const database = await databaseService.createDatabase(data, userId);
+  const database = await databaseService.createDatabase(data, userId);
 
-    sendSuccessResponse(res, 'Database created successfully', database, 201);
+  sendSuccessResponse(res, 'Database created successfully', database, 201);
+});
+
+export const getDatabases = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const params: IDatabaseQueryParams = req.query as any;
+  const userId = getUserId(req);
+  const workspaceId = (req as any).workspace?.id;
+
+  // If workspace context is available, filter by that workspace
+  if (workspaceId) {
+    params.workspaceId = workspaceId;
   }
-);
 
-export const getDatabases = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const params: IDatabaseQueryParams = req.query as any;
-    const userId = getUserId(req);
-    const workspaceId = (req as any).workspace?.id;
+  const result = await databaseService.getDatabases(params, userId);
 
-    // If workspace context is available, filter by that workspace
-    if (workspaceId) {
-      params.workspaceId = workspaceId;
-    }
+  sendPaginatedResponse(res, 'Databases retrieved successfully', result.databases, {
+    total: result.total,
+    page: result.page,
+    limit: result.limit,
+    totalPages: Math.ceil(result.total / result.limit),
+    hasNext: result.hasNext,
+    hasPrev: result.hasPrev
+  });
+});
 
-    const result = await databaseService.getDatabases(params, userId);
+export const getDatabaseById = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    sendPaginatedResponse(res, 'Databases retrieved successfully', result.databases, {
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      totalPages: Math.ceil(result.total / result.limit),
-      hasNext: result.hasNext,
-      hasPrev: result.hasPrev
-    });
-  }
-);
+  const database = await databaseService.getDatabaseById(id);
 
-export const getDatabaseById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database retrieved successfully', database);
+});
 
-    const database = await databaseService.getDatabaseById(id, userId);
+export const updateDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const data: IUpdateDatabaseRequest = req.body;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database retrieved successfully', database);
-  }
-);
+  const database = await databaseService.updateDatabase(id, data, userId);
 
-export const updateDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const data: IUpdateDatabaseRequest = req.body;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database updated successfully', database);
+});
 
-    const database = await databaseService.updateDatabase(id, data, userId);
+export const deleteDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { permanent } = req.query;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database updated successfully', database);
-  }
-);
+  await databaseService.deleteDatabase(id, userId, permanent === 'true');
 
-export const deleteDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const { permanent } = req.query;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database deleted successfully', null, 204);
+});
 
-    await databaseService.deleteDatabase(id, userId, permanent === 'true');
+export const getDatabaseStats = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
 
-    sendSuccessResponse(res, 'Database deleted successfully', null, 204);
-  }
-);
+  const stats = await databaseService.getDatabaseStats(id);
 
-export const getDatabaseStats = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database statistics retrieved successfully', stats);
+});
 
-    const stats = await databaseService.getDatabaseStats(id, userId);
+export const duplicateDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const data = req.body;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database statistics retrieved successfully', stats);
-  }
-);
+  const database = await databaseService.duplicateDatabase(id, data, userId);
 
-export const duplicateDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const data = req.body;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database duplicated successfully', database, 201);
+});
 
-    const database = await databaseService.duplicateDatabase(id, data, userId);
+export const exportDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const options = req.query as any;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database duplicated successfully', database, 201);
-  }
-);
+  const exportData = await databaseService.exportDatabase(id, options, userId);
 
-export const exportDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const options = req.query as any;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database exported successfully', exportData);
+});
 
-    const exportData = await databaseService.exportDatabase(id, options, userId);
+export const importDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { workspaceId, data, options } = req.body;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database exported successfully', exportData);
-  }
-);
+  const database = await databaseService.importDatabase(data, { ...options, workspaceId }, userId);
 
-export const importDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { workspaceId, data, options } = req.body;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database imported successfully', database, 201);
+});
 
-    const database = await databaseService.importDatabase(
-      data,
-      { ...options, workspaceId },
-      userId
-    );
+export const restoreDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database imported successfully', database, 201);
-  }
-);
+  const database = await databaseService.restoreDatabase(id, userId);
 
-export const restoreDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database restored successfully', database);
+});
 
-    const database = await databaseService.restoreDatabase(id, userId);
+export const archiveDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database restored successfully', database);
-  }
-);
+  const database = await databaseService.updateDatabase(id, { isArchived: true }, userId);
 
-export const archiveDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const userId = getUserId(req);
+  sendSuccessResponse(res, 'Database archived successfully', database);
+});
 
-    const database = await databaseService.updateDatabase(id, { isArchived: true }, userId);
+export const unarchiveDatabase = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const userId = getUserId(req);
 
-    sendSuccessResponse(res, 'Database archived successfully', database);
-  }
-);
+  const database = await databaseService.updateDatabase(id, { isArchived: false }, userId);
 
-export const unarchiveDatabase = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { id } = req.params;
-    const userId = getUserId(req);
-
-    const database = await databaseService.updateDatabase(id, { isArchived: false }, userId);
-
-    sendSuccessResponse(res, 'Database unarchived successfully', database);
-  }
-);
+  sendSuccessResponse(res, 'Database unarchived successfully', database);
+});
 
 export const bulkUpdateDatabases = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseIds, updates } = req.body;
     const userId = getUserId(req);
 
@@ -177,7 +147,7 @@ export const bulkUpdateDatabases = catchAsync(
 );
 
 export const bulkDeleteDatabases = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseIds, permanent } = req.body;
     const userId = getUserId(req);
 
@@ -192,18 +162,17 @@ export const bulkDeleteDatabases = catchAsync(
 );
 
 export const getDatabaseTemplates = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
-    const userId = getUserId(req);
 
-    const database = await databaseService.getDatabaseById(id, userId);
+    const database = await databaseService.getDatabaseById(id);
 
     sendSuccessResponse(res, 'Database templates retrieved successfully', database.templates || []);
   }
 );
 
 export const createDatabaseTemplate = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     const templateData = req.body;
     const userId = getUserId(req);
@@ -215,7 +184,7 @@ export const createDatabaseTemplate = catchAsync(
 );
 
 export const updateDatabaseTemplate = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { id, templateId } = req.params;
     const templateData = req.body;
     const userId = getUserId(req);
@@ -232,7 +201,7 @@ export const updateDatabaseTemplate = catchAsync(
 );
 
 export const deleteDatabaseTemplate = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { id, templateId } = req.params;
     const userId = getUserId(req);
 

@@ -58,7 +58,6 @@ export const searchController = {
         offset
       } = validation.data;
 
-      // Build search options
       const options: ISearchOptions = {
         scope: scope || ESearchScope.ALL,
         filters: {
@@ -82,7 +81,6 @@ export const searchController = {
         offset
       };
 
-      // Perform search
       const results = await searchService.globalSearch(query, options, userId);
 
       const response: IGlobalSearchResponse = results;
@@ -93,7 +91,6 @@ export const searchController = {
         executionTime: results.executionTime
       });
     } catch (error) {
-      console.error('Global search error:', error);
       sendErrorResponse(
         res,
         'Search failed',
@@ -149,7 +146,6 @@ export const searchController = {
         offset: params.offset
       };
 
-      // Perform search
       const results = await searchService.globalSearch(query, options, userId);
 
       sendSuccessResponse(res, 'Database search completed successfully', results, 200, {
@@ -159,7 +155,6 @@ export const searchController = {
         executionTime: results.executionTime
       });
     } catch (error) {
-      console.error('Database search error:', error);
       sendErrorResponse(
         res,
         'Database search failed',
@@ -182,7 +177,6 @@ export const searchController = {
         return;
       }
 
-      // Validate query parameters
       const validation = GlobalSearchQuerySchema.safeParse(req.query);
       if (!validation.success) {
         sendErrorResponse(res, 'Invalid search parameters', 400, validation.error.issues);
@@ -191,7 +185,6 @@ export const searchController = {
 
       const { q: query, ...params } = validation.data;
 
-      // Build search options with records scope
       const options: ISearchOptions = {
         scope: ESearchScope.RECORDS,
         filters: {
@@ -218,7 +211,6 @@ export const searchController = {
         offset: params.offset
       };
 
-      // Perform search
       const results = await searchService.globalSearch(query, options, userId);
 
       sendSuccessResponse(res, 'Record search completed successfully', results, 200, {
@@ -228,7 +220,6 @@ export const searchController = {
         executionTime: results.executionTime
       });
     } catch (error) {
-      console.error('Record search error:', error);
       sendErrorResponse(
         res,
         'Record search failed',
@@ -251,7 +242,6 @@ export const searchController = {
         return;
       }
 
-      // Validate query parameters
       const validation = SearchSuggestionsQuerySchema.safeParse(req.query);
       if (!validation.success) {
         sendErrorResponse(res, 'Invalid suggestion parameters', 400, validation.error.issues);
@@ -260,7 +250,6 @@ export const searchController = {
 
       const { q: query, scope, limit } = validation.data;
 
-      // Get suggestions
       const suggestions = await searchService.getSearchSuggestions(
         query,
         scope || ESearchScope.ALL,
@@ -275,7 +264,6 @@ export const searchController = {
 
       sendSuccessResponse(res, 'Search suggestions retrieved successfully', response);
     } catch (error) {
-      console.error('Search suggestions error:', error);
       sendErrorResponse(
         res,
         'Failed to get search suggestions',
@@ -317,7 +305,6 @@ export const searchController = {
 
       sendSuccessResponse(res, 'Recent searches retrieved successfully', response);
     } catch (error) {
-      console.error('Recent searches error:', error);
       sendErrorResponse(
         res,
         'Failed to get recent searches',
@@ -340,11 +327,8 @@ export const searchController = {
         return;
       }
 
-      // Fetch the URL and extract metadata
       const response = await fetch(url as string, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; GlimpseBot/1.0)'
-        }
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GlimpseBot/1.0)' }
       });
 
       if (!response.ok) {
@@ -354,7 +338,6 @@ export const searchController = {
 
       const html = await response.text();
 
-      // Extract metadata
       const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
       const ogTitleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i);
       const descriptionMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]+)"/i);
@@ -371,7 +354,6 @@ export const searchController = {
 
       sendSuccessResponse(res, 'Glimpse data retrieved successfully', data);
     } catch (error) {
-      console.error('Glimpse error:', error);
       sendErrorResponse(
         res,
         'Failed to get glimpse data',

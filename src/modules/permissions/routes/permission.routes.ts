@@ -11,13 +11,14 @@ import {
   bulkGrantPermissions,
   bulkRevokePermissions
 } from '@/modules/permissions/controllers/permission.controller';
-import { authenticateToken } from '@/middlewares';
 import {
-    bulkGrantPermissionsSchema, bulkRevokePermissionsSchema,
-    grantPermissionSchema,
-    resourceParamsSchema,
-    revokePermissionSchema
+  bulkGrantPermissionsSchema,
+  bulkRevokePermissionsSchema,
+  grantPermissionSchema,
+  resourceParamsSchema,
+  revokePermissionSchema
 } from '@/modules/permissions/validations/permissions.validations';
+import { authenticateToken } from '@/middlewares/auth';
 
 const router = Router();
 

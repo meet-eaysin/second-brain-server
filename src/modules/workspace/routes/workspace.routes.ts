@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { validateBody } from '@/middlewares/validation';
-import { authenticateToken } from '@/middlewares/auth';
 import {
   resolveWorkspaceContext,
   requireWorkspaceManagement
@@ -20,6 +19,7 @@ import {
   CreateWorkspaceSchema,
   UpdateWorkspaceSchema
 } from '@/modules/workspace/validators/workspace.validators';
+import { authenticateToken } from '@/middlewares/auth';
 
 const router = Router();
 

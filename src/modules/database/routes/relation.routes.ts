@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '@/middlewares/auth';
 import { validateBody, validateParams } from '@/middlewares/validation';
-import { z } from 'zod';
 import {
   createRelation,
   createConnection,

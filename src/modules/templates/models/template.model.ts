@@ -431,44 +431,62 @@ TemplateSchema.index({ usageCount: -1, rating: -1 });
 TemplateSchema.index({ createdBy: 1, type: 1 });
 
 // Static methods
-TemplateSchema.statics.findByCategory = function (category: ETemplateCategory) {
-  return this.find({ category, isDeleted: { $ne: true } });
+TemplateSchema.statics.findByCategory = function (
+  category: ETemplateCategory
+): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel).find({ category, isDeleted: { $ne: true } }).exec();
 };
 
-TemplateSchema.statics.findByType = function (type: ETemplateType) {
-  return this.find({ type, isDeleted: { $ne: true } });
+TemplateSchema.statics.findByType = function (type: ETemplateType): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel).find({ type, isDeleted: { $ne: true } }).exec();
 };
 
-TemplateSchema.statics.findByModule = function (moduleType: EDatabaseType) {
-  return this.find({ moduleType, isDeleted: { $ne: true } });
+TemplateSchema.statics.findByModule = function (
+  moduleType: EDatabaseType
+): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel).find({ moduleType, isDeleted: { $ne: true } }).exec();
 };
 
-TemplateSchema.statics.findFeatured = function () {
-  return this.find({ isFeatured: true, isDeleted: { $ne: true } }).sort({
-    usageCount: -1,
-    rating: -1
-  });
+TemplateSchema.statics.findFeatured = function (): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel)
+    .find({ isFeatured: true, isDeleted: { $ne: true } })
+    .sort({
+      usageCount: -1,
+      rating: -1
+    })
+    .exec();
 };
 
-TemplateSchema.statics.findOfficial = function () {
-  return this.find({ isOfficial: true, isDeleted: { $ne: true } }).sort({
-    usageCount: -1,
-    rating: -1
-  });
+TemplateSchema.statics.findOfficial = function (): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel)
+    .find({ isOfficial: true, isDeleted: { $ne: true } })
+    .sort({
+      usageCount: -1,
+      rating: -1
+    })
+    .exec();
 };
 
-TemplateSchema.statics.findPublic = function () {
-  return this.find({ access: ETemplateAccess.PUBLIC, isDeleted: { $ne: true } }).sort({
-    usageCount: -1,
-    rating: -1
-  });
+TemplateSchema.statics.findPublic = function (): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel)
+    .find({ access: ETemplateAccess.PUBLIC, isDeleted: { $ne: true } })
+    .sort({
+      usageCount: -1,
+      rating: -1
+    })
+    .exec();
 };
 
-TemplateSchema.statics.findByUser = function (userId: string) {
-  return this.find({ createdBy: userId, isDeleted: { $ne: true } }).sort({ updatedAt: -1 });
+TemplateSchema.statics.findByUser = function (userId: string): Promise<TTemplateDocument[]> {
+  return (this as TTemplateModel)
+    .find({ createdBy: userId, isDeleted: { $ne: true } })
+    .sort({ updatedAt: -1 })
+    .exec();
 };
 
-TemplateSchema.statics.searchTemplates = async function (query: any) {
+TemplateSchema.statics.searchTemplates = async function (
+  query: any
+): Promise<{ templates: TTemplateDocument[]; total: number }> {
   const filter: any = { isDeleted: { $ne: true } };
 
   // Build search filter
@@ -503,26 +521,31 @@ TemplateSchema.statics.searchTemplates = async function (query: any) {
   }
 
   // Execute query
-  const total = await this.countDocuments(filter);
-  const templates = await this.find(filter)
+  const total = await (this as TTemplateModel).countDocuments(filter);
+  const templates = await (this as TTemplateModel)
+    .find(filter)
     .sort(sort)
     .limit(query.limit || 20)
-    .skip(query.offset || 0);
+    .skip(query.offset || 0)
+    .exec();
 
   return { templates, total };
 };
 
-TemplateSchema.statics.incrementUsage = async function (templateId: string) {
-  await this.findByIdAndUpdate(templateId, { $inc: { usageCount: 1 } });
+TemplateSchema.statics.incrementUsage = async function (templateId: string): Promise<void> {
+  await (this as TTemplateModel).findByIdAndUpdate(templateId, { $inc: { usageCount: 1 } });
 };
 
-TemplateSchema.statics.updateRating = async function (templateId: string, rating: number) {
-  const template = await this.findById(templateId);
+TemplateSchema.statics.updateRating = async function (
+  templateId: string,
+  rating: number
+): Promise<void> {
+  const template = await (this as TTemplateModel).findById(templateId);
   if (template) {
     const newRatingCount = template.ratingCount + 1;
     const newRating = (template.rating * template.ratingCount + rating) / newRatingCount;
 
-    await this.findByIdAndUpdate(templateId, {
+    await (this as TTemplateModel).findByIdAndUpdate(templateId, {
       rating: newRating,
       ratingCount: newRatingCount
     });

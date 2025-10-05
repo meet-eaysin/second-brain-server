@@ -64,102 +64,123 @@ const DeviceInfoSchema = new Schema(
   { _id: false }
 );
 
-const DeviceTokenSchema = createBaseSchema({
-  userId: {
-    type: String,
-    required: true
+const DeviceTokenSchema = createBaseSchema(
+  {
+    userId: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['fcm', 'webpush'],
+      required: true
+    },
+    token: {
+      type: String,
+      sparse: true,
+      index: true
+    },
+    endpoint: {
+      type: String,
+      sparse: true,
+      index: true
+    },
+    keys: DeviceKeysSchema,
+    deviceInfo: DeviceInfoSchema,
+    lastUsedAt: {
+      type: Date,
+      index: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    }
   },
-  type: {
-    type: String,
-    enum: ['fcm', 'webpush'],
-    required: true
-  },
-  token: {
-    type: String,
-    sparse: true,
-    index: true
-  },
-  endpoint: {
-    type: String,
-    sparse: true,
-    index: true
-  },
-  keys: DeviceKeysSchema,
-  deviceInfo: DeviceInfoSchema,
-  lastUsedAt: {
-    type: Date,
-    index: true
-  },
-  isActive: {
-    type: Boolean,
-    default: true
+  {
+    statics: {
+      findByUser(userId: string): Promise<TDeviceTokenDocument[]> {
+        return this.find({
+          userId,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true }
+        }).exec();
+      },
+
+      findActiveByUser(userId: string): Promise<TDeviceTokenDocument[]> {
+        return this.find({
+          userId,
+          isActive: true,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true }
+        }).exec();
+      },
+
+      findByToken(token: string): Promise<TDeviceTokenDocument | null> {
+        return this.findOne({
+          token,
+          isActive: true,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true }
+        }).exec();
+      },
+
+      findByEndpoint(endpoint: string): Promise<TDeviceTokenDocument | null> {
+        return this.findOne({
+          endpoint,
+          isActive: true,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true }
+        }).exec();
+      },
+
+      async deactivateToken(token: string): Promise<void> {
+        await this.updateOne(
+          { token },
+          {
+            isActive: false,
+            updatedAt: new Date()
+          }
+        ).exec();
+      },
+
+      async deactivateEndpoint(endpoint: string): Promise<void> {
+        await this.updateOne(
+          { endpoint },
+          {
+            isActive: false,
+            updatedAt: new Date()
+          }
+        ).exec();
+      },
+
+      async countByUser(userId: string): Promise<{ fcm: number; webpush: number; total: number }> {
+        const result = await this.aggregate([
+          { $match: { userId, isActive: true } },
+          {
+            $group: {
+              _id: '$type',
+              count: { $sum: 1 }
+            }
+          }
+        ]).exec();
+
+        const counts = { fcm: 0, webpush: 0, total: 0 };
+        result.forEach((item: { _id: 'fcm' | 'webpush'; count: number }) => {
+          counts[item._id] = item.count;
+          counts.total += item.count;
+        });
+
+        return counts;
+      }
+    }
   }
-});
+);
 
 // Compound indexes
 DeviceTokenSchema.index({ userId: 1, type: 1 });
 DeviceTokenSchema.index({ userId: 1, isActive: 1 });
 DeviceTokenSchema.index({ token: 1, isActive: 1 });
 DeviceTokenSchema.index({ endpoint: 1, isActive: 1 });
-
-// Static methods
-DeviceTokenSchema.statics.findByUser = function (userId: string) {
-  return this.find({ userId }).notDeleted().notArchived().exec();
-};
-
-DeviceTokenSchema.statics.findActiveByUser = function (userId: string) {
-  return this.find({ userId, isActive: true }).notDeleted().notArchived().exec();
-};
-
-DeviceTokenSchema.statics.findByToken = function (token: string) {
-  return this.findOne({ token, isActive: true }).notDeleted().notArchived().exec();
-};
-
-DeviceTokenSchema.statics.findByEndpoint = function (endpoint: string) {
-  return this.findOne({ endpoint, isActive: true }).notDeleted().notArchived().exec();
-};
-
-DeviceTokenSchema.statics.deactivateToken = function (token: string) {
-  return this.updateOne(
-    { token },
-    {
-      isActive: false,
-      updatedAt: new Date()
-    }
-  ).exec();
-};
-
-DeviceTokenSchema.statics.deactivateEndpoint = function (endpoint: string) {
-  return this.updateOne(
-    { endpoint },
-    {
-      isActive: false,
-      updatedAt: new Date()
-    }
-  ).exec();
-};
-
-DeviceTokenSchema.statics.countByUser = async function (
-  userId: string
-): Promise<{ fcm: number; webpush: number; total: number }> {
-  const result = await this.aggregate([
-    { $match: { userId, isActive: true } },
-    {
-      $group: {
-        _id: '$type',
-        count: { $sum: 1 }
-      }
-    }
-  ]).exec();
-
-  const counts = { fcm: 0, webpush: 0, total: 0 };
-  result.forEach((item: { _id: 'fcm' | 'webpush'; count: number }) => {
-    counts[item._id] = item.count;
-    counts.total += item.count;
-  });
-
-  return counts;
-};
 
 // Instance methods
 DeviceTokenSchema.methods.markAsUsed = function () {

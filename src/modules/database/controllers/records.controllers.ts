@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { recordsService, IRecordQueryOptions } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
 export const createDatabaseRecord = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId } = req.params;
     const record = await recordsService.createRecord(databaseId, req.body, userId);
@@ -13,7 +13,7 @@ export const createDatabaseRecord = catchAsync(
 );
 
 export const getDatabaseRecords = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const queryOptions: IRecordQueryOptions = req.query;
     const { databaseId } = req.params;
@@ -34,7 +34,7 @@ export const getDatabaseRecords = catchAsync(
 );
 
 export const getDatabaseRecordById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
     const record = await recordsService.getRecordById(databaseId, recordId, userId);
@@ -43,7 +43,7 @@ export const getDatabaseRecordById = catchAsync(
 );
 
 export const updateDatabaseRecord = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
     const record = await recordsService.updateRecord(databaseId, recordId, req.body, userId);
@@ -52,7 +52,7 @@ export const updateDatabaseRecord = catchAsync(
 );
 
 export const deleteDatabaseRecord = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
     const permanent = req.query.permanent === 'true';
@@ -62,7 +62,7 @@ export const deleteDatabaseRecord = catchAsync(
 );
 
 export const bulkUpdateDatabaseRecords = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId } = req.params;
     const result = await recordsService.bulkUpdateRecords(databaseId, req.body, userId);
@@ -71,7 +71,7 @@ export const bulkUpdateDatabaseRecords = catchAsync(
 );
 
 export const bulkDeleteDatabaseRecords = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId } = req.params;
     const result = await recordsService.bulkDeleteRecords(databaseId, req.body, userId);
@@ -80,7 +80,7 @@ export const bulkDeleteDatabaseRecords = catchAsync(
 );
 
 export const reorderDatabaseRecords = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId } = req.params;
     await recordsService.reorderRecords(databaseId, req.body, userId);
@@ -89,7 +89,7 @@ export const reorderDatabaseRecords = catchAsync(
 );
 
 export const duplicateDatabaseRecord = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, recordId } = req.params;
 

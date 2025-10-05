@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IView, EViewType, ISortConfig, IFilterCondition } from '@/modules/core/types/view.types';
+import { IView, ISortConfig, IFilterCondition } from '@/modules/core/types/view.types';
 import { createBaseSchema, IBaseDocument } from '@/modules/core/models/base.model';
 
 export type TViewDocument = IView & IBaseDocument;
@@ -259,16 +259,24 @@ ViewSchema.index(
 );
 
 // Static methods
-ViewSchema.statics.findByDatabase = function (databaseId: string) {
-  return this.find({ databaseId }).notDeleted().sort({ order: 1 }).exec();
+ViewSchema.statics.findByDatabase = function (databaseId: string): Promise<TViewDocument[]> {
+  return (this as TViewModel)
+    .find({ databaseId, isDeleted: { $ne: true } })
+    .sort({ order: 1 })
+    .exec();
 };
 
-ViewSchema.statics.findDefaultView = function (databaseId: string) {
-  return this.findOne({ databaseId, isDefault: true }).notDeleted().exec();
+ViewSchema.statics.findDefaultView = function (databaseId: string): Promise<TViewDocument | null> {
+  return (this as TViewModel)
+    .findOne({ databaseId, isDefault: true, isDeleted: { $ne: true } })
+    .exec();
 };
 
-ViewSchema.statics.findPublicViews = function (databaseId: string) {
-  return this.find({ databaseId, isPublic: true }).notDeleted().sort({ order: 1 }).exec();
+ViewSchema.statics.findPublicViews = function (databaseId: string): Promise<TViewDocument[]> {
+  return (this as TViewModel)
+    .find({ databaseId, isPublic: true, isDeleted: { $ne: true } })
+    .sort({ order: 1 })
+    .exec();
 };
 
 // Instance methods

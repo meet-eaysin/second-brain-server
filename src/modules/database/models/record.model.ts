@@ -159,74 +159,113 @@ const RecordContentSchema: any = new Schema(
   { _id: false }
 );
 
-const RecordSchema = createBaseSchema({
-  databaseId: {
-    type: String,
-    required: true,
-    index: true
-  },
-  properties: {
-    type: Schema.Types.Mixed,
-    default: {}
-  },
+const RecordSchema = createBaseSchema(
+  {
+    databaseId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    properties: {
+      type: Schema.Types.Mixed,
+      default: {}
+    },
 
-  // Rich content (like Notion page content)
-  content: [RecordContentSchema],
+    // Rich content (like Notion page content)
+    content: [RecordContentSchema],
 
-  // Ordering
-  order: {
-    type: Number,
-    default: 0,
-    min: 0,
-    index: true
-  },
+    // Ordering
+    order: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true
+    },
 
-  // Metadata
-  isTemplate: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  isFavorite: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
+    // Metadata
+    isTemplate: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    isFavorite: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
 
-  // Collaboration
-  lastEditedBy: {
-    type: String,
-    index: true
-  },
-  lastEditedAt: {
-    type: Date,
-    index: true
-  },
+    // Collaboration
+    lastEditedBy: {
+      type: String,
+      index: true
+    },
+    lastEditedAt: {
+      type: Date,
+      index: true
+    },
 
-  // Comments and discussions
-  commentCount: {
-    type: Number,
-    default: 0,
-    min: 0
+    // Comments and discussions
+    commentCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+
+    // Version control (if enabled)
+    version: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+
+    // AI features
+    autoTags: [String],
+    aiSummary: String,
+
+    // Relations cache (for performance)
+    relationsCache: {
+      type: Schema.Types.Mixed,
+      default: {}
+    }
   },
+  {
+    statics: {
+      findByDatabase(databaseId: string): Promise<TRecordDocument[]> {
+        return this.find({ databaseId, isDeleted: { $ne: true }, isArchived: { $ne: true } })
+          .sort({ updatedAt: -1 })
+          .exec();
+      },
 
-  // Version control (if enabled)
-  version: {
-    type: Number,
-    default: 1,
-    min: 1
-  },
+      findTemplates(databaseId: string): Promise<TRecordDocument[]> {
+        return this.find({ databaseId, isTemplate: true, isDeleted: { $ne: true } })
+          .sort({ createdAt: -1 })
+          .exec();
+      },
 
-  // AI features
-  autoTags: [String],
-  aiSummary: String,
+      findFavorites(databaseId: string, userId: string): Promise<TRecordDocument[]> {
+        return this.find({
+          databaseId,
+          isFavorite: true,
+          isDeleted: { $ne: true },
+          isArchived: { $ne: true },
+          $or: [
+            { createdBy: userId }
+            // Include records that user has permission to view
+            // Note: Additional permission filtering should be done at service level
+          ]
+        })
+          .sort({ updatedAt: -1 })
+          .exec();
+      },
 
-  // Relations cache (for performance)
-  relationsCache: {
-    type: Schema.Types.Mixed,
-    default: {}
+      findByProperty(databaseId: string, propertyId: string, value: any): Promise<TRecordDocument[]> {
+        const query: any = { databaseId, isDeleted: { $ne: true }, isArchived: { $ne: true } };
+        query[`properties.${propertyId}`] = value;
+        return this.find(query).exec();
+      }
+    }
   }
-});
+);
 
 // Indexes
 RecordSchema.index({ databaseId: 1, createdAt: -1 });
@@ -245,40 +284,6 @@ RecordSchema.index({
   aiSummary: 'text'
 });
 
-// Static methods
-RecordSchema.statics.findByDatabase = function (databaseId: string) {
-  return this.find({ databaseId }).notDeleted().notArchived().sort({ updatedAt: -1 }).exec();
-};
-
-RecordSchema.statics.findTemplates = function (databaseId: string) {
-  return this.find({ databaseId, isTemplate: true }).notDeleted().sort({ createdAt: -1 }).exec();
-};
-
-RecordSchema.statics.findFavorites = function (databaseId: string, userId: string) {
-  return this.find({
-    databaseId,
-    isFavorite: true,
-    $or: [
-      { createdBy: userId }
-      // Include records that user has permission to view
-      // Note: Additional permission filtering should be done at service level
-    ]
-  })
-    .notDeleted()
-    .notArchived()
-    .sort({ updatedAt: -1 })
-    .exec();
-};
-
-RecordSchema.statics.findByProperty = function (
-  databaseId: string,
-  propertyId: string,
-  value: any
-) {
-  const query: any = { databaseId };
-  query[`properties.${propertyId}`] = value;
-  return this.find(query).notDeleted().notArchived().exec();
-};
 
 // Instance methods
 RecordSchema.methods.updateProperty = function (propertyId: string, value: any) {

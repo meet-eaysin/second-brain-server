@@ -1,7 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { authenticateToken, requireAdmin, requireModerator } from '../../../middlewares/auth';
-import { validateBody, validateQuery } from '../../../middlewares/validation';
 import {
   deleteAccount,
   deleteUserById,
@@ -25,14 +23,17 @@ import {
   userStatsQuerySchema,
   updateUserRoleSchema
 } from '../validators/users.validators';
+import { changePasswordSchema } from '../../auth/validators/auth.validaations';
+import { changeUserPassword } from '../../auth/controllers/auth.controller';
+import { authenticateToken, requireAdmin, requireModerator } from '@/middlewares/auth';
+import { validateBody, validateQuery } from '@/middlewares/validation';
 
 const router = Router();
 
-// Configure multer for avatar uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit for avatars
+    fileSize: 5 * 1024 * 1024
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -44,48 +45,35 @@ const upload = multer({
   }
 });
 
+router.use(authenticateToken);
+
 // USER PROFILE MANAGEMENT
-router.get('/profile', authenticateToken, getProfile);
-router.put('/profile', authenticateToken, validateBody(updateProfileSchema), updateProfile);
-router.delete('/profile', authenticateToken, deleteAccount);
-
-// Avatar management
-router.post('/profile/avatar', authenticateToken, upload.single('avatar'), uploadProfileAvatar);
-router.delete('/profile/avatar', authenticateToken, deleteProfileAvatar);
-
-router.get('/', authenticateToken, requireModerator, validateQuery(getUsersQuerySchema), getUsers);
-router.get(
-  '/stats',
+router.get('/profile', getProfile);
+router.put('/profile', validateBody(updateProfileSchema), updateProfile);
+router.delete('/profile', deleteAccount);
+router.post(
+  '/change-password',
   authenticateToken,
-  requireAdmin,
-  validateQuery(userStatsQuerySchema),
-  getUserStatsController
+  validateBody(changePasswordSchema),
+  changeUserPassword
 );
-router.get('/:id', authenticateToken, requireModerator, getUserDetails);
 
-router.put(
-  '/:id',
-  authenticateToken,
-  requireAdmin,
-  validateBody(updateUserByAdminSchema),
-  updateUserById
-);
-router.patch('/:id/status', authenticateToken, requireAdmin, toggleUserStatusController);
+// AVATAR MANAFGEMENT - Avatar management
+router.post('/profile/avatar', upload.single('avatar'), uploadProfileAvatar);
+router.delete('/profile/avatar', deleteProfileAvatar);
+
+router.get('/', requireModerator, validateQuery(getUsersQuerySchema), getUsers);
+router.get('/stats', requireAdmin, validateQuery(userStatsQuerySchema), getUserStatsController);
+router.get('/:id', requireModerator, getUserDetails);
+router.put('/:id', requireAdmin, validateBody(updateUserByAdminSchema), updateUserById);
+router.patch('/:id/status', requireAdmin, toggleUserStatusController);
 router.patch(
   '/:id/role',
-  authenticateToken,
   requireAdmin,
   validateBody(updateUserRoleSchema),
   updateUserRoleController
 );
-router.delete('/:id', authenticateToken, requireAdmin, deleteUserById);
-
-router.patch(
-  '/bulk-update',
-  authenticateToken,
-  requireAdmin,
-  validateBody(bulkUpdateUsersSchema),
-  bulkUpdateUsersController
-);
+router.delete('/:id', requireAdmin, deleteUserById);
+router.patch('/bulk-update', requireAdmin, bulkUpdateUsersController);
 
 export default router;

@@ -65,63 +65,239 @@ const CustomPermissionsSchema = new Schema<IWorkspaceMemberPermissions>(
   { _id: false }
 );
 
-const WorkspaceMemberSchema = createBaseSchema({
-  workspaceId: {
-    type: String,
-    required: true
-  },
-  userId: {
-    type: String,
-    required: true
-  },
-  role: {
-    type: String,
-    enum: Object.values(EWorkspaceMemberRole),
-    required: true,
-    default: EWorkspaceMemberRole.VIEWER
-  },
+const WorkspaceMemberSchema = createBaseSchema(
+  {
+    workspaceId: {
+      type: String,
+      required: true
+    },
+    userId: {
+      type: String,
+      required: true
+    },
+    role: {
+      type: String,
+      enum: Object.values(EWorkspaceMemberRole),
+      required: true,
+      default: EWorkspaceMemberRole.VIEWER
+    },
 
-  invitedBy: {
-    type: String,
-    index: true
-  },
-  invitedAt: {
-    type: Date
-  },
-  invitationAcceptedAt: {
-    type: Date
-  },
+    invitedBy: {
+      type: String,
+      index: true
+    },
+    invitedAt: {
+      type: Date
+    },
+    invitationAcceptedAt: {
+      type: Date
+    },
 
-  joinedAt: {
-    type: Date,
-    default: Date.now,
-    required: true
-  },
-  lastActiveAt: {
-    type: Date,
-    default: Date.now,
-    index: true
-  },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+      required: true
+    },
+    lastActiveAt: {
+      type: Date,
+      default: Date.now,
+      index: true
+    },
 
-  // Status
-  isActive: {
-    type: Boolean,
-    default: true,
-    index: true
-  },
+    // Status
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
 
-  // Custom permissions (override role defaults)
-  customPermissions: {
-    type: CustomPermissionsSchema,
-    default: null
-  },
+    // Custom permissions (override role defaults)
+    customPermissions: {
+      type: CustomPermissionsSchema,
+      default: null
+    },
 
-  // Metadata
-  notes: {
-    type: String,
-    maxlength: 500
+    // Metadata
+    notes: {
+      type: String,
+      maxlength: 500
+    }
+  },
+  {
+    statics: {
+      findByWorkspace(workspaceId: string): Promise<TWorkspaceMemberDocument[]> {
+        return this.find({
+          workspaceId,
+          isActive: true,
+          isDeleted: false
+        })
+          .sort({ joinedAt: 1 })
+          .exec();
+      },
+
+      findByUser(userId: string): Promise<TWorkspaceMemberDocument[]> {
+        return this.find({
+          userId,
+          isActive: true,
+          isDeleted: false
+        })
+          .sort({ lastActiveAt: -1 })
+          .exec();
+      },
+
+      findMember(workspaceId: string, userId: string): Promise<TWorkspaceMemberDocument | null> {
+        return this.findOne({
+          workspaceId,
+          userId,
+          isActive: true,
+          isDeleted: false
+        }).exec();
+      },
+
+      async isOwner(workspaceId: string, userId: string): Promise<boolean> {
+        const member = await this.findMember(workspaceId, userId);
+        return member?.role === EWorkspaceMemberRole.OWNER;
+      },
+
+      async isAdmin(workspaceId: string, userId: string): Promise<boolean> {
+        const member = await this.findMember(workspaceId, userId);
+        return (
+          member?.role === EWorkspaceMemberRole.ADMIN || member?.role === EWorkspaceMemberRole.OWNER
+        );
+      },
+
+      async hasRole(
+        workspaceId: string,
+        userId: string,
+        role: EWorkspaceMemberRole
+      ): Promise<boolean> {
+        const member = await this.findMember(workspaceId, userId);
+        if (!member) return false;
+
+        // Owner has all roles
+        if (member.role === EWorkspaceMemberRole.OWNER) return true;
+
+        // Check specific role hierarchy using switch for type safety
+        const getRoleLevel = (role: EWorkspaceMemberRole): number => {
+          switch (role) {
+            case EWorkspaceMemberRole.OWNER:
+              return 5;
+            case EWorkspaceMemberRole.ADMIN:
+              return 4;
+            case EWorkspaceMemberRole.EDITOR:
+              return 3;
+            case EWorkspaceMemberRole.COMMENTER:
+              return 2;
+            case EWorkspaceMemberRole.VIEWER:
+              return 1;
+            default:
+              return 0;
+          }
+        };
+
+        return getRoleLevel(member.role) >= getRoleLevel(role);
+      },
+
+      getActiveMembers(workspaceId: string): Promise<TWorkspaceMemberDocument[]> {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        return this.find({
+          workspaceId,
+          isActive: true,
+          isDeleted: false,
+          lastActiveAt: { $gte: thirtyDaysAgo }
+        })
+          .sort({ lastActiveAt: -1 })
+          .exec();
+      },
+
+      async hasPermission(
+        workspaceId: string,
+        userId: string,
+        permission: keyof IWorkspaceMemberPermissions
+      ): Promise<boolean> {
+        const member = await this.findMember(workspaceId, userId);
+        if (!member) return false;
+
+        // Owner has all permissions
+        if (member.role === EWorkspaceMemberRole.OWNER) return true;
+
+        // Check custom permissions first
+        if (member.customPermissions && member.customPermissions[permission] !== undefined) {
+          return member.customPermissions[permission] as boolean;
+        }
+
+        // Get role permissions using switch for type safety
+        const getRolePermissions = (
+          role: EWorkspaceMemberRole
+        ): Partial<IWorkspaceMemberPermissions> => {
+          switch (role) {
+            case EWorkspaceMemberRole.OWNER:
+              return {
+                canCreateDatabases: true,
+                canManageMembers: true,
+                canManageSettings: true,
+                canManageBilling: true,
+                canExportData: true,
+                canDeleteWorkspace: true,
+                canInviteMembers: true,
+                canRemoveMembers: true
+              };
+            case EWorkspaceMemberRole.ADMIN:
+              return {
+                canCreateDatabases: true,
+                canManageMembers: true,
+                canManageSettings: true,
+                canManageBilling: false,
+                canExportData: true,
+                canDeleteWorkspace: false,
+                canInviteMembers: true,
+                canRemoveMembers: true
+              };
+            case EWorkspaceMemberRole.EDITOR:
+              return {
+                canCreateDatabases: true,
+                canManageMembers: false,
+                canManageSettings: false,
+                canManageBilling: false,
+                canExportData: true,
+                canDeleteWorkspace: false,
+                canInviteMembers: false,
+                canRemoveMembers: false
+              };
+            case EWorkspaceMemberRole.COMMENTER:
+              return {
+                canCreateDatabases: false,
+                canManageMembers: false,
+                canManageSettings: false,
+                canManageBilling: false,
+                canExportData: false,
+                canDeleteWorkspace: false,
+                canInviteMembers: false,
+                canRemoveMembers: false
+              };
+            case EWorkspaceMemberRole.VIEWER:
+              return {
+                canCreateDatabases: false,
+                canManageMembers: false,
+                canManageSettings: false,
+                canManageBilling: false,
+                canExportData: false,
+                canDeleteWorkspace: false,
+                canInviteMembers: false,
+                canRemoveMembers: false
+              };
+            default:
+              return {};
+          }
+        };
+
+        const memberPermissions = getRolePermissions(member.role);
+        const rolePermission = memberPermissions[permission];
+        return rolePermission !== undefined ? rolePermission : false;
+      }
+    }
   }
-});
+);
 
 // Compound indexes
 WorkspaceMemberSchema.index({ workspaceId: 1, userId: 1 }, { unique: true });
@@ -129,178 +305,6 @@ WorkspaceMemberSchema.index({ workspaceId: 1, isActive: 1 });
 WorkspaceMemberSchema.index({ userId: 1, isActive: 1 });
 WorkspaceMemberSchema.index({ workspaceId: 1, role: 1 });
 WorkspaceMemberSchema.index({ lastActiveAt: -1 });
-
-// Static methods
-WorkspaceMemberSchema.statics.findByWorkspace = function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string
-): Promise<TWorkspaceMemberDocument[]> {
-  return this.find({
-    workspaceId,
-    isActive: true,
-    isDeleted: false
-  })
-    .sort({ joinedAt: 1 })
-    .exec();
-};
-
-WorkspaceMemberSchema.statics.findByUser = function (
-  this: TWorkspaceMemberModel,
-  userId: string
-): Promise<TWorkspaceMemberDocument[]> {
-  return this.find({
-    userId,
-    isActive: true,
-    isDeleted: false
-  })
-    .sort({ lastActiveAt: -1 })
-    .exec();
-};
-
-WorkspaceMemberSchema.statics.findMember = function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string,
-  userId: string
-): Promise<TWorkspaceMemberDocument | null> {
-  return this.findOne({
-    workspaceId,
-    userId,
-    isActive: true,
-    isDeleted: false
-  }).exec();
-};
-
-WorkspaceMemberSchema.statics.isOwner = async function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string,
-  userId: string
-): Promise<boolean> {
-  const member = await this.findMember(workspaceId, userId);
-  return member?.role === EWorkspaceMemberRole.OWNER;
-};
-
-WorkspaceMemberSchema.statics.isAdmin = async function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string,
-  userId: string
-): Promise<boolean> {
-  const member = await this.findMember(workspaceId, userId);
-  return member?.role === EWorkspaceMemberRole.ADMIN || member?.role === EWorkspaceMemberRole.OWNER;
-};
-
-WorkspaceMemberSchema.statics.hasRole = async function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string,
-  userId: string,
-  role: EWorkspaceMemberRole
-): Promise<boolean> {
-  const member = await this.findMember(workspaceId, userId);
-  if (!member) return false;
-
-  // Owner has all roles
-  if (member.role === EWorkspaceMemberRole.OWNER) return true;
-
-  // Check specific role hierarchy
-  const roleHierarchy: Record<EWorkspaceMemberRole, number> = {
-    [EWorkspaceMemberRole.OWNER]: 5,
-    [EWorkspaceMemberRole.ADMIN]: 4,
-    [EWorkspaceMemberRole.EDITOR]: 3,
-    [EWorkspaceMemberRole.COMMENTER]: 2,
-    [EWorkspaceMemberRole.VIEWER]: 1
-  };
-
-  return roleHierarchy[member.role] >= roleHierarchy[role];
-};
-
-WorkspaceMemberSchema.statics.getActiveMembers = function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string
-): Promise<TWorkspaceMemberDocument[]> {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  return this.find({
-    workspaceId,
-    isActive: true,
-    isDeleted: false,
-    lastActiveAt: { $gte: thirtyDaysAgo }
-  })
-    .sort({ lastActiveAt: -1 })
-    .exec();
-};
-
-WorkspaceMemberSchema.statics.hasPermission = async function (
-  this: TWorkspaceMemberModel,
-  workspaceId: string,
-  userId: string,
-  permission: keyof IWorkspaceMemberPermissions
-): Promise<boolean> {
-  const member = await this.findMember(workspaceId, userId);
-  if (!member) return false;
-
-  // Owner has all permissions
-  if (member.role === EWorkspaceMemberRole.OWNER) return true;
-
-  // Check custom permissions first
-  if (member.customPermissions && member.customPermissions[permission] !== undefined) {
-    return member.customPermissions[permission] as boolean;
-  }
-
-  // Default role-based permissions
-  const rolePermissions: Record<EWorkspaceMemberRole, Partial<IWorkspaceMemberPermissions>> = {
-    [EWorkspaceMemberRole.OWNER]: {
-      canCreateDatabases: true,
-      canManageMembers: true,
-      canManageSettings: true,
-      canManageBilling: true,
-      canExportData: true,
-      canDeleteWorkspace: true,
-      canInviteMembers: true,
-      canRemoveMembers: true
-    },
-    [EWorkspaceMemberRole.ADMIN]: {
-      canCreateDatabases: true,
-      canManageMembers: true,
-      canManageSettings: true,
-      canManageBilling: false,
-      canExportData: true,
-      canDeleteWorkspace: false,
-      canInviteMembers: true,
-      canRemoveMembers: true
-    },
-    [EWorkspaceMemberRole.EDITOR]: {
-      canCreateDatabases: true,
-      canManageMembers: false,
-      canManageSettings: false,
-      canManageBilling: false,
-      canExportData: true,
-      canDeleteWorkspace: false,
-      canInviteMembers: false,
-      canRemoveMembers: false
-    },
-    [EWorkspaceMemberRole.COMMENTER]: {
-      canCreateDatabases: false,
-      canManageMembers: false,
-      canManageSettings: false,
-      canManageBilling: false,
-      canExportData: false,
-      canDeleteWorkspace: false,
-      canInviteMembers: false,
-      canRemoveMembers: false
-    },
-    [EWorkspaceMemberRole.VIEWER]: {
-      canCreateDatabases: false,
-      canManageMembers: false,
-      canManageSettings: false,
-      canManageBilling: false,
-      canExportData: false,
-      canDeleteWorkspace: false,
-      canInviteMembers: false,
-      canRemoveMembers: false
-    }
-  };
-
-  const rolePermission = rolePermissions[member.role][permission];
-  return rolePermission !== undefined ? rolePermission : false;
-};
 
 // Pre-save middleware
 WorkspaceMemberSchema.pre('save', function (next) {

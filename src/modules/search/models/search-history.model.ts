@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { createBaseSchema, IBaseDocument, QueryHelpers } from '@/modules/core/models/base.model';
 import { IRecentSearch, ESearchScope } from '../types/search.types';
 
@@ -16,47 +16,95 @@ export type TSearchHistoryModel = Model<TSearchHistoryDocument, QueryHelpers> & 
   cleanupOldSearches(olderThanDays: number): Promise<number>;
 };
 
-const SearchHistorySchema = createBaseSchema({
-  userId: {
-    type: String,
-    required: true
-  },
-  query: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 500
-  },
-  scope: {
-    type: String,
-    enum: Object.values(ESearchScope),
-    required: true
-  },
-  filters: {
-    workspaceId: String,
-    databaseTypes: [String],
-    databaseIds: [String],
-    createdBy: String,
-    dateRange: {
-      start: Date,
-      end: Date
+const SearchHistorySchema = createBaseSchema(
+  {
+    userId: {
+      type: String,
+      required: true
     },
-    tags: [String],
-    isPublic: Boolean,
-    isArchived: Boolean,
-    isTemplate: Boolean
+    query: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500
+    },
+    scope: {
+      type: String,
+      enum: Object.values(ESearchScope),
+      required: true
+    },
+    filters: {
+      workspaceId: String,
+      databaseTypes: [String],
+      databaseIds: [String],
+      createdBy: String,
+      dateRange: {
+        start: Date,
+        end: Date
+      },
+      tags: [String],
+      isPublic: Boolean,
+      isArchived: Boolean,
+      isTemplate: Boolean
+    },
+    resultCount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    searchedAt: {
+      type: Date,
+      required: true,
+      default: Date.now
+    }
   },
-  resultCount: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  searchedAt: {
-    type: Date,
-    required: true,
-    default: Date.now
+  {
+    statics: {
+      findByUser(userId: string, limit: number = 10): Promise<TSearchHistoryDocument[]> {
+        return this.find({ userId }).sort({ searchedAt: -1 }).limit(limit).exec();
+      },
+
+      findPopularQueries(limit: number = 10): Promise<Array<{ query: string; count: number }>> {
+        return this.aggregate([
+          {
+            $group: {
+              _id: '$query',
+              count: { $sum: 1 },
+              lastSearched: { $max: '$searchedAt' }
+            }
+          },
+          {
+            $sort: { count: -1, lastSearched: -1 }
+          },
+          {
+            $limit: limit
+          },
+          {
+            $project: {
+              query: '$_id',
+              count: 1,
+              _id: 0
+            }
+          }
+        ]);
+      },
+
+      findByScope(scope: ESearchScope, limit: number = 10): Promise<TSearchHistoryDocument[]> {
+        return this.find({ scope }).sort({ searchedAt: -1 }).limit(limit).exec();
+      },
+
+      async cleanupOldSearches(olderThanDays: number = 90): Promise<number> {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+        const result = await this.deleteMany({
+          searchedAt: { $lt: cutoffDate }
+        });
+        return result.deletedCount || 0;
+      }
+    }
   }
-});
+);
 
 // Indexes for performance
 SearchHistorySchema.index({ userId: 1, searchedAt: -1 });
@@ -68,49 +116,6 @@ SearchHistorySchema.index({ searchedAt: -1 }); // For cleanup
 SearchHistorySchema.methods.updateResultCount = function (count: number) {
   this.resultCount = count;
   return this.save();
-};
-
-// Static methods
-SearchHistorySchema.statics.findByUser = function (userId: string, limit: number = 10) {
-  return this.find({ userId }).sort({ searchedAt: -1 }).limit(limit).exec();
-};
-
-SearchHistorySchema.statics.findPopularQueries = function (limit: number = 10) {
-  return this.aggregate([
-    {
-      $group: {
-        _id: '$query',
-        count: { $sum: 1 },
-        lastSearched: { $max: '$searchedAt' }
-      }
-    },
-    {
-      $sort: { count: -1, lastSearched: -1 }
-    },
-    {
-      $limit: limit
-    },
-    {
-      $project: {
-        query: '$_id',
-        count: 1,
-        _id: 0
-      }
-    }
-  ]);
-};
-
-SearchHistorySchema.statics.findByScope = function (scope: ESearchScope, limit: number = 10) {
-  return this.find({ scope }).sort({ searchedAt: -1 }).limit(limit).exec();
-};
-
-SearchHistorySchema.statics.cleanupOldSearches = function (olderThanDays: number = 90) {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
-  return this.deleteMany({
-    searchedAt: { $lt: cutoffDate }
-  }).then((result: any) => result.deletedCount || 0);
 };
 
 // TTL index to automatically delete old searches after 90 days

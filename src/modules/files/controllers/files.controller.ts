@@ -8,7 +8,7 @@ import * as filesService from '../services/files.service';
  */
 export const uploadFile = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = (req as AuthenticatedRequest).user.userId;
+    const userId = req?.user?.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     if (!req.file) {
@@ -40,8 +40,8 @@ export const bulkUploadFiles = catchAsync(
     const userId = (req as AuthenticatedRequest).user.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
-    const files = req.files as Express.Multer.File[];
-    if (!files || files.length === 0) {
+    const files = req.files;
+    if (!files || !Array.isArray(files) || files.length === 0) {
       return next(createNotFoundError('No files provided'));
     }
 
@@ -67,7 +67,7 @@ export const bulkUploadFiles = catchAsync(
 export const getFileById = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const { id } = req.params;
-    const userId = (req as AuthenticatedRequest).user.userId;
+    const userId = req?.user?.userId;
     if (!userId) return next(createNotFoundError('User authentication required'));
 
     const file = await filesService.getFileById(id, userId);

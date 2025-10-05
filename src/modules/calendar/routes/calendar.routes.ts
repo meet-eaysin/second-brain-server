@@ -39,12 +39,13 @@ import {
 import { CalendarSchema, EventSchema } from '../validators/calendar.validators';
 import { CalendarConnectionSchema } from '../validators/connection.validators';
 import { EEventStatus, EEventVisibility } from '../types/enums.types';
-import { authenticateToken, validateRequest } from '@/middlewares';
 import {
   resolveWorkspaceContext,
   ensureDefaultWorkspace,
   injectWorkspaceContext
 } from '@/modules/workspace/middleware/workspace.middleware';
+import { authenticateToken } from '@/middlewares/auth';
+import { validateRequest } from '@/middlewares/validation';
 
 const router = Router();
 

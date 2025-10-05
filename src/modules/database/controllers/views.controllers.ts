@@ -1,28 +1,24 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { catchAsync, sendSuccessResponse } from '@/utils';
 import { viewsService } from '@/modules/database';
 import { getUserId } from '@/auth/index';
 
-export const createDatabaseView = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId } = req.params;
-    const view = await viewsService.createView(databaseId, req.body, userId);
-    sendSuccessResponse(res, 'View created successfully', view, 201);
-  }
-);
+export const createDatabaseView = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId } = req.params;
+  const view = await viewsService.createView(databaseId, req.body, userId);
+  sendSuccessResponse(res, 'View created successfully', view, 201);
+});
 
-export const getDatabaseViews = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId } = req.params;
-    const views = await viewsService.getViews(databaseId, req.query, userId);
-    sendSuccessResponse(res, 'Views retrieved successfully', views);
-  }
-);
+export const getDatabaseViews = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId } = req.params;
+  const views = await viewsService.getViews(databaseId, req.query, userId);
+  sendSuccessResponse(res, 'Views retrieved successfully', views);
+});
 
 export const getDatabaseViewById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, viewId } = req.params;
     const view = await viewsService.getViewById(databaseId, viewId, userId);
@@ -30,26 +26,22 @@ export const getDatabaseViewById = catchAsync(
   }
 );
 
-export const updateDatabaseView = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, viewId } = req.params;
-    const view = await viewsService.updateView(databaseId, viewId, req.body, userId);
-    sendSuccessResponse(res, 'View updated successfully', view);
-  }
-);
+export const updateDatabaseView = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, viewId } = req.params;
+  const view = await viewsService.updateView(databaseId, viewId, req.body, userId);
+  sendSuccessResponse(res, 'View updated successfully', view);
+});
 
-export const deleteDatabaseView = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = getUserId(req);
-    const { databaseId, viewId } = req.params;
-    await viewsService.deleteView(databaseId, viewId, userId);
-    sendSuccessResponse(res, 'View deleted successfully');
-  }
-);
+export const deleteDatabaseView = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const userId = getUserId(req);
+  const { databaseId, viewId } = req.params;
+  await viewsService.deleteView(databaseId, viewId, userId);
+  sendSuccessResponse(res, 'View deleted successfully');
+});
 
 export const duplicateDatabaseView = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const userId = getUserId(req);
     const { databaseId, viewId } = req.params;
     const { newName } = req.body;
@@ -84,32 +76,28 @@ export const duplicateDatabaseView = catchAsync(
   }
 );
 
-export const updateViewGrouping = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { databaseId, viewId } = req.params;
-    const { groupBy } = req.body;
-    const userId = getUserId(req);
+export const updateViewGrouping = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { databaseId, viewId } = req.params;
+  const { groupBy } = req.body;
+  const userId = getUserId(req);
 
-    const view = await viewsService.updateViewGrouping(databaseId, viewId, groupBy, userId);
+  const view = await viewsService.updateViewGrouping(databaseId, viewId, groupBy, userId);
 
-    sendSuccessResponse(res, 'View grouping updated successfully', view);
-  }
-);
+  sendSuccessResponse(res, 'View grouping updated successfully', view);
+});
 
-export const changeViewType = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { databaseId, viewId } = req.params;
-    const { type } = req.body;
-    const userId = getUserId(req);
+export const changeViewType = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { databaseId, viewId } = req.params;
+  const { type } = req.body;
+  const userId = getUserId(req);
 
-    const view = await viewsService.changeViewType(databaseId, viewId, type, userId);
+  const view = await viewsService.changeViewType(databaseId, viewId, type, userId);
 
-    sendSuccessResponse(res, 'View type changed successfully', view);
-  }
-);
+  sendSuccessResponse(res, 'View type changed successfully', view);
+});
 
 export const updateViewPropertyVisibility = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, viewId } = req.params;
     const { visibleProperties } = req.body;
     const userId = getUserId(req);
@@ -126,7 +114,7 @@ export const updateViewPropertyVisibility = catchAsync(
 );
 
 export const updateViewHiddenProperties = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, viewId } = req.params;
     const { hiddenProperties } = req.body;
     const userId = getUserId(req);
@@ -143,7 +131,7 @@ export const updateViewHiddenProperties = catchAsync(
 );
 
 export const updateViewColumnFreeze = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const { databaseId, viewId } = req.params;
     const { frozenColumns } = req.body;
     const userId = getUserId(req);
@@ -159,26 +147,22 @@ export const updateViewColumnFreeze = catchAsync(
   }
 );
 
-export const updateViewFilters = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { databaseId, viewId } = req.params;
-    const { filters } = req.body;
-    const userId = getUserId(req);
+export const updateViewFilters = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { databaseId, viewId } = req.params;
+  const { filters } = req.body;
+  const userId = getUserId(req);
 
-    const view = await viewsService.updateViewFilters(databaseId, viewId, filters, userId);
+  const view = await viewsService.updateViewFilters(databaseId, viewId, filters, userId);
 
-    sendSuccessResponse(res, 'View filters updated successfully', view);
-  }
-);
+  sendSuccessResponse(res, 'View filters updated successfully', view);
+});
 
-export const updateViewSorts = catchAsync(
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { databaseId, viewId } = req.params;
-    const { sorts } = req.body;
-    const userId = getUserId(req);
+export const updateViewSorts = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { databaseId, viewId } = req.params;
+  const { sorts } = req.body;
+  const userId = getUserId(req);
 
-    const view = await viewsService.updateViewSorts(databaseId, viewId, sorts, userId);
+  const view = await viewsService.updateViewSorts(databaseId, viewId, sorts, userId);
 
-    sendSuccessResponse(res, 'View sorts updated successfully', view);
-  }
-);
+  sendSuccessResponse(res, 'View sorts updated successfully', view);
+});

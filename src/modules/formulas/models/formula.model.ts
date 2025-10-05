@@ -133,12 +133,21 @@ FormulaPropertySchema.index({ dependencies: 1, isActive: 1 });
 FormulaPropertySchema.index({ complexity: -1, isActive: 1 });
 
 // Static methods for formula properties
-FormulaPropertySchema.statics.findByDatabase = function (databaseId: string) {
-  return this.find({ databaseId, isActive: true, isDeleted: { $ne: true } });
+FormulaPropertySchema.statics.findByDatabase = function (
+  databaseId: string
+): Promise<TFormulaPropertyDocument[]> {
+  return (this as TFormulaPropertyModel).find({
+    databaseId,
+    isActive: true,
+    isDeleted: { $ne: true }
+  });
 };
 
-FormulaPropertySchema.statics.findByProperty = function (databaseId: string, propertyName: string) {
-  return this.findOne({
+FormulaPropertySchema.statics.findByProperty = function (
+  databaseId: string,
+  propertyName: string
+): Promise<TFormulaPropertyDocument | null> {
+  return (this as TFormulaPropertyModel).findOne({
     databaseId,
     propertyName,
     isActive: true,
@@ -146,8 +155,10 @@ FormulaPropertySchema.statics.findByProperty = function (databaseId: string, pro
   });
 };
 
-FormulaPropertySchema.statics.findDependentFormulas = function (propertyName: string) {
-  return this.find({
+FormulaPropertySchema.statics.findDependentFormulas = function (
+  propertyName: string
+): Promise<TFormulaPropertyDocument[]> {
+  return (this as TFormulaPropertyModel).find({
     dependencies: propertyName,
     isActive: true,
     isDeleted: { $ne: true }
@@ -157,8 +168,8 @@ FormulaPropertySchema.statics.findDependentFormulas = function (propertyName: st
 FormulaPropertySchema.statics.updateDependencies = async function (
   formulaId: string,
   dependencies: string[]
-) {
-  await this.findByIdAndUpdate(formulaId, {
+): Promise<void> {
+  await (this as TFormulaPropertyModel).findByIdAndUpdate(formulaId, {
     dependencies,
     lastValidated: new Date()
   });
@@ -226,26 +237,37 @@ FormulaCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 FormulaCacheSchema.index({ dependencies: 1, calculatedAt: -1 });
 
 // Static methods for formula cache
-FormulaCacheSchema.statics.findByRecord = function (recordId: string) {
-  return this.find({ recordId, isDeleted: { $ne: true } });
+FormulaCacheSchema.statics.findByRecord = function (
+  recordId: string
+): Promise<TFormulaCacheDocument[]> {
+  return (this as TFormulaCacheModel).find({ recordId, isDeleted: { $ne: true } });
 };
 
-FormulaCacheSchema.statics.findByProperty = function (recordId: string, propertyName: string) {
-  return this.findOne({ recordId, propertyName, isDeleted: { $ne: true } });
+FormulaCacheSchema.statics.findByProperty = function (
+  recordId: string,
+  propertyName: string
+): Promise<TFormulaCacheDocument | null> {
+  return (this as TFormulaCacheModel).findOne({ recordId, propertyName, isDeleted: { $ne: true } });
 };
 
-FormulaCacheSchema.statics.invalidateByDependency = async function (dependency: string) {
-  await this.deleteMany({ dependencies: dependency });
+FormulaCacheSchema.statics.invalidateByDependency = async function (
+  dependency: string
+): Promise<void> {
+  await (this as TFormulaCacheModel).deleteMany({ dependencies: dependency });
 };
 
-FormulaCacheSchema.statics.cleanupExpired = async function () {
-  const result = await this.deleteMany({
+FormulaCacheSchema.statics.cleanupExpired = async function (): Promise<number> {
+  const result = await (this as TFormulaCacheModel).deleteMany({
     expiresAt: { $lt: new Date() }
   });
   return result.deletedCount || 0;
 };
 
-FormulaCacheSchema.statics.getCacheStats = async function () {
+FormulaCacheSchema.statics.getCacheStats = async function (): Promise<{
+  totalEntries: number;
+  hitRate: number;
+  avgAge: number;
+}> {
   const pipeline = [
     {
       $group: {
@@ -257,7 +279,7 @@ FormulaCacheSchema.statics.getCacheStats = async function () {
     }
   ];
 
-  const result = await this.aggregate(pipeline);
+  const result = await (this as TFormulaCacheModel).aggregate(pipeline);
   const stats = result[0] || { totalEntries: 0, totalHits: 0, avgAge: 0 };
 
   return {
@@ -344,7 +366,7 @@ FormulaPerformanceSchema.statics.recordExecution = async function (
   formulaId: string,
   executionTime: number,
   success: boolean
-) {
+): Promise<void> {
   const update: any = {
     $inc: {
       totalExecutions: 1,
@@ -356,7 +378,7 @@ FormulaPerformanceSchema.statics.recordExecution = async function (
   };
 
   // Update execution time statistics
-  const existing = await this.findOne({ formulaId });
+  const existing = await (this as TFormulaPerformanceModel).findOne({ formulaId });
   if (existing) {
     const newTotal = existing.totalExecutions + 1;
     const newAverage =
@@ -379,19 +401,24 @@ FormulaPerformanceSchema.statics.recordExecution = async function (
     };
   }
 
-  await this.findOneAndUpdate({ formulaId }, update, { upsert: true });
+  await (this as TFormulaPerformanceModel).findOneAndUpdate({ formulaId }, update, { upsert: true });
 };
 
-FormulaPerformanceSchema.statics.getPerformanceStats = function (formulaId: string) {
-  return this.findOne({ formulaId });
+FormulaPerformanceSchema.statics.getPerformanceStats = function (formulaId: string): Promise<TFormulaPerformanceDocument | null> {
+  return (this as TFormulaPerformanceModel).findOne({ formulaId });
 };
 
-FormulaPerformanceSchema.statics.getSlowFormulas = function (limit = 10) {
-  return this.find({}).sort({ averageExecutionTime: -1 }).limit(limit).populate('formulaId');
+FormulaPerformanceSchema.statics.getSlowFormulas = function (limit = 10): Promise<TFormulaPerformanceDocument[]> {
+  return (this as TFormulaPerformanceModel)
+    .find({})
+    .sort({ averageExecutionTime: -1 })
+    .limit(limit)
+    .populate('formulaId');
 };
 
-FormulaPerformanceSchema.statics.getErrorProneFormulas = function (limit = 10) {
-  return this.find({ errorRate: { $gt: 0 } })
+FormulaPerformanceSchema.statics.getErrorProneFormulas = function (limit = 10): Promise<TFormulaPerformanceDocument[]> {
+  return (this as TFormulaPerformanceModel)
+    .find({ errorRate: { $gt: 0 } })
     .sort({ errorRate: -1 })
     .limit(limit)
     .populate('formulaId');

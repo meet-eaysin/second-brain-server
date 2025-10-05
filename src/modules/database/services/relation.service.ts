@@ -387,8 +387,7 @@ export const relationService = {
   removeConnection: async (
     relationId: string,
     sourceRecordId: string,
-    targetRecordId: string,
-    userId: string
+    targetRecordId: string
   ): Promise<void> => {
     const connection = await RelationConnectionModel.findConnection(
       relationId,

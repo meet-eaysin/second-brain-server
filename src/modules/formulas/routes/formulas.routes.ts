@@ -127,57 +127,44 @@ const formatResultSchema = z.object({
   format: z.string().optional()
 });
 
-// Public routes (no authentication required)
 router.get('/formulas/functions', getAvailableFunctions);
 
-// All other routes require authentication
 router.use(authenticateToken);
 
-// Formula validation and testing
 router.post('/formulas/validate', validateBody(formulaExpressionSchema), validateFormula);
-
 router.post('/formulas/test', validateBody(testFormulaSchema), testFormula);
-
 router.post('/formulas/execute', validateBody(executeFormulaSchema), executeFormula);
-
 router.post(
   '/formulas/analyze',
   validateBody(z.object({ expression: z.string().min(1).max(5000) })),
   getFormulaDependencies
 );
-
 router.post(
   '/formulas/optimize',
   validateBody(z.object({ expression: z.string().min(1).max(5000) })),
   optimizeFormula
 );
-
-// Formula property management
 router.post(
   '/formulas/properties',
   validateBody(createFormulaPropertySchema),
   createFormulaProperty
 );
-
 router.put(
   '/formulas/properties/:formulaId',
   validateParams(z.object({ formulaId: z.string().min(1) })),
   validateBody(updateFormulaPropertySchema),
   updateFormulaProperty
 );
-
 router.delete(
   '/formulas/properties/:formulaId',
   validateParams(z.object({ formulaId: z.string().min(1) })),
   deleteFormulaProperty
 );
-
 router.get(
   '/formulas/databases/:databaseId',
   validateParams(z.object({ databaseId: z.string().min(1) })),
   getDatabaseFormulas
 );
-
 router.get(
   '/formulas/databases/:databaseId/properties/:propertyName',
   validateParams(
@@ -189,28 +176,22 @@ router.get(
   getFormulaProperty
 );
 
-// Formula performance and monitoring
 router.get(
   '/formulas/performance/:formulaId',
   validateParams(z.object({ formulaId: z.string().min(1) })),
   getFormulaPerformance
 );
-
 router.get(
   '/formulas/performance/slow',
   validateQuery(z.object({ limit: z.string().regex(/^\d+$/).optional() })),
   getSlowFormulas
 );
-
 router.get(
   '/formulas/performance/errors',
   validateQuery(z.object({ limit: z.string().regex(/^\d+$/).optional() })),
   getErrorProneFormulas
 );
-
-// Cache management
 router.get('/formulas/cache/stats', getCacheStats);
-
 router.delete(
   '/formulas/cache',
   validateQuery(
@@ -221,24 +202,15 @@ router.delete(
   ),
   clearFormulaCache
 );
-
 router.post('/formulas/cache/cleanup', cleanupExpiredCache);
-
-// Formula recalculation
 router.post(
   '/formulas/recalculate/:recordId',
   validateParams(z.object({ recordId: z.string().min(1) })),
   validateBody(recalculateFormulasSchema),
   recalculateFormulas
 );
-
-// AI-powered features
 router.post('/formulas/suggestions', validateBody(formulaSuggestionsSchema), getFormulaSuggestions);
-
-// Utility functions
 router.post('/formulas/format', validateBody(formatResultSchema), formatFormulaResult);
-
-// Function search and discovery
 router.get(
   '/formulas/functions/search',
   validateQuery(

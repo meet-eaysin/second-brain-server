@@ -225,7 +225,8 @@ export const addSoftDeleteMethods = (schema: Schema) => {
 };
 
 export const createBaseSchema = <TDocument, TModel>(
-  additionalFields?: any
+  additionalFields?: any,
+  options?: { statics?: Record<string, any> }
 ): Schema<TDocument, TModel, QueryHelpers> => {
   const schema = new Schema(additionalFields || {}, {
     timestamps: true,
@@ -242,7 +243,8 @@ export const createBaseSchema = <TDocument, TModel>(
         }
         return ret;
       }
-    }
+    },
+    statics: options?.statics || {}
   }) as Schema<any, any, QueryHelpers>;
 
   addBaseSchema(schema);

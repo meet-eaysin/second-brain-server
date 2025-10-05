@@ -13,8 +13,6 @@ import {
   createConflictError,
   createForbiddenError
 } from '@/utils/error.utils';
-import { permissionService } from '@/modules/permissions/services/permission.service';
-import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import {
   buildWorkspaceAwareDatabaseQuery,
   formatDatabaseResponse,
@@ -60,10 +58,8 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
 
     await database.save();
 
-    // Get module config for this database type
     const moduleConfig = moduleConfigService.getModuleConfig(database.type as EDatabaseType);
     if (moduleConfig) {
-      // Use module initialization service to create properties and views
       const properties = await moduleInitializationService.createModuleProperties(
         database.id.toString(),
         moduleConfig,
@@ -79,8 +75,6 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
       );
       database.views = views.map((view: any) => view._id).filter(Boolean);
     } else {
-      // Fallback for custom databases or unknown types
-      // Always create a default "name" property for custom databases
       const nameProperty = new PropertyModel({
         databaseId: database.id,
         name: 'Name',
@@ -100,7 +94,6 @@ const createDatabase = async (data: ICreateDatabaseRequest, userId: string): Pro
       await nameProperty.save();
       database.properties = [nameProperty.id];
 
-      // Create default view based on defaultViewType or TABLE
       const defaultViewType = (data.defaultViewType as EViewType) || EViewType.TABLE;
       const defaultView = new ViewModel({
         databaseId: database.id,
@@ -165,7 +158,7 @@ const getDatabases = async (params: IDatabaseQueryParams, userId: string) => {
   }
 };
 
-const getDatabaseById = async (id: string, userId: string): Promise<IDatabase> => {
+const getDatabaseById = async (id: string): Promise<IDatabase> => {
   try {
     const database = await DatabaseModel.findOne({
       _id: id,
@@ -176,18 +169,6 @@ const getDatabaseById = async (id: string, userId: string): Promise<IDatabase> =
       .exec();
 
     if (!database) throw createNotFoundError('Database', id);
-
-    // Check permission to view this database
-    const hasPermission = await permissionService.hasPermission(
-      EShareScope.DATABASE,
-      id,
-      userId,
-      EPermissionLevel.READ
-    );
-
-    if (!hasPermission && database.createdBy !== userId && !database.isPublic) {
-      throw createForbiddenError('Insufficient permissions to view this database');
-    }
 
     return formatDatabaseResponse(database);
   } catch (error: any) {
@@ -208,23 +189,9 @@ const updateDatabase = async (
     }).exec();
     if (!database) throw createNotFoundError('Database', id);
 
-    // Check if database is frozen - allow unfreezing
     const isTryingToUnfreeze = data.isFrozen === false;
-    if (database.isFrozen && !isTryingToUnfreeze) {
+    if (database.isFrozen && !isTryingToUnfreeze)
       throw createForbiddenError('Cannot edit a frozen database');
-    }
-
-    // Check permission to edit this database
-    const hasPermission = await permissionService.hasPermission(
-      EShareScope.DATABASE,
-      id,
-      userId,
-      EPermissionLevel.EDIT
-    );
-
-    if (!hasPermission && database.createdBy !== userId) {
-      throw createForbiddenError('Insufficient permissions to edit this database');
-    }
 
     if (data.name && data.name !== database.name) {
       const existingDatabase = await DatabaseModel.findOne({
@@ -263,22 +230,7 @@ const deleteDatabase = async (
     }).exec();
     if (!database) throw createNotFoundError('Database', id);
 
-    // Check if database is frozen
-    if (database.isFrozen) {
-      throw createForbiddenError('Cannot delete a frozen database');
-    }
-
-    // Check permission to delete this database
-    const hasPermission = await permissionService.hasPermission(
-      EShareScope.DATABASE,
-      id,
-      userId,
-      EPermissionLevel.FULL_ACCESS
-    );
-
-    if (!hasPermission && database.createdBy !== userId) {
-      throw createForbiddenError('Insufficient permissions to delete this database');
-    }
+    if (database.isFrozen) throw createForbiddenError('Cannot delete a frozen database');
 
     if (permanent) {
       await Promise.all([
@@ -296,25 +248,13 @@ const deleteDatabase = async (
   }
 };
 
-const getDatabaseStats = async (id: string, userId: string): Promise<IDatabaseStats> => {
+const getDatabaseStats = async (id: string): Promise<IDatabaseStats> => {
   try {
     const database = await DatabaseModel.findOne({
       _id: id,
       isDeleted: { $ne: true }
     }).exec();
     if (!database) throw createNotFoundError('Database', id);
-
-    // Check permission to view database stats
-    const hasPermission = await permissionService.hasPermission(
-      EShareScope.DATABASE,
-      id,
-      userId,
-      EPermissionLevel.READ
-    );
-
-    if (!hasPermission && database.createdBy !== userId && !database.isPublic) {
-      throw createForbiddenError('Insufficient permissions to view database statistics');
-    }
 
     return await calculateDatabaseStats(id);
   } catch (error: any) {
@@ -597,19 +537,6 @@ const bulkUpdateDatabases = async (
             continue;
           }
 
-          // Check permission to edit this database
-          const hasPermission = await permissionService.hasPermission(
-            EShareScope.DATABASE,
-            database.id,
-            userId,
-            EPermissionLevel.EDIT
-          );
-
-          if (!hasPermission && database.createdBy !== userId) {
-            results.failed.push(database.id);
-            continue;
-          }
-
           // Apply updates
           if (updates.name !== undefined) database.name = updates.name;
           if (updates.description !== undefined) database.description = updates.description;
@@ -671,19 +598,6 @@ const bulkDeleteDatabases = async (
             continue;
           }
 
-          // Check permission to delete this database
-          const hasPermission = await permissionService.hasPermission(
-            EShareScope.DATABASE,
-            database.id,
-            userId,
-            EPermissionLevel.FULL_ACCESS
-          );
-
-          if (!hasPermission && database.createdBy !== userId) {
-            results.failed.push(database.id);
-            continue;
-          }
-
           if (permanent) {
             // Permanently delete database and all related data
             await Promise.all([
@@ -737,18 +651,6 @@ const exportDatabase = async (
       .exec();
 
     if (!database) throw createNotFoundError('Database', id);
-
-    // Check permission to export this database
-    const hasPermission = await permissionService.hasCapability(
-      EShareScope.DATABASE,
-      id,
-      userId,
-      'canExport'
-    );
-
-    if (!hasPermission && database.createdBy !== userId) {
-      throw createForbiddenError('Insufficient permissions to export this database');
-    }
 
     const exportData: any = {
       database: {

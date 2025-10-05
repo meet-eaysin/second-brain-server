@@ -200,8 +200,8 @@ const connectRecords = async (
   return {
     sourceRecordId,
     targetRecordId,
-    sourceModule: sourceDatabase.type as EDatabaseType,
-    targetModule: targetDatabase.type as EDatabaseType,
+    sourceModule: sourceDatabase.type,
+    targetModule: targetDatabase.type,
     relationId: relation.id,
     createdAt: new Date()
   };
@@ -234,7 +234,6 @@ const disconnectRecords = async (
     throw createNotFoundError('Target database not found');
   }
 
-  // Get all relations for the source database to find the matching one
   const relations = await relationService.getDatabaseRelations(sourceDatabase.id.toString());
   const relation = relations.find(r => r.targetDatabaseId === targetDatabase.id.toString());
 
@@ -242,7 +241,7 @@ const disconnectRecords = async (
     throw createNotFoundError('Relation not found between these modules');
   }
 
-  await relationService.removeConnection(relation.id, sourceRecordId, targetRecordId, userId);
+  await relationService.removeConnection(relation.id, sourceRecordId, targetRecordId);
 };
 
 const getRelatedRecords = async (

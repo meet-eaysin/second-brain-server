@@ -179,9 +179,7 @@ export const getRecordById = async (
     databaseId
   }).exec();
 
-  if (!record) {
-    throw createAppError('Record not found', 404);
-  }
+  if (!record) throw createAppError('Record not found', 404);
 
   return formatRecordResponse(record);
 };
@@ -219,7 +217,6 @@ export const updateRecord = async (
         400
       );
     }
-    // Merge validated properties with existing record properties
     updateData.properties = { ...record.properties, ...validationResult.validatedProperties };
   }
 
@@ -367,22 +364,17 @@ export const validateRecordProperties = async (
   const propertyNameMap = createPropertyNameMap(databaseProperties);
 
   for (const [propertyKey, value] of Object.entries(properties)) {
-    // Check if propertyKey is a property ID first
     let property = databaseProperties.find(p => p.id === propertyKey);
 
     if (!property) {
-      // If not found by ID, try to find by exact name match
       property = databaseProperties.find(p => p.name === propertyKey);
       if (!property) {
-        // Try normalized name matching as fallback
         const matchedPropertyName = findMatchingPropertyName(propertyKey, propertyNameMap);
         property = databaseProperties.find(p => p.name === matchedPropertyName);
       }
     }
 
-    if (!property) {
-      throw createAppError(`Property '${propertyKey}' does not exist in database schema`, 400);
-    }
+    if (!property) throw createAppError(`Property '${propertyKey}' does not exist in database schema`, 400);
 
     validatedProperties[property.name] = value;
   }
@@ -402,9 +394,7 @@ export const createPropertyNameMap = (properties: IProperty[]): Map<string, stri
     const name = property.name;
 
     map.set(name.toLowerCase(), name);
-
     map.set(name.toLowerCase().replace(/\s+/g, '_'), name);
-
     map.set(
       name.toLowerCase().replace(/\s+(.)/g, (_, char) => char.toUpperCase()),
       name

@@ -116,8 +116,12 @@ NotificationSchema.index({ userId: 1, workspaceId: 1, readAt: 1 });
 NotificationSchema.statics.findByUser = function (
   userId: string,
   options: { limit?: number; offset?: number; unreadOnly?: boolean } = {}
-) {
-  let query = this.find({ userId }).notDeleted().notArchived();
+): Promise<TNotificationDocument[]> {
+  let query = (this as TNotificationModel).find({
+    userId,
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true }
+  });
 
   if (options.unreadOnly) {
     query = query.where({ readAt: null });
@@ -137,8 +141,12 @@ NotificationSchema.statics.findByUser = function (
 NotificationSchema.statics.findByWorkspace = function (
   workspaceId: string,
   options: { limit?: number; offset?: number } = {}
-) {
-  let query = this.find({ workspaceId }).notDeleted().notArchived();
+): Promise<TNotificationDocument[]> {
+  let query = (this as TNotificationModel).find({
+    workspaceId,
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true }
+  });
 
   if (options.offset) {
     query = query.skip(options.offset);
@@ -151,39 +159,46 @@ NotificationSchema.statics.findByWorkspace = function (
   return query.sort({ createdAt: -1 }).exec();
 };
 
-NotificationSchema.statics.countUnread = function (userId: string, workspaceId?: string) {
+NotificationSchema.statics.countUnread = function (
+  userId: string,
+  workspaceId?: string
+): Promise<number> {
   const query: any = {
     userId,
-    readAt: null
+    readAt: null,
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true }
   };
 
   if (workspaceId) {
     query.workspaceId = workspaceId;
   }
 
-  return this.countDocuments(query).notDeleted().notArchived().exec();
+  return (this as TNotificationModel).countDocuments(query).exec();
 };
 
-NotificationSchema.statics.markAllAsRead = function (userId: string, workspaceId?: string) {
+NotificationSchema.statics.markAllAsRead = function (
+  userId: string,
+  workspaceId?: string
+): Promise<{ modifiedCount: number }> {
   const query: any = {
     userId,
-    readAt: null
+    readAt: null,
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true }
   };
 
   if (workspaceId) {
     query.workspaceId = workspaceId;
   }
 
-  return this.updateMany(query, {
+  return (this as TNotificationModel).updateMany(query, {
     $set: {
       readAt: new Date(),
       status: ENotificationStatus.READ,
       updatedAt: new Date()
     }
-  })
-    .notDeleted()
-    .notArchived()
-    .exec();
+  }).exec();
 };
 
 // Instance methods

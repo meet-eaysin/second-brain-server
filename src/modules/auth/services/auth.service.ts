@@ -2,7 +2,6 @@ import { sendEmail } from '@/config/mailer';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { jwtConfig } from '@/config/jwt/jwt.config';
 import { workspaceService } from '@/modules/workspace';
-import { WorkspaceMemberModel } from '@/modules/workspace/models/workspace-member.model';
 import {
   createAccountDeactivatedError,
   createAuthenticationFailedError,
@@ -49,16 +48,17 @@ import {
 
 export const getUserWithWorkspaces = async (userId: string) => {
   const workspaces = await workspaceService.getUserWorkspaces(userId);
-  const workspaceMemberships = await WorkspaceMemberModel.findByUser(userId);
 
   return workspaces.map(workspace => {
-    const membership = workspaceMemberships.find(m => m.workspaceId.toString() === workspace.id);
+    const isOwner = workspace.ownerId === userId;
+    const role = isOwner ? 'owner' : 'member';
+
     return {
       id: workspace.id,
       name: workspace.name,
       description: workspace.description,
       type: workspace.type,
-      role: membership?.role || 'viewer',
+      role,
       isDefault: workspace.type === 'personal',
       memberCount: workspace.memberCount,
       databaseCount: workspace.databaseCount,
@@ -282,12 +282,12 @@ export const forgotPassword = async (forgotPasswordData: TForgotPasswordRequest)
     to: user.email,
     subject: 'Password Reset Request',
     html: `
-            <h2>Password Reset Request</h2>
-            <p>You have requested to reset your password. Click the link below to reset it:</p>
-            <a href="${process.env.FRONTEND_URL}/reset-password?token=${resetToken}">Reset Password</a>
-            <p>This link will expire in 10 minutes.</p>
-            <p>If you didn't request this, please ignore this email.</p>
-        `
+        <h2>Password Reset Request</h2>
+        <p>You have requested to reset your password. Click the link below to reset it:</p>
+        <a href="${process.env.FRONTEND_URL}/reset-password?token=${resetToken}">Reset Password</a>
+        <p>This link will expire in 10 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+    `
   });
 };
 

@@ -23,11 +23,9 @@ export const authenticateToken = async (
     const payload = verifyAccessToken(accessToken);
 
     const user = await getUserById(payload.userId);
-    if (!user || !user.isActive) {
-      return next(createUnauthorizedError('Invalid token'));
-    }
+    if (!user || !user.isActive) return next(createUnauthorizedError('Invalid token'));
 
-    (req as AuthenticatedRequest).user = payload;
+    req.user = payload;
     next();
   } catch (error) {
     next(createUnauthorizedError('Invalid token'));
@@ -36,15 +34,10 @@ export const authenticateToken = async (
 
 export const requireRoles = (...roles: TUserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const { user } = req as AuthenticatedRequest;
+    const { user } = req;
 
-    if (!user) {
-      return next(createUnauthorizedError('Authentication required'));
-    }
-
-    if (!roles.includes(user.role)) {
-      return next(createForbiddenError('Insufficient permissions'));
-    }
+    if (!user) return next(createUnauthorizedError('Authentication required'));
+    if (!roles.includes(user.role)) return next(createForbiddenError('Insufficient permissions'));
 
     next();
   };
@@ -66,9 +59,7 @@ export const optionalAuth = async (
       const payload = verifyAccessToken(accessToken);
       const user = await getUserById(payload.userId);
 
-      if (user && user.isActive) {
-        (req as AuthenticatedRequest).user = payload;
-      }
+      if (user && user.isActive) req.user = payload;
     }
 
     next();

@@ -3,12 +3,13 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { errorHandler, notFound } from './middlewares';
-import { encryptRequest, encryptResponse, generalLimiter } from './config';
+import { encryptRequest, encryptResponse } from './config';
 import { stream } from './config/logger';
 import routes from './routes';
 import { createAppError } from './utils';
 import { validateGoogleConfig } from './config/google/google';
+import { notFound } from '@/middlewares/not-found';
+import { errorHandler } from '@/middlewares/error-handler';
 
 dotenv.config();
 
@@ -58,14 +59,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'X-Forwarded-For',
-      'workspace-id',
-      'x-workspace-id'
-    ],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'workspace-id'],
     exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
   })
 );
