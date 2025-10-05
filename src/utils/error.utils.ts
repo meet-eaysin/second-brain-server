@@ -1,5 +1,5 @@
-import {IValidationError, TAppError} from "@/types";
-import {convertErrorArrayToRecord, convertToValidationError} from "@/utils/validation-error-converter";
+import {IValidationError, TAppError} from '@/types';
+import {convertErrorArrayToRecord, convertToValidationError} from '@/utils/validation-error-converter';
 
 /**
  * Get error code from status code
@@ -29,7 +29,7 @@ export const getErrorCode = (statusCode: number): string => {
     default:
       return 'UNKNOWN_ERROR';
   }
-}
+};
 
 export const createAppError = (
   message: string,

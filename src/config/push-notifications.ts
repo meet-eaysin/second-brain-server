@@ -26,8 +26,8 @@ if (FIREBASE_PROJECT_ID && FIREBASE_PRIVATE_KEY && FIREBASE_CLIENT_EMAIL) {
       credential: admin.credential.cert({
         projectId: FIREBASE_PROJECT_ID,
         privateKey: FIREBASE_PRIVATE_KEY,
-        clientEmail: FIREBASE_CLIENT_EMAIL,
-      }),
+        clientEmail: FIREBASE_CLIENT_EMAIL
+      })
     }, 'push-notifications');
   } catch (error) {
     console.warn('Firebase Admin initialization failed:', error);
@@ -136,21 +136,21 @@ export const sendWebPushNotification = async (
       data: {
         ...payload.data,
         url: payload.url || '/',
-        timestamp: payload.timestamp || Date.now(),
+        timestamp: payload.timestamp || Date.now()
       },
       actions: payload.actions || [],
       requireInteraction: payload.requireInteraction || false,
       silent: payload.silent || false,
       tag: payload.tag,
-      vibrate: payload.vibrate || [200, 100, 200],
+      vibrate: payload.vibrate || [200, 100, 200]
     });
 
     const options = {
       TTL: 24 * 60 * 60, // 24 hours
       urgency: 'normal' as const,
       headers: {
-        'Content-Encoding': 'gzip',
-      },
+        'Content-Encoding': 'gzip'
+      }
     };
 
     await webpush.sendNotification(subscription, notificationPayload, options);
@@ -170,14 +170,14 @@ export const sendFCMNotification = async (payload: IFCMPayload): Promise<void> =
     }
 
     const messaging = admin.messaging(firebaseApp);
-    
+
     const message: admin.messaging.Message = {
       token: payload.token,
       notification: payload.notification,
       data: payload.data,
       android: payload.android,
       apns: payload.apns,
-      webpush: payload.webpush,
+      webpush: payload.webpush
     };
 
     await messaging.send(message);
@@ -200,18 +200,18 @@ export const sendFCMMulticast = async (
     }
 
     const messaging = admin.messaging(firebaseApp);
-    
+
     const message: admin.messaging.MulticastMessage = {
       tokens,
       notification: payload.notification,
       data: payload.data,
       android: payload.android,
       apns: payload.apns,
-      webpush: payload.webpush,
+      webpush: payload.webpush
     };
 
     const response = await messaging.sendEachForMulticast(message);
-    
+
     const failedTokens: string[] = [];
     response.responses.forEach((resp: admin.messaging.SendResponse, idx: number) => {
       if (!resp.success) {
@@ -222,7 +222,7 @@ export const sendFCMMulticast = async (
     return {
       successCount: response.successCount,
       failureCount: response.failureCount,
-      failedTokens,
+      failedTokens
     };
   } catch (error) {
     console.error('FCM multicast failed:', error);
@@ -240,11 +240,11 @@ export const validateFCMToken = async (token: string): Promise<boolean> => {
     }
 
     const messaging = admin.messaging(firebaseApp);
-    
+
     // Try to send a dry-run message
     await messaging.send({
       token,
-      data: { test: 'true' },
+      data: { test: 'true' }
     }, true); // dry-run = true
 
     return true;

@@ -238,7 +238,7 @@ export const collaborationService = {
       return { transformed: op1, hasConflict: false };
     }
 
-    let transformed = { ...op1 };
+    const transformed = { ...op1 };
     let hasConflict = false;
 
     // Transform based on operation types

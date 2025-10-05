@@ -173,10 +173,10 @@ export const initializeUserWorkspace = async (userId: string, userInfo?: { first
   try {
     // Create default workspace
     const workspace = await ensureUserDefaultWorkspace(userId, userInfo);
-    
+
     // Optionally create default databases (can be enabled/disabled via config)
     const shouldCreateDefaultDatabases = process.env.CREATE_DEFAULT_DATABASES !== 'false';
-    
+
     if (shouldCreateDefaultDatabases) {
       // This would create default databases like Tasks, Notes, etc.
       // Implementation depends on business requirements
@@ -215,8 +215,8 @@ export const validateWorkspaceAccess = async (workspaceId: string, userId: strin
 // Get workspace context from request (helper for middleware)
 export const extractWorkspaceContext = (req: any) => {
   // Try to get workspace ID from various sources
-  const workspaceId = req.params?.workspaceId || 
-                     req.query?.workspaceId || 
+  const workspaceId = req.params?.workspaceId ||
+                     req.query?.workspaceId ||
                      req.body?.workspaceId ||
                      req.workspace?.id;
 
@@ -235,9 +235,9 @@ export const generateWorkspaceNameSuggestions = (userInfo?: { firstName?: string
     `${fullName} Workspace`,
     `${firstName}'s Space`,
     `${fullName} Hub`,
-    `Personal Workspace`,
+    'Personal Workspace',
     `${firstName}'s Projects`,
-    `Main Workspace`
+    'Main Workspace'
   ];
 };
 
@@ -260,7 +260,7 @@ export const getWorkspaceTypeDisplayName = (type: EWorkspaceType): string => {
     [EWorkspaceType.ORGANIZATION]: 'Organization',
     [EWorkspaceType.PUBLIC]: 'Public'
   };
-  
+
   return displayNames[type] || type;
 };
 
@@ -276,13 +276,13 @@ export const calculateWorkspaceStorageUsage = async (workspaceId: string) => {
     // Calculate total storage (this is a simplified calculation)
     // In a real implementation, you'd calculate actual file sizes, attachments, etc.
     let totalStorage = 0;
-    
+
     for (const database of databases) {
       const recordCount = await RecordModel.countDocuments({
         databaseId: database.id.toString(),
         isDeleted: { $ne: true }
       });
-      
+
       // Rough estimate: 1KB per record (adjust based on actual data)
       totalStorage += recordCount * 1024;
     }

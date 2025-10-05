@@ -17,7 +17,7 @@ import {
     grantPermissionSchema,
     resourceParamsSchema,
     revokePermissionSchema
-} from "@/modules/permissions/validations/permissions.validations";
+} from '@/modules/permissions/validations/permissions.validations';
 
 const router = Router();
 

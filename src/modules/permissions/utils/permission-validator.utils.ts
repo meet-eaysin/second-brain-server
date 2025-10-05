@@ -14,7 +14,7 @@ export interface IPermissionValidationOptions {
 }
 
 export class PermissionValidator {
-  
+
   // Validate database access
   static async validateDatabaseAccess(
     databaseId: string,
@@ -309,7 +309,7 @@ export class PermissionValidator {
     };
 
     const capabilities: Record<string, boolean> = {};
-    
+
     // Check all permission levels
     for (const level of Object.values(EPermissionLevel)) {
       try {

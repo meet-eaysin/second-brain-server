@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 export enum EViewType {
   TABLE = 'TABLE',
   BOARD = 'BOARD',
@@ -132,76 +130,6 @@ export interface IUpdateViewRequest {
 }
 
 export interface IViewResponse extends IDatabaseView {}
-
-export const ViewFilterSchema = z.object({
-  id: z.string().optional(),
-  property: z.string().min(1, 'Property is required'),
-  condition: z.enum(EFilterCondition),
-  value: z.any().optional(),
-  operator: z.enum(EFilterOperator).default(EFilterOperator.AND)
-});
-
-export const ViewSortSchema = z.object({
-  property: z.string().min(1, 'Property is required'),
-  direction: z.enum(ESortDirection).default(ESortDirection.ASCENDING)
-});
-
-export const ViewGroupSchema = z.object({
-  property: z.string().min(1, 'Property is required'),
-  direction: z.enum(ESortDirection).default(ESortDirection.ASCENDING)
-});
-
-export const ViewSettingsSchema = z.object({
-  filters: z.array(ViewFilterSchema).default([]),
-  sorts: z.array(ViewSortSchema).default([]),
-  groupBy: ViewGroupSchema.optional(),
-  visibleProperties: z.array(z.string()).default([]),
-  hiddenProperties: z.array(z.string()).default([]),
-  frozenColumns: z.array(z.string()).default([]),
-  pageSize: z.number().min(1).max(1000).default(25),
-
-  // View-specific settings
-  boardGroupProperty: z.string().optional(),
-  calendarDateProperty: z.string().optional(),
-  calendarViewType: z.enum(['month', 'week', 'day']).optional(),
-  galleryImageProperty: z.string().optional(),
-  galleryCardSize: z.enum(['small', 'medium', 'large']).optional(),
-  timelineStartProperty: z.string().optional(),
-  timelineEndProperty: z.string().optional(),
-  ganttStartProperty: z.string().optional(),
-  ganttEndProperty: z.string().optional(),
-  ganttDependencyProperty: z.string().optional()
-});
-
-export const CreateViewSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'View name is required')
-    .max(100, 'View name cannot exceed 100 characters')
-    .trim(),
-  type: z.enum(EViewType),
-  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
-  isDefault: z.boolean().default(false),
-  isPublic: z.boolean().default(false),
-  settings: ViewSettingsSchema
-});
-
-export const UpdateViewSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'View name is required')
-    .max(100, 'View name cannot exceed 100 characters')
-    .trim()
-    .optional(),
-  description: z.string().max(500, 'Description cannot exceed 500 characters').trim().optional(),
-  isDefault: z.boolean().optional(),
-  isPublic: z.boolean().optional(),
-  settings: ViewSettingsSchema.partial().optional()
-});
-
-export const ViewIdSchema = z.object({
-  viewId: z.string().min(1, 'View ID is required')
-});
 
 // Query builder types
 export interface IViewQuery {

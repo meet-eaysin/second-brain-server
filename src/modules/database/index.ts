@@ -62,8 +62,79 @@ export {
   createDatabaseSchema,
   updateDatabaseSchema,
   getDatabasesQuerySchema,
-  databaseIdSchema
+  databaseIdSchema,
+  DatabaseTypeSchema,
+  DatabaseIconSchema,
+  DatabaseCoverSchema,
+  DatabaseTemplateSchema,
+  DatabaseSchema,
+  DatabaseStatsSchema
 } from './validators/database.validators';
+
+export {
+  CreateRecordSchema,
+  UpdateRecordSchema,
+  BulkUpdateRecordsSchema,
+  BulkDeleteRecordsSchema,
+  ReorderRecordsSchema,
+  DuplicateRecordSchema,
+  RecordIdSchema,
+  RecordQuerySchema
+} from './validators/record.validators';
+
+export {
+  SelectOptionSchema,
+  TextConfigSchema,
+  NumberConfigSchema,
+  DateConfigSchema,
+  SelectConfigSchema,
+  PeopleConfigSchema,
+  RelationConfigSchema,
+  FormulaConfigSchema,
+  FilesConfigSchema,
+  AutoNumberConfigSchema,
+  RollupConfigSchema,
+  PropertyConfigSchema,
+  CreatePropertySchema,
+  UpdatePropertySchema,
+  ReorderPropertiesSchema,
+  PropertyIdSchema,
+  DuplicatePropertySchema,
+  ChangePropertyTypeSchema,
+  InsertPropertyAfterSchema,
+  CreateRelationSchema
+} from './validators/properties.validators';
+
+export type {
+  IDuplicatePropertyRequest,
+  IChangePropertyTypeRequest,
+  IInsertPropertyAfterRequest,
+  IRollupConfigRequest
+} from './validators/properties.validators';
+
+export {
+  ViewFilterSchema,
+  ViewSortSchema,
+  ViewGroupSchema,
+  ViewSettingsSchema,
+  CreateViewSchema,
+  UpdateViewSchema,
+  ViewIdSchema
+} from './validators/views.validators';
+
+export {
+  TextAnnotationsSchema,
+  TextContentSchema,
+  MentionContentSchema,
+  EquationContentSchema,
+  RichTextContentSchema,
+  FileObjectSchema,
+  CreateBlockSchema,
+  UpdateBlockSchema,
+  MoveBlockSchema,
+  BulkBlockOperationSchema,
+  BlockIdSchema
+} from './validators/blocks.validators';
 
 export {
   validateDatabaseAccess,

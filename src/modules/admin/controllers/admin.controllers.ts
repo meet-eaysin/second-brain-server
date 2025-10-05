@@ -9,7 +9,7 @@ import {
   isInitialSetupNeeded
 } from '@/modules/admin/services/admin.services';
 import { getUserId } from '@/modules/auth';
-import {catchAsync, sendSuccessResponse} from "@/utils";
+import {catchAsync, sendSuccessResponse} from '@/utils';
 
 /**
  * Get admin dashboard statistics

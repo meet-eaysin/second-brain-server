@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import {EPermissionLevel, EShareScope} from "@/modules/core/types";
+import {EPermissionLevel, EShareScope} from '@/modules/core/types';
 
 export const resourceParamsSchema = z.object({
     resourceType: z.enum(EShareScope),

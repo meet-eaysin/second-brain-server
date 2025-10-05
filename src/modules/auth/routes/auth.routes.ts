@@ -19,7 +19,7 @@ import {
   getProfile,
   googleLogin,
   googleCallback,
-  googleLoginSuccess,
+  googleLoginSuccess
 } from '@/modules/auth/controllers/auth.controller';
 import {
   registerSchema,
@@ -31,7 +31,7 @@ import {
   googleCallbackQuerySchema,
   googleCallbackSchema
 } from '@/modules/auth/validators/auth.validaations';
-import {authenticateToken} from "@/middlewares";
+import { authenticateToken } from '@/middlewares';
 
 const router = Router();
 

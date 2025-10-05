@@ -24,7 +24,7 @@ import { generateId } from '@/utils/id-generator';
 import { createNotFoundError } from '@/utils';
 import { IDatabaseQueryParams } from '@/modules/database';
 
-function convertSortDirection(direction: string | number | boolean): 'asc' | 'desc' {
+const convertSortDirection = (direction: string | number | boolean): 'asc' | 'desc' => {
   const dirStr = String(direction).toLowerCase();
   if (dirStr === 'ascending' || dirStr === 'asc') {
     return 'asc';
@@ -33,24 +33,24 @@ function convertSortDirection(direction: string | number | boolean): 'asc' | 'de
     return 'desc';
   }
   return 'asc';
-}
+};
 
-function convertToDatabaseSortDirection(direction: 'asc' | 'desc'): 'ascending' | 'descending' {
+const convertToDatabaseSortDirection = (direction: 'asc' | 'desc'): 'ascending' | 'descending' => {
   return direction === 'asc' ? 'ascending' : 'descending';
-}
+};
 
-function isValidFilterOperator(value: string): value is EFilterOperator {
+const isValidFilterOperator = (value: string): value is EFilterOperator => {
   return Object.values(EFilterOperator).includes(value as EFilterOperator);
-}
+};
 
-function convertToDatabaseFilterOperator(operator: string): EFilterOperator {
+const convertToDatabaseFilterOperator = (operator: string): EFilterOperator => {
   if (isValidFilterOperator(operator)) {
     return operator;
   }
   throw new Error(`Invalid filter operator: ${operator}`);
-}
+};
 
-function convertToEViewType(type: string): EViewType {
+const convertToEViewType = (type: string): EViewType => {
   const upperType = type.toUpperCase();
   const validTypes = Object.values(EViewType);
   if (validTypes.includes(upperType as EViewType)) {
@@ -58,14 +58,14 @@ function convertToEViewType(type: string): EViewType {
   }
   // Default to TABLE if invalid
   return EViewType.TABLE;
-}
+};
 
 // Auto-create properties for Gantt view
-async function createGanttProperties(
+const createGanttProperties = async (
   databaseId: string,
   viewId: string,
   userId: string
-): Promise<void> {
+): Promise<void> => {
   const { propertiesService } = await import('./properties.services');
 
   // Check if DATE_RANGE property already exists
@@ -93,10 +93,10 @@ async function createGanttProperties(
       console.warn('Failed to create DATE_RANGE property for Gantt view:', error);
     }
   }
-}
+};
 
 // Auto-create properties for Board view
-async function createBoardProperties(databaseId: string, viewId: string, userId: string) {
+const createBoardProperties = async (databaseId: string, viewId: string, userId: string) => {
   const { propertiesService } = await import('./properties.services');
 
   // Check if SELECT property already exists
@@ -130,9 +130,9 @@ async function createBoardProperties(databaseId: string, viewId: string, userId:
     }
   }
   return null;
-}
+};
 
-function formatViewResponse(view: TViewDocument): IDatabaseView {
+const formatViewResponse = (view: TViewDocument): IDatabaseView => {
   return {
     id: (view._id as Types.ObjectId).toString(),
     databaseId: view.databaseId,
@@ -175,13 +175,13 @@ function formatViewResponse(view: TViewDocument): IDatabaseView {
     updatedBy: view.updatedBy,
     lastUsedAt: view.lastUsedAt
   };
-}
+};
 
-async function createView(
+const createView = async (
   databaseId: string,
   data: ICreateViewRequest,
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const database = await DatabaseModel.findOne({
     _id: new ObjectId(databaseId),
     $or: [{ createdBy: new ObjectId(userId) }, { 'permissions.userId': new ObjectId(userId) }]
@@ -260,13 +260,13 @@ async function createView(
   }
 
   return formatViewResponse(view);
-}
+};
 
-async function getViews(
+const getViews = async (
   databaseId: string,
   _query: Partial<IDatabaseQueryParams>,
   userId: string
-): Promise<IDatabaseView[]> {
+): Promise<IDatabaseView[]> => {
   const database = await DatabaseModel.findOne({
     _id: new ObjectId(databaseId),
     $or: [{ createdBy: new ObjectId(userId) }, { 'permissions.userId': new ObjectId(userId) }]
@@ -288,13 +288,13 @@ async function getViews(
   );
 
   return accessibleViews.map(view => formatViewResponse(view));
-}
+};
 
-async function getViewById(
+const getViewById = async (
   databaseId: string,
   viewId: string,
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: new ObjectId(viewId),
     databaseId,
@@ -317,14 +317,14 @@ async function getViewById(
   }
 
   return formatViewResponse(view);
-}
+};
 
-async function updateView(
+const updateView = async (
   databaseId: string,
   viewId: string,
   data: IUpdateViewRequest,
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: new ObjectId(viewId),
     databaseId,
@@ -403,9 +403,9 @@ async function updateView(
   await view.save();
 
   return formatViewResponse(view);
-}
+};
 
-async function deleteView(databaseId: string, viewId: string, userId: string): Promise<void> {
+const deleteView = async (databaseId: string, viewId: string, userId: string): Promise<void> => {
   const view = await ViewModel.findOne({
     _id: new ObjectId(viewId),
     databaseId,
@@ -463,13 +463,13 @@ async function deleteView(databaseId: string, viewId: string, userId: string): P
       $set: { updatedAt: new Date() }
     }
   );
-}
+};
 
-async function buildFilterQuery(
+const buildFilterQuery = async (
   filters: IViewFilter[],
   databaseId: string,
   userId: string
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, unknown>> => {
   if (!filters || filters.length === 0) {
     return {};
   }
@@ -545,14 +545,14 @@ async function buildFilterQuery(
   }
 
   return conditions.length === 1 ? conditions[0] : { $and: conditions };
-}
+};
 
 // Build MongoDB sort query from view sorts
-async function buildSortQuery(
+const buildSortQuery = async (
   sorts: IViewSort[],
   databaseId: string,
   userId: string
-): Promise<Record<string, 1 | -1>> {
+): Promise<Record<string, 1 | -1>> => {
   if (!sorts || sorts.length === 0) {
     return { createdAt: -1 }; // Default sort
   }
@@ -586,10 +586,10 @@ async function buildSortQuery(
   }
 
   return sortObj;
-}
+};
 
 // Build MongoDB aggregation pipeline for grouping
-function buildGroupQuery(groupBy: string): Record<string, unknown>[] {
+const buildGroupQuery = (groupBy: string): Record<string, unknown>[] => {
   if (!groupBy) {
     return [];
   }
@@ -613,15 +613,15 @@ function buildGroupQuery(groupBy: string): Record<string, unknown>[] {
       $sort: { _id: 1 }
     }
   ];
-}
+};
 
 // Update view with grouping
-async function updateViewGrouping(
+const updateViewGrouping = async (
   databaseId: string,
   viewId: string,
   groupBy: string | null,
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -643,15 +643,15 @@ async function updateViewGrouping(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 // Change view type
-async function changeViewType(
+const changeViewType = async (
   databaseId: string,
   viewId: string,
   newType: EViewType,
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -685,15 +685,15 @@ async function changeViewType(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 // Update view property visibility
-async function updateViewPropertyVisibility(
+const updateViewPropertyVisibility = async (
   databaseId: string,
   viewId: string,
   visibleProperties: string[],
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -709,15 +709,15 @@ async function updateViewPropertyVisibility(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 // Update view hidden properties
-async function updateViewHiddenProperties(
+const updateViewHiddenProperties = async (
   databaseId: string,
   viewId: string,
   hiddenProperties: string[],
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -733,15 +733,15 @@ async function updateViewHiddenProperties(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 // Update view column freeze
-async function updateViewColumnFreeze(
+const updateViewColumnFreeze = async (
   databaseId: string,
   viewId: string,
   frozenColumns: string[],
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -757,15 +757,15 @@ async function updateViewColumnFreeze(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 // Update view filters
-async function updateViewFilters(
+const updateViewFilters = async (
   databaseId: string,
   viewId: string,
   filters: IViewFilter[],
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -788,15 +788,15 @@ async function updateViewFilters(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 // Update view sorts
-async function updateViewSorts(
+const updateViewSorts = async (
   databaseId: string,
   viewId: string,
   sorts: IViewSort[],
   userId: string
-): Promise<IDatabaseView> {
+): Promise<IDatabaseView> => {
   const view = await ViewModel.findOne({
     _id: viewId,
     databaseId
@@ -815,7 +815,7 @@ async function updateViewSorts(
 
   await view.save();
   return formatViewResponse(view);
-}
+};
 
 export const viewsService = {
   updateView,

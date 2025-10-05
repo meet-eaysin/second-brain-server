@@ -26,7 +26,7 @@ import {
   createOAuthCodeInvalidError
 } from '@/auth/utils/auth-errors';
 import { appConfig } from '@/config';
-import {getUserWithWorkspaces} from "@/auth/services/auth.service";
+import {getUserWithWorkspaces} from '@/auth/services/auth.service';
 
 export const register = catchAsync(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {

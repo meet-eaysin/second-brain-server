@@ -10,8 +10,8 @@ import {
   checkInitialSetupController,
   createInitialSuperAdminController
 } from '@/modules/admin/controllers/admin.controllers';
-import {authenticateToken} from "@/middlewares";
-import {requireSuperAdmin} from "@/middlewares/auth";
+import { authenticateToken } from '@/middlewares';
+import { requireSuperAdmin } from '@/middlewares/auth';
 
 const router = Router();
 

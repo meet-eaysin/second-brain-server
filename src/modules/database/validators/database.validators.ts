@@ -225,3 +225,69 @@ export const bulkDeleteDatabasesSchema = z.object({
     .max(50, 'Cannot delete more than 50 databases at once'),
   permanent: z.boolean().default(false) // Soft delete vs permanent delete
 });
+
+// Additional validation schemas moved from types
+export const DatabaseTypeSchema = z.enum(EDatabaseType);
+
+export const DatabaseIconSchema = z.object({
+  type: z.enum(['emoji', 'icon', 'image']),
+  value: z.string().min(1)
+});
+
+export const DatabaseCoverSchema = z.object({
+  type: z.enum(['color', 'gradient', 'image']),
+  value: z.string().min(1)
+});
+
+export const DatabaseTemplateSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  defaultValues: z.record(z.string(), z.any()),
+  isDefault: z.boolean().default(false)
+});
+
+export const DatabaseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  name: z.string().min(1).max(100),
+  type: DatabaseTypeSchema,
+  description: z.string().max(1000).optional(),
+  icon: DatabaseIconSchema.optional(),
+  cover: DatabaseCoverSchema.optional(),
+  isPublic: z.boolean().default(false),
+  isTemplate: z.boolean().default(false),
+  isArchived: z.boolean().default(false),
+  isFrozen: z.boolean().default(false),
+  frozenReason: z.string().max(500).optional(),
+  recordCount: z.number().min(0).default(0),
+  lastActivityAt: z.date().optional(),
+  allowComments: z.boolean().default(true),
+  allowDuplicates: z.boolean().default(true),
+  enableVersioning: z.boolean().default(false),
+  enableAuditLog: z.boolean().default(true),
+  enableAutoTagging: z.boolean().default(false),
+  enableSmartSuggestions: z.boolean().default(false),
+  syncSettings: z.record(z.string(), z.any()).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  createdBy: z.string(),
+  updatedBy: z.string().optional()
+});
+
+export const DatabaseStatsSchema = z.object({
+  databaseId: z.string(),
+  recordCount: z.number().min(0),
+  propertyCount: z.number().min(0),
+  viewCount: z.number().min(0),
+  templateCount: z.number().min(0),
+  lastActivityAt: z.date().optional(),
+  createdThisWeek: z.number().min(0),
+  updatedThisWeek: z.number().min(0),
+  topContributors: z.array(
+    z.object({
+      userId: z.string(),
+      recordCount: z.number().min(0)
+    })
+  )
+});

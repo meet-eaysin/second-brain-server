@@ -23,7 +23,7 @@ export class PermissionService {
         const { DatabaseModel } = await import('@/modules/database/models/database.model');
         const database = await DatabaseModel.findById(resourceId);
         if (database && database.createdBy === userId) {
-          return true; 
+          return true;
         }
       }
 
@@ -31,7 +31,7 @@ export class PermissionService {
         const { RecordModel } = await import('@/modules/database/models/record.model');
         const record = await RecordModel.findById(resourceId);
         if (record && record.createdBy === userId) {
-          return true; 
+          return true;
         }
       }
 

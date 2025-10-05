@@ -304,3 +304,177 @@ export const bulkUpdateSchema = z.object({
     )
     .min(1, 'At least one update is required')
 });
+
+// Additional validation schemas moved from types
+export const TextAnnotationsSchema = z.object({
+  bold: z.boolean().default(false),
+  italic: z.boolean().default(false),
+  strikethrough: z.boolean().default(false),
+  underline: z.boolean().default(false),
+  code: z.boolean().default(false),
+  color: z.string().default('default')
+});
+
+export const TextContentSchema = z.object({
+  type: z.literal('text'),
+  text: z.object({
+    content: z.string(),
+    link: z
+      .object({
+        url: z.string().url()
+      })
+      .optional()
+  }),
+  annotations: TextAnnotationsSchema,
+  plain_text: z.string(),
+  href: z.string().url().optional()
+});
+
+export const MentionContentSchema = z.object({
+  type: z.literal('mention'),
+  mention: z.object({
+    type: z.enum(['user', 'page', 'database', 'date', 'link_mention', 'template_mention']),
+    user: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        avatar_url: z.string().url().optional()
+      })
+      .optional(),
+    page: z
+      .object({
+        id: z.string(),
+        title: z.string().optional()
+      })
+      .optional(),
+    database: z
+      .object({
+        id: z.string(),
+        name: z.string().optional()
+      })
+      .optional(),
+    date: z
+      .object({
+        start: z.string(),
+        end: z.string().optional(),
+        time_zone: z.string().optional()
+      })
+      .optional(),
+    link_mention: z
+      .object({
+        url: z.string().url()
+      })
+      .optional(),
+    template_mention: z
+      .object({
+        type: z.enum(['template_mention_date', 'template_mention_user'])
+      })
+      .optional()
+  }),
+  annotations: TextAnnotationsSchema,
+  plain_text: z.string(),
+  href: z.string().url().optional()
+});
+
+export const EquationContentSchema = z.object({
+  type: z.literal('equation'),
+  equation: z.object({
+    expression: z.string()
+  }),
+  annotations: TextAnnotationsSchema,
+  plain_text: z.string()
+});
+
+export const RichTextContentSchema = z.union([
+  TextContentSchema,
+  MentionContentSchema,
+  EquationContentSchema
+]);
+
+export const FileObjectSchema = z.object({
+  type: z.enum(['file', 'external']),
+  file: z
+    .object({
+      url: z.string().url(),
+      expiry_time: z.string().optional()
+    })
+    .optional(),
+  external: z
+    .object({
+      url: z.string().url()
+    })
+    .optional(),
+  name: z.string().optional(),
+  caption: z.array(RichTextContentSchema).optional()
+});
+
+export const CreateBlockSchema = z.object({
+  type: z.enum([
+    'paragraph',
+    'heading_1',
+    'heading_2',
+    'heading_3',
+    'child_page',
+    'child_database',
+    'bulleted_list_item',
+    'numbered_list_item',
+    'to_do',
+    'toggle',
+    'quote',
+    'divider',
+    'code',
+    'embed',
+    'image',
+    'video',
+    'file',
+    'table',
+    'table_row',
+    'callout',
+    'column_list',
+    'column',
+    'bookmark',
+    'equation',
+    'breadcrumb',
+    'table_of_contents',
+    'link_preview',
+    'synced_block',
+    'template'
+  ]),
+  afterBlockId: z.string().optional(),
+  parentId: z.string().optional(),
+  content: z.record(z.string(), z.any())
+});
+
+export const UpdateBlockSchema = z
+  .object({
+    content: z.record(z.string(), z.any()).optional(),
+    archived: z.boolean().optional()
+  })
+  .refine(data => data.content || data.archived !== undefined, {
+    message: 'At least one field must be provided for update'
+  });
+
+export const MoveBlockSchema = z
+  .object({
+    afterBlockId: z.string().optional(),
+    parentId: z.string().optional()
+  })
+  .refine(data => data.afterBlockId || data.parentId, {
+    message: 'Either afterBlockId or parentId must be provided'
+  });
+
+export const BulkBlockOperationSchema = z.object({
+  operations: z
+    .array(
+      z.object({
+        operation: z.enum(['create', 'update', 'delete', 'move']),
+        blockId: z.string().optional(),
+        data: z.union([CreateBlockSchema, UpdateBlockSchema, MoveBlockSchema]).optional()
+      })
+    )
+    .min(1, 'At least one operation is required')
+});
+
+export const BlockIdSchema = z.object({
+  blockId: z.string().min(1, 'Block ID is required')
+});

@@ -23,7 +23,7 @@ export function generateShortId(): string {
  * Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
  */
 export function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
@@ -39,16 +39,16 @@ export function generateReadableId(): string {
     'happy', 'clever', 'bright', 'swift', 'calm', 'bold', 'wise', 'kind',
     'quick', 'smart', 'cool', 'warm', 'fresh', 'clean', 'sharp', 'smooth'
   ];
-  
+
   const nouns = [
     'table', 'view', 'record', 'field', 'data', 'list', 'board', 'card',
     'item', 'entry', 'note', 'task', 'project', 'goal', 'plan', 'idea'
   ];
-  
+
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   const number = Math.floor(Math.random() * 1000);
-  
+
   return `${adjective}-${noun}-${number}`;
 }
 
@@ -57,23 +57,23 @@ export function generateReadableId(): string {
  */
 export function isValidId(id: string): boolean {
   if (!id || typeof id !== 'string') return false;
-  
+
   // Check for timestamp-random format
   const timestampRandomPattern = /^\d{13}-[a-f0-9]{8}$/;
   if (timestampRandomPattern.test(id)) return true;
-  
+
   // Check for UUID format
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (uuidPattern.test(id)) return true;
-  
+
   // Check for readable format
   const readablePattern = /^[a-z]+-[a-z]+-\d+$/;
   if (readablePattern.test(id)) return true;
-  
+
   // Check for short hex format
   const shortPattern = /^[a-f0-9]{8}$/;
   if (shortPattern.test(id)) return true;
-  
+
   return false;
 }
 
@@ -83,11 +83,11 @@ export function isValidId(id: string): boolean {
 export function extractTimestamp(id: string): number | null {
   const timestampRandomPattern = /^(\d{13})-[a-f0-9]{8}$/;
   const match = id.match(timestampRandomPattern);
-  
+
   if (match) {
     return parseInt(match[1], 10);
   }
-  
+
   return null;
 }
 
@@ -100,7 +100,7 @@ export function generatePropertyId(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
-  
+
   const suffix = randomBytes(2).toString('hex');
   return `${snakeCase}_${suffix}`;
 }
@@ -113,10 +113,10 @@ export function generateViewId(name: string, type: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
-  
+
   const typeSlug = type.toLowerCase();
   const suffix = randomBytes(2).toString('hex');
-  
+
   return `${nameSlug}_${typeSlug}_${suffix}`;
 }
 

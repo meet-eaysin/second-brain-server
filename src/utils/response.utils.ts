@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import {getErrorCode} from "@/utils/error.utils";
+import {getErrorCode} from '@/utils/error.utils';
 
 export interface DatabaseProperty {
   id: string;

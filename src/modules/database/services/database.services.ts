@@ -13,7 +13,7 @@ import {
   createConflictError,
   createForbiddenError
 } from '@/utils/error.utils';
-import { permissionService } from '../../permissions/services/permission.service';
+import { permissionService } from '@/modules/permissions/services/permission.service';
 import { EShareScope, EPermissionLevel } from '@/modules/core/types/permission.types';
 import {
   buildWorkspaceAwareDatabaseQuery,
