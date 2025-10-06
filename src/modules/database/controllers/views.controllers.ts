@@ -166,3 +166,15 @@ export const updateViewSorts = catchAsync(async (req: Request, res: Response): P
 
   sendSuccessResponse(res, 'View sorts updated successfully', view);
 });
+
+export const updateViewScrollWidth = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const { databaseId, viewId } = req.params;
+    const { scrollWidth } = req.body;
+    const userId = getUserId(req);
+
+    const view = await viewsService.updateViewScrollWidth(databaseId, viewId, scrollWidth, userId);
+
+    sendSuccessResponse(res, 'View scroll width updated successfully', view);
+  }
+);

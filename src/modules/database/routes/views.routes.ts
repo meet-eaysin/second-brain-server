@@ -14,7 +14,8 @@ import {
   updateViewHiddenProperties,
   updateViewColumnFreeze,
   updateViewFilters,
-  updateViewSorts
+  updateViewSorts,
+  updateViewScrollWidth
 } from '../controllers/views.controllers';
 import { databaseIdSchema } from '@/modules/database/validators/database.validators';
 import {
@@ -90,6 +91,12 @@ router.patch(
   validateParams(databaseIdSchema),
   validateParams(viewIdParamSchema),
   updateViewSorts
+);
+router.patch(
+  '/:databaseId/views/:viewId/scroll-width',
+  validateParams(databaseIdSchema),
+  validateParams(viewIdParamSchema),
+  updateViewScrollWidth
 );
 
 export default router;

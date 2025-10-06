@@ -599,11 +599,38 @@ const validateRollupFunction = (rollupFunction: string, propertyType: EPropertyT
   }
 };
 
+const updatePropertyWidth = async (
+  databaseId: string,
+  propertyId: string,
+  width: number,
+  userId: string
+): Promise<IProperty> => {
+  const database = await DatabaseModel.findById(databaseId);
+
+  if (!database) throw createNotFoundError('Database');
+
+  const property = await PropertyModel.findOne({
+    databaseId,
+    _id: propertyId
+  });
+
+  if (!property) throw createNotFoundError('Property', propertyId);
+
+  // Allow width modification for system properties since it's just a UI preference
+  property.width = width;
+  property.updatedBy = userId;
+
+  await property.save();
+
+  return property.toJSON() as IProperty;
+};
+
 export const propertiesService = {
   createProperty,
   getProperties,
   getPropertyById,
   updateProperty,
+  updatePropertyWidth,
   reorderProperties,
   deleteProperty,
   duplicateProperty,

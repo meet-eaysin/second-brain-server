@@ -121,6 +121,7 @@ export interface IViewConfig {
   visibleProperties?: string[];
   hiddenProperties?: string[];
   frozenColumns?: string[];
+  scrollWidth?: number;
 
   // Type-specific configurations
   columns?: IColumnConfig[];

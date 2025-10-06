@@ -102,6 +102,7 @@ export interface IProperty extends IBaseEntity {
   isSystem: boolean; // System properties cannot be deleted
   isVisible: boolean;
   order: number;
+  width?: number;
   description?: string;
 }
 

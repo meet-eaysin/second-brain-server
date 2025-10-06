@@ -817,10 +817,35 @@ const updateViewSorts = async (
   return formatViewResponse(view);
 };
 
+// Update view scroll width
+const updateViewScrollWidth = async (
+  databaseId: string,
+  viewId: string,
+  scrollWidth: number,
+  userId: string
+): Promise<IDatabaseView> => {
+  const view = await ViewModel.findOne({
+    _id: viewId,
+    databaseId
+  });
+
+  if (!view) {
+    throw createNotFoundError('View not found');
+  }
+
+  // Update scroll width in config
+  view.config.scrollWidth = scrollWidth;
+  view.updatedBy = userId;
+
+  await view.save();
+  return formatViewResponse(view);
+};
+
 export const viewsService = {
   updateView,
   updateViewGrouping,
   updateViewFilters,
+  updateViewScrollWidth,
   createView,
   getViews,
   getViewById,

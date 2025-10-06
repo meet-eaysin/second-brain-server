@@ -155,6 +155,11 @@ const PropertySchema = createBaseSchema(
       min: 0,
       index: true
     },
+    width: {
+      type: Number,
+      min: 50,
+      default: 150
+    },
     description: {
       type: String,
       trim: true,
@@ -227,6 +232,11 @@ PropertySchema.methods.updateOption = function (
       this.markModified('config.options');
     }
   }
+  return this.save();
+};
+
+PropertySchema.methods.updateWidth = function (newWidth: number) {
+  this.width = newWidth;
   return this.save();
 };
 

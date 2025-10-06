@@ -187,3 +187,20 @@ export const togglePropertyVisibility = catchAsync(
     sendSuccessResponse(res, 'Property visibility toggled successfully', property);
   }
 );
+
+export const updatePropertyWidth = catchAsync(
+  async (req: Request, res: Response): Promise<void> => {
+    const { databaseId, propertyId } = req.params;
+    const { width } = req.body;
+    const userId = getUserId(req);
+
+    const property = await propertiesService.updatePropertyWidth(
+      databaseId,
+      propertyId,
+      width,
+      userId
+    );
+
+    sendSuccessResponse(res, 'Property width updated successfully', property);
+  }
+);

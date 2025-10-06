@@ -6,6 +6,7 @@ import {
   getDatabaseProperties,
   getDatabasePropertyById,
   updateDatabaseProperty,
+  updatePropertyWidth,
   reorderDatabaseProperties,
   deleteDatabaseProperty,
   validatePropertyValue,
@@ -76,6 +77,11 @@ router.patch(
   '/:databaseId/properties/:propertyId/toggle-visibility',
   validateParams(databaseIdSchema),
   togglePropertyVisibility
+);
+router.patch(
+  '/:databaseId/properties/:propertyId/width',
+  validateParams(databaseIdSchema),
+  updatePropertyWidth
 );
 
 export default router;
