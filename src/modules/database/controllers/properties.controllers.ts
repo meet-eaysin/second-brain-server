@@ -34,7 +34,7 @@ export const getDatabaseProperties = catchAsync(
       databaseId,
       userId,
       includeHidden === 'true',
-      viewId as string
+      viewId as string | undefined
     );
 
     sendSuccessResponse(res, 'Properties retrieved successfully', properties);

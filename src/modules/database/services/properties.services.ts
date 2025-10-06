@@ -86,7 +86,7 @@ const getProperties = async (
   databaseId: string,
   userId: string,
   includeHidden: boolean = false,
-  viewId?: string
+  viewId?: string | undefined
 ): Promise<IProperty[]> => {
   const database = await DatabaseModel.findById(databaseId);
 
